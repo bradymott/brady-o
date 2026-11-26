@@ -193,7 +193,7 @@ const GearArt = {
     ctx.fillStyle = '#fffaf0'; ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(-11, -7); ctx.lineTo(-6, 0); ctx.lineTo(-11, 7); ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#e8dcc8'; ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(-6, 0); ctx.lineTo(-9, 3.5); ctx.closePath(); ctx.fill();
     ctx.strokeStyle = 'rgba(120,100,80,0.6)'; ctx.lineWidth = 0.8; ctx.setLineDash([1.6, 1.6]); ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(-8, 0); ctx.stroke(); ctx.setLineDash([]);
-    // Princess Papaya's stamp: a red heart
+    // Chinka's stamp: a red heart
     ctx.fillStyle = '#e8384f'; ctx.beginPath(); ctx.moveTo(-3, -1.2); ctx.bezierCurveTo(-5.5, -4, -1.5, -5.5, -1.2, -3.2); ctx.bezierCurveTo(-0.9, -5.5, 3, -4, 0.6, -1.2); ctx.lineTo(-1.2, 0.6); ctx.closePath(); ctx.fill();
     ctx.restore();
   }

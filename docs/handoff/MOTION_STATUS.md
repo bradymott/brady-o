@@ -26,7 +26,7 @@ The cause: `BURNS_SKINACTOR.MAP` (`src/40_burns_be_skinactor.js`) had no clip fo
 | `bbaZip` | procedural | `cheer` (a guess; check how it looks) |
 | pilot seats (world 14 flight) and other `poseFn` users without a mapped animation | procedural | still procedural (unchanged) |
 
-- The new clips (`spin`, `flip`, `pound`, `bike`, `climb`) have no FALLBACK on purpose. Princess Papaya and the mannequin don't have them, so they still use the procedural model for those states, as before.
+- The new clips (`spin`, `flip`, `pound`, `bike`, `climb`) have no FALLBACK on purpose. Chinka and the mannequin don't have them, so they still use the procedural model for those states, as before.
 - Engine changes:
   - `BurnsSkinnedChar` (`src/40_burns_bc_skin.js`) gained whole-body `pitch`, `roll`, `yaw2`, `pivot` and `dy`.
   - The skin actor copies these from `ch.P` for the states listed in `BURNS_SKINACTOR.ROOT`.

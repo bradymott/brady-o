@@ -1,5 +1,5 @@
 /* ============================================================
-   Princess Papaya: Brady-O's wife, as she appears in the Piwi Squirmin'
+   Chinka-O: Brady-O's wife, as she appears in the Piwi Squirmin'
    story of Super Brady-O World (Nov 2026; docs/design/STORY_PIWI.md).
    Brady's spec (16 Nov 2026): a ballerina in a pink tutu; she is
    Ecuadorian, with black hair, a warm brown skin tone and dark

@@ -1,10 +1,10 @@
 /* ============================================================
    World tour: the story (docs/design/STORY_PIWI.md).
    PIWI SQUIRMIN', a lonely ventriloquist dummy with a flying
-   Showtrunk, hooks Princess Papaya into his show cage in Mexico City and
+   Showtrunk, hooks Chinka-O into his show cage in Mexico City and
    takes her on his world tour. Each land is a tour date: its boss is
    tonight's act and a landmark is shrunk into scenery. Brady-O
-   chases him on Pupo, their giant sloth, following Princess Papaya's
+   chases him on Pupo, their giant sloth, following Chinka-O's
    postcards. The Grand Finale is in Nepal; the encore in World 22.
    The cast is drawn in 05b_piwi.js, 05c_chinka.js, 05d_showtrunk.js
    and 05e_pupo.js.
@@ -117,11 +117,11 @@ const TourCast = {
 function TourIntroPanels() {
   const C = TourCast;
   return [
-    { text: 'Brady-O, Princess Papaya and Pupo, their giant sloth, set off on the trip of a lifetime. Two passports. One very small plane.',
+    { text: 'Brady-O, Chinka-O and Pupo, their giant sloth, set off on the trip of a lifetime. Two passports. One very small plane.',
       scene(ctx, W, H, t) { const { gy, s } = tourStage(ctx, W, H, t, 'tour_title'); C.pupo(ctx, W * 0.2, gy, s * 0.8, t, 'idle', 1); C.brady(ctx, W * 0.38, gy, s, t, 'idle', 1); C.chinka(ctx, W * 0.5, gy, s, t, 'wave', -1); ctx.save(); ctx.translate(W * 0.75, gy - 30 * s); ctx.scale(s * 1.2, s * 1.2); TourMapScene.prototype.drawPlane.call({ t }, ctx, 0, 0, 0); ctx.restore(); } },
     { text: 'First stop, Mexico City. A flying trunk landed, its lid opened into a tiny stage, and a wooden dummy bowed to nobody. "OPENING NIGHT!"',
       scene(ctx, W, H, t) { const { gy, s } = tourStage(ctx, W, H, t, 'mx_mercado'); C.trunk(ctx, W * 0.68, gy, s * 0.62, t, 'talk', false); C.pupo(ctx, W * 0.14, gy, s * 0.8, t, 'idle', 1); C.brady(ctx, W * 0.28, gy, s, t, 'idle', 1); C.chinka(ctx, W * 0.4, gy, s, t, 'idle', 1); } },
-    { text: 'His head fell off mid-song. Princess Papaya stepped in and finished his number with a perfect pirouette. "A STAR! You\'re my LEADING LADY!"',
+    { text: 'His head fell off mid-song. Chinka-O stepped in and finished his number with a perfect pirouette. "A STAR! You\'re my LEADING LADY!"',
       scene(ctx, W, H, t, pt) { const { gy, s } = tourStage(ctx, W, H, t, 'mx_mercado'); C.trunk(ctx, W * 0.72, gy, s * 0.62, t, pt > 1.6 ? 'gloat' : 'startled', false); C.pupo(ctx, W * 0.14, gy, s * 0.8, t, 'happy', 1); C.brady(ctx, W * 0.28, gy, s, t, 'idle', 1); C.chinka(ctx, W * 0.46, gy, s, t, 'pirouette', 1); } },
     { text: 'A hook swung out and popped her into his show cage. FWOOMP: his spotlight shrank the Palace of Fine Arts. "Every show needs scenery!"',
       scene(ctx, W, H, t, pt) { const { gy, s } = tourStage(ctx, W, H, t, 'mx_mercado'); C.trunk(ctx, W * 0.64, gy - 110 * s, s * 0.62, t, 'gloat', true); C.pupo(ctx, W * 0.16, gy, s * 0.8, t, 'poke', 1); C.brady(ctx, W * 0.32, gy, s, t, 'idle', 1); if (pt > 1.4 && pt < 1.9) { ctx.fillStyle = `rgba(255,248,220,${0.8 * (1 - (pt - 1.4) / 0.5)})`; ctx.fillRect(0, 0, W, H); } } },
@@ -129,12 +129,12 @@ function TourIntroPanels() {
       scene(ctx, W, H, t, pt) { const { gy, s } = tourStage(ctx, W, H, t, 'tour_dusk'); const k = Math.min(1, pt * 0.35); C.trunk(ctx, W * (0.58 + k * 0.18), gy - 120 * s - k * 40 * s, s * 0.62, t, 'gloat', true); C.pupo(ctx, W * 0.14, gy, s * 0.8, t, 'walk', 1); C.brady(ctx, W * 0.32, gy, s, t, 'run', 1); } },
     { text: 'Pupo sat in the empty plaza, hugging her pink bow. "We\'re getting her back, buddy." A very long pause. "...climb on."',
       scene(ctx, W, H, t) { const { gy, s } = tourStage(ctx, W, H, t, 'tour_dusk'); C.pupo(ctx, W * 0.5, gy, s, t, 'sad', -1); C.brady(ctx, W * 0.3, gy, s, t, 'idle', 1); } },
-    { text: 'Piwi Squirmin\'s World Tour: twelve tour dates. Crash every show, put the scenery back and bring Princess Papaya home.',
+    { text: 'Piwi Squirmin\'s World Tour: twelve tour dates. Crash every show, put the scenery back and bring Chinka-O home.',
       scene(ctx, W, H, t) { const { gy, s } = tourStage(ctx, W, H, t, 'tour_title'); C.pupo(ctx, W * 0.36, gy, s * 0.9, t, 'ride', 1, true); ctx.save(); ctx.translate(W * 0.66, gy - 60 * s); ctx.rotate(-0.1); ctx.scale(s * 1.6, s * 1.6); TourArt.postcard(ctx, 0, 0, t, false); ctx.restore(); } }
   ];
 }
 
-// arriving in a country for the first time: Princess Papaya's postcard (shown on the map)
+// arriving in a country for the first time: Chinka-O's postcard (shown on the map)
 function tourArrivalCard(C) {
   return { title: 'POSTCARD FROM ' + C.name.toUpperCase(), text: C.arrival || ('Brady! Piwi\'s trunk landed in ' + C.name + '. Crash his show, save the landmark! ♥ C') };
 }
@@ -146,8 +146,8 @@ class TourEndingScene {
     this.lines = [
       'The Shrink-Spot sputters... FWOOMP. Piwi Squirmin\' is now exactly pocket-sized, rattling in his own prop jar.',
       'One by one, the landmarks pop back to full size all over the world. Somewhere, a volcano sighs with relief.',
-      'Princess Papaya: "You followed every postcard?"  Brady-O: "Every. Single. One. Your handwriting is beautiful."',
-      'Pupo reaches out, very slowly, and pokes Princess Papaya\'s belly button. "...your pupo. ...I missed it."',
+      'Chinka-O: "You followed every postcard?"  Brady-O: "Every. Single. One. Your handwriting is beautiful."',
+      'Pupo reaches out, very slowly, and pokes Chinka-O\'s belly button. "...your pupo. ...I missed it."',
       'Sunrise over the Himalayas. Two passports full of stamps, one giant sleepy sloth, one very quiet dummy. Best. Trip. Ever.'
     ];
     this.parts = new Particles();
@@ -203,13 +203,13 @@ function tourCreditsLines() {
   const bosses = [];
   for (const C of Tour.mainCountries()) if (C.boss && C.id !== 'np') bosses.push(C.boss.name + '  ·  ' + C.name);
   return [
-    ['Princess Papaya is home. The world is back to size. Piwi is pocket-sized.', 's'], ['', ''],
-    ['STARRING', 'k'], ['Brady-O  ·  man bun, square shades, many passport stamps', 'v'], ['Princess Papaya  ·  prima ballerina, unimpressed, excellent postcards', 'v'], ['Pupo  ·  giant sloth, steed, belly button enthusiast', 'v'], ['', ''],
+    ['Chinka-O is home. The world is back to size. Piwi is pocket-sized.', 's'], ['', ''],
+    ['STARRING', 'k'], ['Brady-O  ·  man bun, square shades, many passport stamps', 'v'], ['Chinka-O  ·  prima ballerina, unimpressed, excellent postcards', 'v'], ['Pupo  ·  giant sloth, steed, belly button enthusiast', 'v'], ['', ''],
     ['AND INTRODUCING', 'k'], ['Piwi Squirmin\'  ·  a dummy with a dream (and a hook)', 'v'], ['', ''],
     ['LOCALS WHO GOT IN THE WAY', 'k'], ['Jumping jalapeños and walking corn', 'v'], ['Piñata burros full of candy', 'v'], ['Marching baguettes and rolling croissants', 'v'], ['Crêpe pans with surprisingly good aim', 'v'], ['', ''],
     ['TONIGHT\'S ACTS', 'k'], ...bosses.map(n => [n, 'v']), ['', ''],
-    ['YOUR STATS', 'k'], [`Postcards from Princess Papaya: ${tot.gold} / ${tot.goldTotal}`, 'v'], [`Levels cleared: ${tot.done} / ${tot.total}`, 'v'], [`Score: ${Save.data.score}`, 'v'], [`Times Piwi got you: ${Save.data.deaths || 0}`, 'v'], ['', ''],
-    [tot.gold >= tot.goldTotal ? 'Every postcard found. Princess Papaya framed them all.' : 'Some postcards are still out there, somewhere in the world...', 's'],
+    ['YOUR STATS', 'k'], [`Postcards from Chinka-O: ${tot.gold} / ${tot.goldTotal}`, 'v'], [`Levels cleared: ${tot.done} / ${tot.total}`, 'v'], [`Score: ${Save.data.score}`, 'v'], [`Times Piwi got you: ${Save.data.deaths || 0}`, 'v'], ['', ''],
+    [tot.gold >= tot.goldTotal ? 'Every postcard found. Chinka-O framed them all.' : 'Some postcards are still out there, somewhere in the world...', 's'],
     [Tour.countries.w22 && TourProgress.countryUnlocked(Tour.countries.w22) ? 'You found World 22.' : 'Legend speaks of a World 22.', 's'], ['', ''],
     ['Pack light. Stay curious. Send postcards.', 's'], ['', ''], ['', '']
   ];

@@ -1,6 +1,6 @@
 # Brady's Games
 
-Three original games for iPhone, starring **Brady** (man bun, square shades, stubble, blackwork sleeve tattoos, all black) and his wife **Princess Papaya**. Each one is its own installable web app, with its own icon and save data.
+Three original games for iPhone, starring **Brady** (man bun, square shades, stubble, blackwork sleeve tattoos, all black) and his wife **Chinka**. Each one is its own installable web app, with its own icon and save data.
 
 **▶ Play: https://bradymott.github.io/brady-o/**
 
@@ -20,7 +20,7 @@ Do this once for each game. No sound? Check the silent switch and the volume, be
 
 ## Brady Goes to Burning Man
 
-Brady arrives at Burning Man as a clueless first-timer with no camp. Over one week he becomes a full-on burner, while the Man (the forty-foot effigy, who has a crush on Princess Papaya) keeps stealing her away. It ends with the Saturday-night burn and a secret Exodus.
+Brady arrives at Burning Man as a clueless first-timer with no camp. Over one week he becomes a full-on burner, while the Man (the forty-foot effigy, who has a crush on Chinka) keeps stealing her away. It ends with the Saturday-night burn and a secret Exodus.
 
 - **Open world:** walk, bike or drive art cars across a streaming Black Rock City:
   - the Esplanade, the lettered and clock-face streets, and Center Camp at 6:00
@@ -42,7 +42,7 @@ Brady arrives at Burning Man as a clueless first-timer with no camp. Over one we
 
 ## Super Brady-O World
 
-Piwi Squirmin', a lonely ventriloquist dummy, has hooked Brady-O's wife Princess Papaya into the show cage of his flying Showtrunk and taken her on his world tour, shrinking a landmark in every land for scenery. Brady-O chases him across a world map, riding Pupo, their giant sloth. The route runs Mexico → Ecuador → Brazil → Mozambique → Morocco → Valencia → Paris → Amsterdam → Bali → Vietnam → Japan → Nepal, where the finale happens. Princess Papaya sends postcard clues (and sabotages every show).
+Piwi Squirmin', a lonely ventriloquist dummy, has hooked Brady-O's wife Chinka-O into the show cage of his flying Showtrunk and taken her on his world tour, shrinking a landmark in every land for scenery. Brady-O chases him across a world map, riding Pupo, their giant sloth. The route runs Mexico → Ecuador → Brazil → Mozambique → Morocco → Valencia → Paris → Amsterdam → Bali → Vietnam → Japan → Nepal, where the finale happens. Chinka-O sends postcard clues (and sabotages every show).
 
 - **Countries:** five levels each, with its own landmarks, enemies, music, castle boss and **signature item**:
   - Mexico: taco toss
@@ -72,7 +72,7 @@ Piwi Squirmin', a lonely ventriloquist dummy, has hooked Brady-O's wife Princess
   - Quackzilla (rubber duck): Bubble Barrage
   - Pyramid Scheme (laser pyramid): Laser Sweep
   - …and seven more.
-- **26 drivers:** Brady, Princess Papaya, the Man and the whole burner cast.
+- **26 drivers:** Brady, Chinka, the Man and the whole burner cast.
 - **Grand Prix:** two cups of four tracks, at sunset, night, in a dust storm, and Burn Night.
 - **Other modes:** Quick Race, Time Trial, and **Battle** in a skate park, a dirt-bike course and a deep-playa art park.
 - **Battle objectives:** last car standing, glow-orb grab, king of the hill, capture the flag, and a scramble race.

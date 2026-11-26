@@ -21,7 +21,7 @@ const SIGN_TEXTS = [
   'Somewhere, a wall is lying to you.',
   'The Man has a crush. It is not going well for anyone.',
   'Stand still long enough and Brady gets bored.',
-  'Princess Papaya was here. She left a heart in the dust.',
+  'Chinka was here. She left a heart in the dust.',
   'Free hugs ahead. Proceed with caution.',
   'Radical self-reliance means carrying your own snacks.',
   'Up on a porta-potty door to step through. Hold your breath.',

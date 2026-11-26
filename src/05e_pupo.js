@@ -1,7 +1,7 @@
 /* ============================================================
-   Pupo: Princess Papaya's giant pet sloth, and Brady-O's sidekick and
+   Pupo: Chinka-O's giant pet sloth, and Brady-O's sidekick and
    steed (Nov 2026; story: docs/design/STORY_PIWI.md, gameplay:
-   docs/design/PUPO.md). Piwi took Princess Papaya and left Pupo behind,
+   docs/design/PUPO.md). Piwi took Chinka-O and left Pupo behind,
    so he sets off with Brady-O to get her back. Slow, sweet,
    deadpan. He pokes belly buttons, which he calls "pupos" (that is
    how he got his name); Piwi is wooden and has none.
@@ -353,7 +353,7 @@ const Pupo = {
         ctx.beginPath(); ctx.moveTo(0, 3); ctx.bezierCurveTo(-5, -1, -2.6, -5, 0, -2.2); ctx.bezierCurveTo(2.6, -5, 5, -1, 0, 3); ctx.fill(); ctx.stroke(); ctx.restore();
       }
     } else if (pose === 'sad') {
-      // left behind: slumped, head down, hugging Princess Papaya's pink hair bow
+      // left behind: slumped, head down, hugging Chinka-O's pink hair bow
       mood = 'sad'; headX = 9; headY = -45; headTilt = 0.35; bob = 2;
       afx = 6; afy = -28; abx = 0; aby = -30; armB = true; armF = true;
     }

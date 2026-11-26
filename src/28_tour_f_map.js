@@ -139,7 +139,7 @@ class TourMapScene {
     this.music();
     this.mode = 'land';
     this.ow = new TourOverworld(this, Tour.countries[at] || mains[0], { at: fromKey, auto, arrive });
-    // the very first visit: Princess Papaya's first postcard
+    // the very first visit: Chinka's first postcard
     const C0 = Tour.countries[this.sel];
     if (!T.cards) T.cards = {};
     if (C0 && !T.cards[C0.id]) { T.cards[C0.id] = true; this.card = tourArrivalCard(C0); Save.save(); }
@@ -293,7 +293,7 @@ class TourMapScene {
     if (Input.mode !== 'game' && !ow.menu) Input.setMode('game');
     Input.camDrag = !ow.menu; this.setHud();
     const inp = ow.readInput();
-    // Princess Papaya's postcard: any tap or key puts it away
+    // Chinka's postcard: any tap or key puts it away
     if (this.card) { ow.update(dt, null); if (inp.taps.length || inp.enter || inp.back) { this.card = null; Sound.play('cardFlip'); } TourMapKeys.m = false; return; }
     if (TourMapKeys.m && ow.idle()) { TourMapKeys.m = false; this.openRoute({ dest: this.sel }); return; }
     TourMapKeys.m = false;
@@ -457,7 +457,7 @@ class TourMapScene {
     ctx.fillText(TourLandscape.fit(ctx, sub, tw), tx, R.y + 44);
     ctx.restore();
   }
-  // a postcard from Princess Papaya, laid over the map
+  // a postcard from Chinka, laid over the map
   drawCard(ctx) {
     const W = Game.cssW, H = Game.cssH, C = Tour.countries[this.sel] || {}, cols = C.colors || { a: '#ff4f8a', b: '#38c8ff', c: '#ffd84a' };
     ctx.save(); ctx.fillStyle = 'rgba(6,10,30,0.55)'; ctx.fillRect(0, 0, W, H);

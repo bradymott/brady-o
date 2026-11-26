@@ -4,7 +4,7 @@
    party cone, a flower crown, a mini top hat, a propeller beanie, a chef's toque or a bobble hat. One hat per creature
    type (a hash of its type name, so a screen of mixed animals shows a mix of hats). Cosmetic only.
    - Who wears one: ONLY the types in TourHats.HEADS (animals: enemies, friends, critters). Everything else (doors,
-     smoke puffs, lasers, flames, items, blocks, signs, platforms, food and toy enemies, machines, Brady, Princess Papaya,
+     smoke puffs, lasers, flames, items, blocks, signs, platforms, food and toy enemies, machines, Brady, Chinka-O,
      Pupo, Piwi, bosses) is listed in TourHats.NOT. tools/sbw_hats_test.js fails when a registered type is in neither
      list, so a new land's types must be sorted into one of them.
    - Where it sits: HEADS[type] = [fx, fxFlip, fy, size]: the top of the head in the type's usual pose, as fractions
@@ -244,7 +244,7 @@ TourHats.NOT = new Set([].concat(
   'mzCashew mzMango mzJet mzStampede mzCannon mzShellPot mzShellBucket mzShellBottle mzChiliBasket mzBeam mzKeyShutter mzGustFx'.split(' '),
   // the Netherlands: cheese, clogs, tulip bulbs, snowmen, stroopwafels, chutes, goudas, hatches, winds, bike hooks
   'nlCheese nlClog nlBulb nlSnowman nlStroop nlChute nlGouda nlHatch nlCanalWind nlBikeHook'.split(' '),
-  // Nepal: momos, roti, snowballs, tin bots, Piwi bobbleheads, snow globes, the yak pen, walls, bridges, blizzards, icicles, cameras, roofs, landmarks, Princess Papaya, gales, belts, winds, chutes, ramps, banners, jars
+  // Nepal: momos, roti, snowballs, tin bots, Piwi bobbleheads, snow globes, the yak pen, walls, bridges, blizzards, icicles, cameras, roofs, landmarks, Chinka-O, gales, belts, winds, chutes, ramps, banners, jars
   'npMomo npRoti npSnowball npTinBot npBobble npGlobe npPen npSnowWall npBridge npBlizzard npIcicle npCamera npRoof npLandmark npChinka npGale npCrateWall npWallBelt npGustWind npGustBridge npBallChute npBallWall npRiseRamp npIceBridge npFortBanner npJar npCrateBelt npYetiWatch'.split(' '),
   // Vietnam: flying conical hats, the coffee phin, tin scooters, bao, rolls, gỏi, beans, hooks, phở, boats, rafts, signals, ice, roasters, kettles, pedals, lanterns, puppets, goods, gates, rain clouds, the cave's bat swarm
   'vnNon vnPhinDrip vnScooter vnBao vnRoll vnGoi vnBean vnHook vnPho vnBoat vnRaft vnTrainSignal vnIce vnRoaster vnKettle vnPedal vnArenaLantern vnPuppet vnGoods vnTradeGate vnRainCloud vnCaveBats'.split(' '),

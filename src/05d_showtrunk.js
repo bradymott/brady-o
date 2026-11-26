@@ -4,7 +4,7 @@
    with travel stickers, flown by two brass rotors on masts. Its lid
    stands open as a little stage: velvet curtains, footlights and a
    bulb-lit marquee that says PIWI! Under it, on a chain, hangs the
-   gilded show cage where Princess Papaya sits on a swing with her popcorn.
+   gilded show cage where Chinka-O sits on a swing with her popcorn.
    It replaced the old villain's blimp on the title, the route
    map, the land maps and the Nepal fight. Not referenced yet.
      Showtrunk.draw(ctx, { x, y, scale, t, piwi: pose | null, chinka: true | false, party })
@@ -29,7 +29,7 @@ const Showtrunk = {
     ctx.fillStyle = C.brass; ctx.strokeStyle = C.ink; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(0, 0, 3.4, 2.2, 0, 0, TAU); ctx.fill(); ctx.stroke();
     ctx.restore();
   },
-  // the gilded show cage; Princess Papaya sits on its swing
+  // the gilded show cage; Chinka-O sits on its swing
   cage(ctx, x, y, s, t, chinka) {
     const C = SHOWTRUNK; ctx.save(); ctx.translate(x, y); if (s && s !== 1) ctx.scale(s, s);
     const sw = Math.sin(t * 1.4) * 0.05; ctx.rotate(sw);

@@ -9,7 +9,7 @@
    - World 22's encore: when the Other Brady's mirror cracks, Piwi
      pops out from behind it. Before the Nepal finale he flees to
      rehearse; after it, he puts on his last show for an audience
-     of Princess Papaya, and gets three stars.
+     of Chinka-O, and gets three stars.
    ============================================================ */
 (() => {
 if (typeof BOSS_BRAINS === 'undefined' || typeof Boss === 'undefined') return;

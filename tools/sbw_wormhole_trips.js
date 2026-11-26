@@ -2,7 +2,7 @@
 // For each Wormhole of the game (TourSecrets.warps()), on a fresh v5 save with ordinary progression up to the level:
 //   Brady stands at the trunk in its backstage area, presses Up, is sucked in, the WORMHOLE! results come up, a real
 //   tap on the results' MAP button opens the map, the map plays (the land's reveals, the route map's wormhole trip,
-//   the landing; Princess Papaya's postcards are tapped away), and then: which land and stop Brady stands on, the target level
+//   the landing; Chinka's postcards are tapped away), and then: which land and stop Brady stands on, the target level
 //   unlocked, its stop visible and enterable, a walkable trail to it, nothing of the trip left in the save, and
 //   entering the stop really starts the target level.
 // Variants (each on its own fresh save):

@@ -1,9 +1,9 @@
 /* ============================================================
-   Cast: Princess Papaya, Slothy, the bosses and portraits
+   Cast: Chinka, Slothy, the bosses and portraits
    ============================================================ */
 const CHINKA = { hair: '#241612', hairHi: '#5a3a2c', skin: '#dcaa86', skinSh: '#b8835e', top: '#7a5644', topHi: '#9a7260', legs: '#141218', shoe: '#f4f4f0' };
 
-/* Princess Papaya: long dark wavy hair, sunglasses, big smile, brown tee, black leggings,
+/* Chinka: long dark wavy hair, sunglasses, big smile, brown tee, black leggings,
    white sneakers, glowing LED necklace. pose: idle | wave | cheer | run | captive */
 function drawChinka(ctx, o) {
   const t = o.t || 0, pose = o.pose || 'idle', f = o.facing || 1, C = CHINKA;
@@ -522,7 +522,7 @@ const ManArt = {
     ctx.strokeStyle = wood; ctx.lineWidth = 5;
     ctx.beginPath(); ctx.moveTo(-9, -34); ctx.lineTo(-30, -62 + armA * 20); ctx.moveTo(9, -34); ctx.lineTo(30, -62 - armA * 20); ctx.stroke();
     ctx.strokeStyle = dark; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(-14, -40); ctx.lineTo(-24, -50); ctx.moveTo(14, -40); ctx.lineTo(24, -50); ctx.stroke();
-    if (o.cage) { // Princess Papaya's cage dangles from his left hand
+    if (o.cage) { // Chinka's cage dangles from his left hand
       ctx.strokeStyle = '#c8c8d0'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-30, -62); ctx.lineTo(-30, -52); ctx.stroke();
       ctx.save(); ctx.translate(-30, -30); ctx.scale(0.36 / s * 2.4, 0.36 / s * 2.4); drawChinka(ctx, { x: 0, y: 0, scale: 1, t, pose: 'captive', facing: 1 }); ctx.restore();
       ctx.strokeStyle = '#ffd8a0'; ctx.lineWidth = 1.2; ctx.strokeRect(-38, -52, 16, 22); for (let i = 1; i < 4; i++) { ctx.beginPath(); ctx.moveTo(-38 + i * 4, -52); ctx.lineTo(-38 + i * 4, -30); ctx.stroke(); }
@@ -552,7 +552,7 @@ const ManArt = {
     if (b.phase === 1 || b.state !== 'fight' && b.phase !== 2) {
       const crouch = b.pose === 'crouch';
       this.figure(ctx, b.x + b.w / 2, b.y + b.h + (crouch ? 0 : 0), 1, t, { lit: true, arms: b.pose === 'arms' || b.pose === 'throw', kneel: crouch ? 0.6 : 0, angry: b.hurtT > 0 });
-      // Princess Papaya's cage rides on the saucer deck beside him
+      // Chinka's cage rides on the saucer deck beside him
       if (b.saucer && !b.saucer.dead) { const sx = b.saucer.x + b.saucer.w - 22, sy = b.saucer.y; ctx.save(); ctx.translate(sx, sy); ctx.scale(0.55, 0.55); drawChinka(ctx, { x: 0, y: 0, scale: 1, t, pose: 'captive', facing: -1 }); ctx.restore(); ctx.strokeStyle = '#ffd8a0'; ctx.lineWidth = 1.2; ctx.strokeRect(sx - 12, sy - 34, 24, 34); for (let i = 1; i < 4; i++) { ctx.beginPath(); ctx.moveTo(sx - 12 + i * 6, sy - 34); ctx.lineTo(sx - 12 + i * 6, sy); ctx.stroke(); } }
       return;
     }

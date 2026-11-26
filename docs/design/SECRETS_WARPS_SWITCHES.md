@@ -3,7 +3,7 @@
 > **Brady's decisions, 16 Nov 2026 (these override the text below wherever they differ):**
 > - Backstage theme: yes. Warps may jump up to two lands ahead: yes. The three bonus lands (Festival Fields, Lost & Found, The Red-Eye): yes. A Settings switch for hats and dancing: yes.
 > - **Player-facing names:** Road Cases are called **Wormholes**; Ban Buzzers are called **Brady Buttons**. Keep code identifiers neutral (`warp`, `button`).
-> - **The villain is no longer the Baron.** He is **Piwi Squirmin'**, a ventriloquist-dummy villain who has stolen Brady-O's beloved wife **Princess Papaya** and drags her around the world; Brady-O chases him to get her back. Wherever this document says "the Baron" or "the Baron's Rulebook", read Piwi Squirmin'. Story and character sheet: `docs/design/STORY_PIWI.md` (being written).
+> - **The villain is no longer the Baron.** He is **Piwi Squirmin'**, a ventriloquist-dummy villain who has stolen Brady-O's beloved wife **Chinka-O** and drags her around the world; Brady-O chases him to get her back. Wherever this document says "the Baron" or "the Baron's Rulebook", read Piwi Squirmin'. Story and character sheet: `docs/design/STORY_PIWI.md` (being written).
 
 Design spec, 16 Nov 2026. Read from `main` at `c3ed88a`. **This is a design document: no game code was written and nothing in the repo was changed.** Implementation agents build from this file alone, together with the docs it points to.
 

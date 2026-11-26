@@ -1296,7 +1296,7 @@ const levels = [
         bouncy: { title: 'THE CARNIVAL FLOAT BOUNCE', rule: 'A HALF-BUILT CARNIVAL FLOAT, FULLY INFLATED. THE FLOOR BOUNCES: THE PRIZE IS ON THE TALLEST TOWER', skin: ['#ff4ab8', '#ffd23a', '#3ad8a8'] } }
     ] },
 
-  // 3-2 THIEF: Quati snatches Princess Papaya's stamps and runs through the Pantanal
+  // 3-2 THIEF: Quati snatches Chinka's stamps and runs through the Pantanal
   { n: 2, name: 'Coati Caper', mapLabel: 'Coati', arch: 'thief', theme: 'br_pantanal', pupo: 'level',   // Brazil's Pupo level: The Sloth Bridge
     gimmick: 'Quati the coati grabs the passport stamps: chase him on capybaras and caimans, catch him three times',
     hint: 'Stomp Quati (or kick the football at him) while he waits: three catches open the ranger gate',

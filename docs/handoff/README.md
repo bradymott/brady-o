@@ -26,7 +26,7 @@ Three agents now finish the three games, one agent per game. **Read this file fi
 2. **Local Claude session on Brady's Mac (Nov 3), already on `main`.** It added:
    - a glTF pipeline: the `BurnsGLTF` loader, skinned characters and textured PBR (`docs/BURNS_GUIDE.md` §6.8–6.10)
    - Blender models for all 12 Art Cart cars and six Burning Man props
-   - rigged Brady and Princess Papaya with 19 clips each
+   - rigged Brady and Chinka with 19 clips each
    - seven Art Cart battle arenas
    - Super Brady-O World's Fiesta Toon pipeline: Mexico fully converted, plus Ecuador, Brazil and Mozambique art and a redesign of all 14 bosses
    
@@ -51,24 +51,24 @@ If you are running in parallel and #3 hasn't landed yet, the Art Cart agent wait
 ## 3. Ownership: who may edit what
 | Area | Owner |
 |---|---|
-| `src/40_burns_*`, `src/41_burns_*` (the shared 3D engine), `src/42_burns_*` (Burning Man worlds), `assets/models/burning-man/`, `assets/models/shared/` (Brady and Princess Papaya) | **Burning Man agent** |
+| `src/40_burns_*`, `src/41_burns_*` (the shared 3D engine), `src/42_burns_*` (Burning Man worlds), `assets/models/burning-man/`, `assets/models/shared/` (Brady and Chinka) | **Burning Man agent** |
 | `src/43_cart_*`, `assets/models/art-cart/`, `tools/cart_*` | **Art Cart agent** |
 | `src/03`–`src/30` (2D engine, world tour, sprites), `assets/sprites/`, `tools/blender/sprites/`, `tools/validate_levels.js`, `tools/gameplay_test.js`, `tools/boss_test*` | **Super Brady-O World agent** |
 | `src/00_core.js`, `01_audio.js`, `02_input.js`, `99_main.js`, `tools/build.js`, `tools/apps_test.js` | Shared. Make small additive edits only. In `build.js`, touch only your own app's entry. |
 
-**Art Cart runs on the Burns engine**, so engine changes can break it, and the shared Brady and Princess Papaya models appear in Art Cart as drivers.
+**Art Cart runs on the Burns engine**, so engine changes can break it, and the shared Brady and Chinka models appear in Art Cart as drivers.
 - The Burning Man agent runs Art Cart's smoke test after any engine change.
 - The Art Cart agent asks for engine changes rather than making them. Write the request in `docs/handoff/REQUESTS.md` and tell Brady.
 
-## 4. Brady and Princess Papaya: the appearance rules (latest wins)
+## 4. Brady and Chinka: the appearance rules (latest wins)
 - **Brady:**
   - man bun, hair pulled back with a clean nape (no loose curtain of hair)
   - dark square sunglasses, **no stubble** (clean-shaven; Brady's call, 16 Nov 2026, overriding the older docs that say stubble)
   - his own hair and skin colour; one look only (Super Brady-O World's LOOK picker was removed, 16 Nov 2026)
   - black T-shirt, black trousers and black sneakers (no blue denim)
   - sacred-geometry blackwork sleeve tattoos on both arms, forearms included
-- **Princess Papaya in Super Brady-O World: settled by Brady, 16 Nov 2026.** Princess Papaya is a ballerina in a pink tutu (pink leotard, layered tutu, pale pink tights, satin slippers with ribbons). She is Ecuadorian: warm brown skin, dark eyes, long wavy black hair worn down with a pink bow; no sunglasses. Code-drawn in `src/05c_chinka.js`; story in `docs/design/STORY_PIWI.md`. Their giant sloth Pupo (`src/05e_pupo.js`) is Brady-O's sidekick and steed.
-- **Princess Papaya in the 3D games (Burning Man, Art Cart): still open, ask Brady.** The original spec and ChatGPT's Art Cart notes say long dark wavy hair, sunglasses, a brown tee or top, black leggings, white sneakers and an LED necklace. ChatGPT's Burning Man pass instead gave her ivory fabric, a pleated skirt and gold accents. Show Brady both and let him choose before more Princess Papaya work.
+- **Chinka in Super Brady-O World: settled by Brady, 16 Nov 2026.** Chinka-O is a ballerina in a pink tutu (pink leotard, layered tutu, pale pink tights, satin slippers with ribbons). She is Ecuadorian: warm brown skin, dark eyes, long wavy black hair worn down with a pink bow; no sunglasses. Code-drawn in `src/05c_chinka.js`; story in `docs/design/STORY_PIWI.md`. Their giant sloth Pupo (`src/05e_pupo.js`) is Brady-O's sidekick and steed.
+- **Chinka in the 3D games (Burning Man, Art Cart): still open, ask Brady.** The original spec and ChatGPT's Art Cart notes say long dark wavy hair, sunglasses, a brown tee or top, black leggings, white sneakers and an LED necklace. ChatGPT's Burning Man pass instead gave her ivory fabric, a pleated skirt and gold accents. Show Brady both and let him choose before more Chinka work.
 - **Treat both warmly.** They're real people: Brady and his wife.
 
 ## 5. Ground rules (full list in `docs/HANDOFF_LOCAL_AGENTS.md` §2)
@@ -101,7 +101,7 @@ node tools/apps_test.js      # all three apps boot (names, save keys, zero error
 ## 7. Practical notes
 - **Blender on Brady's Mac (5.2.3) crashes in background mode** (`blender -b`) during Metal detection. Run scripts inside an open Blender window instead: in its Python Console, `import runpy; runpy.run_path('/abs/path/script.py', run_name='__main__')`. Blender MCP also works for live edits. Only one agent at a time may drive the open Blender window.
 - **Still owed by Brady:**
-  - face scans and reference photos for realistic Brady and Princess Papaya, going into `private/scans/` (git-ignored, never committed)
+  - face scans and reference photos for realistic Brady and Chinka, going into `private/scans/` (git-ignored, never committed)
   - Mixamo animation clips
   Ask him when your work needs them.
 - **iPhone budgets** (medium tier): about 120 draw calls and about 450k visible triangles, with steady 60 fps. No one has measured real-iPhone frame rates yet. Do that early.

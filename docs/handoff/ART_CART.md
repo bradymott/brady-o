@@ -15,7 +15,7 @@ Read [README.md](README.md) first: owner, ownership rules, appearance rules, dep
   - Quackzilla (duck), Pyramid Scheme (laser pyramid), Frosted Fury (cupcake), Dusty Doubloon (galleon)
   - Turbo Escargot (snail), Jelly Jolt (jellyfish), Dune Chomper (land shark), Whale of a Time (whale bus)
   - The names and designs are original. Never use real art-car names or art.
-- **26 drivers:** Brady, Princess Papaya, the Man and the burner cast. Driver and car are picked separately.
+- **26 drivers:** Brady, Chinka, the Man and the burner cast. Driver and car are picked separately.
 - **Modes:**
   - Grand Prix: 2 cups × 4 tracks.
   - Quick Race and Time Trial.
@@ -24,15 +24,15 @@ Read [README.md](README.md) first: owner, ownership rules, appearance rules, dep
   - All 12 cars as `.glb`, a showroom version plus a `_lo` race version, in `assets/models/art-cart/`. Scripts are in `tools/blender/`.
   - Pipeline: `docs/ART_CART_GLTF_PILOT.md`. Engine API: `docs/BURNS_GUIDE.md` §6.8–6.10 (glTF, skinned characters, textured PBR, sky-probe reflections).
   - The procedural cars remain as fallbacks.
-- **Drivers:** skinned drivers sit on the seat. The shared Brady and Princess Papaya models come from `assets/models/shared/`.
+- **Drivers:** skinned drivers sit on the seat. The shared Brady and Chinka models come from `assets/models/shared/`.
 
 ## Waiting for you: ChatGPT's PR #1 (`codex/art-cart-visual-refinement`)
 Read its notes: `git show origin/codex/art-cart-visual-refinement:docs/ART_CART_VISUAL_POLISH.md`.
 
 **What it does:**
 - **Drivers:** a refined procedural driver look (`src/43_cart_bc_driver_art.js`) with modelled faces, hair volumes and clothing seams.
-  - It uses a `cartArt` flag so the shared Brady and Princess Papaya downloads don't replace those designs in Art Cart.
-  - **Check that choice with Brady:** do the drivers use the Blender Brady and Princess Papaya, or the refined procedural ones?
+  - It uses a `cartArt` flag so the shared Brady and Chinka downloads don't replace those designs in Art Cart.
+  - **Check that choice with Brady:** do the drivers use the Blender Brady and Chinka, or the refined procedural ones?
 - **Wheels:** wheel and rim detail merged into the car buffers (`src/43_cart_bc_car_finish.js`). Race cars stay under 8,000 triangles.
 - **Presentation:** a blue-hour showroom palette, better driver framing, and road edges that follow the track width.
 - **A new test:** `tools/cart_art_test.js`.

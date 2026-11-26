@@ -1,6 +1,6 @@
 /* ============================================================
    World tour: shared art. The level goal (a giant passport stamp
-   on a post), checkpoints (a travel signpost), Princess Papaya's postcards
+   on a post), checkpoints (a travel signpost), Chinka's postcards
    (the 3 collectibles per level), coins (each country re-skins
    them), item crates, doors, the default boat and Brady's effects.
    ============================================================ */
@@ -62,7 +62,7 @@ const TourArt = {
     if (active) { const wv = Math.sin(t * 6) * 2; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(x + 2, y - 70); ctx.lineTo(x + 18, y - 66 + wv); ctx.lineTo(x + 2, y - 61); ctx.fill(); ctx.fillStyle = col.a; ctx.beginPath(); ctx.arc(x + 8, y - 66 + wv * 0.4, 2.4, 0, TAU); ctx.fill(); }
     ctx.fillStyle = active ? '#ffd84a' : '#5a4a3a'; ctx.beginPath(); ctx.arc(x, y - 71, 3.5, 0, TAU); ctx.fill();
   },
-  // one of Princess Papaya's postcards (3 per level)
+  // one of Chinka's postcards (3 per level)
   postcard(ctx, x, y, t, ghost) {
     ctx.save(); ctx.translate(x, y); ctx.rotate(Math.sin(t * 1.6) * 0.12);
     if (ghost) ctx.globalAlpha *= 0.45;

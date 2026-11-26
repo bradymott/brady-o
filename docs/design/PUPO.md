@@ -3,7 +3,7 @@
 Design spec, 16 Nov 2026. Read from `main` at `15e1207`, plus `origin/sbw/secrets-wp1` (`ea1011d`), `sbw/mazes` and the uncommitted Pupo art on `sbw/story-piwi` (`src/05e_pupo.js`, `docs/design/STORY_PIWI.md`). **This is a design document. No game code was written and nothing in the repo was changed.** Implementation agents build from this file, together with the docs it points to.
 
 Brady's request, restated:
-- Brady-O sets off to find Princess Papaya with **Pupo** as his sidekick and steed.
+- Brady-O sets off to find Chinka-O with **Pupo** as his sidekick and steed.
 - He finds Pupo in boxes and rides him.
 - Pupo's arms stretch. They hit bad guys, grab things across big gaps, reach up to grab objects, and climb.
 - Pupo levels (one or two per land) have obstacles that only Pupo can get past.
@@ -760,7 +760,7 @@ This covers what the validator approximates:
 ### 7.7 Pupo's art: what PU-1 needs from the story agent
 **Nov 17 redraw (Brady: "rounder, not spiky"):** Pupo is drawn in Brady's language (`src/05_brady.js`): smooth ellipses with a thin soft outline (`rgba(26,18,36,0.62)`, Brady's `CLOTH.outline`) and one cel shade step, a bigger round head (`PUPO_HEAD_S` 2.05), round mitten paws with three small round-capped claws, arms as smooth tubes with soft rounded stripe bands, round claw tips on the Nap Box. No faceted outlines, fur tufts or thorn shapes anywhere.
 
-Pupo must be **steed-sized**. On all fours his back is about 1.1 tiles high and his body about 1.6 tiles long, with Brady seated on top: the pair is about 2 tiles tall. The story file currently draws him about a third of Princess Papaya's height, as a pet clinging to her back.
+Pupo must be **steed-sized**. On all fours his back is about 1.1 tiles high and his body about 1.6 tiles long, with Brady seated on top: the pair is about 2 tiles tall. The story file currently draws him about a third of Chinka-O's height, as a pet clinging to her back.
 
 **Requests to `sbw/story-piwi` for `src/05e_pupo.js`:**
 1. **Poses:**
@@ -778,12 +778,12 @@ Pupo must be **steed-sized**. On all fours his back is about 1.1 tiles high and 
 
 Until the art lands, PU-1 draws a stand-in with the existing `drawSlothy` (`src/22_cast.js`, in the world build) at scale 1.6, with fixed anchors.
 
-**Story note for the story agent.** `STORY_PIWI.md` §2b has Pupo carried off with Princess Papaya and chooses against making him Brady-O's companion. Brady has now asked for the opposite. A suggested fix:
-- When the hook scoops Princess Papaya, Pupo, clinging to her tutu, loses his grip very slowly ("sloths do not let go... usually").
+**Story note for the story agent.** `STORY_PIWI.md` §2b has Pupo carried off with Chinka-O and chooses against making him Brady-O's companion. Brady has now asked for the opposite. A suggested fix:
+- When the hook scoops Chinka-O, Pupo, clinging to her tutu, loses his grip very slowly ("sloths do not let go... usually").
 - He drops into a stack of cartons in the Mexico market and falls asleep in one.
 - He has napped in boxes ever since, which is why Brady keeps finding him in them.
 - The per-land "Pupo's verdict" gags still work, with Pupo poking each act's tummy after the boss.
-- The finale reunion becomes Pupo poking *Princess Papaya's* pupo: "...I missed it."
+- The finale reunion becomes Pupo poking *Chinka-O's* pupo: "...I missed it."
 - Make him big enough to ride, and keep the joke that he once clung to a ballerina's back with his feet dragging.
 
 **Drawing the ride without editing `11_player.js`.**
@@ -954,7 +954,7 @@ Each group owns only its lands' `src/29_tour_<cc>_levels.js` (the Pupo level, th
    - Grilles, climbable surfaces and grab points are spawns and rectangles, not tiles.
    - Stamps use the existing `spawn` and `piece` legend kinds.
 10. **Story and art conflict.**
-    - `STORY_PIWI.md` has Pupo kidnapped with Princess Papaya and pet-sized.
+    - `STORY_PIWI.md` has Pupo kidnapped with Chinka-O and pet-sized.
     - Brady now wants him as a rideable sidekick.
     - The story and the art need the changes in §7.7 before PU-5.
 11. **The save rule.** Brady resets all progress whenever levels change. Converting 14 levels should ship with the secrets v3 reset, or it costs a second reset.

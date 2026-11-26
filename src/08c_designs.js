@@ -156,7 +156,7 @@ const LEVEL_DESIGNS = {
     chunks: [['barrels', 2], ['forklift', 1.5], ['crane', 1.5], ['rebar', 2], ['enemies', 2]],
     enemies: [['dpw', 4]], hint: 'Foreman Rusty does not like your attitude' },
 
-  /* ===== 48 The Man Base: where the Man keeps Princess Papaya ===== */
+  /* ===== 48 The Man Base: where the Man keeps Chinka ===== */
   '48-1': { arch: 'side', theme: 'manbase', bpm: 120, liquid: 'lava', slothy: 2, len: 170, bags: ['molly', 'khole', 'powder', 'lsd'],
     chunks: [['rvpark', 1], ['queue', 1], ['beatpads', 1], ['griddle', 1], ['geyser', 1], ['bubbles', 0.8], ['barrels', 1], ['flamealley', 1], ['enemies', 2], ['gap', 1.5]],
     enemies: [['driver', 1], ['hippie', 1], ['raver', 1], ['camplead', 1], ['greeter', 1], ['spinner', 1], ['pony', 1], ['influencer', 1], ['techbro', 1], ['crusty', 1], ['dpw', 1], ['witch', 1]],
@@ -171,7 +171,7 @@ const LEVEL_DESIGNS = {
     enemies: [['influencer', 2], ['raver', 2], ['pony', 2]], hint: 'When the neon counts down, hide behind cover!' },
   '48-5': { arch: 'castle', theme: 'manbase', castleTheme: 'manbase_fort', boss: 'man', arena: 'man', arenaW: 30, music: 'castle',
     chunks: [['neonflash', 2], ['flamealley', 2], ['poiring', 1.5], ['enemies', 2], ['gap', 1]],
-    enemies: [['spinner', 2], ['dpw', 2], ['greeter', 1]], hint: 'THE MAN. Bring Princess Papaya home' },
+    enemies: [['spinner', 2], ['dpw', 2], ['greeter', 1]], hint: 'THE MAN. Bring Chinka home' },
 
   /* ===== 49 Sunrise Set (secret): dance till dawn ===== */
   '49-1': { arch: 'side', theme: 'sunrise', sunrise: true, bpm: 124, slothy: 1,

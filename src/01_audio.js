@@ -1412,7 +1412,7 @@ const Sound = (() => {
       ap: '0.1.2.1.', ai: 'pluck', av: 0.035, ao: 55,
       dr: [FOUR, '..h...h...h...h.', '....s.......s...', 'l.l.l.l.l.l.l.l.'], dv: 0.38
     },
-    // Ending: reunion with Princess Papaya as the Man burns. 8 tender bars, then the drop into celebration
+    // Ending: reunion with Chinka as the Man burns. 8 tender bars, then the drop into celebration
     ending: {
       bpm: 120, bars: 16, rv: 0.35, dl: 0.12, pump: 0.4,
       ch: 'Cm Ab Eb Bb Cm Ab Fm Bb Eb Bb Cm Ab Eb Bb Ab,Bb Eb',
@@ -1655,7 +1655,7 @@ const Sound = (() => {
       ap: 'c---..c-..c-....', ai: 'ep', av: 0.06, ao: 55,
       dr: ['k.......k..k....', '....r.......r...', '..h...h...h...h.', 'n.n.n.n.n.n.n.n.'], dv: 0.38
     },
-    // Story intro: 8 romantic bars (piano, Eb major), then the Man takes Princess Papaya (C minor, low brass, timpani)
+    // Story intro: 8 romantic bars (piano, Eb major), then the Man takes Chinka (C minor, low brass, timpani)
     burns_intro: {
       bpm: 84, bars: 16, rv: 0.45, dl: 0.15,
       ch: 'Eb Cm Ab Bb Eb Cm Fm7 Bb Cm Cm Ab G Cm Db Ab G',

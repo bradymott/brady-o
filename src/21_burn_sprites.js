@@ -364,7 +364,7 @@ Object.assign(Sprites, {
     ctx.restore();
   },
   goldRecord(ctx, x, y, t, ghost) {
-    // a polaroid of Princess Papaya (three hidden in every level)
+    // a polaroid of Chinka (three hidden in every level)
     ctx.save();
     if (ghost) ctx.globalAlpha *= 0.4;
     ctx.globalCompositeOperation = 'lighter';
@@ -376,7 +376,7 @@ Object.assign(Sprites, {
     ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1; ctx.stroke();
     const sg = ctx.createLinearGradient(0, -11, 0, 7); sg.addColorStop(0, '#ff9a6a'); sg.addColorStop(1, '#ffd8a0');
     ctx.fillStyle = sg; ctx.fillRect(-9.5, -11.5, 19, 18);
-    // Princess Papaya's silhouette: long hair, sunglasses
+    // Chinka's silhouette: long hair, sunglasses
     ctx.fillStyle = '#2a1a16'; ctx.beginPath(); ctx.ellipse(0, -3, 5.5, 7, 0, 0, TAU); ctx.fill(); ctx.fillRect(-5.5, -3, 11, 9);
     ctx.fillStyle = '#d9a580'; ctx.beginPath(); ctx.arc(0, -4, 3.6, 0, TAU); ctx.fill();
     ctx.fillStyle = '#1a1018'; ctx.fillRect(-3, -5, 6, 1.6);

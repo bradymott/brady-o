@@ -1,6 +1,6 @@
 # Brady Goes to Burning Man: handoff for its agent
 > Latest: [20 November finishing release and validation](BURNING_MAN_FINISH.md). Read that first; the older PR/roadmap notes below are historical context.
-> 24 November (branch `burning-man/cast-1`): Brady's right sleeve now mirrors his left; realistic Princess Papaya (ivory-and-gold gown, LED necklace) replaces the stylised one everywhere, Art Kart included; NPCs near the camera are drawn by the realistic cast kit (BURNS_GUIDE §6.13). Build scripts: `tools/blender/realistic_chinka/`, `tools/blender/realistic_cast/`; Blender scenes in `private/work/` (`chinka_*.blend`, `cast_*.blend`).
+> 24 November (branch `burning-man/cast-1`): Brady's right sleeve now mirrors his left; realistic Chinka (ivory-and-gold gown, LED necklace) replaces the stylised one everywhere, Art Kart included; NPCs near the camera are drawn by the realistic cast kit (BURNS_GUIDE §6.13). Build scripts: `tools/blender/realistic_chinka/`, `tools/blender/realistic_cast/`; Blender scenes in `private/work/` (`chinka_*.blend`, `cast_*.blend`).
 
 
 Read [README.md](README.md) first: owner, ownership rules, appearance rules, deploy.
@@ -26,7 +26,7 @@ He doesn't want "stick figures". He wants believable people, vehicles and camps,
 
 **The Blender pipeline (local session, Nov 3):**
 - **Loader:** `BurnsGLTF`, plus skinned characters (`src/40_burns_bc_skin.js`, Mixamo-named joints) and textured PBR with sky-probe reflections (`src/40_burns_bd_pbr.js`). See §6.8–6.10.
-- **Brady and Princess Papaya** are rigged, animated `.glb` files with 19 clips each, in `assets/models/shared/`. Brady plays as the skinned model.
+- **Brady and Chinka** are rigged, animated `.glb` files with 19 clips each, in `assets/models/shared/`. Brady plays as the skinned model.
 - **Burning Man props:** the RV, bus, geodesic dome, tipi, porta-potty and shade are Blender models (`tools/blender/bm_*.py`, hooked in by `src/41_burns_glbprops.js`).
 - **Size:** models ship packed and gzipped.
 - **Textured heroes (Nov 10):** a skinned `.glb` with UVs and textures now draws through `BurnsSkinPBR` (`src/40_burns_bf_skinpbr.js`): skin/cloth/hair shading, cutout hair cards, 3 LODs, 2K/1K tier textures, blink/talk face poses. The Blender side exports against the **character GLB contract** in `docs/BURNS_GUIDE.md` §6.12; `tools/skinpbr_test.js` proves it with a generated fixture (`tools/make_skin_fixture.js`).
@@ -40,7 +40,7 @@ Its review images are under `docs/graphics-pass/` and `docs/cinematic-pass/` on 
 
 **What it does (about 40 files and 8 revised GLBs):**
 - **Brady:** a remodelled character (23.8k triangles, 26 joints) with a continuous head and torso, tied bun, black trousers and geometric sleeves.
-- **Princess Papaya:** remodelled too (11.7k triangles). Her outfit changed to ivory, a pleated skirt and gold. **That conflicts with her original look; ask Brady** (see README §4).
+- **Chinka:** remodelled too (11.7k triangles). Her outfit changed to ivory, a pleated skirt and gold. **That conflicts with her original look; ask Brady** (see README §4).
 - **NPCs:** jaw and temple geometry, and matte skin.
 - **Renderer:** fog silhouettes, cloth-weave filtering, vehicle and bike detail, tent seams, cables, and baked dusty finishes on the exported props.
 - **Cinematics:** sharp-focus story shots, and auto-framing of whoever is speaking above the dialogue panel.
@@ -61,16 +61,16 @@ Its review images are under `docs/graphics-pass/` and `docs/cinematic-pass/` on 
    - `tools/apps_test.js`
    - Art Cart's smoke and battle tests, because you touched the engine and its Man
 3. **Look at the screenshots:** faces, dialogue framing in both orientations, the city by day and at night, the Burn.
-4. Show Brady the new Brady, the Princess Papaya question and the timber Man. Merge only after he agrees.
+4. Show Brady the new Brady, the Chinka question and the timber Man. Merge only after he agrees.
 
 ## Then: the road to realistic, in order
-1. **Realistic Brady and Princess Papaya** from Brady's face scans and photos, which he puts in `private/scans/`. That folder is git-ignored, so never commit it.
+1. **Realistic Brady and Chinka** from Brady's face scans and photos, which he puts in `private/scans/`. That folder is git-ignored, so never commit it.
    - **Body and face:** an MPFB2 or Character Creator base, matched to the scans.
    - **Skin:** 2K textures with pores and fine detail, and a soft tint (never plastic).
    - **Hair:** hair cards.
    - **Clothes:** cloth folds baked into the textures.
    - **Brady's real tattoos,** projected on from photos.
-   - **Princess Papaya's LED necklace,** glowing.
+   - **Chinka's LED necklace,** glowing.
    - **Rig and animation:** Mixamo clips (Brady downloads them), with 3 LODs.
    - Ask Brady for anything he hasn't provided yet.
 2. **The cast (about 30 characters):** one realistic base body plus a costume kit, LODs, and impostor cards for distant crowds.
@@ -98,5 +98,5 @@ Its review images are under `docs/graphics-pass/` and `docs/cinematic-pass/` on 
 
 ## First message (Brady pastes this)
 ```
-Read docs/handoff/README.md and docs/handoff/BURNING_MAN.md. You are the Brady Goes to Burning Man agent and the owner of the shared 3D engine. Phase 0: pull main, build, run apps_test and the all-worlds and open-world flow tests, and show me screenshots of Brady, Princess Papaya, Root Society at night and the city. Then review ChatGPT's draft PR #3 (codex/burning-man-graphics-pass): show me before/after screenshots of Brady, Princess Papaya (her outfit changed, ask me which I want) and the new timber Man, run the full regression including Art Cart, and tell me in plain words whether to merge it. Then propose your plan for realistic Brady and Princess Papaya in Blender, tell me exactly which scans, photos and Mixamo clips you need from me, and wait for my OK.
+Read docs/handoff/README.md and docs/handoff/BURNING_MAN.md. You are the Brady Goes to Burning Man agent and the owner of the shared 3D engine. Phase 0: pull main, build, run apps_test and the all-worlds and open-world flow tests, and show me screenshots of Brady, Chinka, Root Society at night and the city. Then review ChatGPT's draft PR #3 (codex/burning-man-graphics-pass): show me before/after screenshots of Brady, Chinka (her outfit changed, ask me which I want) and the new timber Man, run the full regression including Art Cart, and tell me in plain words whether to merge it. Then propose your plan for realistic Brady and Chinka in Blender, tell me exactly which scans, photos and Mixamo clips you need from me, and wait for my OK.
 ```

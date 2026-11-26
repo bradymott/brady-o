@@ -613,11 +613,11 @@ const P = {
 // at a time. A thrown landmark lands as a world object: kick it (run into it) or stomp it to launch it and it lobs
 // itself back at Piwi. A landmark that hits him is RETURNED: it hurts him and pops back to full size behind the
 // summit. Stomps bounce off (NOT THE HAIR!).
-//   Phase 1 (hp 7-5): the Showtrunk (Princess Papaya in its show cage), three landmarks, snow-globe drops and low swoops.
+//   Phase 1 (hp 7-5): the Showtrunk (Chinka-O in its show cage), three landmarks, snow-globe drops and low swoops.
 //   Phase 2 (hp 4-2): he crashes and climbs into THE SHOWSTOPPER, a stage mech built from his props: it walks, stomps, charges
 //                     with its windmill arm and fires the spotlight beam. Three more landmarks.
 //   Phase 3 (hp 1):   the mech breaks; on foot he runs the ledge with the last jar while gales buffet the summit.
-//   Finish: his Shrink-Spot goes off in his own face, every landmark pops back, Princess Papaya runs to Brady-O.
+//   Finish: his Shrink-Spot goes off in his own face, every landmark pops back, Chinka-O runs to Brady-O.
 const LANDMARKS = [
   { id: 'ec', name: 'THE VOLCANO' }, { id: 'nl', name: 'THE WINDMILL' }, { id: 'fr', name: 'THE IRON TOWER' },
   { id: 'br', name: 'SUGARLOAF' }, { id: 'mz', name: 'THE BAOBAB' }, { id: 'ma', name: 'THE KASBAH' },
@@ -763,7 +763,7 @@ class NpRoof extends Ent {
     }
   }
 }
-// Princess Papaya: in the show cage under the Showtrunk in phase 1; when it crashes she tiptoes out and floats down on her tutu, cheers from the ledge,
+// Chinka-O: in the show cage under the Showtrunk in phase 1; when it crashes she tiptoes out and floats down on her tutu, cheers from the ledge,
 // and runs to Brady when the last landmark is home
 class NpChinka extends Ent {
   constructor(g, s) { super(g, s, 24, 46); this.friendly = true; this.npChinka = true; this.state = 'chute'; this.tx = s.tx; this.ty = s.ty; this.lineT = 1; this.facing = 1; this.hearts = 0; }

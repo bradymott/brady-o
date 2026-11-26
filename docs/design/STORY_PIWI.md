@@ -1,15 +1,15 @@
-# Super Brady-O World: the new story (Piwi Squirmin' and Princess Papaya)
+# Super Brady-O World: the new story (Piwi Squirmin' and Chinka-O)
 
 Design spec, 16 Nov 2026, written from `origin/main` at `ab95358`. Brady's request, in his words:
 
-> "the villain should not be the Baron he should be Piwi Squirmin' and he should look like a peewee herman-esque ventriloquist dummy and he wants to steal Brady-O's beloved wife Princess Papaya away from him so he takes her around the world and brady-o is chasing him trying to catch him and get his wife back"
+> "the villain should not be the Baron he should be Piwi Squirmin' and he should look like a peewee herman-esque ventriloquist dummy and he wants to steal Brady-O's beloved wife Chinka-O away from him so he takes her around the world and brady-o is chasing him trying to catch him and get his wife back"
 
 **Phase A (this branch, `sbw/story-piwi`).** This document plus code-drawn art for the new cast in four new files: `src/05b_piwi.js`, `src/05c_chinka.js`, `src/05d_showtrunk.js` and `src/05e_pupo.js`. Nothing in the game references them yet, so the game is unchanged. Contact sheets: `node tools/story_preview/sheet.js <dist>/site <outDir>`.
 
 **Phase B (after the other agents' branches merge).** Apply §7, the replacement table, in the order of §8.
 
 > **Status, 17 Nov 2026 (branch `sbw/story-b`):** phase B is applied.
-> - **Done:** all text, credits and ending, the map icon and P flags, the title's Showtrunk, the `TourVillain` adapter, 7 intro panels, the ending with Princess Papaya, Pupo and pocket-sized Piwi, the Nepal re-skin (Showtrunk, Showstopper, Piwi on foot, Princess Papaya, the Piwi bobble-head, Shrink-Spots, P banners), tests and docs.
+> - **Done:** all text, credits and ending, the map icon and P flags, the title's Showtrunk, the `TourVillain` adapter, 7 intro panels, the ending with Chinka-O, Pupo and pocket-sized Piwi, the Nepal re-skin (Showtrunk, Showstopper, Piwi on foot, Chinka-O, the Piwi bobble-head, Shrink-Spots, P banners), tests and docs.
 > - **New file `src/29_tour_zz_story.js`:** the "tonight's act" banners, Pupo's verdict lines and the World 22 encore. It loads after every country and changes no fight.
 > - **Not done:** B11 (the Blender re-renders) and the post-credits sting card. The World 22 arrival postcard keeps its old text.
 
@@ -17,7 +17,7 @@ Ground rules this story keeps:
 - Piwi is our own character. He is a wink at the prim, giggly man-child showman type, not a lookalike.
   - No real character's trademark outfit or colour scheme, face, catchphrases, laugh or show material.
   - He is creepy-funny, never frightening.
-- Princess Papaya is Brady's real wife. She is written and drawn warmly, as a flattering cartoon of a real, loved person, and she is never a helpless prize.
+- Chinka-O is Brady's real wife. She is written and drawn warmly, as a flattering cartoon of a real, loved person, and she is never a helpless prize.
 - Pupo, her giant sloth and Brady-O's sidekick and steed, is gentle: his belly-button poke is sweet and PG, and his pointing hand always points with the index claw.
 - Piwi's motive is silly and PG: he is a lonely dummy who wants a leading lady for his show. Nothing sleazy, nothing menacing toward her.
 - The chase is our own structure (§3.1), not "the villain carries the princess from castle to castle".
@@ -63,18 +63,18 @@ A wooden ventriloquist dummy who walks and talks on his own. Nobody is working h
 He is a prim, giggly, theatrical show-off who is desperately lonely, and he has decided the whole world is his audience.
 - He speaks in exclamations and stage directions, and calls everything "the show".
 - His jaw clacks at the end of every sentence ("...*clack*"). That clack is his only verbal tic: no laugh catchphrase.
-- He calls Brady-O **"Mister Bun"** and Princess Papaya **"my leading lady"**. She corrects him every time ("Mrs.").
+- He calls Brady-O **"Mister Bun"** and Chinka-O **"my leading lady"**. She corrects him every time ("Mrs.").
 - He is vain about his lacquer and his curl. He is terrified of termites, woodpeckers, beavers, campfires and woodchippers.
 - He is light: a strong wind blows him about.
-- He is never cruel to Princess Papaya. He keeps trying to impress her, and it never works.
+- He is never cruel to Chinka-O. He keeps trying to impress her, and it never works.
 
 ### Ten sample lines
 1. "Ladies and gentlemen, and Mister Bun: PIWI SQUIRMIN'S WORLD TOUR! Hold your applause. No, really. Hold it. I'll collect it later. *clack*"
-2. "Every great show needs a leading lady, and Mrs. Princess Papaya got the only applause my show has EVER had. With ONE pirouette. ...I'm not jealous. I'm CASTING."
+2. "Every great show needs a leading lady, and Mrs. Chinka-O got the only applause my show has EVER had. With ONE pirouette. ...I'm not jealous. I'm CASTING."
 3. "Scenery! A show needs scenery! *FWOOMP* ...There. One Palace of Fine Arts, pocket-sized."
 4. "That's not a hand-hole in my back, Mister Bun. That's a ventilation feature."
 5. "Nobody pulls my strings! ...Mostly because I cut them. With my teeth. Took a week. *clack*"
-6. "Princess Papaya, darling, smile for the second row!" / Princess Papaya: "There is no second row." / "Smile for where it WILL be!"
+6. "Chinka-O, darling, smile for the second row!" / Chinka-O: "There is no second row." / "Smile for where it WILL be!"
 7. "Who said that? ...Oh. Me. I said that. Nobody else is in here. *glances behind himself*"
 8. "Is that... a WOODPECKER? Cancel the matinée!"
 9. "You can't stop the show, Mister Bun. The show stops ME. ...Wait, that came out wrong."
@@ -82,7 +82,7 @@ He is a prim, giggly, theatrical show-off who is desperately lonely, and he has 
 
 ---
 
-## 2. Princess Papaya (Brady-O's wife)
+## 2. Chinka-O (Brady-O's wife)
 
 ### Look (`src/05c_chinka.js`): Brady's spec, 16 Nov 2026
 Brady's words: *"make chinka-o dressed like a ballerina in a pink tutu. shes latina so black hair and ecuadorian looking."* This replaces the earlier spec (brown tee, black leggings, sunglasses) entirely.
@@ -121,7 +121,7 @@ Unimpressed, dry, quick and kind.
 
 ### Ten sample lines
 1. "Brady! I'm fine. He's made of wood and he's scared of termites. Follow my postcards. Bring snacks."
-2. "It's *Mrs.* Princess Papaya."
+2. "It's *Mrs.* Chinka-O."
 3. (in the cage, eating popcorn) "Honestly? The seats are good."
 4. "I swapped his tap shoes for flip-flops. You'll know when the number starts."
 5. "Got two bridges away en pointe this time. He hooked me back by the tutu. Rude."
@@ -133,14 +133,14 @@ Unimpressed, dry, quick and kind.
 
 ---
 
-## 2b. Pupo (Princess Papaya's giant sloth, Brady-O's sidekick and steed)
+## 2b. Pupo (Chinka-O's giant sloth, Brady-O's sidekick and steed)
 
 ### Who he is
 Brady's words:
 - *"she has a pet sloth named pupo that likes to touch peoples bellybuttons and he calls their bellybuttons their pupo and thats why hes called pupo"*
 - *"brady-o is off to find chinka-o with pupo as his sidekick and steed. he can ride pupo"*
 
-**Where he comes from.** Pupo is Princess Papaya's pet, and Piwi left him behind: a giant sloth will not fit in a show cage. He sets off with Brady-O to get her back. Brady-O rides him, and finds him in the boxes. His arms stretch to hit bad guys, grab things across big gaps and climb. His super move is **PUPO POWER!**
+**Where he comes from.** Pupo is Chinka-O's pet, and Piwi left him behind: a giant sloth will not fit in a show cage. He sets off with Brady-O to get her back. Brady-O rides him, and finds him in the boxes. His arms stretch to hit bad guys, grab things across big gaps and climb. His super move is **PUPO POWER!**
 
 **The gameplay is not in this file.** Riding, boxes, stretch arms, the Pupo levels and Pupo Power are all designed in **`docs/design/PUPO.md`** (written separately). This file covers only his character, look and story.
 
@@ -167,7 +167,7 @@ Brady's words:
 | `poke` | The slow reach and poke: 2.6 s out, the pointing finger, a *boop* ring, a contented hold, back. |
 | `stretch` | One arm out to **any** length (`reach`) at any angle (`angle`), finger pointing. |
 | `happy` | Arms up, eyes shut, a big smile, hearts. |
-| `sad` | Left behind: slumped, head down, a tear, hugging Princess Papaya's pink hair bow. |
+| `sad` | Left behind: slumped, head down, a tear, hugging Chinka-O's pink hair bow. |
 | `power` | **A PUPO POWER! key pose for cutscenes:** a ring of ten arms with every finger out; flat, hard-edged rainbow spiral eyes; a long patterned **carpet tongue** unrolling with a fringe; butterflies bursting from his belly button. The "PUPO POWER!" lettering is screen UI (big bold yellow, inked), drawn on the contact sheet but not part of his art. Animating it is for the `PUPO.md` work. |
 
 ### Sample lines
@@ -180,8 +180,8 @@ He speaks rarely, in slow, short lines, with long pauses written as "...". He me
 6. (Brady-O climbing on) "...hold on... we go... fast now." (they do not)
 7. (stretching across a gap) "...I can... reach. ...I have... always... been able... to reach."
 8. "...is it... nap... or... adventure."
-9. (the reunion, to Princess Papaya) "...Princess Papaya... your pupo. ...I missed it."
-10. (the encore, to Piwi) "...I made you... a pupo." (he has drawn one on Piwi's tummy in Princess Papaya's lip pencil)
+9. (the reunion, to Chinka-O) "...Chinka... your pupo. ...I missed it."
+10. (the encore, to Piwi) "...I made you... a pupo." (he has drawn one on Piwi's tummy in Chinka-O's lip pencil)
 
 ---
 
@@ -189,44 +189,44 @@ He speaks rarely, in slow, short lines, with long pauses written as "...". He me
 
 ### 3.1 How the chase works: our own structure
 - **The tour poster is the route.** Piwi's world tour has a printed poster of "TOUR DATES", which is the route through the lands. Every land is one **tour date**.
-- **Brady-O never chases alone.** He rides Pupo, Princess Papaya's giant sloth, who was left behind. Their double act carries every land: Brady-O in a hurry, Pupo in no hurry at all.
+- **Brady-O never chases alone.** He rides Pupo, Chinka-O's giant sloth, who was left behind. Their double act carries every land: Brady-O in a hurry, Pupo in no hurry at all.
 - **What Brady-O finds in each land.** Piwi's flying Showtrunk is parked above that land's venue. He has shrunk one landmark into **scenery** for his stage set (this keeps the existing landmark jars on the map and the Nepal fight). He has hired or bullied the land's boss into being **tonight's act**.
-- **Princess Papaya is never "in the boss's castle".** She is in the show cage under the Showtrunk, heckling. She leaves Brady-O her postcards (the collectible), and sometimes a snack or a clue.
+- **Chinka-O is never "in the boss's castle".** She is in the show cage under the Showtrunk, heckling. She leaves Brady-O her postcards (the collectible), and sometimes a snack or a clue.
 - **What happens when the act falls.**
   - The show flops.
   - The scenery pops back to full size: the jar on the map shatters, as now.
-  - Piwi stuffs everything into the trunk and flies off in a huff to the next tour date. Princess Papaya waves from the cage, and Pupo waves back, about a minute later.
-- **Nobody ever says "she's in another castle".** Instead, every land ends with Brady-O arriving a moment too late at a stage that is already being packed up, with a postcard from Princess Papaya pinned to it.
+  - Piwi stuffs everything into the trunk and flies off in a huff to the next tour date. Chinka-O waves from the cage, and Pupo waves back, about a minute later.
+- **Nobody ever says "she's in another castle".** Instead, every land ends with Brady-O arriving a moment too late at a stage that is already being packed up, with a postcard from Chinka-O pinned to it.
 - **The Nepal date is the Grand Finale.** Piwi performs it himself, and it is the main reunion.
 - **World 22 is the secret encore,** where Piwi makes his last stand (§3.4).
 
 ### 3.2 The opening (intro panels, Mexico City)
-1. **The trip.** Brady-O and Princess Papaya (and Pupo, their giant sloth, asleep in the back row) finally booked it: the trip of a lifetime, with twelve countries, two passports and one very small plane.
+1. **The trip.** Brady-O and Chinka-O (and Pupo, their giant sloth, asleep in the back row) finally booked it: the trip of a lifetime, with twelve countries, two passports and one very small plane.
 2. **The show.** In a plaza in Mexico City, a steamer trunk flies down on two brass rotors. Its lid flips open into a tiny stage, its marquee lights up with PIWI!, and a wooden dummy bows to an empty plaza: "OPENING NIGHT!"
-3. **The dance.** Nobody watches except Princess Papaya. When his big number flops (his head falls off), she can't help herself: she steps in and finishes it with a perfect pirouette. The plaza bursts into applause, the first his show has ever had. Piwi: "A STAR! Madam, you are my LEADING LADY!"
+3. **The dance.** Nobody watches except Chinka-O. When his big number flops (his head falls off), she can't help herself: she steps in and finishes it with a perfect pirouette. The plaza bursts into applause, the first his show has ever had. Piwi: "A STAR! Madam, you are my LEADING LADY!"
 4. **The hook.** A long vaudeville hook swings out of the wings and scoops her (by the tutu) into the gilded show cage under the trunk. Piwi aims a stage spotlight at the Palace of Fine Arts. *FWOOMP*: it shrinks to a pocket-sized backdrop. "Every show needs scenery!" Pupo reaches, very slowly, for Piwi's tummy. Piwi: "Don't. There's nothing there." Pupo: "...oh no."
-5. **Lift-off.** The trunk lifts off, and Princess Papaya calls down from the cage: "Brady! I'm fine. He's made of wood and scared of termites. Look after Pupo. Follow my postcards, and bring snacks!"
+5. **Lift-off.** The trunk lifts off, and Chinka-O calls down from the cage: "Brady! I'm fine. He's made of wood and scared of termites. Look after Pupo. Follow my postcards, and bring snacks!"
 6. **Left behind.** The plaza is empty. Pupo sits in the middle of it, hugging her pink hair bow (`sad`). Brady-O kneels: "We're getting her back, buddy." Pupo, after a very long pause: "...climb on."
-7. **The chase.** Brady-O rides off on Pupo after the trunk, at a top speed of slightly faster than walking: "Twelve tour dates. Crash every show, put the scenery back, and bring Princess Papaya home."
+7. **The chase.** Brady-O rides off on Pupo after the trunk, at a top speed of slightly faster than walking: "Twelve tour dates. Crash every show, put the scenery back, and bring Chinka-O home."
 
 ### 3.3 The fourteen lands: a beat each
-Each beat covers Piwi's show there, how Princess Papaya sinks it, how the existing boss fits, and what Pupo makes of it (he pokes the act's belly button, or looks for it). **All fourteen boss fights are unchanged.** The "act" title can show as a one-line banner when the boss wakes (§8, step B5).
+Each beat covers Piwi's show there, how Chinka-O sinks it, how the existing boss fits, and what Pupo makes of it (he pokes the act's belly button, or looks for it). **All fourteen boss fights are unchanged.** The "act" title can show as a one-line banner when the boss wakes (§8, step B5).
 
 | Land | Beat |
 |---|---|
-| **1 Mexico** · El Gran Piñatón | **Opening Night.** Piwi books a giant piñata as his **warm-up act** and stuffs the Palace of Fine Arts behind the stage as scenery. Princess Papaya tells the plaza's street dogs the piñata is full of candy. The piñata falls, the candy rains, and the dogs give the only standing ovation of the tour. *Pupo* pokes the fallen piñata's tummy and gets a lollipop. "...good... pupo." |
-| **2 Ecuador** · El Tortugón | **The Middle-of-the-World Balancing Act.** Piwi wants to balance on the equator line, on a stage that walks: a giant grumpy tortoise hired by the hour. Princess Papaya (home ground!) teaches the tortoise to sit down mid-act whenever Piwi says "and... HOLD!" The Equator monument pops back. *Pupo* takes the whole land to reach the tortoise, and finds him a kindred spirit: "...your pupo... is inside... your house." |
-| **3 Brazil** · O Tucanão | **The Samba Spectacular.** Sugarloaf Mountain is wedged onto a carnival float, and the giant toucan is Piwi's **flying usher**. Princess Papaya swaps his tap shoes for flip-flops and steals the number with a samba-ballet solo, and the float follows *her*. The final football puts the usher in the goal net. *Pupo* stretches an arm to the top of the stadium to poke the toucan, and gets there just after it leaves. "...next... year." |
-| **4 Mozambique** · O Eremita | **The Beach Revue.** The hermit crab is Piwi's **props master**, who keeps everything in his shells. Princess Papaya convinces the crab that a props master is owed a tea break every ten minutes. The great baobab comes out of its flowerpot. *Pupo* finds the crab's pupo by checking every shell, one a day. |
-| **5 Morocco** · Berrad the Magnificent (and the Brass Owl, 5-4) | **The Tea-Time Magic Hour.** Piwi hires the pompous brass teapot as his **magician** and rolls up the great kasbah like a rug as the "vanishing palace". The Brass Owl is his clockwork **stage-door guard**. Princess Papaya rolls herself up in a rug too, and tiptoes as far as the airport before Piwi notices. *Pupo* pokes the teapot: "...hot... pupo." |
-| **6 Spain** · Paellasaurus | **Cooking with Piwi.** A live cooking show, with the Silk Exchange shrunk as the kitchen backdrop. Princess Papaya adds extra chilli when he isn't looking, and the paella pan grows legs and a temper. Piwi: "That is NOT in the recipe!" *Pupo* finds a single grain of rice in his own fur and keeps it as a pet. |
-| **7 France** · Le Grand Soufflé | **Piwi's Mime Period.** He takes up mime because nobody can heckle a mime. Princess Papaya heckles him in ballet, which is louder. The giant soufflé is the head pastry chef of his backstage buffet, and the iron tower was meant to be the backdrop. She has hidden his ladder. *Pupo* pokes the soufflé and it sighs and sinks a little. "...sorry." |
-| **8 Amsterdam** · The Cheese King | **The Royal Command Performance.** The Cheese King bought every ticket, so he is Piwi's only paying fan. The old windmill is folded up on a canal cruise. Princess Papaya borrows a bike and gets two bridges away, nearly to Brady-O, before Piwi hooks her back off a drawbridge. *Pupo* finds the King's pupo is a hole in the cheese, and is delighted. |
-| **9 Bali** · Boss Kera | **The Sunset Luau.** The monkey king steals Piwi's script, his props and his bow tie, and Piwi performs anyway. Princess Papaya trades the monkey her hair bow for the cage key and gets as far as the surf on a borrowed board, which is why the gecko offers Brady-O one. *Pupo* and the monkey hang from the same branch all afternoon, best friends, while Brady-O waits. |
-| **10 Vietnam** · Ong Phin | **The Water-Puppet Dream.** Piwi longs to star in a water-puppet show, but he is wood, so he just bobs. The grumpy coffee filter is his **backstage caterer**, and the Hoi An bridge is squeezed into a snow globe. Princess Papaya lassoes the cage key with a noodle lasso, nearly. Piwi leaves for Japan so jittery from coffee that his jaw won't stop clacking. *Pupo* has one sip and is still exactly as slow. |
-| **11 Japan** · The Great Kappa | **The Most Polite Comedy Act in the World.** Piwi tries to out-bow his co-star, a kappa. Princess Papaya tells Brady-O the kappa rule in a postcard ("bow, Brady, BOW"). The golden roof fish go back on the castle. *Pupo* bows to the kappa as well. The bow takes until Nepal. |
+| **1 Mexico** · El Gran Piñatón | **Opening Night.** Piwi books a giant piñata as his **warm-up act** and stuffs the Palace of Fine Arts behind the stage as scenery. Chinka-O tells the plaza's street dogs the piñata is full of candy. The piñata falls, the candy rains, and the dogs give the only standing ovation of the tour. *Pupo* pokes the fallen piñata's tummy and gets a lollipop. "...good... pupo." |
+| **2 Ecuador** · El Tortugón | **The Middle-of-the-World Balancing Act.** Piwi wants to balance on the equator line, on a stage that walks: a giant grumpy tortoise hired by the hour. Chinka-O (home ground!) teaches the tortoise to sit down mid-act whenever Piwi says "and... HOLD!" The Equator monument pops back. *Pupo* takes the whole land to reach the tortoise, and finds him a kindred spirit: "...your pupo... is inside... your house." |
+| **3 Brazil** · O Tucanão | **The Samba Spectacular.** Sugarloaf Mountain is wedged onto a carnival float, and the giant toucan is Piwi's **flying usher**. Chinka-O swaps his tap shoes for flip-flops and steals the number with a samba-ballet solo, and the float follows *her*. The final football puts the usher in the goal net. *Pupo* stretches an arm to the top of the stadium to poke the toucan, and gets there just after it leaves. "...next... year." |
+| **4 Mozambique** · O Eremita | **The Beach Revue.** The hermit crab is Piwi's **props master**, who keeps everything in his shells. Chinka-O convinces the crab that a props master is owed a tea break every ten minutes. The great baobab comes out of its flowerpot. *Pupo* finds the crab's pupo by checking every shell, one a day. |
+| **5 Morocco** · Berrad the Magnificent (and the Brass Owl, 5-4) | **The Tea-Time Magic Hour.** Piwi hires the pompous brass teapot as his **magician** and rolls up the great kasbah like a rug as the "vanishing palace". The Brass Owl is his clockwork **stage-door guard**. Chinka-O rolls herself up in a rug too, and tiptoes as far as the airport before Piwi notices. *Pupo* pokes the teapot: "...hot... pupo." |
+| **6 Spain** · Paellasaurus | **Cooking with Piwi.** A live cooking show, with the Silk Exchange shrunk as the kitchen backdrop. Chinka-O adds extra chilli when he isn't looking, and the paella pan grows legs and a temper. Piwi: "That is NOT in the recipe!" *Pupo* finds a single grain of rice in his own fur and keeps it as a pet. |
+| **7 France** · Le Grand Soufflé | **Piwi's Mime Period.** He takes up mime because nobody can heckle a mime. Chinka-O heckles him in ballet, which is louder. The giant soufflé is the head pastry chef of his backstage buffet, and the iron tower was meant to be the backdrop. She has hidden his ladder. *Pupo* pokes the soufflé and it sighs and sinks a little. "...sorry." |
+| **8 Amsterdam** · The Cheese King | **The Royal Command Performance.** The Cheese King bought every ticket, so he is Piwi's only paying fan. The old windmill is folded up on a canal cruise. Chinka-O borrows a bike and gets two bridges away, nearly to Brady-O, before Piwi hooks her back off a drawbridge. *Pupo* finds the King's pupo is a hole in the cheese, and is delighted. |
+| **9 Bali** · Boss Kera | **The Sunset Luau.** The monkey king steals Piwi's script, his props and his bow tie, and Piwi performs anyway. Chinka-O trades the monkey her hair bow for the cage key and gets as far as the surf on a borrowed board, which is why the gecko offers Brady-O one. *Pupo* and the monkey hang from the same branch all afternoon, best friends, while Brady-O waits. |
+| **10 Vietnam** · Ong Phin | **The Water-Puppet Dream.** Piwi longs to star in a water-puppet show, but he is wood, so he just bobs. The grumpy coffee filter is his **backstage caterer**, and the Hoi An bridge is squeezed into a snow globe. Chinka-O lassoes the cage key with a noodle lasso, nearly. Piwi leaves for Japan so jittery from coffee that his jaw won't stop clacking. *Pupo* has one sip and is still exactly as slow. |
+| **11 Japan** · The Great Kappa | **The Most Polite Comedy Act in the World.** Piwi tries to out-bow his co-star, a kappa. Chinka-O tells Brady-O the kappa rule in a postcard ("bow, Brady, BOW"). The golden roof fish go back on the castle. *Pupo* bows to the kappa as well. The bow takes until Nepal. |
 | **12 Nepal** · Piwi Squirmin' himself | **THE GRAND FINALE**, at Piwi's Playhouse on the roof of the world (§3.4). |
-| **13 Antarctica** (secret) · Big Tusk (and the Snow-Plough Bot, 13-3) | **The Penguin Matinée.** A detour: Piwi has heard that the penguins dress for the theatre every night. Big Tusk is the colony's grumpy **critic**, and the Snow-Plough Bot is Piwi's rented crew for a car park that doesn't exist. Princess Papaya teaches the penguins ballet, and they are excellent. *Pupo* tries to find a penguin's pupo under its tuxedo and is too polite to look. |
+| **13 Antarctica** (secret) · Big Tusk (and the Snow-Plough Bot, 13-3) | **The Penguin Matinée.** A detour: Piwi has heard that the penguins dress for the theatre every night. Big Tusk is the colony's grumpy **critic**, and the Snow-Plough Bot is Piwi's rented crew for a car park that doesn't exist. Chinka-O teaches the penguins ballet, and they are excellent. *Pupo* tries to find a penguin's pupo under its tuxedo and is too polite to look. |
 | **22 World 22** (secret) · The Other Brady | **The Encore** (§3.4): where Piwi makes his last stand. |
 
 The secret levels with the old villain in their names keep their places and fights, renamed:
@@ -241,31 +241,31 @@ The secret levels with the old villain in their names keep their places and figh
 - the jar archive is his **prop shelf** of every shrunken landmark
 
 The fight is kept exactly, phase for phase:
-1. **Phase 1, the Showtrunk over the summit stage.** Princess Papaya is in the cage under it, eating popcorn and shouting tips. Pupo stretches an arm up to poke the trunk's underside ("...no pupo... here... either"). Piwi throws the shrunken landmarks, and Brady-O kicks them back.
-2. **Phase 2.** The trunk crashes and the cage door pops open. Princess Papaya tiptoes out, floats down using her tutu like a parachute, and cheers from the ledge (`NpChinka`, as now). Piwi climbs into **THE SHOWSTOPPER**, a walking stage mech built from his props, his trunk and the windmill arm. Its spotlight beam replaces the "laser monocle".
+1. **Phase 1, the Showtrunk over the summit stage.** Chinka-O is in the cage under it, eating popcorn and shouting tips. Pupo stretches an arm up to poke the trunk's underside ("...no pupo... here... either"). Piwi throws the shrunken landmarks, and Brady-O kicks them back.
+2. **Phase 2.** The trunk crashes and the cage door pops open. Chinka-O tiptoes out, floats down using her tutu like a parachute, and cheers from the ledge (`NpChinka`, as now). Piwi climbs into **THE SHOWSTOPPER**, a walking stage mech built from his props, his trunk and the windmill arm. Its spotlight beam replaces the "laser monocle".
 3. **Phase 3.** On foot in the gales. He is light wood, so the wind zones really toss him about.
 
-**The finish.** His Shrink-Spot slips and goes off in his own face. Every landmark pops back, and Piwi is **pocket-sized**, rattling in his own prop jar: "LET ME OUT! IT'S TINY IN HERE!" Princess Papaya runs to Brady-O with a grand leap, then turns and throws her arms round Pupo (`hug`).
+**The finish.** His Shrink-Spot slips and goes off in his own face. Every landmark pops back, and Piwi is **pocket-sized**, rattling in his own prop jar: "LET ME OUT! IT'S TINY IN HERE!" Chinka-O runs to Brady-O with a grand leap, then turns and throws her arms round Pupo (`hug`).
 
 **The ending (`TourEndingScene`, five cards):**
 1. "The Shrink-Spot sputters... *FWOOMP*. Piwi Squirmin' is now exactly pocket-sized, and rattling in his own prop jar."
 2. "One by one, the landmarks pop back to full size all over the world. Somewhere, a volcano sighs with relief."
-3. Princess Papaya: "You followed every postcard?" Brady-O: "Every. Single. One. Your handwriting is beautiful."
-4. Pupo reaches out, very slowly, and pokes Princess Papaya's belly button. "...Princess Papaya... your pupo. ...I missed it." Princess Papaya, hugging him: "I missed you too, you big slowpoke."
-5. "Sunrise over the Himalayas. Two passports full of stamps, one giant sleepy sloth carrying all three of them home, and one very small, very quiet dummy in Princess Papaya's dance bag. Best. Trip. Ever."
+3. Chinka-O: "You followed every postcard?" Brady-O: "Every. Single. One. Your handwriting is beautiful."
+4. Pupo reaches out, very slowly, and pokes Chinka-O's belly button. "...Chinka... your pupo. ...I missed it." Chinka-O, hugging him: "I missed you too, you big slowpoke."
+5. "Sunrise over the Himalayas. Two passports full of stamps, one giant sleepy sloth carrying all three of them home, and one very small, very quiet dummy in Chinka-O's dance bag. Best. Trip. Ever."
 
 **Post-credits sting.** The tiny jar is on a hotel shelf, and its lid is unscrewed. A trail of tiny footprints leads to a door with **22** on it: "Legend speaks of a World 22..."
 
 **World 22: the Encore (Piwi's last stand).** World 22 is a dream land of clocks, mirrors and the Writer's Desk (a nod to Brady's novel *22*). Piwi has slipped into it, where he can be any size and rewrite his own show. He has also **carved himself a wooden understudy of Brady-O**.
 - **The fight is unchanged:** the Other Brady mirrors Brady-O, and Brady-O walks him into the hazards.
 - **When the mirror cracks,** Piwi is revealed behind it, with his hand in the understudy's back. For once the dummy is the ventriloquist. "...BYE, ME" is the understudy's last line, and Piwi was doing the voice.
-- **The final face-off is a short scene, not a new fight.** Piwi has nothing left: no trunk, no scenery, no acts. He asks for the one thing he wanted all along, an audience. Brady-O, Princess Papaya and Pupo sit down on folding chairs and watch his whole show, once. Princess Papaya joins in for the finale, and it is genuinely good. He takes a bow.
-- **Pupo's gift.** Pupo has drawn a belly button on Piwi's tummy in Princess Papaya's lip pencil: "...I made you... a pupo." Piwi, moved: "It's... the nicest thing anyone's ever drawn on me."
-- **Princess Papaya's review:** "Two stars for the show. One for the bow." Piwi: "THREE STARS!"
+- **The final face-off is a short scene, not a new fight.** Piwi has nothing left: no trunk, no scenery, no acts. He asks for the one thing he wanted all along, an audience. Brady-O, Chinka-O and Pupo sit down on folding chairs and watch his whole show, once. Chinka-O joins in for the finale, and it is genuinely good. He takes a bow.
+- **Pupo's gift.** Pupo has drawn a belly button on Piwi's tummy in Chinka-O's lip pencil: "...I made you... a pupo." Piwi, moved: "It's... the nicest thing anyone's ever drawn on me."
+- **Chinka-O's review:** "Two stars for the show. One for the bow." Piwi: "THREE STARS!"
 - **Where he ends up:** a puppet theatre in the plaza in Mexico City, where it all started, with a sign: "MATINÉES DAILY. NO HOOKS. BALLET ON SUNDAYS."
 
 **If Brady-O reaches World 22 before beating Nepal** (it opens with 22 postcards, so this can happen), the text changes:
-- Piwi is only rehearsing his Grand Finale, and Princess Papaya watches from the cage, unimpressed.
+- Piwi is only rehearsing his Grand Finale, and Chinka-O watches from the cage, unimpressed.
 - After the mirror cracks, Piwi says: "Fine! See you at the FINALE, Mister Bun!" and flies off.
 - The encore scene plays the first time 22-4 is cleared after the main ending (`Save.data.beatGame`).
 
@@ -274,13 +274,13 @@ The fight is kept exactly, phase for phase:
 
 **The lid.** It stands open as a **little stage**, with blue velvet curtains, a gold star lining, footlights, and a magenta **marquee** with chasing bulbs that says **PIWI!**
 
-**The show cage.** Under the trunk, on a chain, hangs a gilded cage (a "STAR" plaque on its base). Princess Papaya sits on its swing in her tutu with her popcorn.
+**The show cage.** Under the trunk, on a chain, hangs a gilded cage (a "STAR" plaque on its base). Chinka-O sits on its swing in her tutu with her popcorn.
 
 **Where it replaces the Baron's airship:**
 
 | Where | What it becomes |
 |---|---|
-| The title (`SBWT.blimp`) | The Showtrunk drifting past, with Princess Papaya in the cage. (Brady-O on Pupo can chase it across the title as a later polish idea.) |
+| The title (`SBWT.blimp`) | The Showtrunk drifting past, with Chinka-O in the cage. (Brady-O on Pupo can chase it across the title as a later polish idea.) |
 | The route map and the land maps (`TourPanelFx.airship`) | `Showtrunk.mini`, about 44 px: the trunk, two rotors, the marquee, a tiny Piwi and the cage with a dot of black hair and pink tutu. |
 | The intro panels and the Nepal fight's phase 1 (`TourVillain.blimp`) | The full Showtrunk. |
 
@@ -299,11 +299,11 @@ The fight is kept exactly, phase for phase:
 - **RULE 10: NO LATE FLIGHTS.** The show starts on time.
 - **RULE 1: NO FUN.** Fun is for after the show, and the show never ends.
 
-**Why they are Brady Buttons.** Each rule is enforced by one of Piwi's backstage cue buttons: a big DO NOT PRESS button that runs that rule's machinery. On her way round the world, **Princess Papaya has found every one**. She doodled Brady-O's face on the dome in lipstick (man bun, square shades) and stuck on a note: "PRESS ME, B ♥". Slapping one cancels the rule, and a stamp slams **CANCELLED** across the rule card.
+**Why they are Brady Buttons.** Each rule is enforced by one of Piwi's backstage cue buttons: a big DO NOT PRESS button that runs that rule's machinery. On her way round the world, **Chinka-O has found every one**. She doodled Brady-O's face on the dome in lipstick (man bun, square shades) and stuck on a note: "PRESS ME, B ♥". Slapping one cancels the rule, and a stamp slams **CANCELLED** across the rule card.
 
-**The look.** The waist-high pedestal and brass bezel stay, and so do the side-slap, the stomp-does-nothing squeak and the instant save. The dome changes to Piwi's magenta with his gold "P" etched in it, under Princess Papaya's doodle. The plaque reads `DO NOT PRESS — BY ORDER OF PIWI SQUIRMIN' — RULE 7`.
+**The look.** The waist-high pedestal and brass bezel stay, and so do the side-slap, the stomp-does-nothing squeak and the instant save. The dome changes to Piwi's magenta with his gold "P" etched in it, under Chinka-O's doodle. The plaque reads `DO NOT PRESS — BY ORDER OF PIWI SQUIRMIN' — RULE 7`.
 
-**B6's cloche note** reads "NOT YET. — PIWI", and underneath, in Princess Papaya's writing: "nearly there ♥ C".
+**B6's cloche note** reads "NOT YET. — PIWI", and underneath, in Chinka-O's writing: "nearly there ♥ C".
 
 **Other renames in that document:**
 
@@ -324,7 +324,7 @@ The fight is kept exactly, phase for phase:
 ---
 
 ## 5. Names and words
-- **In story text, credits and the characters' lines,** use **Brady-O** and **Princess Papaya**. Postcards keep their warm short forms ("Brady!", "♥ C"); a postcard is personal.
+- **In story text, credits and the characters' lines,** use **Brady-O** and **Chinka-O**. Postcards keep their warm short forms ("Brady!", "♥ C"); a postcard is personal.
 - **The villain:** **Piwi Squirmin'**. His name and the act banners are in capitals in speech bubbles, like the other bosses.
 - **His world tour:** "Piwi Squirmin's World Tour".
 - **What he travels in and keeps:** the Showtrunk, the show cage, the Shrink-Spot, the prop jars.
@@ -338,13 +338,13 @@ The fight is kept exactly, phase for phase:
 |---|---|
 | `src/05b_piwi.js` | `PIWI` (palette), `piwiPose`, `Piwi.draw` (6 poses), `Piwi.head`, `Piwi.badge` |
 | `src/05c_chinka.js` | `CHINKA_O` (palette), `chinkaOPose`, `ChinkaO.draw` (9 poses), `ChinkaO.head` |
-| `src/05d_showtrunk.js` | `Showtrunk.draw`, `.cage` (Princess Papaya on the swing), `.mini`, `.rotor` |
+| `src/05d_showtrunk.js` | `Showtrunk.draw`, `.cage` (Chinka-O on the swing), `.mini`, `.rotor` |
 | `src/05e_pupo.js` | `PUPO` (palette), `Pupo.draw` (8 poses incl. riding and the PUPO POWER! key pose), `Pupo.arm` (any length), `Pupo.hand`, `Pupo.head`, `Pupo.saddle`, `Pupo.carpet`, `Pupo.butterfly`; the preview hook `window.BRADY_STORY` (it is in the last file so every name exists when it runs) |
 | `tools/story_preview/sheet.js` | Contact sheets on a mid-tone and a dark backdrop, plus a phone-screen crop, all through the game's own Ink |
 
 All four load in every Super Brady-O World build. They only define names, so the game is unchanged.
 
-**Size on a phone.** In the game these characters are 1.5 CSS px per art unit, on a 390-px-high screen at Near zoom. At that size Piwi is about 82 px tall, Princess Papaya about 95 px (her tutu about 50 px wide) and Pupo about 95 px sitting up (about 75 px at the back on all fours, 125 px with Brady-O riding), next to Brady-O's 95 px.
+**Size on a phone.** In the game these characters are 1.5 CSS px per art unit, on a 390-px-high screen at Near zoom. At that size Piwi is about 82 px tall, Chinka-O about 95 px (her tutu about 50 px wide) and Pupo about 95 px sitting up (about 75 px at the back on all fours, 125 px with Brady-O riding), next to Brady-O's 95 px.
 
 ---
 
@@ -368,23 +368,23 @@ All four load in every Super Brady-O World build. They only define names, so the
 ### 7.1 `src/28_tour_g_story.js` (the story file): text, art and scenes
 | Line | Current | New |
 |---|---|---|
-| 1–10 | header comment: "BARON BRIC-A-BRAC, a greedy souvenir collector with a shrink-ray camera, snaps the Palace … Princess Papaya leaps onto his rope ladder …" | Comment: "PIWI SQUIRMIN', a lonely ventriloquist dummy with a flying Showtrunk, hooks Princess Papaya into his show cage in Mexico City and takes her on his world tour. Each land is a tour date: its boss is tonight's act and a landmark is shrunk into scenery. Brady-O chases him by Princess Papaya's postcards. The Grand Finale is in Nepal; the encore in World 22. Design: docs/design/STORY_PIWI.md." |
+| 1–10 | header comment: "BARON BRIC-A-BRAC, a greedy souvenir collector with a shrink-ray camera, snaps the Palace … Chinka leaps onto his rope ladder …" | Comment: "PIWI SQUIRMIN', a lonely ventriloquist dummy with a flying Showtrunk, hooks Chinka-O into his show cage in Mexico City and takes her on his world tour. Each land is a tour date: its boss is tonight's act and a landmark is shrunk into scenery. Brady-O chases him by Chinka-O's postcards. The Grand Finale is in Nepal; the encore in World 22. Design: docs/design/STORY_PIWI.md." |
 | 11–62 | `const TourVillain = { draw(...) {…Baron…}, blimp(...) {…snow-globe blimp…} }` | **Art (S): keep the name `TourVillain` as an adapter, so `29_tour_np.js` keeps working.** `draw(ctx, x, y, s, t, pose)` → `Piwi.draw(ctx, { x, y, scale: s, t, pose: { flash: 'gloat', camera: 'talk', empty: 'idle' }[pose] \|\| 'idle', facing: 1 })`. For `pose === 'flash'`, also draw the old white radial flash in front of him (it is the Shrink-Spot going off). `blimp(ctx, x, y, s, t)` → `Showtrunk.draw(ctx, { x, y: y + 20 * s, scale: s * 0.8, t, piwi: null, chinka: true })`. |
-| 149 | `'Brady and Princess Papaya finally booked it: the trip of a lifetime. Twelve countries, two passports and one very small plane.'` | `'Brady-O, Princess Papaya and Pupo, their giant sloth, finally booked it: the trip of a lifetime. Twelve countries, two passports and one very small plane (Pupo took up the back row).'` **Scene:** `ChinkaO.draw({ pose: 'wave' })` in place of `drawChinka(… 'cheer')`, `Pupo.draw({ pose: 'idle' })` behind them. |
-| 151 | `'First stop: Mexico City. Then a giant snow globe floated over the plaza... and a tiny man with a big camera leaned out. "MAGNIFICENT! I\'LL TAKE IT!"'` | `'First stop: Mexico City. A steamer trunk flew down on two little rotors, its lid flipped open into a stage, and a wooden dummy bowed to an empty plaza. "OPENING NIGHT!"'`. **Scene:** Showtrunk landed at W*0.66 with `piwi: 'talk'`, `chinka: false`; Princess Papaya `idle` beside Brady-O. |
-| 153 | `'FLASH! The Palace of Fine Arts shrank down to snow-globe size. Baron Bric-a-Brac popped it in his pocket. "The finest souvenir collection on Earth needs the finest landmarks!"'` | **Becomes two panels.** (a) `'His head fell off mid-song. Princess Papaya couldn\'t help it: she stepped in and finished his number with a perfect pirouette, and the plaza cheered. "A STAR! Madam, you are my LEADING LADY!"'` (Princess Papaya `pirouette`; Piwi `startled` → `gloat`; Pupo `idle` at the side). (b) `'A long hook swung out of the wings and popped her, tutu and all, into his show cage. FWOOMP: his Shrink-Spot shrank the Palace of Fine Arts to pocket size. "Every show needs scenery!"'` (keep the white flash at pt 1.4–1.9; Princess Papaya in `Showtrunk.cage`). |
-| 155 | `'Princess Papaya didn\'t wait. She grabbed the blimp\'s rope ladder as it lifted off. "Brady! I\'ll follow him. Watch for my postcards!"'` | `'Up went the trunk. Princess Papaya leaned out of the cage: "Brady! I\'m fine. He\'s made of wood and scared of termites. Look after Pupo. Follow my postcards, and bring snacks!"'`. **New panel after it:** `'The plaza was empty, except for Pupo, hugging her pink hair bow. "We\'re getting her back, buddy." A very long pause. "...climb on."'` (Pupo `sad`, then Brady-O on Pupo `ride` heading off) |. **Scene:** Showtrunk rising (k as now), `chinka: true`, Brady-O `run`. |
-| 157 | `'Every country he visits, he shrinks something else. Follow Princess Papaya\'s postcards, beat the Baron\'s goons, put the world back to size and bring Princess Papaya home.'` | `'Piwi Squirmin\'s World Tour: twelve tour dates. Follow Princess Papaya\'s postcards, crash every show, put the scenery back and bring her home.'` **Scene:** Brady-O riding Pupo (`Pupo.draw({ pose: 'ride', rider })`) with the postcard. |
+| 149 | `'Brady and Chinka finally booked it: the trip of a lifetime. Twelve countries, two passports and one very small plane.'` | `'Brady-O, Chinka-O and Pupo, their giant sloth, finally booked it: the trip of a lifetime. Twelve countries, two passports and one very small plane (Pupo took up the back row).'` **Scene:** `ChinkaO.draw({ pose: 'wave' })` in place of `drawChinka(… 'cheer')`, `Pupo.draw({ pose: 'idle' })` behind them. |
+| 151 | `'First stop: Mexico City. Then a giant snow globe floated over the plaza... and a tiny man with a big camera leaned out. "MAGNIFICENT! I\'LL TAKE IT!"'` | `'First stop: Mexico City. A steamer trunk flew down on two little rotors, its lid flipped open into a stage, and a wooden dummy bowed to an empty plaza. "OPENING NIGHT!"'`. **Scene:** Showtrunk landed at W*0.66 with `piwi: 'talk'`, `chinka: false`; Chinka-O `idle` beside Brady-O. |
+| 153 | `'FLASH! The Palace of Fine Arts shrank down to snow-globe size. Baron Bric-a-Brac popped it in his pocket. "The finest souvenir collection on Earth needs the finest landmarks!"'` | **Becomes two panels.** (a) `'His head fell off mid-song. Chinka-O couldn\'t help it: she stepped in and finished his number with a perfect pirouette, and the plaza cheered. "A STAR! Madam, you are my LEADING LADY!"'` (Chinka-O `pirouette`; Piwi `startled` → `gloat`; Pupo `idle` at the side). (b) `'A long hook swung out of the wings and popped her, tutu and all, into his show cage. FWOOMP: his Shrink-Spot shrank the Palace of Fine Arts to pocket size. "Every show needs scenery!"'` (keep the white flash at pt 1.4–1.9; Chinka-O in `Showtrunk.cage`). |
+| 155 | `'Chinka didn\'t wait. She grabbed the blimp\'s rope ladder as it lifted off. "Brady! I\'ll follow him. Watch for my postcards!"'` | `'Up went the trunk. Chinka-O leaned out of the cage: "Brady! I\'m fine. He\'s made of wood and scared of termites. Look after Pupo. Follow my postcards, and bring snacks!"'`. **New panel after it:** `'The plaza was empty, except for Pupo, hugging her pink hair bow. "We\'re getting her back, buddy." A very long pause. "...climb on."'` (Pupo `sad`, then Brady-O on Pupo `ride` heading off) |. **Scene:** Showtrunk rising (k as now), `chinka: true`, Brady-O `run`. |
+| 157 | `'Every country he visits, he shrinks something else. Follow Chinka\'s postcards, beat the Baron\'s goons, put the world back to size and bring Chinka home.'` | `'Piwi Squirmin\'s World Tour: twelve tour dates. Follow Chinka-O\'s postcards, crash every show, put the scenery back and bring her home.'` **Scene:** Brady-O riding Pupo (`Pupo.draw({ pose: 'ride', rider })`) with the postcard. |
 | 164 | `'Brady! The Baron\'s blimp landed in ' + C.name + '. Find his goon, save the landmark! ♥ C'` | `'Brady! Piwi\'s trunk landed in ' + C.name + '. Crash his show, save the landmark! ♥ C'` |
 | 167 | comment `the ending (after the showdown in Nepal)` | `the ending (after the Grand Finale in Nepal)` |
 | 172 | `'The Baron\'s Shrink-o-Matic sputters... FLASH. Baron Bric-a-Brac is now exactly snow-globe sized.'` | `'The Shrink-Spot sputters... FWOOMP. Piwi Squirmin\' is now exactly pocket-sized, and rattling in his own prop jar.'` |
-| 174 | `'Princess Papaya: "You followed every postcard?"  Brady: "Every. Single. One. Your handwriting is beautiful."'` | `'Princess Papaya: "You followed every postcard?"  Brady-O: "Every. Single. One. Your handwriting is beautiful."'` |
-| 174–175 (new card between) | – | Insert `'Pupo reached out, very slowly, and poked Princess Papaya\'s belly button. "...Princess Papaya... your pupo. ...I missed it."  "I missed you too, you big slowpoke."'` (Princess Papaya `hug` in front of Pupo `happy`, then Pupo `poke`). The `stage >= 3` checks in `update`/`draw` move to `>= 4`. |
-| 175 | `'Sunrise over the Himalayas. Two passports full of stamps. Best. Trip. Ever.'` | `'Sunrise over the Himalayas. Two passports full of stamps, one giant sleepy sloth carrying them both home, and one very small, very quiet dummy in Princess Papaya\'s dance bag. Best. Trip. Ever.'` |
+| 174 | `'Chinka: "You followed every postcard?"  Brady: "Every. Single. One. Your handwriting is beautiful."'` | `'Chinka-O: "You followed every postcard?"  Brady-O: "Every. Single. One. Your handwriting is beautiful."'` |
+| 174–175 (new card between) | – | Insert `'Pupo reached out, very slowly, and poked Chinka-O\'s belly button. "...Chinka... your pupo. ...I missed it."  "I missed you too, you big slowpoke."'` (Chinka-O `hug` in front of Pupo `happy`, then Pupo `poke`). The `stage >= 3` checks in `update`/`draw` move to `>= 4`. |
+| 175 | `'Sunrise over the Himalayas. Two passports full of stamps. Best. Trip. Ever.'` | `'Sunrise over the Himalayas. Two passports full of stamps, one giant sleepy sloth carrying them both home, and one very small, very quiet dummy in Chinka-O\'s dance bag. Best. Trip. Ever.'` |
 | 202 | `drawChinka(ctx, { … pose: this.stage >= 3 ? 'cheer' : 'wave', facing: -1 })` | **Art:** `ChinkaO.draw(ctx, { x: …, y: gy, scale: s * 1.1, t: this.t, pose: this.stage >= 2 ? 'reunion' : 'wave', facing: -1 })`, and Pupo (`happy`, on the Pupo card `poke`) on her other side, so the three stand together |
 | 203–208 | `// the Baron, now a souvenir himself` + the snow globe + `TourVillain.draw(..., 'empty')` | **Art:** "Piwi, pocket-sized in his prop jar": the jar art (glass dome on a wooden base, as now), `Piwi.draw(ctx, { x: 0, y: -6, scale: 0.42, t, pose: 'startled' })` inside, and the purple band in `PIWI.jacket` magenta. |
-| 227 | `['Princess Papaya is home. The world is back to size. The Baron is a snow globe.', 's']` | `['Princess Papaya is home. The world is back to size. Piwi is pocket-sized.', 's']` (see 7.2, line 524) |
-| 228 | `['Brady  ·  long hair, man bun, many passport stamps', 'v'], ['Princess Papaya  ·  fearless, fast, excellent postcards', 'v']` | `['Brady-O  ·  man bun, square shades, many passport stamps', 'v'], ['Princess Papaya  ·  prima ballerina, unimpressed, excellent postcards', 'v'], ['Pupo  ·  sloth; belly button enthusiast', 'v']` |
+| 227 | `['Chinka is home. The world is back to size. The Baron is a snow globe.', 's']` | `['Chinka-O is home. The world is back to size. Piwi is pocket-sized.', 's']` (see 7.2, line 524) |
+| 228 | `['Brady  ·  long hair, man bun, many passport stamps', 'v'], ['Chinka  ·  fearless, fast, excellent postcards', 'v']` | `['Brady-O  ·  man bun, square shades, many passport stamps', 'v'], ['Chinka-O  ·  prima ballerina, unimpressed, excellent postcards', 'v'], ['Pupo  ·  sloth; belly button enthusiast', 'v']` |
 | 229 | `['Baron Bric-a-Brac  ·  collector of other people\'s landmarks', 'v']` | `['Piwi Squirmin\'  ·  a dummy with a dream (and a hook)', 'v']` |
 | 231 | `['THE BARON\'S GOONS', 'k']` | `['TONIGHT\'S ACTS', 'k']` |
 | 232 | `` `Times the Baron got you: ${…}` `` | `` `Times Piwi got you: ${…}` `` |
@@ -395,11 +395,11 @@ All four load in every Super Brady-O World build. They only define names, so the
 
 | Line | Current | New |
 |---|---|---|
-| 4–5 | comment `the Baron's blimp drifts past with a bottled landmark` | `Piwi's Showtrunk drifts past with Princess Papaya and Pupo in its show cage` |
+| 4–5 | comment `the Baron's blimp drifts past with a bottled landmark` | `Piwi's Showtrunk drifts past with Chinka-O and Pupo in its show cage` |
 | 86–104 | `// the Baron's blimp with a bottled landmark …` `blimp(k) { return this.inked(170, 150, 85, 60, k, x => { … }) }` | **Art (S):** `blimp(k) { return this.inked(190, 230, 95, 120, k, x => Showtrunk.draw(x, { x: 0, y: 0, scale: 0.85, t: 0.3, piwi: 'idle', chinka: true }), { width: 1.5 }); }`. It is painted once, so the rotors are frozen mid-spin, which reads fine. Check the box in portrait and at 568x320 (`tools/title_icon/shots.js`). |
-| 615 | comment `the Baron's blimp drifting with a bottled landmark` | `the Showtrunk drifting by with Princess Papaya in the cage` |
+| 615 | comment `the Baron's blimp drifting with a bottled landmark` | `the Showtrunk drifting by with Chinka-O in the cage` |
 | (title show) | Brady jogging on the globe | **Optional, with `docs/design/PUPO.md`:** Brady-O riding Pupo round the globe (`Pupo.draw({ pose: 'ride', rider })`), chasing the Showtrunk. Not needed for the story change. |
-| 524 | `c.lines.filter(l => !/Princess Papaya is home\|Baron is a snow globe/.test(l[0]))` | `c.lines.filter(l => !/Princess Papaya is home\|Piwi is pocket-sized\|Puppet Theatre/.test(l[0]))`. **Must change together with 7.1, line 227**, or the title's credits spoil the ending. |
+| 524 | `c.lines.filter(l => !/Chinka is home\|Baron is a snow globe/.test(l[0]))` | `c.lines.filter(l => !/Chinka-O is home\|Piwi is pocket-sized\|Puppet Theatre/.test(l[0]))`. **Must change together with 7.1, line 227**, or the title's credits spoil the ending. |
 
 **`src/13_ui.js`**
 
@@ -637,9 +637,9 @@ All four load in every Super Brady-O World build. They only define names, so the
 | 475–500 | the camera head art | **Art (S, optional):** redraw the camera body as a stage spotlight: a black barrel with a magenta hood and a yellow lens. The beam is unchanged. |
 | 487–488 | `'SHRUNK!'`, `'TOO SMALL TO SHRINK!'` | Keep. |
 | 535, 596, 597, 601 | comments `the Baron's crates` / `12-5: the Baron's fortress` / `shrink-ray cameras` / `the Baron's jar shelf` | `Piwi's crates` / `12-5: Piwi's playhouse` / `Shrink-Spots` / `Piwi's prop shelf` |
-| 611–620 | block comment `the final boss: BARON BRIC-A-BRAC … snow-globe airship … bric-a-brac mech … Shrink-o-Matic … Princess Papaya arrives` | `the final boss: PIWI SQUIRMIN' … the Showtrunk (Princess Papaya in its cage) … THE SHOWSTOPPER, a stage mech of his props … his Shrink-Spot … Princess Papaya runs to Brady-O` |
+| 611–620 | block comment `the final boss: BARON BRIC-A-BRAC … snow-globe airship … bric-a-brac mech … Shrink-o-Matic … Chinka arrives` | `the final boss: PIWI SQUIRMIN' … the Showtrunk (Chinka-O in its cage) … THE SHOWSTOPPER, a stage mech of his props … his Shrink-Spot … Chinka-O runs to Brady-O` |
 | 697, 711, 721, 740 | comments `the Baron` | `Piwi` |
-| 766 | comment `Princess Papaya: tied up in the gondola in phase 1, she bails out on a scrap of balloon …` | `Princess Papaya: in the show cage under the Showtrunk in phase 1 (Pupo on the bars); when it crashes she tiptoes out of the cage and floats down on her tutu, cheers from the ledge, …` |
+| 766 | comment `Chinka: tied up in the gondola in phase 1, she bails out on a scrap of balloon …` | `Chinka-O: in the show cage under the Showtrunk in phase 1 (Pupo on the bars); when it crashes she tiptoes out of the cage and floats down on her tutu, cheers from the ledge, …` |
 | 777 | `['KICK IT BACK, BRADY!', 'YOU\'VE GOT THIS!', 'THAT\'S MY BRADY!', 'HE HATES THAT!']` | `['KICK IT BACK, BRADY!', 'YOU\'VE GOT THIS!', 'THAT\'S MY BRADY!', 'HE HATES THAT!', 'TELL HIM IT\'S A WOODPECKER!', 'GO, PUPO!']` |
 | 786 | `drawChinka(ctx, { …, pose: chute→'jump', run→'run', hug→'hug', else 'cheer' })` | **Art:** `ChinkaO.draw(ctx, { x: this.cx, y: this.y + this.h, scale: 0.9, t, pose: { chute: 'tiptoe', run: 'walk', hug: 'reunion' }[this.state] \|\| 'wave', facing: this.facing })` |
 | 826 | `'NOOO! MY COLLECTION!'` | `'NOOO! MY SCENERY!'` |
@@ -662,7 +662,7 @@ All four load in every Super Brady-O World build. They only define names, so the
 | 1011 | `['MY PAINTWORK!', 'THAT WAS NOT YOURS TO RETURN!', 'HOW RUDE!']` | `['MY LACQUER!', 'THAT WAS SCENERY!', 'HOW RUDE!']` |
 | 1012 | `['MY BRIC! MY BRAC!', 'NOT THE WINDMILL ARM!', 'WARRANTY VOID!']` | `['MY PROPS!', 'NOT THE WINDMILL ARM!', 'BOO! I MEAN, OW!']` |
 | 1013 | `['OW! MY MONOCLE!', 'UNHAND MY LANDMARK!']` | `['OW! MY HINGES!', 'UNHAND MY LANDMARK!']` |
-| 1020–1025 | phase 1 draw: `TourVillain.blimp(ctx, 0, 0, 1, t)`; `drawChinka(... pose: 'captive')` in the gondola; `TourVillain.draw(ctx, 18, 54, 0.42, t, …)` | **Art (M):** `Showtrunk.draw(ctx, { x: 0, y: 30, scale: 0.75, t, piwi: P === 'drop' ? 'gloat' : P === 'wind' ? 'startled' : 'talk', chinka: b.act !== 'crash' })`. The trunk and lid fill the old 140x84 box; the cage hangs below it, outside the hitbox. Delete the separate `drawChinka` and `TourVillain.draw` lines: Princess Papaya is in the cage and Piwi is on the stage. In the crash (line 1020) fade out `Showtrunk.draw(… chinka: false)` instead of the blimp. |
+| 1020–1025 | phase 1 draw: `TourVillain.blimp(ctx, 0, 0, 1, t)`; `drawChinka(... pose: 'captive')` in the gondola; `TourVillain.draw(ctx, 18, 54, 0.42, t, …)` | **Art (M):** `Showtrunk.draw(ctx, { x: 0, y: 30, scale: 0.75, t, piwi: P === 'drop' ? 'gloat' : P === 'wind' ? 'startled' : 'talk', chinka: b.act !== 'crash' })`. The trunk and lid fill the old 140x84 box; the cage hangs below it, outside the hitbox. Delete the separate `drawChinka` and `TourVillain.draw` lines: Chinka-O is in the cage and Piwi is on the stage. In the crash (line 1020) fade out `Showtrunk.draw(… chinka: false)` instead of the blimp. |
 | 1031–1041 | phase 3: `// the little Baron on foot (and … his own snow globe)`; `TourVillain.draw(ctx, 0, 0, 1, t, …)` | Comment `Piwi on foot (and, at the end, pocket-sized in his own prop jar)`; `Piwi.draw(ctx, { x: 0, y: 0, scale: 1.15, t, pose: P === 'run' ? 'walk' : P === 'hurt' ? 'startled' : P === 'finale' ? 'defeated' : P === 'flash' \|\| P === 'aim' ? 'gloat' : 'talk' })`. Check the pose names against `b.pose` values in the brain when applying. |
 | 1064, 1086 | comments `the Baron's supply depot` | `Piwi's prop depot` |
 | 1088 | `name: "Baron's Supply Depot"` | `name: "Piwi's Prop Depot"` |
@@ -728,16 +728,16 @@ All four load in every Super Brady-O World build. They only define names, so the
 
 | Line | Current | New |
 |---|---|---|
-| 37 | `desc: 'Brady flies around the world after Baron Bric-a-Brac, who bottles every landmark he can find: a 2D platformer across twelve countries.'` | `desc: 'Brady-O chases Piwi Squirmin\', a runaway ventriloquist dummy who has whisked his wife Princess Papaya off on a world tour: a 2D platformer across twelve countries.'`. Touch only the world app's entry. This also changes the manifest and launcher text. |
+| 37 | `desc: 'Brady flies around the world after Baron Bric-a-Brac, who bottles every landmark he can find: a 2D platformer across twelve countries.'` | `desc: 'Brady-O chases Piwi Squirmin\', a runaway ventriloquist dummy who has whisked his wife Chinka-O off on a world tour: a 2D platformer across twelve countries.'`. Touch only the world app's entry. This also changes the manifest and launcher text. |
 
 ### 7.8 Docs
 | File | Line | Change |
 |---|---|---|
-| `README.md` | 45 | "Baron Bric-a-Brac is shrinking and stealing the world's landmarks, so Super Brady-O flies after him on a world map. … Princess Papaya sends postcard clues." → "Piwi Squirmin', a lonely ventriloquist dummy, has hooked Brady-O's wife Princess Papaya into the show cage of his flying Showtrunk and taken her on his world tour, so Brady-O chases him across a world map. … Princess Papaya sends postcard clues (and sabotages every show)." |
-| `docs/WORLD_TOUR_GUIDE.md` | 49 | "The villain (Baron Bric-a-Brac)" → "The villain (Piwi Squirmin'; his art is in `05b_piwi.js`, the Showtrunk in `05d_showtrunk.js`, Princess Papaya in `05c_chinka.js`)" |
+| `README.md` | 45 | "Baron Bric-a-Brac is shrinking and stealing the world's landmarks, so Super Brady-O flies after him on a world map. … Chinka sends postcard clues." → "Piwi Squirmin', a lonely ventriloquist dummy, has hooked Brady-O's wife Chinka-O into the show cage of his flying Showtrunk and taken her on his world tour, so Brady-O chases him across a world map. … Chinka-O sends postcard clues (and sabotages every show)." |
+| `docs/WORLD_TOUR_GUIDE.md` | 49 | "The villain (Baron Bric-a-Brac)" → "The villain (Piwi Squirmin'; his art is in `05b_piwi.js`, the Showtrunk in `05d_showtrunk.js`, Chinka-O in `05c_chinka.js`)" |
 | `docs/WORLD_TOUR_GUIDE.md` | 88 | "what the Baron shrank (story flavour)" → "what Piwi shrank into scenery (story flavour)" |
 | `docs/BOSS_REDESIGN.md` | 102 | "The Baron's clockwork sentry" → "Piwi's clockwork stage-door guard" |
-| `docs/BOSS_REDESIGN.md` | 154–162 | Heading "Nepal 12-5: Baron Bric-a-Brac, the finale" → "Nepal 12-5: Piwi Squirmin', the Grand Finale". In the text, "the Baron" → "Piwi", "airship" → "Showtrunk (Princess Papaya in its cage)", "bric-a-brac mech … laser monocle" → "the Showstopper mech … spotlight beam". Mechanic unchanged. |
+| `docs/BOSS_REDESIGN.md` | 154–162 | Heading "Nepal 12-5: Baron Bric-a-Brac, the finale" → "Nepal 12-5: Piwi Squirmin', the Grand Finale". In the text, "the Baron" → "Piwi", "airship" → "Showtrunk (Chinka-O in its cage)", "bric-a-brac mech … laser monocle" → "the Showstopper mech … spotlight beam". Mechanic unchanged. |
 | `docs/design/LEVEL_OVERHAUL.md` | 78 | "shrunk by the Baron" → "shrunk by Piwi's Shrink-Spot" |
 | `docs/design/LEVEL_OVERHAUL.md` | 153 | "(the Baron's automaton)" → "(Piwi's automaton)" |
 | `docs/design/LEVEL_OVERHAUL.md` | 233 | "a Baron supply shed" → "Piwi's prop shed" |
@@ -746,18 +746,18 @@ All four load in every Super Brady-O World build. They only define names, so the
 | `docs/design/LEVEL_OVERHAUL.md` | 587 | "the Baron's jar" → "Piwi's prop jar" |
 | `docs/design/LEVEL_OVERHAUL.md` | 588 | "The Baron's airship" → "Piwi's Showtrunk" |
 | `docs/design/LEVEL_OVERHAUL.md` | 893, 900 | "the Baron's shrink-ray tripwire", "Baron surveillance camera" → "Piwi's Shrink-Spot tripwire", "Piwi's spotlight camera" |
-| `docs/design/SECRETS_WARPS_SWITCHES.md` | 1, 22, 114, 186, 277, 294–304, 318, 319, 322, 334, 346, 365, 376, 502, 691, 707 | Apply §4: "the Baron's Rulebook" → "Piwi's House Rules"; "Ban Buzzer" → "Brady Button" (already decided); "REVOKED" → "CANCELLED"; "the Baron's customs office" → "Piwi's Lost Props cage"; the dome look and plaque as in §4; "NOT YET. — THE BARON" → "NOT YET. — PIWI" plus Princess Papaya's note; "the Baron's airship" → "Piwi's Showtrunk"; "party blimp" → "party trunk"; "22-6 The Rulebook" → "22-6 The House Rules"; "The Baron's noise-complaint robot" → "Piwi's noise-complaint robot". Then delete the "read Piwi" note at line 6. |
+| `docs/design/SECRETS_WARPS_SWITCHES.md` | 1, 22, 114, 186, 277, 294–304, 318, 319, 322, 334, 346, 365, 376, 502, 691, 707 | Apply §4: "the Baron's Rulebook" → "Piwi's House Rules"; "Ban Buzzer" → "Brady Button" (already decided); "REVOKED" → "CANCELLED"; "the Baron's customs office" → "Piwi's Lost Props cage"; the dome look and plaque as in §4; "NOT YET. — THE BARON" → "NOT YET. — PIWI" plus Chinka-O's note; "the Baron's airship" → "Piwi's Showtrunk"; "party blimp" → "party trunk"; "22-6 The Rulebook" → "22-6 The House Rules"; "The Baron's noise-complaint robot" → "Piwi's noise-complaint robot". Then delete the "read Piwi" note at line 6. |
 | `docs/design/TOOLKIT_STATUS.md` | 194, 200 | "the Baron's roadblock" → "Piwi's roadblock"; "the Baron's jars, airship" → "Piwi's prop jars, the Showtrunk" |
-| `docs/handoff/SUPER_BRADY_O_WORLD.md` | 8 | "chasing Baron Bric-a-Brac" → "chasing Piwi Squirmin', who has taken Princess Papaya on his world tour" |
+| `docs/handoff/SUPER_BRADY_O_WORLD.md` | 8 | "chasing Baron Bric-a-Brac" → "chasing Piwi Squirmin', who has taken Chinka-O on his world tour" |
 | `docs/handoff/SBW_RELAY.md` | 48 | "the Baron's blimp" → "the Baron's blimp (since replaced by Piwi's Showtrunk, `docs/design/STORY_PIWI.md`)" |
 | `docs/HANDOFF_LOCAL_AGENTS.md` | 19 | "the villain Baron Bric-a-Brac" → "the villain Piwi Squirmin'" |
-| `docs/handoff/README.md` | 69 (§4, the Princess Papaya bullet) | Replace "**Princess Papaya: CONFLICT, ask Brady.** The original spec … Show Brady both and let him choose before more Princess Papaya work." with "**Princess Papaya (Super Brady-O World, decided by Brady 16 Nov 2026): Princess Papaya, a ballerina in a pink tutu** (pink leotard, layered tutu, pale pink tights, satin slippers with ribbons). She is Ecuadorian: warm brown skin, dark eyes, long wavy black hair worn down with a pink bow. No sunglasses. Her giant pet sloth **Pupo** is Brady-O's sidekick and steed in the story. Code-drawn in `src/05c_chinka.js` and `src/05e_pupo.js`; story in `docs/design/STORY_PIWI.md`. The 3D Burning Man and Art Cart Princess Papaya is a separate question for those games' owners." In the Brady bullet, "stubble" → "no stubble" (the current rule). |
-| `docs/handoff/SUPER_BRADY_O_WORLD.md` | (the cast note, wherever Princess Papaya's look is described) | Point to the README §4 rule above. |
+| `docs/handoff/README.md` | 69 (§4, the Chinka bullet) | Replace "**Chinka: CONFLICT, ask Brady.** The original spec … Show Brady both and let him choose before more Chinka work." with "**Chinka (Super Brady-O World, decided by Brady 16 Nov 2026): Chinka-O, a ballerina in a pink tutu** (pink leotard, layered tutu, pale pink tights, satin slippers with ribbons). She is Ecuadorian: warm brown skin, dark eyes, long wavy black hair worn down with a pink bow. No sunglasses. Her giant pet sloth **Pupo** is Brady-O's sidekick and steed in the story. Code-drawn in `src/05c_chinka.js` and `src/05e_pupo.js`; story in `docs/design/STORY_PIWI.md`. The 3D Burning Man and Art Cart Chinka is a separate question for those games' owners." In the Brady bullet, "stubble" → "no stubble" (the current rule). |
+| `docs/handoff/SUPER_BRADY_O_WORLD.md` | (the cast note, wherever Chinka's look is described) | Point to the README §4 rule above. |
 
 ### 7.9 Count of replacements by file
 | File | Text | Art / scene | Comment only |
 |---|---|---|---|
-| `src/28_tour_g_story.js` | 15 | 5 (TourVillain adapter, 2 new intro panels, ending art, Princess Papaya and Pupo in the ending, the new Pupo card) | 2 |
+| `src/28_tour_g_story.js` | 15 | 5 (TourVillain adapter, 2 new intro panels, ending art, Chinka-O and Pupo in the ending, the new Pupo card) | 2 |
 | `src/28_tour_gt_title.js` | 1 (credits filter) | 1 (Showtrunk) | 2 |
 | `src/13_ui.js` | 1 | – | – |
 | `src/28_tour_fb_mapgraph.js` | – | 1 (map icon) | – |
@@ -779,7 +779,7 @@ All four load in every Super Brady-O World build. They only define names, so the
 | Vietnam (`vn`, `vn_levels`) | 4 | – | – |
 | Japan (`jp`, `jp_levels`) | 3 | – | – |
 | `src/29_tour_np_levels.js` | 9 | – | 12 |
-| `src/29_tour_np.js` | 26 | 7 (vault banners, bobble, spotlight, Princess Papaya entity, mech plate and cockpit, phase 1 Showtrunk, phase 3 Piwi) | 20 |
+| `src/29_tour_np.js` | 26 | 7 (vault banners, bobble, spotlight, Chinka-O entity, mech plate and cockpit, phase 1 Showtrunk, phase 3 Piwi) | 20 |
 | `src/29_tour_w22.js`, `src/29_tour_aq.js` | 2 | 1 (encore scene) | – |
 | Blender sources and atlases | – | 3 atlases (later) | 3 |
 | Tests and tools (`gameplay_test`, `boss_tests/np`, `sbw_overworld_test`, `sbw_toolkit_shots`, `build.js`) | 6 | – | 14 |
@@ -793,14 +793,14 @@ Do this after the title, maps, level, post-FX, player/UI and validator branches 
 
 | Step | What | Kind | Size |
 |---|---|---|---|
-| **B1** | All text in 7.3 and 7.4 (arrivals, postcards, gimmicks, hints, signs, level names, Piwi's and Princess Papaya's fight lines), `13_ui.js:702`, `fd_overworld.js:352`, `build.js:37`. | Text only | **S** (2–3 h) |
+| **B1** | All text in 7.3 and 7.4 (arrivals, postcards, gimmicks, hints, signs, level names, Piwi's and Chinka-O's fight lines), `13_ui.js:702`, `fd_overworld.js:352`, `build.js:37`. | Text only | **S** (2–3 h) |
 | **B2** | Credits and ending text in 7.1, **together with** the title filter (7.2, line 524) and the test regex (7.7, `gameplay_test.js:391`). | Text only, coupled | **S** (1 h) |
 | **B3** | The map: `TourPanelFx.airship` → `Showtrunk.mini`; flags, signs and depot crates to Piwi's P and magenta (7.2). | Code art, using the new files | **S** (2 h) |
 | **B4** | The title: `SBWT.blimp` → the inked Showtrunk; check portrait and 568x320 with `tools/title_icon`. | Code art | **S** (1–2 h) |
 | **B5** | The `TourVillain` adapter (7.1, lines 11–62). After it, old callers already draw Piwi and the trunk. Optionally add the "tonight's act" banner on boss wake: one data table `{ mx_pinata: 'THE WARM-UP ACT', ec_tortoise: 'THE WALKING STAGE', br_toucan: 'THE FLYING USHER', mz_hermit: 'THE PROPS MASTER', ma_berrad: 'THE MAGICIAN', es_paella: 'COOKING WITH PIWI', fr_souffle: 'THE PASTRY CHEF', nl_cheese: 'THE ONLY PAYING FAN', id_kera: 'THE SCRIPT THIEF', vn_phin: 'THE CATERER', jp_kappa: 'THE CO-STAR', aq_walrus: 'THE CRITIC' }` and one line in the Boss wake path. | Code; the banner is a small engine hook | **S** (2 h) |
-| **B6** | The intro panels: 6 panels, two of them new (7.1, lines 149–157), using Piwi, Princess Papaya (pirouette, unimpressed, wave), Pupo (idle, sad, and riding with Brady-O) and the Showtrunk (Princess Papaya in the cage). Every SBW use of the old `drawChinka` (story file, `29_tour_np.js`) becomes `ChinkaO.draw`; `22_cast.js` itself stays for any other caller. | New scenes (code art) | **M** (½ day) |
-| **B7** | The ending art: Princess Papaya's reunion leap, her hug with Pupo and Pupo's belly-button card, Piwi pocket-sized in his jar (7.1, lines 174–208). Optionally add the post-credits sting card. | New scene art | **S–M** (2–4 h) |
-| **B8** | The Nepal Grand Finale re-skin (7.4 art rows): phase 1 Showtrunk with Princess Papaya in the cage; the `NpChinka` popcorn parachute → `ChinkaO`; Showstopper plate and cockpit; phase 3 Piwi poses; Piwi bobble code art; vault banners; spotlight heads. Then re-measure the ink box (`10d_bosses.js:179`) and run `boss_test np --shots`. | Code art, no fight logic | **M** (1 day) |
+| **B6** | The intro panels: 6 panels, two of them new (7.1, lines 149–157), using Piwi, Chinka-O (pirouette, unimpressed, wave), Pupo (idle, sad, and riding with Brady-O) and the Showtrunk (Chinka-O in the cage). Every SBW use of the old `drawChinka` (story file, `29_tour_np.js`) becomes `ChinkaO.draw`; `22_cast.js` itself stays for any other caller. | New scenes (code art) | **M** (½ day) |
+| **B7** | The ending art: Chinka-O's reunion leap, her hug with Pupo and Pupo's belly-button card, Piwi pocket-sized in his jar (7.1, lines 174–208). Optionally add the post-credits sting card. | New scene art | **S–M** (2–4 h) |
+| **B8** | The Nepal Grand Finale re-skin (7.4 art rows): phase 1 Showtrunk with Chinka-O in the cage; the `NpChinka` popcorn parachute → `ChinkaO`; Showstopper plate and cockpit; phase 3 Piwi poses; Piwi bobble code art; vault banners; spotlight heads. Then re-measure the ink box (`10d_bosses.js:179`) and run `boss_test np --shots`. | Code art, no fight logic | **M** (1 day) |
 | **B9** | The World 22 encore: Piwi's reveal after the Other Brady, the two variants, and the `TourEncoreScene` (7.5). | New scene | **M** (½–1 day) |
 | **B5b** | Pupo's verdict line after each boss falls: one `K.say` per land from a data table next to the act table (§3.3 has the lines; e.g. Mexico `'...good... pupo.'`, Ecuador `'...your pupo... is inside... your house.'`). Everything else Pupo does in play (riding, boxes, stretch arms, PUPO POWER!) is built from `docs/design/PUPO.md` on `Pupo.draw` / `Pupo.arm`. | Text plus a tiny hook | **S** (1 h) |
 | **B10** | Tests, tool labels and docs (7.7, 7.8), including the SECRETS doc re-theme (§4). | Text only | **S** (2 h) |
@@ -811,7 +811,7 @@ Do this after the title, maps, level, post-FX, player/UI and validator branches 
 **Tests after phase B:**
 - the full SBW suite in `docs/handoff/SBW_RESUME.md`, especially:
   - `gameplay_test` (finale and credits checks)
-  - `boss_test np` (all phases; Princess Papaya spawns in phase 2)
+  - `boss_test np` (all phases; Chinka-O spawns in phase 2)
   - `sbw_overworld_test` (the roadblock toast)
   - `sbw_toolkit_shots --checks` (the world-map jar and Showtrunk)
 - `apps_test` for all three apps
@@ -822,8 +822,8 @@ Do this after the title, maps, level, post-FX, player/UI and validator branches 
 ---
 
 ## 9. Open questions for Brady (each answerable in one sentence)
-1. **Where should Brady-O get Princess Papaya back?** Default: **in Nepal**, at the Grand Finale, so every player sees the reunion. Piwi's real last stand is then the World 22 encore, where he finally gets an audience, a three-star review and a puppet theatre job.
-2. **Should the game say "Brady-O" and "Princess Papaya" everywhere, or only in the story?** Default: in story scenes, credits and Piwi's lines. Her postcards keep saying "Brady!"
+1. **Where should Brady-O get Chinka-O back?** Default: **in Nepal**, at the Grand Finale, so every player sees the reunion. Piwi's real last stand is then the World 22 encore, where he finally gets an audience, a three-star review and a puppet theatre job.
+2. **Should the game say "Brady-O" and "Chinka-O" everywhere, or only in the story?** Default: in story scenes, credits and Piwi's lines. Her postcards keep saying "Brady!"
 3. **Is Piwi's look right?** He is a wooden dummy with copper painted hair, a jaw that clacks, a too-small magenta pinstripe jacket, a lemon polka-dot bow tie and teal trousers, a wink at the type without copying anyone. Default: yes, as on the contact sheet.
 
-(Princess Papaya's outfit stays the original spec until Brady chooses; the colours are one table in `src/05c_chinka.js`.)
+(Chinka-O's outfit stays the original spec until Brady chooses; the colours are one table in `src/05c_chinka.js`.)
