@@ -182,17 +182,22 @@ const Art = {
     for (let q = -1; q <= 1; q++) { ctx.beginPath(); ctx.moveTo(r * 1.08, q * r * 0.3); ctx.bezierCurveTo(r * 1.3, q * r * 0.3 - r * 0.18, r * 1.5, q * r * 0.3 + r * 0.18, r * 1.75, q * r * 0.3); ctx.stroke(); }
     ctx.restore();
   },
-  // a perforated square stamp (the map badge), w = 2 * h
+  // a perforated stamp (the map badge): h is half its height
   stamp(ctx, x, y, h, col, rot) {
     ctx.save(); ctx.translate(x, y); ctx.rotate(rot || 0);
-    const w = h * 0.84;
-    ctx.fillStyle = CREAM; ctx.strokeStyle = INK; ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    const n = 4, perf = (x0, y0, x1, y1) => { for (let i = 0; i < n; i++) { const a = i / n, b = (i + 0.5) / n, c = (i + 1) / n; ctx.lineTo(x0 + (x1 - x0) * a, y0 + (y1 - y0) * a); ctx.quadraticCurveTo(x0 + (x1 - x0) * b + (y1 - y0) / Math.hypot(x1 - x0, y1 - y0) * 1.4, y0 + (y1 - y0) * b - (x1 - x0) / Math.hypot(x1 - x0, y1 - y0) * 1.4, x0 + (x1 - x0) * c, y0 + (y1 - y0) * c); } };
-    ctx.moveTo(-w, -h); perf(-w, -h, w, -h); perf(w, -h, w, h); perf(w, h, -w, h); perf(-w, h, -w, -h); ctx.closePath();
-    ctx.fill(); ctx.stroke();
-    ctx.fillStyle = col; ctx.fillRect(-w + 2.5, -h + 2.5, 2 * w - 5, 2 * h - 5);
-    Art.heart(ctx, 0, 0.5, h * 0.42, CREAM);
+    const w = h * 0.84, nx = 3, ny = 4, rx = w / nx / 2, ry = h / ny / 2, r = Math.min(rx, ry) * 0.55;
+    ctx.beginPath(); ctx.moveTo(-w, -h);
+    for (let i = 0; i < nx; i++) { const cx = -w + (i * 2 + 1) * rx; ctx.lineTo(cx - r, -h); ctx.arc(cx, -h, r, Math.PI, 0, true); }
+    ctx.lineTo(w, -h);
+    for (let i = 0; i < ny; i++) { const cy = -h + (i * 2 + 1) * ry; ctx.lineTo(w, cy - r); ctx.arc(w, cy, r, -Math.PI / 2, Math.PI / 2, true); }
+    ctx.lineTo(w, h);
+    for (let i = nx - 1; i >= 0; i--) { const cx = -w + (i * 2 + 1) * rx; ctx.lineTo(cx + r, h); ctx.arc(cx, h, r, 0, Math.PI, true); }
+    ctx.lineTo(-w, h);
+    for (let i = ny - 1; i >= 0; i--) { const cy = -h + (i * 2 + 1) * ry; ctx.lineTo(-w, cy + r); ctx.arc(-w, cy, r, Math.PI / 2, -Math.PI / 2, true); }
+    ctx.closePath();
+    ctx.fillStyle = CREAM; ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = Math.max(0.9, h * 0.1); ctx.stroke();
+    ctx.fillStyle = col; ctx.fillRect(-w + h * 0.3, -h + h * 0.3, 2 * w - h * 0.6, 2 * h - h * 0.6);
+    Art.heart(ctx, 0, h * 0.06, h * 0.17, CREAM);
     ctx.restore();
   },
   // the care package: a kraft-paper parcel tied with string, her stamp and a pink bow
@@ -209,8 +214,8 @@ const Art = {
     ctx.beginPath(); ctx.moveTo(-4, -8); ctx.lineTo(-4, 28); ctx.moveTo(-36, 10); ctx.lineTo(28, 10); ctx.moveTo(-4, -8); ctx.lineTo(8, -18); ctx.moveTo(28, 10); ctx.lineTo(40, 0); ctx.stroke();
     // her stamp and a FRAGILE label
     ctx.fillStyle = cols.a; ctx.fillRect(10, 14, 12, 10); ctx.strokeStyle = CREAM; ctx.lineWidth = 0.8; ctx.setLineDash([1.4, 1.2]); ctx.strokeRect(11, 15, 10, 8); ctx.setLineDash([]);
-    ctx.fillStyle = CREAM; ctx.fillRect(-32, 14, 20, 9); ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.strokeRect(-32, 14, 20, 9);
-    ctx.fillStyle = '#c42a62'; ctx.font = `5px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('FRAGILE', -22, 18.8);
+    ctx.fillStyle = CREAM; ctx.fillRect(-33, 14, 23, 9); ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.strokeRect(-33, 14, 23, 9);
+    ctx.fillStyle = '#c42a62'; ctx.font = `4.3px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('FRAGILE', -21.5, 18.8);
     // the bow
     ctx.fillStyle = '#ff7ab8'; ctx.strokeStyle = INK; ctx.lineWidth = 1.6;
     for (const sd of [-1, 1]) { ctx.beginPath(); ctx.moveTo(2, -16); ctx.quadraticCurveTo(2 + sd * 14, -30, 2 + sd * 12, -14); ctx.closePath(); ctx.fill(); ctx.stroke(); }
@@ -276,6 +281,7 @@ function lines(ctx, text, maxW) {
   if (line) out.push(line);
   return out;
 }
+const ordinal = n => n + (n % 100 >= 11 && n % 100 <= 13 ? 'TH' : ['TH', 'ST', 'ND', 'RD'][n % 10] || 'TH');
 function fitFont(ctx, text, px, maxW, family) { let s = px; ctx.font = `${s}px ${family || FONT_DISPLAY}`; while (s > 7 && ctx.measureText(text).width > maxW) { s -= 0.5; ctx.font = `${s}px ${family || FONT_DISPLAY}`; } return s; }
 
 /* ---------- 1. a level: the clear, the results screen, the third card ---------- */
@@ -377,10 +383,10 @@ const PerkFx = {
   // the cape, behind Brady (local frame: +x is behind him, y down from the shoulders)
   cape(ctx, p, t, gold) {
     const D = p.small ? BRADY_DIM.small : BRADY_DIM.big, S = ART_SCALE.brady, feet = p.y + p.h;
-    const shY = feet - D.shoulder * S + (p.small ? 3 : 4), len = (D.shoulder - D.hip * (p.small ? 0.2 : 0.45)) * S;
+    const shY = feet - D.shoulder * S + (p.small ? 3 : 4), len = (D.shoulder - D.hip * (p.small ? 0.1 : 0.25)) * S;
     const spd = clamp(Math.abs(p.vx) / (6 * TS), 0, 1), air = p.onGround ? 0 : 1;
-    const lean = 0.12 + spd * 0.85 + air * 0.35 + Math.sin(t * 3) * 0.04, wv = Math.sin(t * 14) * (1 + spd * 2);
-    const hw = (p.small ? 5.5 : 7.5), bw = (p.small ? 8 : 12);
+    const lean = 0.42 + spd * 0.6 + air * 0.3 + Math.sin(t * 3) * 0.05, wv = Math.sin(t * 14) * (1 + spd * 2);
+    const hw = (p.small ? 5.5 : 7.5), bw = (p.small ? 9 : 14);
     ctx.save(); ctx.translate(p.cx - p.facing * 2, shY); ctx.scale(-p.facing, 1);
     const bx = Math.sin(lean) * len, by = Math.cos(lean) * len, nx = Math.cos(lean), ny = -Math.sin(lean);
     ctx.beginPath(); ctx.moveTo(-hw * 0.6, 0); ctx.lineTo(hw, 0);
@@ -470,7 +476,7 @@ function cardFor(item) {
 if (typeof TourMapScene !== 'undefined') {
   const MP = TourMapScene.prototype;
   const ready = m => {
-    if (m.card) return false;
+    if (m.card || m.toastT > 0.2) return false;
     if (m.mode === 'land') { const ow = m.ow; return !!(ow && ow.idle() && !ow.menu && ow.iris && ow.iris.t >= ow.iris.dur); }
     return !m.flight && !m.rReveal && !(m.rRevealQ && m.rRevealQ.length) && m.zoomT == null;
   };
@@ -500,7 +506,7 @@ function drawCareCard(ctx, c, age, t) {
   const C = c.cc ? Tour.countries[c.cc] : null, cols = colsOf(C);
   const k = TourKit.reduceMotion() ? 1 : TourPanelFx.backOut(clamp(age / 0.35, 0, 1));
   ctx.save(); ctx.fillStyle = `rgba(6,10,30,${0.6 * clamp(age * 4, 0, 1)})`; ctx.fillRect(0, 0, W, H);
-  const cw = Math.min(W - 32, portrait ? 360 : 520), ch = Math.min(H - 40, portrait ? 470 : 250), x = (W - cw) / 2, y = (H - ch) / 2;
+  const cw = Math.min(W - 32, portrait ? 360 : 520), ch = Math.min(H - 40, portrait ? 400 : 250), x = (W - cw) / 2, y = (H - ch) / 2;
   ctx.translate(W / 2, H / 2); ctx.scale(k, k); ctx.rotate(-0.015 + Math.sin(t * 1.5) * 0.006); ctx.translate(-W / 2, -H / 2);
   ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 24; ctx.fillStyle = CREAM; rr(ctx, x, y, cw, ch, 8); ctx.fill(); ctx.shadowBlur = 0;
   ctx.strokeStyle = INK; ctx.lineWidth = 2; rr(ctx, x, y, cw, ch, 8); ctx.stroke();
@@ -509,14 +515,14 @@ function drawCareCard(ctx, c, age, t) {
   for (let i = -2; i < (cw + ch) / 14; i++) { ctx.fillStyle = i % 2 ? '#38a8ff' : PINK; ctx.beginPath(); const sx = x + i * 14; ctx.moveTo(sx, y); ctx.lineTo(sx + 7, y); ctx.lineTo(sx + 1, y + 6); ctx.lineTo(sx - 6, y + 6); ctx.fill(); ctx.beginPath(); ctx.moveTo(sx, y + ch); ctx.lineTo(sx + 7, y + ch); ctx.lineTo(sx + 13, y + ch - 6); ctx.lineTo(sx + 6, y + ch - 6); ctx.fill(); }
   ctx.restore();
   // the picture side: the parcel (portrait: on top)
-  const pw = portrait ? cw : cw * 0.36, ph = portrait ? ch * 0.36 : ch;
+  const pw = portrait ? cw : cw * 0.36, ph = portrait ? ch * 0.4 : ch;
   const g = ctx.createLinearGradient(0, y, 0, y + ph); g.addColorStop(0, cols.b); g.addColorStop(1, cols.c);
   ctx.fillStyle = g; rr(ctx, x + 12, y + 14, pw - 24, ph - (portrait ? 14 : 28), 6); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.stroke();
   const px = x + pw / 2, py = y + (portrait ? ph * 0.56 : ph * 0.52), ps = Math.min(pw / 110, ph / 90, 1.8);
   if (c.kind === 'care') Art.parcel(ctx, px, py, ps, cols, t);
-  else { Art.parcel(ctx, px - 22 * ps, py + 6 * ps, ps * 0.75, cols, t); Art.parcel(ctx, px + 24 * ps, py + 2 * ps, ps * 0.85, { a: '#38c8ff' }, t + 1); if (c.kind === 'all') Art.icon(ctx, 'gold', px, py - 30 * ps, 16 * ps, t); }
+  else { const q = Math.min(ps, (pw - 30) / 150); Art.parcel(ctx, px - 26 * q, py + 10 * q, q * 0.72, cols, t); Art.parcel(ctx, px + 26 * q, py + 2 * q, q * 0.8, { a: '#38c8ff' }, t + 1); if (c.kind === 'all') Art.icon(ctx, 'gold', px, py - 40 * q, 16 * q, t); }
   // the writing side
-  const tx = portrait ? x + 20 : x + pw + 4, tw = portrait ? cw - 40 : cw - pw - 22;
+  const tx = portrait ? x + 20 : x + pw + 4, tw = portrait ? cw - 40 : cw - pw - 54;
   let ty = portrait ? y + ph + 22 : y + 30;
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   const title = c.kind === 'care' ? 'A CARE PACKAGE FROM ' + (C ? C.name.toUpperCase() : '') : c.kind === 'all' ? 'THE LAST PARCEL' : 'CHINKA-O CAUGHT UP ON HER MAIL';
@@ -735,6 +741,7 @@ class PostcardAlbum {
     ctx.fillStyle = cols.a; rr(ctx, bx, by, bw, bh, 8); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.stroke();
     ctx.fillStyle = rgba('#ffffff', 0.2); rr(ctx, bx + 4, by + 4, bw - 8, 6, 3); ctx.fill();
     if (C.emblem) { ctx.fillStyle = cols.b; ctx.beginPath(); ctx.arc(bx + 18, by + bh / 2, 11, 0, TAU); ctx.fill(); ctx.strokeStyle = CREAM; ctx.lineWidth = 1.5; ctx.stroke(); try { C.emblem(ctx, bx + 18, by + bh / 2, 8, t); } catch (e) { /* an emblem that wants a map */ } }
+    else Art.stamp(ctx, bx + 18, by + bh / 2, 10, cols.b, -0.1);
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillStyle = CREAM;
     fitFont(ctx, C.name.toUpperCase(), 15, bw * 0.55); ctx.fillText(C.name.toUpperCase(), bx + 36, by + bh / 2 + 1);
     ctx.textAlign = 'right'; ctx.font = `12px ${FONT_DISPLAY}`; ctx.fillText(g + ' / ' + ids.length * 3, bx + bw - 12, by + bh / 2 + 1);
@@ -747,15 +754,15 @@ class PostcardAlbum {
       if (i % 2 === 0) { ctx.fillStyle = 'rgba(60,40,80,0.05)'; ctx.fillRect(bx, y - rowH / 2, listW, rowH); }
       ctx.fillStyle = L.secret ? '#ffd84a' : cols.b; rr(ctx, bx + 2, y - 10, 40, 20, 6); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.stroke();
       ctx.fillStyle = INK; ctx.textAlign = 'center'; ctx.font = `10px ${FONT_DISPLAY}`; ctx.fillText(id, bx + 22, y + 1);
-      const sx0 = bx + listW - slotW * 3 - (all3 ? 4 : 2);
+      const sx0 = bx + listW - slotW * 3 - 30 * cs;
       ctx.textAlign = 'left'; ctx.fillStyle = '#3a2a5a'; ctx.font = `${this.portrait ? 12 : 12}px ${FONT_UI}`;
       ctx.fillText(TourLandscape.fit(ctx, L.name, sx0 - bx - 56), bx + 50, y + 1);
       for (let q = 0; q < 3; q++) { const x = sx0 + slotW * (q + 0.5); if (gd[q]) Art.card(ctx, x, y, cs * 0.92, cols, (q - 1) * 0.06); else Art.ghost(ctx, x, y, cs * 0.92, id); }
-      if (all3) Art.postmark(ctx, sx0 + slotW * 2.55, y + 2, 10 * cs, '#d6206a', '3', -0.25, 0.85);
+      if (all3) Art.stamp(ctx, bx + listW - 15 * cs, y, 9 * cs, cols.a, 0.12);
     });
     if (hidden) { ctx.textAlign = 'left'; ctx.font = `italic 11px ${FONT_UI}`; ctx.fillStyle = '#6a5a7a'; ctx.fillText('+ ' + (hidden === 1 ? 'a secret level' : hidden + ' secret levels') + ' not found yet', bx + 4, ly + ids.length * rowH + 12); }
     // the care package side
-    const nx = this.portrait ? bx : bx + listW + 16, ny = this.portrait ? ly + listH + 12 : ly, nw = this.portrait ? bw : bw - listW - 16, nh = this.portrait ? P.y + P.h - pad - ny : P.y + P.h - pad - ny;
+    const nx = this.portrait ? bx : bx + listW + 16, ny = this.portrait ? ly + listH + 12 : ly, nw = this.portrait ? bw : bw - listW - 16, nh = this.portrait ? Math.min(250, P.y + P.h - pad - ny) : P.y + P.h - pad - ny;
     if (nh < 60) return;
     ctx.save(); ctx.translate(nx + nw / 2, ny + nh / 2); ctx.rotate(done ? 0.012 : -0.01); ctx.translate(-(nx + nw / 2), -(ny + nh / 2));
     ctx.fillStyle = done ? CREAM : 'rgba(255,255,255,0.4)'; rr(ctx, nx, ny, nw, nh, 6); ctx.fill();
@@ -802,22 +809,23 @@ class PostcardAlbum {
       this.tiles.push({ id: it.id, x, y, w: tw, h: th });
       ctx.fillStyle = un ? (on ? '#fff8e8' : '#efe6d4') : 'rgba(60,40,80,0.06)'; rr(ctx, x, y, tw, th, 8); ctx.fill();
       ctx.strokeStyle = un ? INK : 'rgba(60,40,80,0.3)'; ctx.lineWidth = un ? 1.4 : 1; if (!un) ctx.setLineDash([4, 3]); ctx.stroke(); ctx.setLineDash([]);
-      const ir = Math.min(18, th * 0.17), ix = x + ir + 10, iy = y + ir + 10;
+      const ir = Math.min(18, th * 0.14), ix = x + ir + 10, iy = y + ir + 9;
       Art.icon(ctx, it.id, ix, iy, ir, t, !un);
       ctx.textAlign = 'left'; ctx.fillStyle = un ? '#3a2a5a' : '#8a7a9a';
       fitFont(ctx, it.name, 11, tw - ir * 2 - 26); ctx.fillText(it.name, ix + ir + 8, iy - 5);
       ctx.font = `bold 9px ${FONT_UI}`; ctx.fillStyle = it.kind === 'look' ? '#c42a62' : '#2a7a9a'; ctx.fillText(it.kind === 'look' ? 'FOR BRADY' : 'HELPER', ix + ir + 8, iy + 9);
-      ctx.font = `${th < 100 ? 9.5 : 10.5}px ${FONT_UI}`; ctx.fillStyle = un ? '#4a3a5a' : '#9a8aaa';
-      const dl = lines(ctx, it.desc, tw - 18), maxL = Math.max(1, Math.floor((th - ir * 2 - 46) / 12.5));
-      dl.slice(0, maxL).forEach((l, q) => ctx.fillText(l, x + 9, iy + ir + 10 + q * 12.5));
+      const fs = th < 110 ? 9.5 : 10.5, lh = fs * 1.22, d0 = iy + ir + 4 + lh / 2;
+      ctx.font = `${fs}px ${FONT_UI}`; ctx.fillStyle = un ? '#4a3a5a' : '#9a8aaa';
+      const dl = lines(ctx, it.desc, tw - 18), maxL = Math.max(1, Math.floor((y + th - 24 - d0 + lh / 2) / lh));
+      dl.slice(0, maxL).forEach((l, q) => ctx.fillText(l, x + 9, d0 + q * lh));
       // the status pill
-      const pl = un ? (on ? 'ON' : 'OFF') : it.id === 'gold' ? 'EVERY POSTCARD' : 'LAND #' + (i + 1);
+      const pl = un ? (on ? 'ON' : 'OFF') : it.id === 'gold' ? 'EVERY POSTCARD' : ordinal(i + 1) + ' LAND';
       ctx.font = `9px ${FONT_DISPLAY}`; const pw = ctx.measureText(pl).width + 16, px = x + tw - pw - 7, py = y + th - 22;
       ctx.fillStyle = un ? (on ? '#3ac87a' : '#a89aa8') : 'rgba(60,40,80,0.12)'; rr(ctx, px, py, pw, 16, 8); ctx.fill();
       ctx.fillStyle = un ? '#ffffff' : '#7a6a8a'; ctx.textAlign = 'center'; ctx.fillText(pl, px + pw / 2, py + 8.5);
     });
     ctx.textAlign = 'left'; ctx.font = `italic 10px ${FONT_UI}`; ctx.fillStyle = '#7a6a8a';
-    const after = 'After land #' + PERKS.length + ', every care package holds +' + LIVES_PACK + ' lives.';
+    const after = 'After the ' + ordinal(PERKS.length).toLowerCase() + ' land, every care package holds +' + LIVES_PACK + ' lives.';
     const ay = gy + rows * (th + gap) + 4;
     if (!all && ay < P.y + P.h - 6) ctx.fillText(after, P.x + pad + 4, ay);
     this.letterBtn = null;
