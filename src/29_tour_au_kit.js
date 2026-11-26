@@ -253,6 +253,7 @@ class AuHuntsman extends Ent {
   }
   hear(x, s) {
     if (this.state !== 'wait' && this.state !== 'home') return;
+    if (this.calm > 0) return;   // just stomped on: he sulks for a moment and hears nothing
     const d = Math.abs(x - this.cx) / TS;
     if (d > s * AuWeb.REACH * this.reachMul) return;
     this.state = 'notice'; this.st = 0.8; this.tx = clamp(x - this.w / 2, this.minX(), this.maxX()); this.dir = sign(this.tx - this.x) || this.dir;
@@ -261,7 +262,7 @@ class AuHuntsman extends Ent {
   minX() { const W = this.g.auWebs && this.g.auWebs[this.webId]; return W ? W.x - 10 : this.homeX - 200; }
   maxX() { const W = this.g.auWebs && this.g.auWebs[this.webId]; return W ? W.x + W.w - this.w + 10 : this.homeX + 200; }
   update(dt) {
-    this.t += dt;
+    this.t += dt; if (this.calm > 0) this.calm -= dt;
     if (this.lost) { const W = (this.g.auWebs || {})[this.webId]; if (W) { W.spiders.push(this); this.lost = false; } }
     const p = this.g.player;
     if (this.state === 'notice') { this.st -= dt; if (this.st <= 0) { this.state = 'hunt'; this.st = 4; } }
@@ -273,7 +274,7 @@ class AuHuntsman extends Ent {
     else if (this.state === 'home') { this.x = approach(this.x, this.homeX, 3 * TS * dt); this.dir = sign(this.homeX - this.x) || this.dir; if (Math.abs(this.x - this.homeX) < 1) this.state = 'wait'; }
     // a stomp on his back while he hunts: Brady bounces, the spider goes home in a huff
     if (p && !p.dead && (this.state === 'hunt' || this.state === 'look' || this.state === 'notice') && p.vy > 0 && p.prevBottom <= this.y + 8 && p.y + p.h >= this.y && p.x + p.w > this.x + 4 && p.x < this.x + this.w - 4) {
-      p.vy = -PHYS.stompVHeld; p.jumping = true; p.y = this.y - p.h - 1; this.state = 'home'; this.g.parts.text(this.cx, this.y - 16, 'OI! RUDE!', '#ffffff'); Sound.play('stomp', { pitch: 1.4 });
+      p.vy = -PHYS.stompVHeld; p.jumping = true; p.y = this.y - p.h - 1; this.state = 'home'; this.calm = 1.6; this.g.parts.text(this.cx, this.y - 44, 'OI! RUDE!', '#ffffff'); Sound.play('stomp', { pitch: 1.4 });
     }
   }
   touchPlayer(p) { if (this.state === 'hunt' || this.state === 'look') p.hurt(this); }
@@ -349,7 +350,7 @@ class AuRoad extends Ent {
     ctx.fillStyle = '#4a4a54'; ctx.fillRect(x0, y, W, 4);
     ctx.fillStyle = '#f2ece0'; for (let x = x0 - sc; x < x0 + W; x += 128) ctx.fillRect(x, y + 40, 64, 6);
     ctx.fillStyle = '#ffd84a'; ctx.fillRect(x0, y + 12, W, 3);
-    for (let x = x0 - ((t * this.speed * 1.2) % 360); x < x0 + W; x += 360) { ctx.fillStyle = '#f2f2f2'; ctx.fillRect(x, y - 34, 5, 34); ctx.fillStyle = '#e8423a'; ctx.fillRect(x, y - 34, 5, 6); ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.strokeRect(x, y - 34, 5, 34); }
+    for (let x = x0 - ((t * this.speed * 1.2) % 360); x < x0 + W; x += 360) { if (SOLID[tileAt(g.area, Math.floor((x + 2) / TS), Math.floor(y / TS) - 2)]) continue; ctx.fillStyle = '#f2f2f2'; ctx.fillRect(x, y - 34, 5, 34); ctx.fillStyle = '#e8423a'; ctx.fillRect(x, y - 34, 5, 6); ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.strokeRect(x, y - 34, 5, 34); }
     // speed lines and dust
     ctx.strokeStyle = 'rgba(255,240,220,0.5)'; ctx.lineWidth = 2;
     for (let k = 0; k < 8; k++) { const yy = y - 80 - ((k * 53) % 260), xx = x0 + W - ((t * this.speed * 1.6 + k * 197) % (W + 200)); ctx.beginPath(); ctx.moveTo(xx, yy); ctx.lineTo(xx + 50 + (k % 3) * 20, yy); ctx.stroke(); }
