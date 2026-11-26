@@ -56,7 +56,7 @@ const aurora = (() => {
   // the twist: a ribbon whose fade comes TOWARD you (from its far end), rippling hard; a tern over it
   G.put(93, 13, 'Z'); G.put(99, 8, 't'); G.coins(95, 104, 11);
   // the ridge: a pulse ribbon up to the high ledge with the folk's painted door (the secret), a tern
-  G.put(113, 14, 'x'); G.put(106, 12, 'u'); G.put(100, 9, 'U'); G.fill(94, 5, 98, 5, '-'); G.put(97, 4, 'e'); G.put(95, 4, 'D'); G.put(101, 7, 'o'); G.put(99, 6, 'o'); G.put(97, 3, 'o'); G.put(110, 14, 'f'); G.put(106, 14, 'A');
+  G.put(113, 14, 'x'); G.put(106, 12, 'u'); G.put(103, 9, 'U'); G.fill(98, 6, 106, 6, '-'); G.put(101, 5, 'e'); G.put(99, 5, 'D'); G.put(105, 7, 'o'); G.put(104, 4, 'o'); G.put(102, 4, 'o'); G.put(110, 14, 'f'); G.put(106, 14, 'A');
   // the third stretch: a sweep ribbon and a drifting plank above it, two puffins
   G.put(115, 12, 'R'); G.put(122, 7, 'p'); G.put(130, 9, 'z'); G.put(133, 12, 'w'); G.put(136, 6, 'p'); G.coins(117, 127, 10);
   // checkpoint 2, before the last stretch
@@ -79,7 +79,7 @@ const AUR = {
   E: ['piece', 'ribbon', { len: 6, mode: 'sweep', hold: 1.2, dark: 1.6, speed: 4.4, amp: 6, phase: 1.1 }],
   Z: ['piece', 'ribbon', { len: 12, mode: 'sweep', dir: -1, hold: 2.6, dark: 1.2, speed: 5.0, amp: 14, wave: 8, hue: 1 }],
   u: ['piece', 'ribbon', { len: 6, mode: 'pulse', hold: 2.2, dark: 2.0, amp: 4, hue: 2, phase: 0.5 }],
-  U: ['piece', 'ribbon', { len: 4, mode: 'pulse', hold: 2.4, dark: 1.6, amp: 3, hue: 0, phase: 1.4 }],
+  U: ['piece', 'ribbon', { len: 4, mode: 'pulse', hold: 2.6, dark: 1.6, amp: 3, hue: 0, phase: 0.3 }],
   z: ['piece', 'plank', { ax: 6, w: 3, speed: 1.6 }],
   '1': ['piece', 'ribbon', { len: 12, mode: 'sweep', hold: 1.2, dark: 1.4, speed: 5.0, amp: 10, phase: 0 }],
   '2': ['piece', 'ribbon', { len: 12, mode: 'sweep', hold: 1.2, dark: 1.4, speed: 5.0, amp: 10, hue: 1, phase: -1.2 }],
