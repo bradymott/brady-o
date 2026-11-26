@@ -134,8 +134,8 @@ TourRooms.def('keSimon', {
     const span = x1 - x0 - 1, pads = [];
     for (let k = 0; k < 4; k++) pads.push(x0 + Math.round(span * (k + 0.5) / 4));
     g.data.pads = pads; g.data.len = o.len || 4;
-    // a perch over the mats with coins (the room's own little bonus)
-    g.hline(pads[1], pads[2], 6, '-'); g.coins(pads[1], pads[2], 5);
+    // a row of coins high over the mats (the room's own little bonus: hop for them between tunes)
+    g.coins(pads[1], pads[2], 3);
     g.winSpot(A.id, pads[3], Y);
     return g;
   },
@@ -176,8 +176,8 @@ TourRooms.def('keSimon', {
       ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = lit ? S.col : '#c8a850'; ctx.beginPath(); ctx.ellipse(x, fy - 3, 22, 6, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore();
       ctx.save(); TourRoomArt.sym(ctx, k, x, fy - 3, 4); ctx.restore();
       // the nest overhead on its string, the weaver singing out of it
-      const ny = 3 * TS + Math.sin(t * 2 + k) * 2;
-      ctx.save(); ctx.strokeStyle = '#6a4a2a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, TS); ctx.lineTo(x, ny - 18); ctx.stroke();
+      const ny = 6 * TS + Math.sin(t * 2 + k) * 2;
+      ctx.save(); ctx.strokeStyle = '#6a4a2a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, 2 * TS); ctx.lineTo(x, ny - 18); ctx.stroke();
       if (lit) { ctx.fillStyle = 'rgba(255,240,150,0.5)'; ctx.beginPath(); ctx.arc(x, ny, 30, 0, TAU); ctx.fill(); }
       ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#d8b860'; ctx.beginPath(); ctx.ellipse(x, ny, 16, 19, 0, 0, TAU); ctx.fill(); ctx.stroke();
       ctx.fillStyle = '#ffd82a'; ctx.beginPath(); ctx.arc(x, ny + 14 + (lit ? 4 : 0), 7, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(x + 2, ny + 13 + (lit ? 4 : 0), 1.6, 0, TAU); ctx.fill();

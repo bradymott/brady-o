@@ -402,8 +402,9 @@ async function session(browser, viewport, fn) {
     /* ---------- the secret rooms (SECRETS_BRIEF.md): each found the way a player finds it, played once wrong and once right ---------- */
     await run('sec-weavers', async () => {
       // 15-1: the tell (a coin trail up off the leap's top), then up from a wildebeest's back into the canopy
-      await page.evaluate(() => { fresh(); play('15-1'); const T = window.BRADY.T, A = S().area; let tx = 0; for (let x = 100; x < A.W && !tx; x++) if (A.tiles[7 * A.W + x] === T.HARD) tx = x; window._tx = tx; place(tx - 9, 13); sim(0.3); freeze(); });
+      await page.evaluate(() => { fresh(); play('15-1'); const T = window.BRADY.T, A = S().area; let tx = 0; for (let x = 100; x < A.W && !tx; x++) if (A.tiles[7 * A.W + x] === T.HARD) tx = x; window._tx = tx; const p = P(); p.invuln = 99; if (hopOn(tx - 9)) until(() => (p.y + p.h) / 32 < 5.6, 4); p.invuln = 0; freeze(); });
       await shot('80-15-1-secret-tell-coins-up-the-leap.png');
+      await page.evaluate(() => { thaw(); play('15-1'); });
       const r = await page.evaluate(() => {
         thaw(); const g = S(), p = P(), tx = window._tx; p.invuln = 99;
         let up = false;
@@ -449,10 +450,10 @@ async function session(browser, viewport, fn) {
         const cliffTop = until(() => (p.y + p.h) / 32 < 8.2, 6, { up: true });
         window.freezeAt = 1; return { rode, cliffTop };
       });
-      await page.evaluate(() => freeze()); await shot('83-15-2-secret-tell-coins-above-the-cliff.png');
+      await page.evaluate(() => { P().invuln = 0; freeze(); }); await shot('83-15-2-secret-tell-coins-above-the-cliff.png');
       const r2 = await page.evaluate(() => {
         thaw(); const g = S(), p = P(), gi = ents('KeGiraffe').sort((a, b) => a.x - b.x)[0];
-        const top = until(() => gi.pos >= gi.len - 1, 8, { up: true });
+        p.invuln = 99; const top = until(() => gi.pos >= gi.len - 1, 8, { up: true });
         const ledge = until(() => p.onGround && p.ride !== gi && (p.y + p.h) / 32 < 3, 2, { left: true });
         const door = S().entities.find(e => e.constructor.name === 'Portal' && e.s.targetRef === 'manor@in');
         walkTo(door.cx, 3); const to = upDoor();
@@ -489,11 +490,11 @@ async function session(browser, viewport, fn) {
         place(Math.floor(lk.x / 32) - 1, 13); sim(0.2);
         until(() => sk.y > sk.hy - 8 && sk.dx <= 0.05, 14); const on = hopTo(sk, 50);
         until(() => sk.y <= sk.hy + sk.ay + 6, 14);
-        freeze(); return { on };
+        p.invuln = 0; freeze(); return { on };
       });
       await shot('86-15-3-secret-tell-coins-over-the-skein.png');
       const r2 = await page.evaluate(() => {
-        thaw(); const g = S(), p = P(); const door = g.entities.find(e => e.constructor.name === 'Portal' && e.s.targetRef === 'nests@in');
+        thaw(); const g = S(), p = P(); p.invuln = 99; const door = g.entities.find(e => e.constructor.name === 'Portal' && e.s.targetRef === 'nests@in');
         const led = hopTo({ cx: door.cx - 40 }, 50);
         until(() => S().area.aid === 'nests', 3, { right: true });
         return { led, inRoom: waitArea('nests') };

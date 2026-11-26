@@ -628,9 +628,9 @@ class KePuff extends Ent {
     ctx.save();
     for (let k = 0; k < 3; k++) {
       const ph = ((this.t + this.ph) * 0.45 + k / 3) % 1; if (ph > 0.75) continue;
-      const a = (1 - ph / 0.75) * (this.mist ? 0.55 : 0.6);
-      ctx.fillStyle = this.mist ? `rgba(230,248,255,${a})` : `rgba(236,200,150,${a})`;
-      ctx.beginPath(); ctx.arc(x + Math.sin(ph * 6 + k) * 6, y - ph * (this.mist ? 70 : 34), 3 + ph * 9, 0, TAU); ctx.fill();
+      const a = (1 - ph / 0.75) * (this.mist ? 0.8 : 0.75);
+      ctx.fillStyle = this.mist ? `rgba(240,252,255,${a})` : `rgba(240,206,156,${a})`;
+      ctx.beginPath(); ctx.arc(x + Math.sin(ph * 6 + k) * 6, y - ph * (this.mist ? 90 : 40), 4 + ph * 11, 0, TAU); ctx.fill();
     }
     ctx.restore();
   }
