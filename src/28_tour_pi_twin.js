@@ -173,7 +173,7 @@ class PupoGift extends PupoFree {
     }
   }
 }
-ENTITY_TYPES.pupoGift = PupoGift;
+// (spawned only here, never from level data: not an ENTITY_TYPES entry, so the hats list needs nothing)
 
 /* ---------- the wrappers ---------- */
 {
