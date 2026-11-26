@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>Super Brady-O World</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="description" content="Brady-O chases Piwi Squirmin', a runaway ventriloquist dummy who has whisked his wife Princess Papaya off on a world tour: a 2D platformer across twelve countries.">
+<meta name="description" content="Brady-O chases Piwi Squirmin', a runaway ventriloquist dummy who has whisked his wife Chinka-O off on a world tour: a 2D platformer across twelve countries.">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1630,7 +1630,7 @@ const Sound = (() => {
       ap: '0.1.2.1.', ai: 'pluck', av: 0.035, ao: 55,
       dr: [FOUR, '..h...h...h...h.', '....s.......s...', 'l.l.l.l.l.l.l.l.'], dv: 0.38
     },
-    // Ending: reunion with Princess Papaya as the Man burns. 8 tender bars, then the drop into celebration
+    // Ending: reunion with Chinka as the Man burns. 8 tender bars, then the drop into celebration
     ending: {
       bpm: 120, bars: 16, rv: 0.35, dl: 0.12, pump: 0.4,
       ch: 'Cm Ab Eb Bb Cm Ab Fm Bb Eb Bb Cm Ab Eb Bb Ab,Bb Eb',
@@ -1873,7 +1873,7 @@ const Sound = (() => {
       ap: 'c---..c-..c-....', ai: 'ep', av: 0.06, ao: 55,
       dr: ['k.......k..k....', '....r.......r...', '..h...h...h...h.', 'n.n.n.n.n.n.n.n.'], dv: 0.38
     },
-    // Story intro: 8 romantic bars (piano, Eb major), then the Man takes Princess Papaya (C minor, low brass, timpani)
+    // Story intro: 8 romantic bars (piano, Eb major), then the Man takes Chinka (C minor, low brass, timpani)
     burns_intro: {
       bpm: 84, bars: 16, rv: 0.45, dl: 0.15,
       ch: 'Eb Cm Ab Bb Eb Cm Fm7 Bb Cm Cm Ab G Cm Db Ab G',
@@ -5835,7 +5835,7 @@ try { window.BRADY_DRAW = drawBrady; } catch (e) { /* not in a browser */ }
 /* ============================================================
    Piwi Squirmin': the villain of Super Brady-O World (Nov 2026).
    A wooden ventriloquist dummy with nobody working him: a prim,
-   giggly show-off who has decided Princess Papaya is the leading lady of
+   giggly show-off who has decided Chinka-O is the leading lady of
    his world-tour variety show. Story and character sheet:
    docs/design/STORY_PIWI.md.
    Our own design: a big lacquered head with a hinged jaw (two jaw
@@ -6127,7 +6127,7 @@ const Piwi = {
 
 /* ---- 05c_chinka.js ---- */
 /* ============================================================
-   Princess Papaya: Brady-O's wife, as she appears in the Piwi Squirmin'
+   Chinka-O: Brady-O's wife, as she appears in the Piwi Squirmin'
    story of Super Brady-O World (Nov 2026; docs/design/STORY_PIWI.md).
    Brady's spec (16 Nov 2026): a ballerina in a pink tutu; she is
    Ecuadorian, with black hair, a warm brown skin tone and dark
@@ -6415,7 +6415,7 @@ const ChinkaO = {
    with travel stickers, flown by two brass rotors on masts. Its lid
    stands open as a little stage: velvet curtains, footlights and a
    bulb-lit marquee that says PIWI! Under it, on a chain, hangs the
-   gilded show cage where Princess Papaya sits on a swing with her popcorn.
+   gilded show cage where Chinka-O sits on a swing with her popcorn.
    It replaced the old villain's blimp on the title, the route
    map, the land maps and the Nepal fight. Not referenced yet.
      Showtrunk.draw(ctx, { x, y, scale, t, piwi: pose | null, chinka: true | false, party })
@@ -6440,7 +6440,7 @@ const Showtrunk = {
     ctx.fillStyle = C.brass; ctx.strokeStyle = C.ink; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(0, 0, 3.4, 2.2, 0, 0, TAU); ctx.fill(); ctx.stroke();
     ctx.restore();
   },
-  // the gilded show cage; Princess Papaya sits on its swing
+  // the gilded show cage; Chinka-O sits on its swing
   cage(ctx, x, y, s, t, chinka) {
     const C = SHOWTRUNK; ctx.save(); ctx.translate(x, y); if (s && s !== 1) ctx.scale(s, s);
     const sw = Math.sin(t * 1.4) * 0.05; ctx.rotate(sw);
@@ -6584,9 +6584,9 @@ const Showtrunk = {
 
 /* ---- 05e_pupo.js ---- */
 /* ============================================================
-   Pupo: Princess Papaya's giant pet sloth, and Brady-O's sidekick and
+   Pupo: Chinka-O's giant pet sloth, and Brady-O's sidekick and
    steed (Nov 2026; story: docs/design/STORY_PIWI.md, gameplay:
-   docs/design/PUPO.md). Piwi took Princess Papaya and left Pupo behind,
+   docs/design/PUPO.md). Piwi took Chinka-O and left Pupo behind,
    so he sets off with Brady-O to get her back. Slow, sweet,
    deadpan. He pokes belly buttons, which he calls "pupos" (that is
    how he got his name); Piwi is wooden and has none.
@@ -6938,7 +6938,7 @@ const Pupo = {
         ctx.beginPath(); ctx.moveTo(0, 3); ctx.bezierCurveTo(-5, -1, -2.6, -5, 0, -2.2); ctx.bezierCurveTo(2.6, -5, 5, -1, 0, 3); ctx.fill(); ctx.stroke(); ctx.restore();
       }
     } else if (pose === 'sad') {
-      // left behind: slumped, head down, hugging Princess Papaya's pink hair bow
+      // left behind: slumped, head down, hugging Chinka-O's pink hair bow
       mood = 'sad'; headX = 9; headY = -45; headTilt = 0.35; bob = 2;
       afx = 6; afy = -28; abx = 0; aby = -30; armB = true; armF = true;
     }
@@ -8490,7 +8490,7 @@ const SIGN_TEXTS = [
   'Somewhere, a wall is lying to you.',
   'The Man has a crush. It is not going well for anyone.',
   'Stand still long enough and Brady gets bored.',
-  'Princess Papaya was here. She left a heart in the dust.',
+  'Chinka was here. She left a heart in the dust.',
   'Free hugs ahead. Proceed with caution.',
   'Radical self-reliance means carrying your own snacks.',
   'Up on a porta-potty door to step through. Hold your breath.',
@@ -14113,7 +14113,7 @@ class Play {
     arr[idx] = true; Save.data.gold[this.id] = arr; Save.save();
     Sound.play('chinka');
     this.burst(x, y, 30, '#ff9ad8', 'firework');
-    this.parts.text(x, y - 20, this.level.tour ? 'POSTCARD FROM PRINCESS PAPAYA!' : 'PHOTO OF PRINCESS PAPAYA!', '#ff9ad8');
+    this.parts.text(x, y - 20, this.level.tour ? 'POSTCARD FROM CHINKA!' : 'PHOTO OF CHINKA!', '#ff9ad8');
     this.addScore(5000);
     this.happyT = 1.5;
   }
@@ -14609,7 +14609,7 @@ class Play {
     const W = Game.cssW, H = Play.uiH();
     const bw = Math.min(170, W * 0.36), bh = 48, y = H * 0.5 + 90;
     const finale = this.level.tour ? Tour.isFinale(this.id) : !!FINALE_LEVELS[this.id];
-    if (finale) btns.push({ x: W / 2 + 8, y, w: bw, h: bh, label: this.level.tour ? 'HOME TOGETHER ♥' : 'FIND PRINCESS PAPAYA ♥', primary: true, fn: () => this.goNext(null) });
+    if (finale) btns.push({ x: W / 2 + 8, y, w: bw, h: bh, label: this.level.tour ? 'HOME TOGETHER ♥' : 'FIND CHINKA ♥', primary: true, fn: () => this.goNext(null) });
     else if (next) btns.push({ x: W / 2 + 8, y, w: bw, h: bh, label: 'NEXT ▶', primary: true, fn: () => this.goNext(next) });
     else btns.push({ x: W / 2 + 8, y, w: bw, h: bh, label: 'MAP ▶', primary: true, fn: () => this.goNext(null) });
     btns.push({ x: W / 2 - 8 - bw, y, w: bw, h: bh, label: 'PLAY AGAIN', fn: () => { Sound.play('select'); Game.setScene(new Play(this.level, {})); } });
@@ -15199,7 +15199,7 @@ class Play {
     ctx.fillStyle = g;
     // secrets: an exit kind's title (a warp's own title) or a resultsTitle hook (TourHooks.titleFor)
     const hookTitle = typeof TourHooks !== 'undefined' ? TourHooks.titleFor(this) : null;
-    ctx.fillText(hookTitle || (this.secretClear ? 'SECRET EXIT!' : FINALE_LEVELS[this.id] ? 'PRINCESS PAPAYA IS FREE!' : this.level.kind === 'castle' ? 'CASTLE CLEARED!' : this.level.kind === 'fort' ? 'FORT CLEARED!' : this.level.kind === 'haunt' ? 'ESCAPED!' : this.level.kind === 'gift' ? 'GIFTED!' : 'YOU DID IT!'), W / 2, H / 2 - 100);
+    ctx.fillText(hookTitle || (this.secretClear ? 'SECRET EXIT!' : FINALE_LEVELS[this.id] ? 'CHINKA IS FREE!' : this.level.kind === 'castle' ? 'CASTLE CLEARED!' : this.level.kind === 'fort' ? 'FORT CLEARED!' : this.level.kind === 'haunt' ? 'ESCAPED!' : this.level.kind === 'gift' ? 'GIFTED!' : 'YOU DID IT!'), W / 2, H / 2 - 100);
     ctx.font = `14px ${FONT_UI}`; ctx.fillStyle = '#ffffff';
     ctx.fillText(this.level.name + ' cleared', W / 2, H / 2 - 66);
     ctx.font = `13px ${FONT_DISPLAY}`;
@@ -15778,7 +15778,7 @@ class MapScene {
     const cg = countGold(w);
     let done = 0; for (let i = 1; i <= Wd.plan.length; i++) if (Save.data.done[levelId(w, i)]) done++;
     ctx.font = `12px ${FONT_UI}`; ctx.fillStyle = 'rgba(255,255,255,0.8)';
-    ctx.fillText(`${done}/${Wd.plan.length} cleared   ·   ${cg.have}/${cg.total} photos of Princess Papaya`, W / 2, Math.max(82, insets.t + 76));
+    ctx.fillText(`${done}/${Wd.plan.length} cleared   ·   ${cg.have}/${cg.total} photos of Chinka`, W / 2, Math.max(82, insets.t + 76));
     // path
     const pts = this.nodes();
     ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 4; ctx.setLineDash([2, 10]); ctx.lineCap = 'round';
@@ -15970,17 +15970,17 @@ class CreditsScene {
     const tag = burns ? 'ONE WEEK IN BLACK ROCK CITY' : 'A TRIP AROUND THE WORLD';
     const nWorlds = (typeof BURNS_WORLD_ORDER !== 'undefined') ? BURNS_WORLD_ORDER.length : 17;
     this.lines = [
-      [head, 'h'], [tag, 'k'], ['', ''], ['Princess Papaya is safe. The Man burned. Nobody hydrated enough.', 's'], ['', ''],
-      ['STARRING', 'k'], ['Brady  ·  long hair, man bun, zero chill', 'v'], ['Princess Papaya  ·  the actual hero, honestly', 'v'], ['Slothy  ·  very fast, for a sloth', 'v'], ['Toadie & the Toad Crew  ·  hydration consultants', 'v'], ['', ''],
-      ['AND INTRODUCING', 'k'], ['The Man  ·  forty feet of wood with a crush on Princess Papaya', 'v'], ['', ''],
+      [head, 'h'], [tag, 'k'], ['', ''], ['Chinka is safe. The Man burned. Nobody hydrated enough.', 's'], ['', ''],
+      ['STARRING', 'k'], ['Brady  ·  long hair, man bun, zero chill', 'v'], ['Chinka  ·  the actual hero, honestly', 'v'], ['Slothy  ·  very fast, for a sloth', 'v'], ['Toadie & the Toad Crew  ·  hydration consultants', 'v'], ['', ''],
+      ['AND INTRODUCING', 'k'], ['The Man  ·  forty feet of wood with a crush on Chinka', 'v'], ['', ''],
       ['BURNERS WHO GOT IN THE WAY', 'k'], ['Hippies who want to talk about your aura', 'v'], ['Tech bros on electric unicycles', 'v'], ['Orgy dome creepers in fur coats', 'v'], ['Sparkle ponies who forgot water', 'v'], ['Fake spiritual pagan witches', 'v'], ['DPW. Obviously DPW.', 'v'], ['', ''],
       [burns ? 'BOSSES' : 'CAMP BOSSES', 'k'], ...bosses.map(n => [n, 'v']), ['', ''],
       ...(burns ? [
-        ['YOUR STATS', 'k'], [`Burn Tokens: ${nk(B.tokens)}`, 'v'], [`Photos of Princess Papaya: ${nk(B.photos)}`, 'v'], [`Worlds cleared: ${nk(B.worldDone)} / ${nWorlds}`, 'v'], ['', ''],
+        ['YOUR STATS', 'k'], [`Burn Tokens: ${nk(B.tokens)}`, 'v'], [`Photos of Chinka: ${nk(B.photos)}`, 'v'], [`Worlds cleared: ${nk(B.worldDone)} / ${nWorlds}`, 'v'], ['', ''],
         ['Six-day drivers, stressed camp leads and greeters', 's'], ['Influencers, sparkle ponies and crusty old burners', 's'], ['It was better last year. It always is.', 's'], ['', '']
       ] : [
-        ['YOUR STATS', 'k'], [`Photos of Princess Papaya: ${g.have} / ${g.total}`, 'v'], [`Levels cleared: ${sp.done} / ${sp.total}`, 'v'], [`Score: ${Save.data.score}`, 'v'], [`Times the Man got you: ${Save.data.deaths || 0}`, 'v'], ['', ''],
-        [g.have >= g.total ? 'Every photo of Princess Papaya. She framed them all.' : 'Some photos of Princess Papaya are still out on the playa...', 's'],
+        ['YOUR STATS', 'k'], [`Photos of Chinka: ${g.have} / ${g.total}`, 'v'], [`Levels cleared: ${sp.done} / ${sp.total}`, 'v'], [`Score: ${Save.data.score}`, 'v'], [`Times the Man got you: ${Save.data.deaths || 0}`, 'v'], ['', ''],
+        [g.have >= g.total ? 'Every photo of Chinka. She framed them all.' : 'Some photos of Chinka are still out on the playa...', 's'],
         [WORLDS[50] && worldUnlocked(50) ? 'You found World 22.' : 'Legend speaks of a World 22.', 's'], ['', '']
       ]),
 
@@ -17822,7 +17822,7 @@ Object.assign(Sprites, {
     ctx.restore();
   },
   goldRecord(ctx, x, y, t, ghost) {
-    // a polaroid of Princess Papaya (three hidden in every level)
+    // a polaroid of Chinka (three hidden in every level)
     ctx.save();
     if (ghost) ctx.globalAlpha *= 0.4;
     ctx.globalCompositeOperation = 'lighter';
@@ -17834,7 +17834,7 @@ Object.assign(Sprites, {
     ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1; ctx.stroke();
     const sg = ctx.createLinearGradient(0, -11, 0, 7); sg.addColorStop(0, '#ff9a6a'); sg.addColorStop(1, '#ffd8a0');
     ctx.fillStyle = sg; ctx.fillRect(-9.5, -11.5, 19, 18);
-    // Princess Papaya's silhouette: long hair, sunglasses
+    // Chinka's silhouette: long hair, sunglasses
     ctx.fillStyle = '#2a1a16'; ctx.beginPath(); ctx.ellipse(0, -3, 5.5, 7, 0, 0, TAU); ctx.fill(); ctx.fillRect(-5.5, -3, 11, 9);
     ctx.fillStyle = '#d9a580'; ctx.beginPath(); ctx.arc(0, -4, 3.6, 0, TAU); ctx.fill();
     ctx.fillStyle = '#1a1018'; ctx.fillRect(-3, -5, 6, 1.6);
@@ -19206,11 +19206,11 @@ const GiftIcon = {
 
 /* ---- 22_cast.js ---- */
 /* ============================================================
-   Cast: Princess Papaya, Slothy, the bosses and portraits
+   Cast: Chinka, Slothy, the bosses and portraits
    ============================================================ */
 const CHINKA = { hair: '#241612', hairHi: '#5a3a2c', skin: '#dcaa86', skinSh: '#b8835e', top: '#7a5644', topHi: '#9a7260', legs: '#141218', shoe: '#f4f4f0' };
 
-/* Princess Papaya: long dark wavy hair, sunglasses, big smile, brown tee, black leggings,
+/* Chinka: long dark wavy hair, sunglasses, big smile, brown tee, black leggings,
    white sneakers, glowing LED necklace. pose: idle | wave | cheer | run | captive */
 function drawChinka(ctx, o) {
   const t = o.t || 0, pose = o.pose || 'idle', f = o.facing || 1, C = CHINKA;
@@ -19729,7 +19729,7 @@ const ManArt = {
     ctx.strokeStyle = wood; ctx.lineWidth = 5;
     ctx.beginPath(); ctx.moveTo(-9, -34); ctx.lineTo(-30, -62 + armA * 20); ctx.moveTo(9, -34); ctx.lineTo(30, -62 - armA * 20); ctx.stroke();
     ctx.strokeStyle = dark; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(-14, -40); ctx.lineTo(-24, -50); ctx.moveTo(14, -40); ctx.lineTo(24, -50); ctx.stroke();
-    if (o.cage) { // Princess Papaya's cage dangles from his left hand
+    if (o.cage) { // Chinka's cage dangles from his left hand
       ctx.strokeStyle = '#c8c8d0'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-30, -62); ctx.lineTo(-30, -52); ctx.stroke();
       ctx.save(); ctx.translate(-30, -30); ctx.scale(0.36 / s * 2.4, 0.36 / s * 2.4); drawChinka(ctx, { x: 0, y: 0, scale: 1, t, pose: 'captive', facing: 1 }); ctx.restore();
       ctx.strokeStyle = '#ffd8a0'; ctx.lineWidth = 1.2; ctx.strokeRect(-38, -52, 16, 22); for (let i = 1; i < 4; i++) { ctx.beginPath(); ctx.moveTo(-38 + i * 4, -52); ctx.lineTo(-38 + i * 4, -30); ctx.stroke(); }
@@ -19759,7 +19759,7 @@ const ManArt = {
     if (b.phase === 1 || b.state !== 'fight' && b.phase !== 2) {
       const crouch = b.pose === 'crouch';
       this.figure(ctx, b.x + b.w / 2, b.y + b.h + (crouch ? 0 : 0), 1, t, { lit: true, arms: b.pose === 'arms' || b.pose === 'throw', kneel: crouch ? 0.6 : 0, angry: b.hurtT > 0 });
-      // Princess Papaya's cage rides on the saucer deck beside him
+      // Chinka's cage rides on the saucer deck beside him
       if (b.saucer && !b.saucer.dead) { const sx = b.saucer.x + b.saucer.w - 22, sy = b.saucer.y; ctx.save(); ctx.translate(sx, sy); ctx.scale(0.55, 0.55); drawChinka(ctx, { x: 0, y: 0, scale: 1, t, pose: 'captive', facing: -1 }); ctx.restore(); ctx.strokeStyle = '#ffd8a0'; ctx.lineWidth = 1.2; ctx.strokeRect(sx - 12, sy - 34, 24, 34); for (let i = 1; i < 4; i++) { ctx.beginPath(); ctx.moveTo(sx - 12 + i * 6, sy - 34); ctx.lineTo(sx - 12 + i * 6, sy); ctx.stroke(); } }
       return;
     }
@@ -19796,25 +19796,25 @@ const CharArt = {
 /* ---- 25_story.js ---- */
 /* ============================================================
    Story: intro panels, camp-boss messages from the little toads,
-   and the ending where Brady finds Princess Papaya as the Man burns.
+   and the ending where Brady finds Chinka as the Man burns.
    ============================================================ */
 const STORY_BEATS = {
-  '41-1': 'A little toad hops onto your boot: "Psst. The Man went that way, with Princess Papaya on his shoulder. Toads hear everything on Gate Road."',
-  '41-6': '"The Head Greeter lets you through at last. Princess Papaya? The Man carried her into the city. Follow the smell of bad coffee."',
+  '41-1': 'A little toad hops onto your boot: "Psst. The Man went that way, with Chinka on his shoulder. Toads hear everything on Gate Road."',
+  '41-6': '"The Head Greeter lets you through at last. Chinka? The Man carried her into the city. Follow the smell of bad coffee."',
   '41-7': '"Kandi bracelets! One extra hit at the start of every level. Gifting is the whole point, man."',
-  '42-4': '"The Head Camp Lead dropped her clipboard. It says: PRINCESS PAPAYA, SEEN AT THE BIG TOP, 2 AM."',
-  '42-6': '"Barista Bot sputters: Princess Papaya ordered an oat-milk latte for the Man. She\'s stalling him! The Esplanade, now!"',
+  '42-4': '"The Head Camp Lead dropped her clipboard. It says: CHINKA, SEEN AT THE BIG TOP, 2 AM."',
+  '42-6': '"Barista Bot sputters: Chinka ordered an oat-milk latte for the Man. She\'s stalling him! The Esplanade, now!"',
   '43-6': '"DJ Wub-Lord drops the beat, and a clue: the Man stomped off toward Theme Camp Row."',
   '43-7': '"A lamplighter\'s lantern! Dark levels and dust storms are easier to see through now."',
-  '44-6': '"Grand Witch Moonbeam read your aura: deeply annoyed. She saw Princess Papaya out past the hot springs."',
-  '45-6': '"The Geyser Guardian burbles happily. The Man waded into the deep playa, still carrying Princess Papaya."',
+  '44-6': '"Grand Witch Moonbeam read your aura: deeply annoyed. She saw Chinka out past the hot springs."',
+  '45-6': '"The Geyser Guardian burbles happily. The Man waded into the deep playa, still carrying Chinka."',
   '45-7': '"Bike Repair Camp tuned you up. Brady runs faster now. You\'re welcome."',
   '46-6': '"Dust Devil Diablo spins out. Through the settling dust: the Man\'s pavilion, glowing on the horizon."',
   '46-7': '"Hydration Station topped you up: you start every level big now. Drink water. Seriously."',
   '47-3': '"Forklift Frank waves you on. He\'ll pretend he never saw you."',
   '47-6': '"Foreman Rusty radios it in: \'Brady is coming for the Man.\' Somewhere, the whole city cheers."',
-  '48-4': '"The Glitter Queen lost her shine. The pavilion is right there, and Princess Papaya is waving from the top!"',
-  '48-5': '"The Man burns. Princess Papaya is free. Little toad wipes away a little tear."',
+  '48-4': '"The Glitter Queen lost her shine. The pavilion is right there, and Chinka is waving from the top!"',
+  '48-5': '"The Man burns. Chinka is free. Little toad wipes away a little tear."',
   '49-5': '"Bouncer Brutus steps aside. You\'re on the list now. Forever. And someone left a page lying around..."',
   '50-4': '"The Archivist closes the book. Some stories are worth telling twice. Thanks for finding World 22."'
 };
@@ -19892,13 +19892,13 @@ function worldIntroPanels() {
   const chinka = (ctx, x, y, s, t, pose, facing) => drawChinka(ctx, { x, y, scale: s, t, pose, facing: facing || -1 });
   const hearts = (ctx, x, y, s, t) => { for (let i = 0; i < 4; i++) { const k = (t * 0.6 + i / 4) % 1; ctx.fillStyle = `rgba(255,90,160,${1 - k})`; ctx.font = `${12 + i * 3}px ${FONT_UI}`; ctx.textAlign = 'center'; ctx.fillText('\u2665', x + Math.sin(t * 2 + i) * 14 * s, y - k * 60 * s); } };
   return [
-    { text: 'Burn week. Brady and Princess Papaya rolled down Gate Road at sunset: goggles on, playlist ready, a sloth asleep in the back.',
+    { text: 'Burn week. Brady and Chinka rolled down Gate Road at sunset: goggles on, playlist ready, a sloth asleep in the back.',
       scene(ctx, W, H, t) { const { gy, s } = storyStage(ctx, W, H, t, 'gate'); brady(ctx, W * 0.38, gy, s, t, 'idle', 1); chinka(ctx, W * 0.5, gy, s, t, 'wave', -1); } },
-    { text: 'That night the Man looked down from his pavilion: forty feet of wood, a glowing diamond head... and he fell head over lattice for Princess Papaya.',
+    { text: 'That night the Man looked down from his pavilion: forty feet of wood, a glowing diamond head... and he fell head over lattice for Chinka.',
       scene(ctx, W, H, t) { const { gy, s } = storyStage(ctx, W, H, t, 'manbase'); ManArt.figure(ctx, W * 0.66, gy, s * 1.6, t, { lit: true }); hearts(ctx, W * 0.66, gy - 150 * s, s, t); chinka(ctx, W * 0.3, gy, s, t, 'wave', 1); } },
     { text: 'He scooped her up and carried her to the top of his pavilion. "MINE," he boomed. Nobody had ever heard the Man talk before.',
       scene(ctx, W, H, t, pt) { const { gy, s } = storyStage(ctx, W, H, t, 'manbase'); const k = Math.min(1, pt * 0.5); ManArt.figure(ctx, W * (0.6 + k * 0.1), gy, s * 1.6, t, { lit: true, cage: true, arms: true, angry: true }); brady(ctx, W * 0.24, gy, s, t, 'run', 1); if (pt < 0.4) { ctx.fillStyle = `rgba(255,255,255,${0.6 * (1 - pt / 0.4)})`; ctx.fillRect(0, 0, W, H); } } },
-    { text: 'Brady woke Slothy from his hammock. Across the whole playa, land by land, all the way to the Man: hold on, Princess Papaya. We\'re coming.',
+    { text: 'Brady woke Slothy from his hammock. Across the whole playa, land by land, all the way to the Man: hold on, Chinka. We\'re coming.',
       scene(ctx, W, H, t) { const { gy, s } = storyStage(ctx, W, H, t, 'deepplaya'); ctx.save(); ctx.translate(W * 0.45, gy); ctx.scale(s, s); drawSlothy(ctx, { x: 0, y: 0, facing: 1, t, pose: 'walk' }); drawBrady(ctx, { x: -4, y: -24, facing: 1, small: false, power: 0, anim: { state: 'ride', t, phase: 0 }, hair: null, look: Save.data.look, time: t }); ctx.restore(); } }
   ];
 }
@@ -19907,10 +19907,10 @@ class EndingScene {
   constructor(set) {
     this.set = set; this.t = 0; this.stage = 0; Input.setMode('ui'); Sound.music('ending'); Sound.play('reunion');
     this.lines = [
-      "The Man's diamond head flickers. He sets Princess Papaya down very, very gently.",
-      'Princess Papaya: "You came all this way for me?"  Brady: "Through Gate Road traffic. Twice."',
+      "The Man's diamond head flickers. He sets Chinka down very, very gently.",
+      'Chinka: "You came all this way for me?"  Brady: "Through Gate Road traffic. Twice."',
       "Saturday night. The Man burns, and for once he doesn't seem to mind.",
-      'Brady and Princess Papaya watch the fire together. Slothy naps. Best. Burn. Ever.'
+      'Brady and Chinka watch the fire together. Slothy naps. Best. Burn. Ever.'
     ];
     this.parts = new Particles();
     Save.data.beatGame = true; Save.save();
@@ -22634,7 +22634,7 @@ const GearArt = {
     ctx.fillStyle = '#fffaf0'; ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(-11, -7); ctx.lineTo(-6, 0); ctx.lineTo(-11, 7); ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#e8dcc8'; ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(-6, 0); ctx.lineTo(-9, 3.5); ctx.closePath(); ctx.fill();
     ctx.strokeStyle = 'rgba(120,100,80,0.6)'; ctx.lineWidth = 0.8; ctx.setLineDash([1.6, 1.6]); ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(-8, 0); ctx.stroke(); ctx.setLineDash([]);
-    // Princess Papaya's stamp: a red heart
+    // Chinka's stamp: a red heart
     ctx.fillStyle = '#e8384f'; ctx.beginPath(); ctx.moveTo(-3, -1.2); ctx.bezierCurveTo(-5.5, -4, -1.5, -5.5, -1.2, -3.2); ctx.bezierCurveTo(-0.9, -5.5, 3, -4, 0.6, -1.2); ctx.lineTo(-1.2, 0.6); ctx.closePath(); ctx.fill();
     ctx.restore();
   }
@@ -23796,7 +23796,7 @@ try { window.BRADY_CARRY = TourCarry; } catch (e) { /* not in a browser */ }
 /* ---- 28_tour_e_art.js ---- */
 /* ============================================================
    World tour: shared art. The level goal (a giant passport stamp
-   on a post), checkpoints (a travel signpost), Princess Papaya's postcards
+   on a post), checkpoints (a travel signpost), Chinka's postcards
    (the 3 collectibles per level), coins (each country re-skins
    them), item crates, doors, the default boat and Brady's effects.
    ============================================================ */
@@ -23858,7 +23858,7 @@ const TourArt = {
     if (active) { const wv = Math.sin(t * 6) * 2; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(x + 2, y - 70); ctx.lineTo(x + 18, y - 66 + wv); ctx.lineTo(x + 2, y - 61); ctx.fill(); ctx.fillStyle = col.a; ctx.beginPath(); ctx.arc(x + 8, y - 66 + wv * 0.4, 2.4, 0, TAU); ctx.fill(); }
     ctx.fillStyle = active ? '#ffd84a' : '#5a4a3a'; ctx.beginPath(); ctx.arc(x, y - 71, 3.5, 0, TAU); ctx.fill();
   },
-  // one of Princess Papaya's postcards (3 per level)
+  // one of Chinka's postcards (3 per level)
   postcard(ctx, x, y, t, ghost) {
     ctx.save(); ctx.translate(x, y); ctx.rotate(Math.sin(t * 1.6) * 0.12);
     if (ghost) ctx.globalAlpha *= 0.45;
@@ -24114,7 +24114,7 @@ class TourMapScene {
     this.music();
     this.mode = 'land';
     this.ow = new TourOverworld(this, Tour.countries[at] || mains[0], { at: fromKey, auto, arrive });
-    // the very first visit: Princess Papaya's first postcard
+    // the very first visit: Chinka's first postcard
     const C0 = Tour.countries[this.sel];
     if (!T.cards) T.cards = {};
     if (C0 && !T.cards[C0.id]) { T.cards[C0.id] = true; this.card = tourArrivalCard(C0); Save.save(); }
@@ -24268,7 +24268,7 @@ class TourMapScene {
     if (Input.mode !== 'game' && !ow.menu) Input.setMode('game');
     Input.camDrag = !ow.menu; this.setHud();
     const inp = ow.readInput();
-    // Princess Papaya's postcard: any tap or key puts it away
+    // Chinka's postcard: any tap or key puts it away
     if (this.card) { ow.update(dt, null); if (inp.taps.length || inp.enter || inp.back) { this.card = null; Sound.play('cardFlip'); } TourMapKeys.m = false; return; }
     if (TourMapKeys.m && ow.idle()) { TourMapKeys.m = false; this.openRoute({ dest: this.sel }); return; }
     TourMapKeys.m = false;
@@ -24432,7 +24432,7 @@ class TourMapScene {
     ctx.fillText(TourLandscape.fit(ctx, sub, tw), tx, R.y + 44);
     ctx.restore();
   }
-  // a postcard from Princess Papaya, laid over the map
+  // a postcard from Chinka, laid over the map
   drawCard(ctx) {
     const W = Game.cssW, H = Game.cssH, C = Tour.countries[this.sel] || {}, cols = C.colors || { a: '#ff4f8a', b: '#38c8ff', c: '#ffd84a' };
     ctx.save(); ctx.fillStyle = 'rgba(6,10,30,0.55)'; ctx.fillRect(0, 0, W, H);
@@ -27915,10 +27915,10 @@ TourMapScene.Lands = TourOWLands;
 /* ============================================================
    World tour: the story (docs/design/STORY_PIWI.md).
    PIWI SQUIRMIN', a lonely ventriloquist dummy with a flying
-   Showtrunk, hooks Princess Papaya into his show cage in Mexico City and
+   Showtrunk, hooks Chinka-O into his show cage in Mexico City and
    takes her on his world tour. Each land is a tour date: its boss is
    tonight's act and a landmark is shrunk into scenery. Brady-O
-   chases him on Pupo, their giant sloth, following Princess Papaya's
+   chases him on Pupo, their giant sloth, following Chinka-O's
    postcards. The Grand Finale is in Nepal; the encore in World 22.
    The cast is drawn in 05b_piwi.js, 05c_chinka.js, 05d_showtrunk.js
    and 05e_pupo.js.
@@ -28031,11 +28031,11 @@ const TourCast = {
 function TourIntroPanels() {
   const C = TourCast;
   return [
-    { text: 'Brady-O, Princess Papaya and Pupo, their giant sloth, set off on the trip of a lifetime. Two passports. One very small plane.',
+    { text: 'Brady-O, Chinka-O and Pupo, their giant sloth, set off on the trip of a lifetime. Two passports. One very small plane.',
       scene(ctx, W, H, t) { const { gy, s } = tourStage(ctx, W, H, t, 'tour_title'); C.pupo(ctx, W * 0.2, gy, s * 0.8, t, 'idle', 1); C.brady(ctx, W * 0.38, gy, s, t, 'idle', 1); C.chinka(ctx, W * 0.5, gy, s, t, 'wave', -1); ctx.save(); ctx.translate(W * 0.75, gy - 30 * s); ctx.scale(s * 1.2, s * 1.2); TourMapScene.prototype.drawPlane.call({ t }, ctx, 0, 0, 0); ctx.restore(); } },
     { text: 'First stop, Mexico City. A flying trunk landed, its lid opened into a tiny stage, and a wooden dummy bowed to nobody. "OPENING NIGHT!"',
       scene(ctx, W, H, t) { const { gy, s } = tourStage(ctx, W, H, t, 'mx_mercado'); C.trunk(ctx, W * 0.68, gy, s * 0.62, t, 'talk', false); C.pupo(ctx, W * 0.14, gy, s * 0.8, t, 'idle', 1); C.brady(ctx, W * 0.28, gy, s, t, 'idle', 1); C.chinka(ctx, W * 0.4, gy, s, t, 'idle', 1); } },
-    { text: 'His head fell off mid-song. Princess Papaya stepped in and finished his number with a perfect pirouette. "A STAR! You\'re my LEADING LADY!"',
+    { text: 'His head fell off mid-song. Chinka-O stepped in and finished his number with a perfect pirouette. "A STAR! You\'re my LEADING LADY!"',
       scene(ctx, W, H, t, pt) { const { gy, s } = tourStage(ctx, W, H, t, 'mx_mercado'); C.trunk(ctx, W * 0.72, gy, s * 0.62, t, pt > 1.6 ? 'gloat' : 'startled', false); C.pupo(ctx, W * 0.14, gy, s * 0.8, t, 'happy', 1); C.brady(ctx, W * 0.28, gy, s, t, 'idle', 1); C.chinka(ctx, W * 0.46, gy, s, t, 'pirouette', 1); } },
     { text: 'A hook swung out and popped her into his show cage. FWOOMP: his spotlight shrank the Palace of Fine Arts. "Every show needs scenery!"',
       scene(ctx, W, H, t, pt) { const { gy, s } = tourStage(ctx, W, H, t, 'mx_mercado'); C.trunk(ctx, W * 0.64, gy - 110 * s, s * 0.62, t, 'gloat', true); C.pupo(ctx, W * 0.16, gy, s * 0.8, t, 'poke', 1); C.brady(ctx, W * 0.32, gy, s, t, 'idle', 1); if (pt > 1.4 && pt < 1.9) { ctx.fillStyle = `rgba(255,248,220,${0.8 * (1 - (pt - 1.4) / 0.5)})`; ctx.fillRect(0, 0, W, H); } } },
@@ -28043,12 +28043,12 @@ function TourIntroPanels() {
       scene(ctx, W, H, t, pt) { const { gy, s } = tourStage(ctx, W, H, t, 'tour_dusk'); const k = Math.min(1, pt * 0.35); C.trunk(ctx, W * (0.58 + k * 0.18), gy - 120 * s - k * 40 * s, s * 0.62, t, 'gloat', true); C.pupo(ctx, W * 0.14, gy, s * 0.8, t, 'walk', 1); C.brady(ctx, W * 0.32, gy, s, t, 'run', 1); } },
     { text: 'Pupo sat in the empty plaza, hugging her pink bow. "We\'re getting her back, buddy." A very long pause. "...climb on."',
       scene(ctx, W, H, t) { const { gy, s } = tourStage(ctx, W, H, t, 'tour_dusk'); C.pupo(ctx, W * 0.5, gy, s, t, 'sad', -1); C.brady(ctx, W * 0.3, gy, s, t, 'idle', 1); } },
-    { text: 'Piwi Squirmin\'s World Tour: twelve tour dates. Crash every show, put the scenery back and bring Princess Papaya home.',
+    { text: 'Piwi Squirmin\'s World Tour: twelve tour dates. Crash every show, put the scenery back and bring Chinka-O home.',
       scene(ctx, W, H, t) { const { gy, s } = tourStage(ctx, W, H, t, 'tour_title'); C.pupo(ctx, W * 0.36, gy, s * 0.9, t, 'ride', 1, true); ctx.save(); ctx.translate(W * 0.66, gy - 60 * s); ctx.rotate(-0.1); ctx.scale(s * 1.6, s * 1.6); TourArt.postcard(ctx, 0, 0, t, false); ctx.restore(); } }
   ];
 }
 
-// arriving in a country for the first time: Princess Papaya's postcard (shown on the map)
+// arriving in a country for the first time: Chinka-O's postcard (shown on the map)
 function tourArrivalCard(C) {
   return { title: 'POSTCARD FROM ' + C.name.toUpperCase(), text: C.arrival || ('Brady! Piwi\'s trunk landed in ' + C.name + '. Crash his show, save the landmark! ♥ C') };
 }
@@ -28060,8 +28060,8 @@ class TourEndingScene {
     this.lines = [
       'The Shrink-Spot sputters... FWOOMP. Piwi Squirmin\' is now exactly pocket-sized, rattling in his own prop jar.',
       'One by one, the landmarks pop back to full size all over the world. Somewhere, a volcano sighs with relief.',
-      'Princess Papaya: "You followed every postcard?"  Brady-O: "Every. Single. One. Your handwriting is beautiful."',
-      'Pupo reaches out, very slowly, and pokes Princess Papaya\'s belly button. "...your pupo. ...I missed it."',
+      'Chinka-O: "You followed every postcard?"  Brady-O: "Every. Single. One. Your handwriting is beautiful."',
+      'Pupo reaches out, very slowly, and pokes Chinka-O\'s belly button. "...your pupo. ...I missed it."',
       'Sunrise over the Himalayas. Two passports full of stamps, one giant sleepy sloth, one very quiet dummy. Best. Trip. Ever.'
     ];
     this.parts = new Particles();
@@ -28117,13 +28117,13 @@ function tourCreditsLines() {
   const bosses = [];
   for (const C of Tour.mainCountries()) if (C.boss && C.id !== 'np') bosses.push(C.boss.name + '  ·  ' + C.name);
   return [
-    ['Princess Papaya is home. The world is back to size. Piwi is pocket-sized.', 's'], ['', ''],
-    ['STARRING', 'k'], ['Brady-O  ·  man bun, square shades, many passport stamps', 'v'], ['Princess Papaya  ·  prima ballerina, unimpressed, excellent postcards', 'v'], ['Pupo  ·  giant sloth, steed, belly button enthusiast', 'v'], ['', ''],
+    ['Chinka-O is home. The world is back to size. Piwi is pocket-sized.', 's'], ['', ''],
+    ['STARRING', 'k'], ['Brady-O  ·  man bun, square shades, many passport stamps', 'v'], ['Chinka-O  ·  prima ballerina, unimpressed, excellent postcards', 'v'], ['Pupo  ·  giant sloth, steed, belly button enthusiast', 'v'], ['', ''],
     ['AND INTRODUCING', 'k'], ['Piwi Squirmin\'  ·  a dummy with a dream (and a hook)', 'v'], ['', ''],
     ['LOCALS WHO GOT IN THE WAY', 'k'], ['Jumping jalapeños and walking corn', 'v'], ['Piñata burros full of candy', 'v'], ['Marching baguettes and rolling croissants', 'v'], ['Crêpe pans with surprisingly good aim', 'v'], ['', ''],
     ['TONIGHT\'S ACTS', 'k'], ...bosses.map(n => [n, 'v']), ['', ''],
-    ['YOUR STATS', 'k'], [`Postcards from Princess Papaya: ${tot.gold} / ${tot.goldTotal}`, 'v'], [`Levels cleared: ${tot.done} / ${tot.total}`, 'v'], [`Score: ${Save.data.score}`, 'v'], [`Times Piwi got you: ${Save.data.deaths || 0}`, 'v'], ['', ''],
-    [tot.gold >= tot.goldTotal ? 'Every postcard found. Princess Papaya framed them all.' : 'Some postcards are still out there, somewhere in the world...', 's'],
+    ['YOUR STATS', 'k'], [`Postcards from Chinka-O: ${tot.gold} / ${tot.goldTotal}`, 'v'], [`Levels cleared: ${tot.done} / ${tot.total}`, 'v'], [`Score: ${Save.data.score}`, 'v'], [`Times Piwi got you: ${Save.data.deaths || 0}`, 'v'], ['', ''],
+    [tot.gold >= tot.goldTotal ? 'Every postcard found. Chinka-O framed them all.' : 'Some postcards are still out there, somewhere in the world...', 's'],
     [Tour.countries.w22 && TourProgress.countryUnlocked(Tour.countries.w22) ? 'You found World 22.' : 'Legend speaks of a World 22.', 's'], ['', ''],
     ['Pack light. Stay curious. Send postcards.', 's'], ['', ''], ['', '']
   ];
@@ -28160,7 +28160,7 @@ try { window.BRADY_TOUR = { Tour, TourProgress, TourPowers, TourBuild, TourMapSc
    Super Brady-O World: the title show and the home-screen icon.
    Brady jogs around a little toon globe while landmarks from every
    land pop up over its rim, the plane loops the sky, Piwi's
-   Showtrunk drifts past with Princess Papaya in its cage, postcards flutter.
+   Showtrunk drifts past with Chinka-O in its cage, postcards flutter.
    The logo is lettered in canvas (inked letters, a highlight band,
    a chunky extrusion, a spinning globe for the O) and drops in with
    a bounce. Tap: Brady hops into his plane and it takes off into
@@ -28241,7 +28241,7 @@ const SBWT = {
       x.fillStyle = '#ffd23a'; x.beginPath(); x.arc(47, -12, 2.6, 0, TAU); x.fill(); x.stroke();
     }, { width: 1.4 });
   },
-  // Piwi's Showtrunk (05d_showtrunk.js) with Princess Papaya in its show cage: painted once, so its rotors freeze mid-spin
+  // Piwi's Showtrunk (05d_showtrunk.js) with Chinka-O in its show cage: painted once, so its rotors freeze mid-spin
   blimp(k) {
     return this.inked(190, 240, 95, 128, k, x => Showtrunk.draw(x, { x: 0, y: 0, scale: 1, t: 0.3, piwi: 'gloat', chinka: true }), { width: 1.5 });
   },
@@ -28658,7 +28658,7 @@ class SBWTitleScene {
     else {
       // the credits from the title: no spoilers, and watching them doesn't count as beating the game
       const was = !!Save.data.beatGame, c = new CreditsScene('world');
-      if (!was) { Save.data.beatGame = false; Save.save(); c.lines = c.lines.filter(l => !/Princess Papaya is home|Piwi is pocket-sized/.test(l[0])); }
+      if (!was) { Save.data.beatGame = false; Save.save(); c.lines = c.lines.filter(l => !/Chinka-O is home|Piwi is pocket-sized/.test(l[0])); }
       Game.setScene(c);
     }
   }
@@ -28756,7 +28756,7 @@ class SBWTitleScene {
       const x = ((c.x - t * c.sp * (calm ? 0.3 : 1)) % span + span) % span - 130;
       SBWT.blit(ctx, s, x, c.y, c.sc);
     }
-    // Piwi's Showtrunk drifting by with Princess Papaya in the cage
+    // Piwi's Showtrunk drifting by with Chinka-O in the cage
     {
       const b = this.blimp, span = W + 400, x = ((b.x + t * (calm ? 4 : 11)) % span + span) % span - 200;
       SBWT.blit(ctx, this.blimpS, x, b.y + Math.sin(t * 1.3) * 5, 1, Math.sin(t * 0.9) * 0.03);
@@ -37761,7 +37761,7 @@ try { if (typeof window !== 'undefined') { window.BRADY_TOUR = window.BRADY_TOUR
    party cone, a flower crown, a mini top hat, a propeller beanie, a chef's toque or a bobble hat. One hat per creature
    type (a hash of its type name, so a screen of mixed animals shows a mix of hats). Cosmetic only.
    - Who wears one: ONLY the types in TourHats.HEADS (animals: enemies, friends, critters). Everything else (doors,
-     smoke puffs, lasers, flames, items, blocks, signs, platforms, food and toy enemies, machines, Brady, Princess Papaya,
+     smoke puffs, lasers, flames, items, blocks, signs, platforms, food and toy enemies, machines, Brady, Chinka-O,
      Pupo, Piwi, bosses) is listed in TourHats.NOT. tools/sbw_hats_test.js fails when a registered type is in neither
      list, so a new land's types must be sorted into one of them.
    - Where it sits: HEADS[type] = [fx, fxFlip, fy, size]: the top of the head in the type's usual pose, as fractions
@@ -38001,7 +38001,7 @@ TourHats.NOT = new Set([].concat(
   'mzCashew mzMango mzJet mzStampede mzCannon mzShellPot mzShellBucket mzShellBottle mzChiliBasket mzBeam mzKeyShutter mzGustFx'.split(' '),
   // the Netherlands: cheese, clogs, tulip bulbs, snowmen, stroopwafels, chutes, goudas, hatches, winds, bike hooks
   'nlCheese nlClog nlBulb nlSnowman nlStroop nlChute nlGouda nlHatch nlCanalWind nlBikeHook'.split(' '),
-  // Nepal: momos, roti, snowballs, tin bots, Piwi bobbleheads, snow globes, the yak pen, walls, bridges, blizzards, icicles, cameras, roofs, landmarks, Princess Papaya, gales, belts, winds, chutes, ramps, banners, jars
+  // Nepal: momos, roti, snowballs, tin bots, Piwi bobbleheads, snow globes, the yak pen, walls, bridges, blizzards, icicles, cameras, roofs, landmarks, Chinka-O, gales, belts, winds, chutes, ramps, banners, jars
   'npMomo npRoti npSnowball npTinBot npBobble npGlobe npPen npSnowWall npBridge npBlizzard npIcicle npCamera npRoof npLandmark npChinka npGale npCrateWall npWallBelt npGustWind npGustBridge npBallChute npBallWall npRiseRamp npIceBridge npFortBanner npJar npCrateBelt npYetiWatch'.split(' '),
   // Vietnam: flying conical hats, the coffee phin, tin scooters, bao, rolls, gỏi, beans, hooks, phở, boats, rafts, signals, ice, roasters, kettles, pedals, lanterns, puppets, goods, gates, rain clouds, the cave's bat swarm
   'vnNon vnPhinDrip vnScooter vnBao vnRoll vnGoi vnBean vnHook vnPho vnBoat vnRaft vnTrainSignal vnIce vnRoaster vnKettle vnPedal vnArenaLantern vnPuppet vnGoods vnTradeGate vnRainCloud vnCaveBats'.split(' '),
@@ -44023,7 +44023,7 @@ const levels = [
         bouncy: { title: 'THE CARNIVAL FLOAT BOUNCE', rule: 'A HALF-BUILT CARNIVAL FLOAT, FULLY INFLATED. THE FLOOR BOUNCES: THE PRIZE IS ON THE TALLEST TOWER', skin: ['#ff4ab8', '#ffd23a', '#3ad8a8'] } }
     ] },
 
-  // 3-2 THIEF: Quati snatches Princess Papaya's stamps and runs through the Pantanal
+  // 3-2 THIEF: Quati snatches Chinka's stamps and runs through the Pantanal
   { n: 2, name: 'Coati Caper', mapLabel: 'Coati', arch: 'thief', theme: 'br_pantanal', pupo: 'level',   // Brazil's Pupo level: The Sloth Bridge
     gimmick: 'Quati the coati grabs the passport stamps: chase him on capybaras and caimans, catch him three times',
     hint: 'Stomp Quati (or kick the football at him) while he waits: three catches open the ranger gate',
@@ -80279,11 +80279,11 @@ const P = {
 // at a time. A thrown landmark lands as a world object: kick it (run into it) or stomp it to launch it and it lobs
 // itself back at Piwi. A landmark that hits him is RETURNED: it hurts him and pops back to full size behind the
 // summit. Stomps bounce off (NOT THE HAIR!).
-//   Phase 1 (hp 7-5): the Showtrunk (Princess Papaya in its show cage), three landmarks, snow-globe drops and low swoops.
+//   Phase 1 (hp 7-5): the Showtrunk (Chinka-O in its show cage), three landmarks, snow-globe drops and low swoops.
 //   Phase 2 (hp 4-2): he crashes and climbs into THE SHOWSTOPPER, a stage mech built from his props: it walks, stomps, charges
 //                     with its windmill arm and fires the spotlight beam. Three more landmarks.
 //   Phase 3 (hp 1):   the mech breaks; on foot he runs the ledge with the last jar while gales buffet the summit.
-//   Finish: his Shrink-Spot goes off in his own face, every landmark pops back, Princess Papaya runs to Brady-O.
+//   Finish: his Shrink-Spot goes off in his own face, every landmark pops back, Chinka-O runs to Brady-O.
 const LANDMARKS = [
   { id: 'ec', name: 'THE VOLCANO' }, { id: 'nl', name: 'THE WINDMILL' }, { id: 'fr', name: 'THE IRON TOWER' },
   { id: 'br', name: 'SUGARLOAF' }, { id: 'mz', name: 'THE BAOBAB' }, { id: 'ma', name: 'THE KASBAH' },
@@ -80429,7 +80429,7 @@ class NpRoof extends Ent {
     }
   }
 }
-// Princess Papaya: in the show cage under the Showtrunk in phase 1; when it crashes she tiptoes out and floats down on her tutu, cheers from the ledge,
+// Chinka-O: in the show cage under the Showtrunk in phase 1; when it crashes she tiptoes out and floats down on her tutu, cheers from the ledge,
 // and runs to Brady when the last landmark is home
 class NpChinka extends Ent {
   constructor(g, s) { super(g, s, 24, 46); this.friendly = true; this.npChinka = true; this.state = 'chute'; this.tx = s.tx; this.ty = s.ty; this.lineT = 1; this.facing = 1; this.hearts = 0; }
@@ -86681,7 +86681,7 @@ try { if (typeof window !== 'undefined') { window.BRADY_TOUR = window.BRADY_TOUR
    World tour: the Encore Tour's story (docs/design/ENCORE_TOUR.md §1).
    Worlds 14 to 18 follow Nepal's Grand Finale. Loads after every land.
    - The opening: once Nepal's boss has fallen, the next visit to the
-     map plays four panels (Princess Papaya turns the tour poster over).
+     map plays four panels (Chinka-O turns the tour poster over).
    - The acts: each Encore boss wakes under the banner
      "THE ACT NOBODY CANCELLED", and Pupo has a line when it falls.
    - The ending: four panels the first time the Moon's boss is beaten.
@@ -86742,11 +86742,11 @@ function moonStage(ctx, W, H, t) {
 function EncoreIntroPanels() {
   const C = TourCast;
   return [
-    { text: 'Home at last? Not quite. Princess Papaya turned Piwi\'s tour poster over. On the back, in very small print: "PLUS FIVE MORE DATES."',
+    { text: 'Home at last? Not quite. Chinka-O turned Piwi\'s tour poster over. On the back, in very small print: "PLUS FIVE MORE DATES."',
       scene(ctx, W, H, t, pt) { const { gy, s } = storyStage(ctx, W, H, t, 'tour_himalaya'); C.pupo(ctx, W * 0.16, gy, s * 0.8, t, 'idle', 1); C.brady(ctx, W * 0.34, gy, s, t, 'idle', 1); C.chinka(ctx, W * 0.72, gy, s, t, 'idle', -1); poster(ctx, W * 0.54, gy - 60 * s, s * 0.5, pt > 1.1, t); } },
     { text: 'The posters are up. The acts are booked, and paid in advance. The scenery was shrunk and posted ahead weeks ago. Nobody cancelled the second half of the tour.',
       scene(ctx, W, H, t) { const { gy, s } = storyStage(ctx, W, H, t, 'tour_dusk'); for (let i = 0; i < 5; i++) poster(ctx, W * (0.14 + i * 0.18), gy - (62 + (i % 2) * 22) * s, s * 0.36, i % 2 === 1, t + i); C.pupo(ctx, W * 0.5, gy, s * 0.8, t, 'sad', 1); } },
-    { text: 'Princess Papaya: "Then we cancel it ourselves. I\'ll go ahead and talk to the venues. You two put the landmarks back." Pupo: "...more... trip."',
+    { text: 'Chinka-O: "Then we cancel it ourselves. I\'ll go ahead and talk to the venues. You two put the landmarks back." Pupo: "...more... trip."',
       scene(ctx, W, H, t) { const { gy, s } = storyStage(ctx, W, H, t, 'tour_title'); C.pupo(ctx, W * 0.2, gy, s * 0.8, t, 'happy', 1); C.brady(ctx, W * 0.4, gy, s, t, 'idle', 1); C.chinka(ctx, W * 0.62, gy, s, t, 'wave', -1); } },
     { text: 'THE ENCORE TOUR. Italy. Kenya. Australia. Iceland. And the last date on the poster... no, that can\'t be right. The MOON? Fly on from Nepal\'s port.',
       scene(ctx, W, H, t) { const { gy, s } = storyStage(ctx, W, H, t, 'tour_title'); C.pupo(ctx, W * 0.34, gy, s * 0.9, t, 'ride', 1, true); poster(ctx, W * 0.68, gy - 62 * s, s * 0.55, true, t); } }
@@ -86757,7 +86757,7 @@ function EncoreEndPanels() {
   return [
     { text: 'The headliner takes her bow. The very last show of Piwi Squirmin\'s World Tour is cancelled, and the crater pops back into the Moon with a soft, dusty FWOOMP.',
       scene(ctx, W, H, t) { const { gy, s } = moonStage(ctx, W, H, t); C.brady(ctx, W * 0.4, gy, s, t, 'idle', 1); C.pupo(ctx, W * 0.2, gy, s * 0.8, t, 'happy', 1); } },
-    { text: 'Princess Papaya: "Every tour date, and every landmark back where it belongs." Brady-O: "And you did a pirouette on the Moon." Princess Papaya: "Somebody had to."',
+    { text: 'Chinka-O: "Every tour date, and every landmark back where it belongs." Brady-O: "And you did a pirouette on the Moon." Chinka-O: "Somebody had to."',
       scene(ctx, W, H, t) { const { gy, s } = moonStage(ctx, W, H, t); C.brady(ctx, W * 0.32, gy, s, t, 'idle', 1); C.chinka(ctx, W * 0.56, gy - Math.abs(Math.sin(t * 1.2)) * 26 * s, s, t, 'pirouette', -1); } },
     { text: 'Pupo looks down at the Earth for a very long time. "...home... is the round one." Then, very slowly, he pokes the Moon. "...no pupo. ...just holes."',
       scene(ctx, W, H, t) { const { gy, s } = moonStage(ctx, W, H, t); C.pupo(ctx, W * 0.5, gy, s, t, 'poke', 1); } },
@@ -86860,7 +86860,7 @@ for (const [cc, n, to, label, variant, button] of DOCKS) {
    - World 22's encore: when the Other Brady's mirror cracks, Piwi
      pops out from behind it. Before the Nepal finale he flees to
      rehearse; after it, he puts on his last show for an audience
-     of Princess Papaya, and gets three stars.
+     of Chinka-O, and gets three stars.
    ============================================================ */
 (() => {
 if (typeof BOSS_BRAINS === 'undefined' || typeof Boss === 'undefined') return;
