@@ -56,7 +56,7 @@ const aurora = (() => {
   // the twist: a ribbon whose fade comes TOWARD you (from its far end), rippling hard; a tern over it
   G.put(93, 13, 'Z'); G.put(99, 8, 't'); G.coins(95, 104, 11);
   // the ridge: a pulse ribbon up to the high ledge with the folk's painted door (the secret), a tern
-  G.put(113, 14, 'x'); G.put(106, 12, 'u'); G.fill(99, 9, 103, 9, '-'); G.put(99, 8, 'e'); G.put(102, 8, 'D'); G.coins(100, 102, 6); G.put(110, 14, 'f'); G.put(106, 14, 'A');
+  G.put(113, 14, 'x'); G.put(106, 12, 'u'); G.put(100, 9, 'U'); G.fill(94, 5, 98, 5, '-'); G.put(97, 4, 'e'); G.put(95, 4, 'D'); G.put(101, 7, 'o'); G.put(99, 6, 'o'); G.put(97, 3, 'o'); G.put(110, 14, 'f'); G.put(106, 14, 'A');
   // the third stretch: a sweep ribbon and a drifting plank above it, two puffins
   G.put(115, 12, 'R'); G.put(122, 7, 'p'); G.put(130, 9, 'z'); G.put(133, 12, 'w'); G.put(136, 6, 'p'); G.coins(117, 127, 10);
   // checkpoint 2, before the last stretch
@@ -79,6 +79,7 @@ const AUR = {
   E: ['piece', 'ribbon', { len: 6, mode: 'sweep', hold: 1.2, dark: 1.6, speed: 4.4, amp: 6, phase: 1.1 }],
   Z: ['piece', 'ribbon', { len: 12, mode: 'sweep', dir: -1, hold: 2.6, dark: 1.2, speed: 5.0, amp: 14, wave: 8, hue: 1 }],
   u: ['piece', 'ribbon', { len: 6, mode: 'pulse', hold: 2.2, dark: 2.0, amp: 4, hue: 2, phase: 0.5 }],
+  U: ['piece', 'ribbon', { len: 4, mode: 'pulse', hold: 2.4, dark: 1.6, amp: 3, hue: 0, phase: 1.4 }],
   z: ['piece', 'plank', { ax: 6, w: 3, speed: 1.6 }],
   '1': ['piece', 'ribbon', { len: 12, mode: 'sweep', hold: 1.2, dark: 1.4, speed: 5.0, amp: 10, phase: 0 }],
   '2': ['piece', 'ribbon', { len: 12, mode: 'sweep', hold: 1.2, dark: 1.4, speed: 5.0, amp: 10, hue: 1, phase: -1.2 }],
@@ -104,7 +105,8 @@ const L1 = { n: 1, name: 'Northern Lights', mapLabel: 'Northern Lights', arch: '
   exits: { main: { to: '17-2' }, secret: { to: '17-6', hint: 'A tiny painted door in a rock high on the ridge, where a ribbon blinks...' } },
   areas: [
     { id: 'field', gen: 'room', theme: 'is_aurora', stamp: 'isAurora', bottomKill: true },
-    { id: 'huldu', gen: 'room', role: 'secret', theme: 'is_folk', stamp: 'isHuldu' }
+    { id: 'huldu', gen: 'room', role: 'secret', theme: 'is_folk', stamp: 'isHuldu', room: 'isBells',
+      isBells: { title: 'THE FOLK\'S BELLS', rule: 'LISTEN TO THE THREE BELLS, THEN RING THEM BACK IN THE SAME ORDER' } }
   ] };
 
 /* ---------------- 17-2 The Glacier Lagoon ----------------
@@ -154,7 +156,7 @@ const LAG = {
   Y: ['piece', 'plank', { ax: 1, w: 4, speed: 0.5, skin: 'isFloe' }], Z: ['piece', 'plank', { ax: 0, ay: -3, w: 2, speed: 0.9, skin: 'isFloe' }],
   f: ['enemy', 'isFox'], m: ['enemy', 'isRam'], p: ['enemy', 'isPuffin'], t: ['enemy', 'isTern']
 };
-stamps.isLagoon = { floor: 14, rows: lagoon, legend: LAG, items: ['power', 'power', 'star'], gold: { '*': 'must', R: 'risky' }, doors: [{ to: 'cave@in', look: 'isTube' }] };
+stamps.isLagoon = { floor: 14, rows: lagoon, legend: LAG, items: ['power', 'power', 'star'], gold: { '*': 'must', R: 'risky' }, doors: [{ to: 'cave@in', look: 'isCrack' }] };
 // the ice cave in the glacier: blue walls, a hidden 1UP, P2, the way back out
 stamps.isIceCave = (() => {
   const G = mk(30, 14);
@@ -170,7 +172,8 @@ const L2 = { n: 2, name: 'The Glacier Lagoon', mapLabel: 'Glacier Lagoon', arch:
   mapCell: [1, 1], mapFrom: 0,
   areas: [
     { id: 'lagoon', gen: 'room', theme: 'is_lagoon', stamp: 'isLagoon', bottomKill: true },
-    { id: 'cave', gen: 'room', role: 'secret', theme: 'is_lagoon', stamp: 'isIceCave' }
+    { id: 'cave', gen: 'room', role: 'secret', theme: 'is_lagoon', stamp: 'isIceCave', room: 'rush',
+      rush: { title: 'THE PUFFIN EGG ROUNDUP', rule: 'THE PUFFINS LEFT THEIR EGGS ALL OVER THE ICE CAVE: GRAB ALL SIX BEFORE THE CLOCK RUNS OUT', look: 'tokEgg', n: 6 } }
   ] };
 /* ---------------- 17-3 The Rift ----------------
    The crack between two plates of the earth: the land comes apart and grinds together on a slow clock. Slabs of
@@ -198,10 +201,10 @@ const rift = (() => {
   // the lift up to the cliff top, checkpoint 1 on the cliff
   G.put(67, 15, 'e'); G.put(74, 9, 'c'); G.put(80, 9, 'q'); G.put(78, 9, 'f');
   // the steaming fissure under the cliff edge (the lava tube: the secret)
-  G.put(86, 14, 'D'); G.put(87, 14, 'V'); G.put(88, 14, 'A');
   // the twist: ferry, an island under a crusher, ferry
   G.put(89, 15, 'r'); G.put(98, 9, 'u'); G.put(101, 15, 'd'); G.put(94, 7, 't'); G.coins(90, 96, 12);
-  G.put(113, 14, 'x'); G.put(116, 14, 'm');
+  // the steaming fissure: the one crack in the flat with steam in it drops into a lava tube (a seam, not a pit)
+  G.fill(112, 15, 113, 17, '.'); G.put(112, 17, 'YY'); G.put(112, 16, 'X'); G.put(114, 14, 'i'); G.put(110, 14, 'x'); G.put(117, 14, 'm'); G.put(118, 14, 'A');
   // checkpoint 2, before the last stretch
   G.put(120, 14, 'c'); G.put(123, 10, '?');
   // the last stretch: ferry, the counter-ferry, an island under a crusher, a ferry; P3 (risky) over the chasm
@@ -210,7 +213,8 @@ const rift = (() => {
   return G.rows();
 })();
 const RIFTL = {
-  x: ['decor', 'isRock'], q: ['decor', 'isCairn'], V: ['decor', 'isVentDecor'], A: ['anchor', 'tubeBack'],
+  x: ['decor', 'isRock'], q: ['decor', 'isCairn'], V: ['decor', 'isVentDecor'], A: ['anchor', 'tubeBack'], i: ['decor', 'isElfDoor'],
+  Y: ['seam', 'bottom', 'tube@in'], X: ['spawn', 'isSteamTell', { w: 2 }],
   k: ['spawn', 'sign', { text: 'THE RIFT! THE GROUND HERE SLIDES APART AND BACK. WHEN IT RUMBLES AND THE SEAM GLOWS, A SLAB IS ABOUT TO MOVE. RIDE IT ACROSS' }],
   K: ['spawn', 'sign', { text: 'ROCK GRINDS DOWN FROM ABOVE! PASS UNDER WHILE IT IS UP, AND NEVER WHEN IT RUMBLES' }],
   a: ['piece', 'plate', { w: 4, dx: 8, g: 0, period: 5 }],
@@ -239,7 +243,8 @@ const L3 = { n: 3, name: 'The Rift', mapLabel: 'The Rift', arch: 'quake', theme:
   mapCell: [2, 1], mapFrom: 1,
   areas: [
     { id: 'rift', gen: 'room', theme: 'is_rift', stamp: 'isRift', bottomKill: true },
-    { id: 'tube', gen: 'room', role: 'secret', theme: 'is_tube', stamp: 'isLavaTube' }
+    { id: 'tube', gen: 'room', role: 'secret', theme: 'is_tube', stamp: 'isLavaTube', room: 'ambush',
+      ambush: { title: 'THE SHEEP SHELTER', rule: 'THE RAMS SHELTER FROM THE WEATHER HERE AND THEY WANT IT BACK: STOMP THEM ALL', critters: ['isRam'] } }
   ] };
 /* ---------------- 17-4 The Organ Pipes ----------------
    Inside the volcano: a lava lake on rows 15-17 (L), scoria ledges on row 12, and the organ pipes: hexagonal basalt
@@ -261,7 +266,9 @@ const pipes = (() => {
   G.coins(39, 59, 9);
   G.put(66, 8, '?'); G.put(70, 11, 'c'); G.put(68, 11, 'm');
   // test 2: a lift between two leaps up to a high ledge (the vent: the secret), then down over fast pipes
-  G.put(74, 12, 'z'); G.put(77, 14, 'e'); G.put(79, 12, 'U'); G.fill(81, 5, 87, 7, '#'); G.put(85, 4, 'D'); G.put(83, 4, 'V');
+  G.put(74, 12, 'z'); G.put(77, 14, 'e'); G.put(79, 12, 'O'); G.coins(79, 80, 9); G.put(79, 6, 'o'); G.put(80, 4, 'o');
+  // the crater rim above the view: the tall lift's coin trail leads up; a run along the rim to the steaming vent
+  G.fill(81, 3, 89, 4, '#'); G.fill(92, 3, 98, 4, '#'); G.fill(101, 3, 110, 4, '#'); G.put(83, 2, 'i'); G.coins(84, 88, 1); G.coins(93, 97, 1); G.put(95, 0, 't'); G.put(108, 2, 'D'); G.put(106, 2, 'V');
   G.put(83, 12, 'z'); G.put(87, 12, 'P'); G.put(86, 14, 'e'); G.put(91, 12, 'z'); G.put(95, 12, 'z'); G.put(94, 14, 'e'); G.put(99, 12, 'P'); G.put(103, 12, 'z'); G.put(107, 12, 'P'); G.put(106, 14, 'e');
   G.coins(88, 108, 9);
   G.put(114, 11, 'm'); G.put(117, 11, 'c'); G.put(119, 8, '?'); G.put(116, 11, 'A');
@@ -285,6 +292,7 @@ const PIPEL = {
   P: ['piece', 'pipe', { w: 2, lo: 4, speed: 1.0, rise: 2.2 }],
   z: ['piece', 'pipe', { w: 2, lo: 4, speed: 2.0, rise: 3 }],
   u: ['piece', 'pipe', { w: 2, lo: 4, kind: 'lift', speed: 2.2, rise: 2.2 }],
+  O: ['piece', 'pipe', { w: 2, lo: 9, kind: 'lift', speed: 2.8, rise: 2.8 }], i: ['decor', 'isElfDoor'], t: ['enemy', 'isTern'],
   U: ['piece', 'pipe', { w: 2, lo: 5, kind: 'lift', speed: 2.6, rise: 2.4 }],
   e: ['piece', 'ember', { jump: 14, every: 2.4 }], f: ['piece', 'ember', { jump: 14, every: 1.7 }],
   m: ['enemy', 'isRam']
@@ -306,7 +314,7 @@ const L4 = { n: 4, name: 'The Organ Pipes', mapLabel: 'Organ Pipes', arch: 'basa
   mapCell: [2, 2], mapFrom: 2,
   areas: [
     { id: 'crater', gen: 'room', theme: 'is_volcano', stamp: 'isPipes', bottomKill: true },
-    { id: 'vent', gen: 'room', role: 'secret', theme: 'is_tube', stamp: 'isVent' }
+    { id: 'vent', gen: 'room', role: 'secret', theme: 'is_tube', stamp: 'isVent', room: 'isOrgan', isOrgan: {} }
   ] };
 /* ---------------- 17-5 The Night Troll ----------------
    The shore below the troll's cave, the last of the night: the aurora fading, sea stacks in the fjord (trolls the sun
@@ -342,7 +350,8 @@ const L5 = { n: 5, name: 'The Night Troll', mapLabel: 'Troll\'s Cave', arch: 'la
   exits: { main: { to: 'country:next' } },
   areas: [
     { id: 'shore', gen: 'room', theme: 'is_dawn', stamp: 'isShore', bottomKill: true },
-    { id: 'hut', gen: 'room', role: 'secret', theme: 'is_tube', stamp: 'isTrollHut' },
+    { id: 'hut', gen: 'room', role: 'secret', theme: 'is_tube', stamp: 'isTrollHut', room: 'shell',
+      shell: { title: 'THREE BOWLS OF SKYR', rule: 'A BLUEBERRY GOES UNDER ONE BOWL. WATCH THE SHUFFLE, THEN STOMP THAT BOWL', cup: 'isSkyr' } },
     { id: 'cave', gen: 'arena', role: 'arena', layout: 'cave', arenaW: 28, H: 18, theme: 'is_cave' }
   ] };
 /* ---------------- 17-6 The Hidden Folk (secret) ----------------
@@ -366,7 +375,7 @@ const folk = (() => {
   G.put(59, 15, 'N'); G.put(63, 14, 'n'); G.put(68, 13, 'N'); G.put(72, 14, 'n'); G.put(66, 7, 'p');
   G.put(79, 14, 'c'); G.put(82, 10, '?'); G.put(84, 14, 'w');
   // the folk's house in a boulder (the secret room), its door beside a gate
-  G.put(85, 14, 'D'); G.put(86, 14, 'A');
+  G.put(85, 14, 'V'); G.put(105, 14, 'A');
   // the twist: eye planks (look AT them) and folk planks (look AWAY) in turn, a tern
   G.put(87, 15, 'e'); G.put(91, 14, 'n'); G.put(95, 13, 'e'); G.put(99, 14, 'n'); G.put(103, 15, 'e'); G.put(96, 7, 't'); G.coins(88, 104, 10);
   // checkpoint 2, a gate, then the last stretch: longer, a gate on an island, P3 (risky) high over the pit
@@ -379,6 +388,7 @@ const folk = (() => {
 })();
 const FOLK = {
   i: ['decor', 'isElfDoor'], j: ['decor', 'isHut'], A: ['anchor', 'houseBack'], E: ['piece', 'shyEye', {}],
+  V: ['spawn', 'portal', { kind: 'door', look: 'isFolkDoor', targetRef: 'house@in', shy: true }],
   k: ['spawn', 'sign', { text: 'THE HIDDEN FOLK\'S PLANKS ARE ONLY THERE WHEN NOBODY LOOKS. TAP THROW TO LOOK BACK (TAP AGAIN TO LOOK AHEAD), THEN WALK BACKWARDS ONTO THEM' }],
   K: ['spawn', 'sign', { text: 'THEIR LITTLE GATES ARE THE OTHER WAY ROUND: THEY STOP YOU ONLY WHILE YOU LOOK AT THEM. BACK THROUGH!' }],
   n: ['piece', 'shy', { w: 3 }], N: ['piece', 'shy', { w: 2 }], e: ['piece', 'shy', { w: 3, bold: true }], w: ['piece', 'shyWall', { h: 3 }],
@@ -401,7 +411,7 @@ const L6 = { n: 6, name: 'The Hidden Folk', mapLabel: 'Hidden Folk', arch: 'shy'
   exits: { main: { to: 'node:17-2' } },
   areas: [
     { id: 'folk', gen: 'room', theme: 'is_folk', stamp: 'isFolk', bottomKill: true },
-    { id: 'house', gen: 'room', role: 'secret', theme: 'is_tube', stamp: 'isFolkHouse' }
+    { id: 'house', gen: 'room', role: 'secret', theme: 'is_folk', stamp: 'isFolkHouse', room: 'isFolkLights' }
   ] };
 /* ---------------- placeholders for the levels still to come (replaced below as each is built) ---------------- */
 const stub = (n, name, arch, theme, extra) => Object.assign({ n, name, arch, theme, gimmick: name, hint: name, postcard: name + ' ♥ C', enemies: [['isFox', 1]],
