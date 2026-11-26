@@ -351,12 +351,25 @@ const power = {
       }
     }
   },
-  drawOn(p, ctx, t) {
-    // the yak, then Brady again sitting up on its saddle (the walking Brady underneath is hidden by the yak)
-    yakArt(ctx, p.cx, p.y + p.h + 1, p.facing, t, p.onGround && Math.abs(p.vx) > 30, p._charge > 0);
-    drawBrady(ctx, { x: p.cx - p.facing * 3, y: p.y + p.h - 27, facing: p.facing, small: p.small, power: p.power, anim: { state: p.onGround ? 'idle' : 'jump', t: p.anim.t, phase: 0 }, hair: p.hair, look: Save.data.look, time: t, held: 'joint' });
-  }
+  // the yak and Brady on its back are drawn by the player's own draw (below): nothing extra over the top
+  drawOn() {}
 };
+// riding the yak: the yak first, then the one and only Brady (the player's own drawing, ink and all) lifted onto its
+// back, standing. (It used to draw a second Brady over the yak while the running Brady still showed behind it.)
+const YAK_LIFT = 27;
+function npYakRider(p) { return p.sig && p.sig.id === 'yak' && !p.dead && p.state !== 'portal' && p.state !== 'dying' && !p.mounted && !p.pupoRide; }
+{
+  const pd0 = Player.prototype.draw;
+  Player.prototype.draw = function (ctx, t) {
+    if (!npYakRider(this)) return pd0.call(this, ctx, t);
+    const run = this.onGround && Math.abs(this.vx) > 30, charge = this._charge > 0, bob = run ? Math.abs(Math.sin(t * (charge ? 22 : 12))) * 2 : 0;
+    yakArt(ctx, this.cx, this.y + this.h + 1, this.facing, t, run, charge);
+    const a = this.anim, st = a.state;
+    if (st !== 'throw' && st !== 'die' && st !== 'hurt') a.state = this.onGround ? 'idle' : 'jump';
+    ctx.save(); ctx.translate(-this.facing * 3, -(YAK_LIFT + bob));
+    try { return pd0.call(this, ctx, t); } finally { ctx.restore(); a.state = st; }
+  };
+}
 
 /* ---------------- entities ---------------- */
 // a little yak pen: the yak inside is happy to carry Brady for a while
