@@ -119,6 +119,8 @@ TourMaze.addKeys({ tokBean: { name: 'COFFEE BEAN', col: '#6a3a1e', toast: 'BEAN!
 
 /* ======================= room kinds ======================= */
 const RK = () => TourRoomKit;
+// a won room: the cage opens at once, even when it is off to the side of the view (it does not wait to be on screen)
+const winRoom = (play, A, R, opts) => { TourRooms.win(play, A, R, opts); for (const e of play.entities) if (e instanceof ENTITY_TYPES.roomCage) e.update(0); };
 const TOPPINGS = [
   { name: 'TOMATO', col: '#e83a2a', draw(c, x, y) { c.fillStyle = '#e83a2a'; c.beginPath(); c.arc(x, y, 8, 0, TAU); c.fill(); c.stroke(); c.fillStyle = '#4aa84a'; c.fillRect(x - 3, y - 10, 6, 3); } },
   { name: 'MOZZARELLA', col: '#ffffff', draw(c, x, y) { c.fillStyle = '#fffaf0'; c.beginPath(); c.ellipse(x, y, 9, 7, 0, 0, TAU); c.fill(); c.stroke(); } },
@@ -159,7 +161,7 @@ TourRooms.def('itLap', {
     if (f && overlap(p, { x: f[0] * TS, y: (f[1] - 1) * TS, w: TS, h: 2 * TS })) {
       R.next++; Sound.play('checkpoint', { vol: 0.6, pitch: 1 + R.next * 0.15 }); play.burst(f[0] * TS + 16, f[1] * TS, 12, '#ffd24a', 'confetti');
       if (R.next === 1) R.left = kit.data.t;
-      if (R.next >= F.length) { TourRooms.win(play, A, R, { text: 'NEW RECORD!', coins: 8 }); return; }
+      if (R.next >= F.length) { winRoom(play, A, R, { text: 'NEW RECORD!', coins: 8 }); return; }
     }
     if (R.left != null) { R.left -= dt; if (R.left <= 0) { R.left = null; R.next = 0; R.fails = (R.fails || 0) + 1; RK().raspberry(play, 'TOO SLOW! BACK TO FLAG 1'); } }
   },
@@ -201,7 +203,7 @@ TourRooms.def('itPizza', {
   // a jar bumped from below (Play.bumpBlock below): right topping onto the pizza, wrong one burns it
   bump(play, A, R, k) {
     if (R.won) return;
-    if (R.order.indexOf(k) >= 0) { if (R.got.indexOf(k) < 0) { R.got.push(k); Sound.play('pick', { vol: 0.6 }); play.parts.text(play.player.cx, play.player.y - 20, TOPPINGS[k].name + '!', '#ffffff'); } if (R.got.length >= 3) TourRooms.win(play, A, R, { text: 'PERFETTA!', coins: 6 }); }
+    if (R.order.indexOf(k) >= 0) { if (R.got.indexOf(k) < 0) { R.got.push(k); Sound.play('pick', { vol: 0.6 }); play.parts.text(play.player.cx, play.player.y - 20, TOPPINGS[k].name + '!', '#ffffff'); } if (R.got.length >= 3) winRoom(play, A, R, { text: 'PERFETTA!', coins: 6 }); }
     else { R.fails = (R.fails || 0) + 1; R.burnT = 1.2; RK().raspberry(play, 'BURNT! ' + TOPPINGS[k].name + ' WAS NOT ON THE ORDER'); this.order(play, R); }
   },
   update(play, dt, A, R) { if (R.burnT > 0) R.burnT -= dt; },
@@ -272,7 +274,7 @@ TourRooms.def('itBells', {
         const box = { x: bx * TS - 8, y: 4 * TS, w: TS + 16, h: 2 * TS }, hit = overlap(p, box) && p.vy < 0;
         if (hit && !R.was[k]) {
           this.ring(play, R, k);
-          if (R.tune[R.i] === k) { R.i++; if (R.i >= R.tune.length) TourRooms.win(play, A, R, { text: 'BRAVO!', coins: 6 }); }
+          if (R.tune[R.i] === k) { R.i++; if (R.i >= R.tune.length) winRoom(play, A, R, { text: 'BRAVO!', coins: 6 }); }
           else { R.fails = (R.fails || 0) + 1; RK().raspberry(play, 'CLANG! LISTEN AGAIN'); R.phase = 'play'; R.pt = -0.8; R.i = 0; }
         }
         R.was[k] = hit || (R.was[k] && p.vy < 0 && overlap(p, box));
