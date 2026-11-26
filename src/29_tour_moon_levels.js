@@ -42,7 +42,6 @@ const hopRows = (() => {
   ground(Gr, 71, 74, 19); put(Gr, 72, 18, 'r');
   pit(Gr, 75, 82); put(Gr, 78, 14, 'M'); put(Gr, 76, 15, 'o.o.o.o');
   ground(Gr, 83, 108, 21); put(Gr, 85, 20, 'c'); put(Gr, 89, 16, '?');
-  put(Gr, 93, 20, 'X');
   put(Gr, 105, 20, 'u'); put(Gr, 103, 20, 'l');
   ground(Gr, 109, 113, 24); put(Gr, 110, 23, '3'); for (let y = 8; y <= 14; y += 2) put(Gr, 110, y, 'o');
   ground(Gr, 114, 116, 21);
@@ -68,6 +67,14 @@ const hopRows = (() => {
   fillG(Gr, 229, 7, 234, 8, '#'); put(Gr, 231, 6, 'g'); put(Gr, 229, 5, 'o.o.o.o');
   ground(Gr, 228, 251, 21); put(Gr, 233, 20, 'p'); put(Gr, 236, 20, 'm'); put(Gr, 243, 20, 'G'); put(Gr, 248, 20, 'p');
   fillG(Gr, 251, 0, 251, 25, '#');
+  // six rows of sky on top: room for THE RUN ABOVE (the rows below are the level as it was, one row = +6)
+  for (let k = 0; k < 6; k++) Gr.unshift(Array(W).fill('.'));
+  // the gap in the big overhang: a faint dust vent (the land's tell for a way up) blows up a shaft through the slab;
+  // on top, a run along the overhang and the rafters over the golf balls, to the hatch of Piwi's practice green
+  fillG(Gr, 173, 8, 174, 20, '.'); put(Gr, 173, 32 - 1 - 5, '6');
+  put(Gr, 162, 7, 'o.o.o.o.o.o.o.o.o.o');
+  fillG(Gr, 182, 9, 187, 9, '-'); fillG(Gr, 191, 9, 196, 9, '-'); fillG(Gr, 200, 9, 205, 9, '-');
+  put(Gr, 184, 8, 'o.o'); put(Gr, 193, 8, 'o.o'); put(Gr, 192, 4, 'M'); put(Gr, 204, 8, 'K'); put(Gr, 202, 17, 'a');
   return rowsOf(Gr);
 })();
 const HOP = {
@@ -82,9 +89,10 @@ const HOP = {
   '4': ['piece', 'moon.geyser', { steady: true, top: 3, faint: true, w: 3 }],
   '5': ['piece', 'moon.geyser', { steady: true, top: 8 }],
   z: ['piece', 'moon.golfRain', { period: 3.0 }], Z: ['piece', 'moon.golfRain', { period: 3.0, phase: 1.5 }],
-  X: ['piece', 'secretDoor', { to: 'green@in', look: 'fake', back: 'greenBack' }]
+  '6': ['piece', 'moon.geyser', { steady: true, top: 5, faint: true, w: 2 }],
+  K: ['spawn', 'portal', { kind: 'door', look: 'moonHatchQuiet', targetRef: 'green@in' }], a: ['anchor', 'greenOut']
 };
-stamps.moonHop = { floor: 21, rows: hopRows, legend: HOP, gold: { '*': 'must', R: 'risky' }, items: ['power', 'power', 'star'] };
+stamps.moonHop = { floor: 27, rows: hopRows, legend: HOP, gold: { '*': 'must', R: 'risky' }, items: ['power', 'power', 'star'] };
 // Piwi's practice green: under the cracked boulder, a crater cave where someone has been practising their golf for
 // years (balls everywhere); P2, a hidden 1UP, the way back out
 stamps.moonGreen = {
@@ -92,21 +100,20 @@ stamps.moonGreen = {
   rows: [
     '##############################',
     '#............................#',
-    '#........o.o.o.......*.......#',
-    '#.......-----.......-----....#',
     '#............................#',
-    '#..h.........................#',
-    '#...........r.......-----....#',
-    '#............................#',
-    '#...-----........l...........#',
+    '#.....o.o.o.o.o..............#',
     '#............................#',
     '#............................#',
-    '#.@...D.....l....j.....l..l..#',
+    '#............................#',
+    '#.......................######',
+    '#.......................#..?.#',
+    '#.......................Y....#',
+    '#.......................Y....#',
+    '#.@.D.k.....r...........Y....#',
     '##############################',
     '##############################'],
-  gold: { '*': 'hidden' }, hidden: ['oneup'],
-  doors: [{ to: 'surface@greenBack' }],
-  legend: { l: ['decor', 'moonGolf'], j: ['decor', 'moonPoster'], r: ['decor', 'moonRock'] }
+  items: ['oneup'], doors: [{ to: 'surface@greenOut', look: 'moonHatchQuiet' }],
+  legend: { r: ['decor', 'moonRock'], Y: ['lock', 'moon:green'], k: ['piece', 'moon.game', { kind: 'moonPutt', lock: 'moon:green', tee: [8, 12], cup: [21, 12] }] }
 };
 const L1 = { n: 1, name: 'One Small Hop', mapLabel: 'One Small Hop', arch: 'lowg', theme: 'moon_surface',
   gimmick: 'Low gravity: huge floaty jumps and long hang time. Dust geysers blow you sky-high, spikes overhead punish a full jump, golf balls fall out of the black sky',
@@ -117,7 +124,7 @@ const L1 = { n: 1, name: 'One Small Hop', mapLabel: 'One Small Hop', arch: 'lowg
   exits: { main: { to: '18-2' }, secret: { to: '18-6', hint: 'A telescope on the last rim points up at a patch of sky. Something twinkles up there...' } },
   areas: [
     { id: 'surface', gen: 'room', theme: 'moon_surface', stamp: 'moonHop', gravity: G0, moon: { lowg: true }, camera: 'free', bottomKill: true },
-    { id: 'green', gen: 'room', role: 'secret', theme: 'moon_shadow', stamp: 'moonGreen', gravity: G0, moon: { lowg: true } }
+    { id: 'green', gen: 'room', role: 'secret', room: 'moonPutt', theme: 'moon_shadow', stamp: 'moonGreen', gravity: G0, moon: { lowg: true } }
   ] };
 
 /* ---------------- 18-2 Spacewalk ---------------- */
@@ -142,7 +149,7 @@ const walkRows = (() => {
   plate(Gr, 90, 94, 15); plate(Gr, 99, 103, 10); fillG(Gr, 99, 12, 103, 12, 'v'); plate(Gr, 108, 112, 5); fillG(Gr, 108, 7, 112, 7, 'v');
   put(Gr, 96, 8, 'M');
   // the locker-room airlock on its own little plate up top (a light blinks on it)
-  plate(Gr, 115, 121, 3); put(Gr, 118, 2, 'A'); put(Gr, 120, 2, 'a');
+  plate(Gr, 115, 121, 3); put(Gr, 118, 2, 'A'); put(Gr, 113, 6, 'o'); put(Gr, 111, 8, 'o'); put(Gr, 128, 14, 'a');
   plate(Gr, 120, 131, 15); fillG(Gr, 120, 17, 131, 17, 'v'); put(Gr, 124, 14, 'c'); put(Gr, 128, 11, 'o.o');
   // ③ the twist: an air vent blows up out of the void beside the plates; spikes under the plates
   put(Gr, 136, 28, '1'); plate(Gr, 141, 146, 8); fillG(Gr, 141, 10, 146, 10, 'v'); put(Gr, 142, 7, 'o.o.o');
@@ -160,7 +167,7 @@ const WALK = {
   V: ['piece', 'moon.valve', {}],
   j: ['piece', 'moon.junk', { ay: 9, speed: 0.7, kind: 0 }], k: ['piece', 'moon.junk', { ay: 10, speed: 0.55, kind: 1 }], K: ['piece', 'moon.junk', { ax: 9, speed: 0.6, kind: 2, phase: 1 }],
   '1': ['piece', 'moon.geyser', { steady: true, top: 6, w: 2, force: 70, vmax: 6 }],
-  A: ['spawn', 'portal', { kind: 'door', look: 'moonAirlock', targetRef: 'locker@in' }]
+  A: ['spawn', 'portal', { kind: 'door', look: 'moonHatchQuiet', targetRef: 'locker@in' }]
 };
 stamps.moonWalk = { floor: 22, rows: walkRows, legend: WALK, gold: { '*': 'must', R: 'risky' }, items: ['power', 'power', 'power'] };
 // the venue's locker room: Piwi's stagehands keep their spare keys here (and a 1UP, and P2)
@@ -169,23 +176,22 @@ stamps.moonLocker = {
   rows: [
     '##############################',
     '#............................#',
-    '#.........*..................#',
-    '#.......-----......o.o.o.....#',
-    '#..................-----.....#',
-    '#..h.........................#',
-    '#.......................-----#',
-    '#...-----....................#',
     '#............................#',
-    '#..........-----.............#',
+    '#......o.o.o.o.o.o...........#',
     '#............................#',
-    '#.@...D......l.....l....l....#',
+    '#............................#',
+    '#............................#',
+    '#.......................######',
+    '#.......................#..?.#',
+    '#.......................Y....#',
+    '#.......................Y....#',
+    '#.@.D.k.................Y....#',
     '##############################',
     '##############################'],
-  gold: { '*': 'hidden' }, hidden: ['oneup'],
-  doors: [{ to: 'walk@lockerBack', look: 'moonAirlock' }],
-  legend: { l: ['decor', 'moonLamp'] }
+  items: ['oneup'], doors: [{ to: 'walk@lockerOut', look: 'moonHatchQuiet' }],
+  legend: { Y: ['lock', 'moon:locker'], k: ['piece', 'moon.game', { kind: 'moonLights', lock: 'moon:locker', pads: [[8, 12], [11, 12], [14, 12], [17, 12]] }] }
 };
-WALK.a = ['anchor', 'lockerBack'];
+WALK.a = ['anchor', 'lockerOut'];
 const L2 = { n: 2, name: 'Spacewalk', mapLabel: 'Spacewalk', arch: 'drift', theme: 'moon_orbit',
   gimmick: 'Outside Piwi\'s orbiting venue with no ground at all: push off the hull plates and steer with puffs from your air canister. You keep your momentum; the tank holds two puffs',
   hint: 'Jump to push off, jump again in mid-air to puff. Plan your puffs: land on a plate or fly through a valve to refill. The blinking airlock up top is not locked...',
@@ -195,7 +201,7 @@ const L2 = { n: 2, name: 'Spacewalk', mapLabel: 'Spacewalk', arch: 'drift', them
   exits: { main: { to: '18-3' } },
   areas: [
     { id: 'walk', gen: 'room', theme: 'moon_orbit', stamp: 'moonWalk', gravity: 0.2, moon: { drift: { tank: 2 } }, camera: 'free', bottomKill: true },
-    { id: 'locker', gen: 'room', role: 'secret', theme: 'moon_base', stamp: 'moonLocker', gravity: G0, moon: { lowg: true } }
+    { id: 'locker', gen: 'room', role: 'secret', room: 'moonLights', theme: 'moon_base', stamp: 'moonLocker', gravity: G0, moon: { lowg: true } }
   ] };
 
 /* ---------------- 18-3 Moon Buggy ---------------- */
@@ -219,8 +225,8 @@ const buggyRows = (() => {
   pit(Gr, 117, 120); fillG(Gr, 117, 4, 120, 13, 'H'); fillG(Gr, 117, 14, 120, 14, 'v');
   pit(Gr, 126, 129); fillG(Gr, 126, 4, 129, 13, 'H'); fillG(Gr, 126, 14, 129, 14, 'v'); put(Gr, 127, 17, 'R');
   // the rover depot's garage door (a blinking light), ridges
-  put(Gr, 142, 19, 'D'); put(Gr, 145, 19, 'a'); put(Gr, 139, 19, 'p'); put(Gr, 148, 19, 'c');
-  fillG(Gr, 152, 19, 156, 19, '#'); fillG(Gr, 154, 18, 156, 18, '#'); fillG(Gr, 156, 17, 156, 17, '#'); fillG(Gr, 166, 17, 166, 19, 'B');
+  put(Gr, 139, 19, 'p'); put(Gr, 148, 19, 'c');
+  fillG(Gr, 152, 19, 156, 19, '#'); fillG(Gr, 154, 18, 156, 18, '#'); fillG(Gr, 156, 17, 156, 17, '#'); fillG(Gr, 166, 17, 166, 19, 'B'); put(Gr, 166, 16, 'D'); put(Gr, 165, 16, 'f'); put(Gr, 186, 15, 'a');
   // the crater whose steady geyser flings the buggy up onto the mesa
   pit(Gr, 172, 180); put(Gr, 173, 24, '1'); ground(Gr, 181, 199, 16); put(Gr, 197, 15, 'e'); put(Gr, 192, 12, 'o.o.o');
   put(Gr, 204, 19, 'c'); put(Gr, 208, 16, '?');
@@ -239,30 +245,29 @@ const BUGGY = {
   p: ['decor', 'moonPoster'], l: ['decor', 'moonGolf'], e: ['enemy', 'moonBunny'], m: ['enemy', 'moonMite'], u: ['enemy', 'moonHand'],
   z: ['piece', 'moon.golfRain', { period: 2.8 }], Z: ['piece', 'moon.golfRain', { period: 2.8, phase: 1.4 }],
   '1': ['piece', 'moon.geyser', { steady: true, top: 6, w: 4, pull: 0, vmax: 13, force: 150 }], '2': ['piece', 'moon.geyser', { steady: true, top: 7, w: 3, pull: 0, vmax: 13, force: 150 }],
-  a: ['anchor', 'depotBack']
+  a: ['anchor', 'depotOut'], f: ['spawn', 'tourDraft', { look: 'fake' }]
 };
-stamps.moonBuggy = { floor: 20, rows: buggyRows, legend: BUGGY, gold: { '*': 'must', R: 'risky' }, items: ['power', 'power', 'power'], doors: [{ to: 'depot@in', look: 'moonHatch' }] };
+stamps.moonBuggy = { floor: 20, rows: buggyRows, legend: BUGGY, gold: { '*': 'must', R: 'risky' }, items: ['power', 'power', 'power'], doors: [{ to: 'depot@in', look: 'moonHatchQuiet' }] };
 // the rover depot: spare wheels, a buggy up on blocks, P2 on the tyre stack, a hidden 1UP
 stamps.moonDepot = {
   floor: 12,
   rows: [
     '##############################',
     '#............................#',
-    '#.....................*......#',
-    '#....................---.....#',
-    '#.......o.o.o................#',
-    '#......-------.....------....#',
-    '#..h.........................#',
-    '#.......................---..#',
-    '#...----.....................#',
-    '#..........-----.............#',
     '#............................#',
-    '#.@...D.....l....j......l....#',
+    '#....o.o.o.o.o.o.o...........#',
+    '#............................#',
+    '#............................#',
+    '#............................#',
+    '#.......................######',
+    '#.......................#..?.#',
+    '#.......................Y....#',
+    '#.......................Y....#',
+    '#.@.D.k.................Y....#',
     '##############################',
     '##############################'],
-  gold: { '*': 'hidden' }, hidden: ['oneup'],
-  doors: [{ to: 'buggy@depotBack', look: 'moonHatch' }],
-  legend: { l: ['decor', 'moonLamp'], j: ['decor', 'moonPoster'] }
+  items: ['oneup'], doors: [{ to: 'buggy@depotOut', look: 'moonHatchQuiet' }],
+  legend: { Y: ['lock', 'moon:depot'], k: ['piece', 'moon.game', { kind: 'moonOdd', lock: 'moon:depot', pads: [[8, 12], [10, 12], [12, 12], [14, 12], [16, 12], [18, 12]] }] }
 };
 const L3 = { n: 3, name: 'Moon Buggy', mapLabel: 'Moon Buggy', arch: 'rover', theme: 'moon_rover',
   gimmick: 'Drive a springy six-wheeled buggy over craters and ridges: throttle, brake, hop, and lean in the air to land flat',
@@ -273,7 +278,7 @@ const L3 = { n: 3, name: 'Moon Buggy', mapLabel: 'Moon Buggy', arch: 'rover', th
   exits: { main: { to: '18-4' } },
   areas: [
     { id: 'buggy', gen: 'room', theme: 'moon_rover', stamp: 'moonBuggy', gravity: G0, moon: { rover: true }, camera: 'free', bottomKill: true },
-    { id: 'depot', gen: 'room', role: 'secret', theme: 'moon_base', stamp: 'moonDepot', gravity: G0, moon: { lowg: true } }
+    { id: 'depot', gen: 'room', role: 'secret', room: 'moonOdd', theme: 'moon_base', stamp: 'moonDepot', gravity: G0, moon: { lowg: true } }
   ] };
 
 /* ---------------- 18-4 The Moon Base ---------------- */
@@ -296,7 +301,7 @@ const baseRows = (() => {
   // two metal spans with a gap: drop to the ledge between, boots on again from it
   fillG(Gr, 101, 20, 120, 23, '.'); put(Gr, 99, 19, '4'); fillG(Gr, 104, 11, 111, 11, '#'); put(Gr, 111, 19, '5'); fillG(Gr, 107, 3, 110, 3, 'v'); put(Gr, 108, 10, 'k');
   // the storeroom ledge, only reachable from the ceiling (its hatch light blinks)
-  fillG(Gr, 122, 9, 126, 9, '#'); put(Gr, 124, 8, 'D'); put(Gr, 126, 8, 'a');
+  fillG(Gr, 122, 9, 126, 9, '#'); put(Gr, 124, 8, 'D'); put(Gr, 148, 9, 'a'); put(Gr, 120, 6, 'o.o');
   put(Gr, 128, 12, 'M'); put(Gr, 132, 19, 'c');
   // ③ the air vent up to a ledge under the metal; spikes on the ceiling elsewhere
   fillG(Gr, 138, 20, 145, 23, '.'); put(Gr, 139, 23, '6'); fillG(Gr, 136, 3, 145, 3, 'v'); fillG(Gr, 146, 10, 151, 10, '-'); put(Gr, 146, 19, '7');
@@ -313,31 +318,31 @@ const BASE = {
   '3': ['piece', 'moon.metal', { w: 21, ceil: 2, bot: 19 }], '4': ['piece', 'moon.metal', { w: 8, ceil: 2, bot: 19 }],
   '5': ['piece', 'moon.metal', { w: 16, ceil: 2, bot: 19 }],
   '6': ['piece', 'moon.geyser', { steady: true, top: 4, w: 2 }], '7': ['piece', 'moon.metal', { w: 6, ceil: 2, bot: 9 }],
-  a: ['anchor', 'storeBack'],
+  a: ['anchor', 'storeOut'],
   A: ['spawn', 'portal', { kind: 'door', look: 'moonAirlock', targetRef: 'yard@in' }]
 };
-stamps.moonBase = { floor: 20, rows: baseRows, legend: BASE, gold: { '*': 'must', R: 'risky' }, items: ['power', 'power', 'power'], doors: [{ to: 'store@in', look: 'moonHatch' }] };
+stamps.moonBase = { floor: 20, rows: baseRows, legend: BASE, gold: { '*': 'must', R: 'risky' }, items: ['power', 'power', 'power'], doors: [{ to: 'store@in', look: 'moonHatchQuiet' }] };
 // the storeroom over the corridor: Piwi's spare posters, P2, a hidden 1UP
 stamps.moonStore = {
   floor: 12,
   rows: [
     '##############################',
     '#............................#',
-    '#........*...................#',
-    '#......-----......o.o.o......#',
-    '#.................-----......#',
-    '#..h.........................#',
-    '#.....................-----..#',
-    '#...-----....................#',
     '#............................#',
-    '#..........-----.............#',
     '#............................#',
-    '#.@...D.....j....j......l....#',
+    '#............................#',
+    '#............................#',
+    '#............................#',
+    '#.......................######',
+    '#.......................#..?.#',
+    '#.......................Y....#',
+    '#.......................Y....#',
+    '#.@.D.k...m.............Y....#',
     '##############################',
     '##############################'],
-  gold: { '*': 'hidden' }, hidden: ['oneup'],
-  doors: [{ to: 'base@storeBack', look: 'moonHatch' }],
-  legend: { l: ['decor', 'moonLamp'], j: ['decor', 'moonPoster'] }
+  items: ['oneup'], doors: [{ to: 'base@storeOut', look: 'moonHatchQuiet' }],
+  legend: { Y: ['lock', 'moon:store'], m: ['piece', 'moon.metal', { w: 10, ceil: 0, bot: 11 }],
+    k: ['piece', 'moon.game', { kind: 'moonFuses', lock: 'moon:store', time: 20, fuses: [[8, 11], [21, 11], [12, 1, 1], [17, 1, 1]] }] }
 };
 // the yard outside the base: a short spacewalk in low orbit over the stage crater, junk and golf balls adrift
 const yardRows = (() => {
@@ -363,7 +368,7 @@ const L4 = { n: 4, name: 'The Moon Base', mapLabel: 'The Moon Base', arch: 'mag'
   exits: { main: { to: '18-5' } },
   areas: [
     { id: 'base', gen: 'room', theme: 'moon_base', stamp: 'moonBase', gravity: G0, moon: { mag: true } },
-    { id: 'store', gen: 'room', role: 'secret', theme: 'moon_base', stamp: 'moonStore', gravity: G0, moon: { lowg: true } },
+    { id: 'store', gen: 'room', role: 'secret', room: 'moonFuses', theme: 'moon_base', stamp: 'moonStore', gravity: G0, moon: { mag: true } },
     { id: 'yard', gen: 'room', theme: 'moon_orbit', stamp: 'moonYard', gravity: 0.2, moon: { drift: { tank: 2 } }, camera: 'free', bottomKill: true }
   ] };
 
@@ -414,7 +419,7 @@ const L5 = { n: 5, name: 'The Lunar Stage', mapLabel: 'The Lunar Stage', arch: '
   exits: { main: { to: 'country:next' } },
   areas: [
     { id: 'wings', gen: 'room', theme: 'moon_base', stamp: 'moonWings', gravity: G0, moon: { lowg: true } },
-    { id: 'dressing', gen: 'room', role: 'secret', theme: 'moon_base', stamp: 'moonDressing', gravity: G0, moon: { lowg: true } },
+    { id: 'dressing', gen: 'room', role: 'secret', room: 'shell', shell: { title: 'THE HEADLINER\'S HATBOXES', rule: 'WATCH THE GOLDEN BELL, THEN STOMP THE HATBOX IT IS UNDER' }, theme: 'moon_base', stamp: 'moonDressing', gravity: G0, moon: { lowg: true } },
     { id: 'stage', gen: 'arena', role: 'arena', layout: 'stage', arenaW: 30, H: 20, roof: false, theme: 'moon_stage', gravity: G0, moon: { lowg: true } }
   ] };
 
@@ -464,20 +469,20 @@ stamps.moonScope = {
   rows: [
     '##############################',
     '#............................#',
-    '#...................*........#',
-    '#..................-----.....#',
-    '#.......o.o.o................#',
-    '#..h...-------...............#',
     '#............................#',
-    '#...-----.............-----..#',
+    '#.....o.o.o.o.o..............#',
     '#............................#',
-    '#..........-----.............#',
     '#............................#',
-    '#.@...D......k...........k...#',
+    '#............................#',
+    '#.......................######',
+    '#.......................#..?.#',
+    '#.......................Y....#',
+    '#.......................Y....#',
+    '#.@.D.k.j...............Y....#',
     '##############################',
     '##############################'],
-  gold: { '*': 'hidden' }, hidden: ['oneup'], doors: [{ to: 'sky@scopeBack', look: 'moonHatch' }],
-  legend: { k: ['decor', 'moonScope'] }
+  items: ['oneup'], doors: [{ to: 'sky@scopeBack', look: 'moonHatch' }],
+  legend: { j: ['decor', 'moonScope'], Y: ['lock', 'moon:scope'], k: ['piece', 'moon.game', { kind: 'moonEcho', lock: 'moon:scope', pads: [[11, 12], [14, 12], [17, 12], [20, 12]] }] }
 };
 const L6 = { n: 6, name: 'Connect the Stars', mapLabel: 'Connect the Stars', arch: 'stars', secret: true, theme: 'moon_stars',
   gimmick: 'Through the star gate: step on the stars in the right order to draw each constellation, and every finished constellation becomes a bridge of light',
@@ -488,7 +493,7 @@ const L6 = { n: 6, name: 'Connect the Stars', mapLabel: 'Connect the Stars', arc
   exits: { main: { to: 'node:18-4' } },
   areas: [
     { id: 'sky', gen: 'room', theme: 'moon_stars', stamp: 'moonStars', gravity: G0, moon: { lowg: true }, camera: 'free', bottomKill: true },
-    { id: 'scope', gen: 'room', role: 'secret', theme: 'moon_base', stamp: 'moonScope', gravity: G0, moon: { lowg: true } }
+    { id: 'scope', gen: 'room', role: 'secret', room: 'moonEcho', theme: 'moon_base', stamp: 'moonScope', gravity: G0, moon: { lowg: true } }
   ] };
 
 Tour.amend('moon', { stamps, levels: [L1, L2, L3, L4, L5, L6] });
