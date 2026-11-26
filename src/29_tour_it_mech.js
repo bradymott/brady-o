@@ -164,7 +164,7 @@ class ItRamp extends Ent {
     const feet = p.y + p.h, fx = p.cx;
     if (p.itScoot && p.onGround && p.vx > 4 * TS && fx > this.x + 6 && fx < this.x + this.w && feet > this.y + this.h - 6 && feet < this.y + this.h + 4 && !(this.used > 0)) {
       const boost = p.itBoostT > 0;
-      p.vy = -(boost ? 27 : 25) * TS; p.onGround = false; p.jumping = false; p.coyote = 0; p.jumpBuf = 0; p.itRampT = 1.6; p.ride = null;
+      p.vy = -(boost ? 29 : 25) * TS; p.onGround = false; p.jumping = false; p.coyote = 0; p.jumpBuf = 0; p.itRampT = 1.6; p.ride = null;
       this.used = 0.5; K.sfx('ramp', 'spring', { vol: 0.6, pitch: 0.8 }); this.g.burst(this.cx, this.y + this.h, 8, '#ffffff', 'dust');
       this.g.parts.text(this.cx, this.y - 10, boost ? 'WHEEEE!' : 'HOP!', '#ffe28a');
     }
@@ -629,6 +629,17 @@ const P = {
     B.spawn('itFacade', wx, roof, { w: (o.roofN || 14) + 1, h: st.H - roof - 1, seed: wx });
     for (let xx = wx; xx <= wx + (o.roofN || 14); xx++) B.set(xx, roof, T.SEMI);
     B.edge([rx, st.gy - 1], [wx + (o.land || 4), roof]);
+    // a pigeon loft high over the roof terrace: only a BOOSTED launch off the ramp gets that high (a plain one
+    // tops out under it, a jump from the roof falls short). The tell: a pigeon staring up, coins up into the sky
+    if (o.loft) {
+      const ly = roof - 5, lx0 = wx + 6;
+      for (let xx = lx0; xx <= lx0 + 5; xx++) B.set(xx, ly, T.SEMI);
+      B.spawn('portal', lx0 + 3, ly - 1, { kind: 'door', look: 'itLoft', targetRef: o.loft.to });
+      if (o.loft.back) B.anchor(o.loft.back, lx0 + 1, ly - 1);
+      B.edge([rx, st.gy - 1], [lx0 + 2, ly]);
+      for (let k = 0; k < 5; k++) B.pickAt(rx + 2 + k * 2, st.gy - 6 - k * 2);
+      B.spawn('itPigeonTell', rx - 4, st.gy - 1, { dir: 1, look: 'up' });
+    }
     if (o.sign) st.sign(x + 1, o.sign);
     st.coins(rx + 1, wx + 2, roof - 3);
     st.gy = roof;
@@ -900,7 +911,7 @@ P.hideDoor = (st, o) => {
   const B = st.B, x = st.x, y = st.gy - 1, look = o.look || 'fake';
   if (look === 'fake') { B.fill(x, y - (o.h || 3) + 1, x, y, T.FAKE); B.spawn('tourDraft', x, y, { look }); }
   else B.spawn('tourCurtain', x, y, { look, skin: o.skin || 'itVelvet', h: o.h || 3 });
-  B.spawn('portal', x, y, { kind: 'door', look: 'tourDoorHidden', targetRef: o.to || null, secretDoor: true });
+  B.spawn('portal', x, y, { kind: 'door', look: 'tourDoorHidden', targetRef: o.to || null, secretDoor: true, walkIn: !!o.walkIn });
   if (o.back) B.anchor(o.back, x + (o.backDx || 2), y);
   return st.x;
 };
