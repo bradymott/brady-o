@@ -249,8 +249,8 @@ TourHats.NOT = new Set([].concat(
   // Vietnam: flying conical hats, the coffee phin, tin scooters, bao, rolls, gỏi, beans, hooks, phở, boats, rafts, signals, ice, roasters, kettles, pedals, lanterns, puppets, goods, gates, rain clouds, the cave's bat swarm
   'vnNon vnPhinDrip vnScooter vnBao vnRoll vnGoi vnBean vnHook vnPho vnBoat vnRaft vnTrainSignal vnIce vnRoaster vnKettle vnPedal vnArenaLantern vnPuppet vnGoods vnTradeGate vnRainCloud vnCaveBats'.split(' '),
   // World 22: alarm clocks, envelopes, hourglasses, echoes, loops, mirrors, panes, strikes, pendulums, copies, slabs, lakes, doors, keys, ink, falling time; 22-6's pages and stamps
-  // Iceland (17): aurora ribbons, icebergs, rift slabs, organ pipes, lava blobs, the hidden folk's planks / gates / eye, the sun shields
-  'isRibbon isBerg isPlate isPipe isEmber isShyEye isShyPlat isShyWall isSunShield'.split(' '),
+  // Iceland (17): aurora ribbons, icebergs, rift slabs, organ pipes, lava blobs, the hidden folk's planks / gates / eye, the sun shields, the secret rooms' bells / organ keys / lanterns, the steam tell
+  'isRibbon isBerg isPlate isPipe isEmber isShyEye isShyPlat isShyWall isSunShield isBell isOrganKey isFolkLight isSteamTell'.split(' '),
   'w22Alarm w22Envelope w22Hourglass w22Echo w22Loop w22Mirror w22Pane w22Strike w22Pendulum w22Copy w22Slab w22Lake w22ReflectDoor w22Key w22Ink w22TimeFall w22NumDoorE rbPage rbStamp rbTornPage'.split(' ')
 ));
 
