@@ -146,7 +146,28 @@ const WIN = {
   // Mexico 1-7's kinds (src/29_tour_mx_zcasa.js): the key on the attic ceiling, the cistern's rim, the treasure map
   topsy(g, A, R, kit) { const e = g.entities.find(x => x.id === kit.o.key && !x.remove); if (e) e.touchPlayer(P(g)); wait(g, 0.3, () => R.won); },
   hourglass(g, A, R, kit) { place(g, 14, kit.data.top - 1); wait(g, 0.5, () => R.won); check(g.level.id + ' ' + A.aid + ' hourglass: once at the rim the sand stops', A.risingLava && A.risingLava.speed === 0); },
-  treasure(g, A, R, kit) { const e = g.entities.find(x => x.id === kit.o.map && !x.remove); if (e) e.touchPlayer(P(g)); wait(g, 0.3, () => R.won); }
+  treasure(g, A, R, kit) { const e = g.entities.find(x => x.id === kit.o.map && !x.remove); if (e) e.touchPlayer(P(g)); wait(g, 0.3, () => R.won); },
+  // Australia (16)'s kinds (src/29_tour_au_rooms.js): the kookaburra chorus, the muster, the opal seam, the possum's
+  // billy cans (the shell game), the odd big thing
+  auEcho(g, A, R, kit) {
+    const L = kit.data.logs, onLog = k => { place(g, L[k], 7); wait(g, 0.15); place(g, L[0] - 3, 10); wait(g, 0.1); };
+    place(g, L[0] - 3, 10); wait(g, 20, () => R.phase === 'play');
+    onLog((R.seq[0] + 1) % 4);
+    check(g.level.id + ' ' + A.aid + ' auEcho: a wrong log first: the birds sing it again', !R.won && R.phase === 'show');
+    wait(g, 20, () => R.phase === 'play');
+    for (const k of R.seq.slice()) onLog(k);
+    wait(g, 0.3, () => R.won);
+  },
+  auMuster(g, A, R, kit) { place(g, 6, 10); wait(g, 1.5); for (const sh of R.sheep) { sh.x = kit.data.penX * TS + 40; } wait(g, 0.5, () => R.won); place(g, kit.data.penX - 2, 10); },
+  auOpals(g, A, R, kit) { wait(g, 2); for (const o of R.opals) { const p = P(g); p.x = o.cx - p.w / 2; p.y = o.cy - p.h / 2; p.vy = 0; frame(g); } wait(g, 0.5, () => R.won); },
+  auShell(g, A, R, kit) { WIN.shell(g, A, R, kit); },
+  auOddOne(g, A, R, kit) {
+    const Pl = kit.data.plinths, on = k => { place(g, Pl[k] + 1, 8); wait(g, 0.15); place(g, Pl[0] - 2, 10); wait(g, 0.1); };
+    wait(g, 1); on((R.odd + 1) % 5);
+    check(g.level.id + ' ' + A.aid + ' auOddOne: a wrong giant is a raspberry, no round', (R.round || 0) === 0 && !R.won);
+    for (let k = 0; k < 3 && !R.won; k++) on(R.odd);
+    wait(g, 0.3, () => R.won);
+  }
 };
 // kinds without a game to win: their reward is the checker's (validate_levels' room probes)
 const NOGAME = { grotto: 1, lantern: 1, bouncy: 1, floaty: 1, wormhole: 1, pick: 1, closing: 1 };

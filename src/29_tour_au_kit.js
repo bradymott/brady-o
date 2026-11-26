@@ -416,7 +416,7 @@ class AuMud extends Ent {
   }
   update(dt) {
     this.t += dt; const A = this.g.area, p = this.g.player; this.x = 0; this.y = 0; this.w = A.W * TS; this.h = A.H * TS;
-    if (p && !p.dead && p.state === 'play' && p.y + p.h > this.my * TS + 18) { this.g.parts.text(p.cx, this.my * TS - 20, 'SPLOOSH!', '#c8d8a8'); this.g.burst(p.cx, this.my * TS, 10, '#5a5a32', 'dust'); p.die('pit'); }
+    if (p && !p.dead && p.state === 'play' && p.y + p.h > this.my * TS + 18 && this.spans.some(([a, b]) => p.cx >= a * TS && p.cx < (b + 1) * TS)) { this.g.parts.text(p.cx, this.my * TS - 20, 'SPLOOSH!', '#c8d8a8'); this.g.burst(p.cx, this.my * TS, 10, '#5a5a32', 'dust'); p.die('pit'); }
   }
   touchPlayer() {}
   draw(ctx) {
