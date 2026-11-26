@@ -71,7 +71,7 @@ const hopRows = (() => {
   for (let k = 0; k < 6; k++) Gr.unshift(Array(W).fill('.'));
   // the gap in the big overhang: a faint dust vent (the land's tell for a way up) blows up a shaft through the slab;
   // on top, a run along the overhang and the rafters over the golf balls, to the hatch of Piwi's practice green
-  fillG(Gr, 173, 8, 174, 20, '.'); put(Gr, 173, 32 - 1 - 5, '6');
+  fillG(Gr, 171, 8, 172, 20, '.'); put(Gr, 171, 20, '6');
   put(Gr, 162, 7, 'o.o.o.o.o.o.o.o.o.o');
   fillG(Gr, 182, 9, 187, 9, '-'); fillG(Gr, 191, 9, 196, 9, '-'); fillG(Gr, 200, 9, 205, 9, '-');
   put(Gr, 184, 8, 'o.o'); put(Gr, 193, 8, 'o.o'); put(Gr, 192, 4, 'M'); put(Gr, 204, 8, 'K'); put(Gr, 202, 17, 'a');
@@ -83,11 +83,11 @@ const HOP = {
   N: ['spawn', 'sign', { text: 'SPIKES OVERHEAD! JUST TAP JUMP: A SHORT HOP' }],
   J: ['spawn', 'sign', { text: 'DUST GEYSERS BLOW YOU UP HIGH. STEER OUT AT THE TOP. HOLD DOWN TO DROP' }],
   e: ['enemy', 'moonBunny'], m: ['enemy', 'moonMite'], u: ['enemy', 'moonHand'], M: ['enemy', 'moonMoth'],
-  '1': ['piece', 'moon.geyser', { steady: true, top: 5 }],
-  '2': ['piece', 'moon.geyser', { steady: true, top: 9 }],
-  '3': ['piece', 'moon.geyser', { top: 6, on: 2.2, off: 2.6 }],
-  '4': ['piece', 'moon.geyser', { steady: true, top: 3, faint: true, w: 3 }],
-  '5': ['piece', 'moon.geyser', { steady: true, top: 8 }],
+  '1': ['piece', 'moon.geyser', { steady: true, top: 11 }],
+  '2': ['piece', 'moon.geyser', { steady: true, top: 15 }],
+  '3': ['piece', 'moon.geyser', { top: 12, on: 2.2, off: 2.6 }],
+  '4': ['piece', 'moon.geyser', { steady: true, top: 9, faint: true, w: 3 }],
+  '5': ['piece', 'moon.geyser', { steady: true, top: 14 }],
   z: ['piece', 'moon.golfRain', { period: 3.0 }], Z: ['piece', 'moon.golfRain', { period: 3.0, phase: 1.5 }],
   '6': ['piece', 'moon.geyser', { steady: true, top: 5, faint: true, w: 2 }],
   K: ['spawn', 'portal', { kind: 'door', look: 'moonHatchQuiet', targetRef: 'green@in' }], a: ['anchor', 'greenOut']

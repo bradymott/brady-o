@@ -20,12 +20,13 @@ const MK = Tour.moonKit, INK = MK.INK, MoonArt = MK.MoonArt;
 for (const k of ['moonPutt', 'moonLights', 'moonOdd', 'moonFuses', 'moonEcho']) { TourHooks.room(k, {}); if (TourHooks.ROOM_TYPES.indexOf(k) < 0) TourHooks.ROOM_TYPES.push(k); }
 const RULES = {
   moonPutt: ['PIWI\'S PRACTICE GREEN', 'KICK THE BALL INTO THE CUP IN 3 KICKS. TOO HARD AND IT SKIPS OVER!'],
-  moonLights: ['THE PRESSURE PANEL', 'STEP ON A LAMP: IT AND ITS NEIGHBOURS SWITCH. LIGHT ALL FOUR!'],
-  moonOdd: ['THE SPARE-WHEEL RACK', 'STAND ON THE ONE WHEEL THAT IS NOT LIKE THE OTHERS'],
+  moonLights: ['THE PRESSURE PANEL', 'JUMP ONTO A LAMP: IT AND ITS NEIGHBOURS SWITCH. LIGHT ALL FOUR!'],
+  moonOdd: ['THE SPARE-WHEEL RACK', 'JUMP ONTO THE ONE WHEEL THAT IS NOT LIKE THE OTHERS'],
   moonFuses: ['THE FUSE CUPBOARD', 'GRAB ALL 4 SPARE FUSES BEFORE THE CLOCK RUNS OUT (TWO ARE ON THE CEILING)'],
-  moonEcho: ['THE OBSERVATORY', 'WATCH THE STARS LIGHT UP, THEN STEP ON THEM IN THAT ORDER']
+  moonEcho: ['THE OBSERVATORY', 'WATCH THE STARS LIGHT UP, THEN JUMP ONTO THEM IN THAT ORDER']
 };
 // where Brady stands: on a tile (x, floor row y)?
+// (a pad counts when Brady LANDS on it: walking across a row of pads presses nothing)
 const standsOn = (p, x, y) => p && p.onGround && !p.flipped && p.groundTy === y && Math.abs(p.cx - (x * TS + TS / 2)) < TS * 0.6;
 
 /* one controller per room: { kind, pads: [[x, y]...] (the game's floor tiles), ... } */
@@ -51,20 +52,18 @@ class MoonGame extends Ent {
     this.t += dt; const g = this.g, p = g.player, S = this.st;
     if (!this.told && p) { this.told = true; const R = RULES[this.kind]; g.bannerText = R[0]; g.bannerT = 1.8; g.toast && g.toast(R[1]); }
     if (this.won || !p || p.dead) { if (this.kind === 'moonPutt') this.ballStep(dt); return; }
-    const on = this.pads.findIndex(([x, y]) => standsOn(p, x, y));
+    const landed = p.onGround && !this.wasG; this.wasG = p.onGround;
+    const on = landed ? this.pads.findIndex(([x, y]) => standsOn(p, x, y)) : -2;
     if (this.kind === 'moonLights') {
-      if (on >= 0 && on !== S.was) { for (const k of [on - 1, on, on + 1]) if (k >= 0 && k < S.on.length) S.on[k] = !S.on[k]; TourKit.sfx('click', 'select', { vol: 0.5, pitch: 1.2 }); if (S.on.every(Boolean)) this.winGame('ALL LIT!'); }
-      S.was = on;
+      if (on >= 0) { for (const k of [on - 1, on, on + 1]) if (k >= 0 && k < S.on.length) S.on[k] = !S.on[k]; TourKit.sfx('click', 'select', { vol: 0.5, pitch: 1.2 }); if (S.on.every(Boolean)) this.winGame('ALL LIT!'); }
     } else if (this.kind === 'moonOdd') {
-      if (on >= 0 && on !== S.was) { if (on === S.odd) this.winGame('THAT\'S THE ONE!'); else { this.fail('NOT THAT ONE! (SHUFFLED)'); S.shuffles++; S.odd = (S.odd + 2 + S.shuffles) % this.pads.length; if (S.odd === on) S.odd = (S.odd + 1) % this.pads.length; } }
-      S.was = on;
+      if (on >= 0) { if (on === S.odd) this.winGame('THAT\'S THE ONE!'); else { this.fail('NOT THAT ONE! (SHUFFLED)'); S.shuffles++; S.odd = (S.odd + 2 + S.shuffles) % this.pads.length; if (S.odd === on) S.odd = (S.odd + 1) % this.pads.length; } }
     } else if (this.kind === 'moonEcho') {
       if (S.show > 0) { S.show += dt; if (S.show > 1 + S.order.length * 0.8 + 0.6) S.show = 0; return; }
-      if (on >= 0 && on !== S.was) {
+      if (on >= 0) {
         if (on === S.order[S.next]) { S.lit.push(on); S.next++; TourKit.sfx('chime', 'pick', { vol: 0.5, pitch: 1 + S.next * 0.15 }); if (S.next >= S.order.length) this.winGame('A CONSTELLATION!'); }
         else if (S.lit.indexOf(on) < 0) { this.fail('WRONG STAR! WATCH AGAIN'); S.next = 0; S.lit = []; S.show = 0.01; }
       }
-      S.was = on;
     } else if (this.kind === 'moonFuses') {
       if (S.running) { S.left -= dt; if (S.left <= 0) { S.running = false; S.got = []; this.fail('TIME! THE FUSES ARE BACK IN PLACE'); } }
       this.s.fuses.forEach(([fx, fy, up], i) => {

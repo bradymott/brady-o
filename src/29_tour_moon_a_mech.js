@@ -577,6 +577,16 @@ Object.assign(Tour.pieces, {
 
 Object.assign(TourLandscape.ARCH_LABEL, { lowg: 'LOW-G', drift: 'SPACEWALK', rover: 'BUGGY', mag: 'MAG BOOTS', stars: 'STARS' });
 Tour.moonKit.MOON_G = MOON_G;
+// the camera on the moon looks further UP (Brady's feet at 70 % of the view, not 55 %): the jumps go high and the
+// spike overhangs and the gaps in them must be on screen before you jump
+{
+  const ct0 = Play.prototype.camTargetY;
+  Play.prototype.camTargetY = function (snap) {
+    const A = this.area, p = this.player;
+    if (A && A.moon && A.camera === 'free' && p && !A.autoscrollY) return clamp(p.y + p.h - Game.viewH * 0.7, 0, Math.max(0, A.H * TS - Game.viewH));
+    return ct0.call(this, snap);
+  };
+}
 // for the shots tool's autopilot: the game's own physics, run on a copy of Brady's body
 try { if (typeof window !== 'undefined') window.BRADY_MOON = { phys: (b, inp, A, dt, pl, o) => playerPhysicsFlip(b, inp, A, dt, pl, o), spikeContact: (b, A) => spikeContact(b, A), lavaContact: (b, A) => lavaContact(b, A), moveBody: (b, A, dt, o) => moveBody(b, A, dt, o), kit: Tour.moonKit, driftInput, DRIFT_PLANS }; } catch (e) { /* not in a browser */ }
 })();
