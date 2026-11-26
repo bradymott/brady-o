@@ -5,6 +5,7 @@
 //   summary-<o>.png       an old save loaded for the first time: the one summary card
 //   album-<o>.png         the postcard album (the land page, and the perks page: album-perks-<o>.png)
 //   map-badge-<o>.png     a land's map with the all-three stamps on its stops
+//   title-<o>.png         the title with the ALBUM tag on the progress chip
 //   brady-<o>.png         Brady in a level wearing the cape, the golden shades and the heart trail
 // <o> is landscape (844x390) or portrait (390x844). With --before only the results shot is taken (for a build
 // without the rewards). Silent (tools/sbw_silent.js). Exits 1 on a page error.
@@ -69,10 +70,14 @@ async function session(viewport, tag) {
   // 6. the album: Brazil's page, then the perks page
   await page.evaluate(() => { S().card = null; const A = new window.BRADY_POSTCARDS.Album(S(), 'br'); B.Game.setScene(A); sim(0.4); }); await snap('album');
   await page.evaluate(() => { const A = S(); A.page = 0; sim(0.3); }); await snap('album-perks');
+  // the title: the progress chip and its ALBUM tag (a tap opens the album)
+  await page.evaluate(() => { B.Game.setScene(new B.TitleScene()); }); await snap('title', 2600);
+  const r6 = await page.evaluate(() => { const sc = S(), cx = sc.cta.x + sc.cta.w / 2 + sc.chipS.w / 2 + 40; B.Input.taps.push({ x: cx, y: sc.chipY }); sc.update(1 / 60); return S() instanceof window.BRADY_POSTCARDS.Album; });
+  check(tag + ': the title\'s ALBUM tag opens the album', r6, r6);
   // 7. Brady in a level with the perks on
-  await page.evaluate(() => { fresh(); const BP = window.BRADY_POSTCARDS; for (const cc of Object.keys(T.Tour.countries)) full(land(cc)); BP.sync(); BP.data().off.gold = true; BP.data().off.gift = true; BP.data().off.magnet = true; BP.data().pending.length = 0; const g = play('1-1'); sim(1.6, { right: true }); });
+  await page.evaluate(() => { fresh(); const BP = window.BRADY_POSTCARDS; for (const cc of Object.keys(T.Tour.countries)) full(land(cc)); BP.sync(); BP.data().off.gold = true; BP.data().off.gift = true; BP.data().off.magnet = true; BP.data().pending.length = 0; const g = play('1-1'); sim(0.7, { right: true }); g.player.invuln = 0; });
   await snap('brady', 30);
-  await page.evaluate(() => { const BP = window.BRADY_POSTCARDS; delete BP.data().off.gold; sim(0.5, { right: true }); }); await snap('brady-gold', 30);
+  await page.evaluate(() => { const BP = window.BRADY_POSTCARDS; delete BP.data().off.gold; S().player.invuln = 0.0001; sim(0.25, { left: true }); S().player.invuln = 0; }); await snap('brady-gold', 30);
   await browser.close();
   return errors;
 }

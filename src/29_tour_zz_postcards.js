@@ -554,6 +554,7 @@ function drawCareCard(ctx, c, age, t) {
     const shown = items.filter((q, i, a) => a.findIndex(r => r.id === q.id) === i);
     const r = 14, per = Math.max(1, Math.floor(tw / (2 * r + 10)));
     shown.slice(0, per * 2).forEach((q, i) => Art.icon(ctx, q.id, tx + r + (i % per) * (2 * r + 10), ty + 24 + Math.floor(i / per) * 34, r, t));
+    if (shown.length) { ctx.font = `10px ${FONT_UI}`; ctx.fillStyle = '#4a3a5a'; const rowsN = Math.ceil(Math.min(shown.length, per * 2) / per); lines(ctx, shown.map(q => q.name.toLowerCase().replace(/(^| )\w/g, m => m.toUpperCase())).join(' · ') + '. Switch them in the album.', tw).slice(0, 3).forEach((l, i) => ctx.fillText(l, tx, ty + 24 + rowsN * 34 - 6 + i * 13)); }
     if (!shown.length) { ctx.font = `italic 11px ${FONT_UI}`; ctx.fillStyle = '#5a4a6a'; ctx.fillText('lives, for now. Finish a whole land for a care package!', tx, ty + 22); }
   } else {
     const q = items[0], r = 17;
