@@ -22,7 +22,7 @@ Pupo, in one line: big, slow, sweet, deadpan. He pokes belly buttons, which he c
 | Item | Decision |
 |---|---|
 | Where Pupo comes from | A **Nap Box**: a plain brown cardboard travel carton with air holes and a snoring sloth inside, sitting where a gift box would be. It opens every way a gift box does. |
-| Carried between levels? | **No.** Pupo stays with Brady for the whole level run: doors, areas, backstage seams and respawns. At the level clear he climbs back into his box. On the overworld map he rides on Brady's back, as a cosmetic touch. |
+| Carried between levels? | **No.** Pupo stays with Brady for the whole level run: doors, areas, backstage seams and respawns. At the level clear he climbs back into his box. **Not on the overworld map:** Brady walks the map alone (Brady, 26 Nov 2026; the piggyback Pupo that followed him there was removed). |
 | Ground speed | 0.77x Brady: a 4.8 tiles/s amble, or a 7.4 tiles/s stretchy lope when you hold a direction. Jump height is the same as Brady's. In the water he swims 1.6x faster than Brady (real sloths swim far better than they walk). |
 | Stretch arms | One button, the Action button. It aims where the stick points, or forward when the stick is still, and it **auto-targets**. A paw marker always shows what it will do: poke an enemy, grab a hook, zip to a post, pull a handle, or fetch an item. Reach is 5 tiles; the poke reaches 4. |
 | Automatic moves | **None** (changed Nov 17 at Brady's request). He falls exactly like Brady when nothing is pressed. Ledges, climb strips and bars are grabbed only with **Action** while in reach, like hooks and posts. |
@@ -77,7 +77,8 @@ The lid pops and Pupo unfolds over 1.2 s. First he yawns. In the yawn **both arm
 | Death | If Pupo was met in this level run, Brady respawns with Pupo **sitting beside him** at the checkpoint. The checkpoint object carries `pupo: true` and the meter. |
 | Level clear | Pupo waves (slowly), climbs into his box and the lid shuts. Results screen as usual. |
 | A Wormhole (Road Case) exit | Pupo climbs into his own box next to the case and is shipped too. Nothing is carried into the next level. |
-| Overworld map | After `tour.pupo.met`, Pupo rides piggyback on Brady on every land's map (an `owDraw` hook, cosmetic). |
+| Overworld map | Brady walks the map alone (Brady, 26 Nov 2026: "Brady-O shouldn't be walking with Pupo"). The piggyback follower was removed; `tour.pupo.met` still drives the tutorial. |
+| A second Pupo | Reached while Brady already rides (a second Nap Box, or a Pupo left sitting): see §1.8. |
 
 ### 1.3 Movement: making slow fun
 The rule is **unhurried on the ground, fast in the air and on walls.**
@@ -164,6 +165,15 @@ These are the default. An area spec can override with `pupoOk: true` or `pupoOk:
 - backstage seams in a `noPupo` area (§3.3 of the secrets doc already bans seams in most of these)
 
 In these areas Pupo waits at the door (§1.2).
+
+### 1.8 A second Pupo while riding: a present (Brady, 26 Nov 2026)
+"If I'm riding Pupo and then I go to another Pupo, the other Pupo just sits there, but maybe it could give another power-up." (`src/28_tour_pi_twin.js`, `PupoTwin` / `PupoGift`.)
+- When Brady **already rides** and opens another Nap Box (bump, pound, poke) or rides into a Pupo left sitting or asleep elsewhere, that Pupo is not a second steed. He wakes ("...OH. HI... PUPO."), turns to Brady and, very slowly (44 px/s, at least 1 s), holds a present out on one long arm ("...FOR... YOU."). When the paw reaches Brady it is his; the twin waves, packs himself into his carton and is gone. The box stays open (empty), so each Pupo gives once.
+- If Brady rides off, the twin holds it out for 7 s, then sets it down beside his box ("...I'LL... PUT IT... HERE."); it stays put until Brady comes back.
+- The present: something Brady does not hold, in this order: magic mushroom (small), joint (no joint), the land's signature item (only in a level whose item blocks hold it, only with empty HANDS), star (not glittering), else a water bottle. Never the LSD tab (it floats him off Pupo), a jump power (off while riding; budget rule 8) or gear.
+- On foot a Nap Box is a normal mount, as before. The level checker needs nothing: the present exists only while riding and is in no item block; Nap Boxes stay out of the budget.
+- Pupo is the only mount. The other animals Brady stands on (Kenya's wildebeest, giraffes and flamingos, The Red-Eye's sloth and gull, Australia's kangaroo pouch, the Moon buggy) are moving floors or a whole-area mode, where hopping from one to the next is the level, so they are unchanged.
+- Tests: `tools/sbw_pupo_routes_test.js twin`; the map: `tools/sbw_overworld_test.js` check 15.
 
 ---
 
