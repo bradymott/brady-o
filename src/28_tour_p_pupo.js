@@ -15,7 +15,7 @@
    - the ride survives doors, areas and respawns; areas Pupo cannot go
      into (rails, rides, scrolls, carry, flip bands, boss arenas, glide)
      park him at the door; nothing is carried into the next level
-   - the map: once met, Pupo rides piggyback on Brady on the overworld
+   - the map: Brady walks it alone (no Pupo on the map: Brady's call, 26 Nov 2026)
    Everything is a wrapper of an existing method, the way the jump
    powers are (28_tour_di_jumps.js); this file loads after them, so its
    wrappers are outermost. Brady's old Slothy mount (this.mounted) is
@@ -672,20 +672,7 @@ Tour.pieces.napBox = function (st, o) {
     const vis0 = TourPicker.visible;
     TourPicker.visible = function (play) { if (play && play.player && play.player.pupoRide) return false; return vis0.call(this, play); };
   }
-  // the map: once met, Pupo rides piggyback on Brady (cosmetic; drawn behind him)
-  if (typeof TourOverworld !== 'undefined' && TourOverworld.prototype.drawWalker) {
-    const dw0 = TourOverworld.prototype.drawWalker;
-    TourOverworld.prototype.drawWalker = function (ctx) {
-      const T2 = Save.data.tour, w = this.walker;
-      if (T2 && T2.pupo && T2.pupo.met && w) {
-        const o = PupoFree.o, walking = !!w.seg, hop = w.hop > 0 ? Math.sin((1 - w.hop / 0.3) * Math.PI) * 9 : 0;
-        const node = !walking && this.by && this.by[w.at], lift = node ? (node.boss ? 2 : node.kind === 'level' ? 7 : 4) : 0;
-        o.x = w.x - (w.facing || 1) * 7; o.y = w.y - lift - hop - 9 + (walking ? Math.abs(Math.sin(this.t * 13)) * -1.5 : 0); o.t = this.t; o.scale = 0.36; o.facing = w.facing || 1;
-        o.pose = 'idle'; o.mood = 'happy'; o.rider = null; o.armsOff = false; o.spiral = 0; o.reach = 0;
-        PupoFree.cur = o; Ink.around(ctx, o.x - 18, o.y - 26, 36, 28, PupoFree.inkFn, { pad: 8, width: 0.95, color: '#120e16', hero: true });
-      }
-      return dw0.call(this, ctx);
-    };
-  }
+  // the map: Brady walks it alone (Brady, 26 Nov 2026: "Brady-O shouldn't be walking with Pupo"); the piggyback
+  // Pupo that used to ride along behind him on every land's map is gone. Pupo stays in the levels and the story panels.
 }
 try { window.BRADY_PUPO = Object.assign(window.BRADY_PUPO || {}, { PupoRide, PupoFree, NapBox, Pupo }); } catch (e) { /* not in a browser */ }

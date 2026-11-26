@@ -284,6 +284,25 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   check(`no two lands share a layout shape (closest pair ${closest[1]}: ${closest[0].toFixed(3)} of the map apart, at least 0.1 needed)`, sk.length > 1 && !alike.length, alike);
   if (shots) await page.screenshot({ path: path.join(shots, 'ow-14-last-land.png') });
 
+  // 15. Brady walks the map alone (Brady, 26 Nov 2026): no Pupo along with him once Pupo is met, walking or standing
+  await page.setViewportSize({ width: 844, height: 390 });
+  const pupoSetup = await page.evaluate(() => {
+    const B = window.BRADY, P = window.BRADY_PUPO && window.BRADY_PUPO.Pupo; if (!P) return { P: false };
+    fresh(); B.Save.data.tour.pupo = { met: true }; const T = TT.TourProgress.data(); T.cards = { mx: true }; T.seen = { mx: true };
+    const m = new TT.TourMapScene({}); B.Game.setScene(m); m.card = null; settle();
+    if (!P.__d0) { P.__d0 = P.draw; P.draw = function () { window.__pupoDraws = (window.__pupoDraws || 0) + 1; return P.__d0.apply(this, arguments); }; }
+    window.__pupoDraws = 0; return { P: true, at: m.ow.walker.at };
+  });
+  await page.waitForTimeout(500);
+  const pupoWalk = await page.evaluate(() => {
+    const ow = OW(), stand = window.__pupoDraws; const q = ow.G.pos['1-1'], s = ow.G.pos.start;
+    sim(0.05, { left: s.x < q.x, right: s.x > q.x }); window.__pupoDraws = 0; return { stand, seg: !!ow.walker.seg };
+  });
+  await page.waitForTimeout(400);
+  const pupoWalk2 = await page.evaluate(() => { const n = window.__pupoDraws; const P = window.BRADY_PUPO.Pupo; P.draw = P.__d0; delete P.__d0; return n; });
+  if (shots) await page.screenshot({ path: path.join(shots, 'ow-15-no-pupo.png') });
+  check('once Pupo is met, Brady still walks the map alone: Pupo is not drawn on the map (standing or walking)', pupoSetup.P && pupoWalk.stand === 0 && pupoWalk.seg && pupoWalk2 === 0, { pupoSetup, pupoWalk, pupoWalk2 });
+
   check('no page errors', errors.length === 0, errors.slice(0, 5));
   console.log(failures ? `${failures} CHECK(S) FAILED` : 'ALL CHECKS PASSED');
   await browser.close();

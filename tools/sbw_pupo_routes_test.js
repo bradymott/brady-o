@@ -328,4 +328,61 @@ if (!want.length || want.includes('g3')) C.section([], 'g3', () => {
     }
   }
 });
+// the second Pupo (src/28_tour_pi_twin.js, Brady 26 Nov 2026): reached while Brady already rides, a Nap Box (or a Pupo
+// left sitting) gives a power-up Brady does not hold, handed over on a slow long arm, once; on foot it is a normal mount
+if (!want.length || want.includes('twin')) C.section([], 'twin', () => {
+  const play = G.run('(l => { Save.data.lives = 9; Save.data.tips = Object.assign(Save.data.tips || {}, { box: true, picker: true }); const g = new Play(l, {}); Game.scene = g; g.state = "play"; g.fade.a = 0; g.fade.target = 0; g.timeLeft = 999; return g; })');
+  const PR = G.run('PupoRide'), TW = G.run('PupoTwin'), USED = G.run('T.USED'), QB = G.run('T.QBLOCK');
+  const boxesOf = g => g.area.spawns.filter(s => s.type === 'napBox').sort((a, b) => a.x - b.x).map(s => ({ tx: Math.floor(s.x / 32), ty: Math.floor(s.y / 32) - 1 }));
+  const frees = g => g.entities.filter(e => e.pupoFree && !e.remove && !e.pupoGift);
+  const gifts = g => g.entities.filter(e => e.pupoGift && !e.remove);
+  const stand = (g, tx, ty) => { const p = g.player, A = g.area; let fy = ty + 1; while (fy < A.H && !(G.run('SOLID')[A.tiles[fy * A.W + tx]] || A.tiles[fy * A.W + tx] === G.run('T.SEMI'))) fy++; p.x = tx * 32 + 16 - p.w / 2; p.y = fy * 32 - p.h; p.vx = p.vy = 0; };
+  for (const id of ['2-4', '22-1']) {
+    const [w, n] = id.split('-').map(Number), g = play(G.getLevel(w, n)); G.step(g, 0.2);
+    const B = boxesOf(g), p = g.player;
+    // on foot: the first box is a normal Pupo, and Brady gets on
+    stand(g, B[0].tx - 2, B[0].ty); G.step(g, 0.1); g.bumpBlock(B[0].tx, B[0].ty, false, p); G.step(g, 1.3);
+    const f0 = frees(g)[0]; C.check(`${id}: on foot, the first Nap Box gives Pupo to ride (no present)`, !!f0 && !gifts(g).length && f0.mode === 'sit', { frees: frees(g).length, gifts: gifts(g).length });
+    PR.mount(p, true); f0.remove = true; G.step(g, 0.1);
+    // riding, the second box: a present, not a second steed
+    p.setPower(0, true); stand(g, B[1].tx - 3, B[1].ty); G.step(g, 0.2);
+    g.bumpBlock(B[1].tx, B[1].ty, false, p); G.step(g, 0.1);
+    C.check(`${id}: riding, the second Nap Box opens on a twin who gives (no second Pupo to sit there)`, gifts(g).length === 1 && !frees(g).length && p.pupoRide, { gifts: gifts(g).length, frees: frees(g).length });
+    let held = false, handT = null;
+    for (let k = 0; k < 1500 && gifts(g).length; k++) { G.step(g, 1 / 120); const e = gifts(g)[0]; if (e && e.mode === 'offer' && e.kind && e.L > 20) held = true; if (handT == null && p.power > 0) handT = k / 120; }
+    C.check(`${id}: he holds the present out on a long arm, slowly, and Brady (small) gets the mushroom (${handT == null ? '-' : handT.toFixed(1)} s)`, held && p.power === 1 && handT > 1.5 && p.pupoRide, { held, power: p.power, handT });
+    C.check(`${id}: then the twin packs up and is gone; the box stays open`, !gifts(g).length && !frees(g).length && g.area.tiles[B[1].ty * g.area.W + B[1].tx] === USED, { gifts: gifts(g).map(e => e.mode + e.mt.toFixed(1)), frees: frees(g).map(e => e.mode), tile: g.area.tiles[B[1].ty * g.area.W + B[1].tx], USED });
+    // once per Pupo: bumping the used box again while riding gives nothing
+    g.bumpBlock(B[1].tx, B[1].ty, false, p); G.step(g, 3);
+    C.check(`${id}: once only: the used box bumped again while riding gives nothing`, !gifts(g).length && !frees(g).length && p.power === 1);
+    // a Pupo left sitting elsewhere, ridden into: he gives too (now the joint, as Brady is big)
+    const stray = new (G.run('PupoFree'))(g, { x: p.cx + 70, y: p.y + p.h, facing: -1, mode: 'sit' }); g.spawn(stray); G.step(g, 0.1);
+    const pw0 = p.power;
+    for (let k = 0; k < 240 && !gifts(g).length; k++) G.step(g, 1 / 120, { right: true });
+    G.step(g, 6);
+    C.check(`${id}: riding into a Pupo left sitting: he gives something Brady lacks (power ${pw0} -> ${p.power}) and goes`, stray.remove && p.power === 2 && pw0 === 1 && !gifts(g).length && p.pupoRide, { pw0, power: p.power, gifts: gifts(g).length });
+  }
+  // Brady rides off before the paw reaches him: the present is set down for him, and it stays put until he comes back
+  {
+    const g = play(G.getLevel(2, 4)); G.step(g, 0.2); const p = g.player, B = boxesOf(g);
+    PR.mount(p, true); p.setPower(0, true); stand(g, B[1].tx - 3, B[1].ty); G.step(g, 0.2);
+    g.bumpBlock(B[1].tx, B[1].ty, false, p); G.step(g, 0.1); stand(g, B[1].tx - 14, B[1].ty); p.invuln = 99;
+    G.step(g, 12); const it = g.entities.find(e => e.item && e.kind === 'mushroom' && !e.remove), x0 = it && it.x;
+    G.step(g, 2);
+    C.check('riding off before the hand-over: the twin sets the mushroom down by his box, and it stays there', !!it && Math.abs(it.x - x0) < 1 && Math.abs(it.cx - B[1].tx * 32) < 3 * 32 && !gifts(g).length && p.power === 0, { it: !!it, gifts: gifts(g).length });
+    stand(g, Math.floor(it.cx / 32), B[1].ty); G.step(g, 0.3);
+    C.check('...and riding back to it picks it up', p.power === 1 && it.remove);
+  }
+  // what he picks: never something Brady holds, never the LSD tab, a jump power or gear; the signature item only where the level has it
+  {
+    const g = play(G.getLevel(2, 4)); G.step(g, 0.1); const p = g.player, seen = new Set();
+    for (const pw of [0, 1, 2]) for (const star of [0, 5]) { p.setPower(pw, true); p.star = star; const k = TW.pick(g, p); seen.add(k); if (TW.held(p, k)) seen.add('HELD:' + k); }
+    const bad = [...seen].filter(k => /^HELD|lsd|socks|cake|beans|gear/.test(k));
+    C.check('the present is always something Brady does not hold, never LSD, a jump power or gear', !bad.length, [...seen]);
+    p.setPower(2, true); p.star = 0; const sig = TW.offersSig(g), k = TW.pick(g, p);
+    C.check(`with big + joint: the land's signature item where the level offers it, else the star (${k})`, sig ? /^sig:/.test(k) : k === 'star', { sig, k });
+  }
+  // the level checker is unchanged: the Nap Boxes are still no power-ups for the budget
+  for (const id of ['2-4', '22-1']) { const [w, n] = id.split('-').map(Number), b = G.Validator.budget(G.getLevel(w, n)); C.check(`${id}: the power-up budget still passes`, b.ok !== false && !b.errors.length, b.errors); }
+});
 C.done();
