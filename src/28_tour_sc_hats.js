@@ -246,6 +246,10 @@ TourHats.NOT = new Set([].concat(
   // ridges, tumbling frames, auction lots and paddles, posing marks, the cord rack (and its crawling gnat), the rooms'
   // props, the fountain's way in
   'galPill galSitter galViewer galRidge galTumble galLot galPaddle galSitting galRack galCrawler galRoomProp galFountainGate'.split(' '),
+  // The Department of Unclaimed Shadows (world 35, hidden land A10): floating lines, claim boards, lamps and shelves,
+  // overlap screens, cutters and mail slots, split lamps, the filing wall (and its flea), the rooms' props, the keyhole,
+  // the secret nooks' painted covers
+  'shadPill shadBoard shadLamp shadOverlap shadCutter shadSlot shadSplit shadFiling shadCrawler shadRoomProp shadKeyholeGate shadCover'.split(' '),
   // Morocco: tagines, teapots, oranges, storms, pots, mirages, gales, lanterns, slabs, lines, portcullises, hooks, chains, grilles, winds
   'maTagine maTeapot maOrange maStorm maPot maMirage maGale maKickPot maShopLantern maMirageSlab maPhaseLine maPortcullis maLidHook maChain maRoofGrille maDownWind'.split(' '),
   // Mexico: peppers, elotes, popcorn, the piñata burro, lava blobs, salsa, melon carts, swingers, cannons, rails, sunbeams, bubbles, the Casa's gates
@@ -366,6 +370,8 @@ Object.assign(TourHats.HEADS, {
   seatsCrab: [0.42, 0.42, -1.55, 0], seatsShrew: [0.55, 0.55, -1.2, 0], seatsHen: [0.4, 0.4, -1.4, 0], seatsStoat: [0.45, 0.45, -1.45, 0],
   // The Table Salt Sea (34): the grain wren, the brine shrimp, the cork weevil, the salt lick
   saltWren: [0.3, 0.3, -1.3, 0], saltShrimp: [0.4, 0.4, -1.1, 0], saltWeevil: [0.4, 0.4, -1.15, 0], saltLick: [0.05, 0.05, -1.25, 0],
+  // The Department of Unclaimed Shadows (world 35): the thumb rabbit, the staple hound, the shade flea, the carbon crow
+  shadRabbit: [0.3, 0.3, -0.9, 0], shadHound: [0.59, 0.59, -1.08, 0], shadFlea: [0.37, 0.37, -1.0, 0], shadCrow: [0.33, 0.33, -1.0, 0]
 
 });
 

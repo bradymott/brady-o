@@ -70,6 +70,7 @@ const NOTES = {
   seats: 'Every card from under the cheap seats! I have put a folding chair facing the wall in the hall so you feel at home. Twice I sat on it the right way round. Both times, darling, it folded me up.',   // Below the Cheap Seats (33)
   // The Table Salt Sea (34, hidden land A9)
   salt: 'Every card from the salt sea! I have stopped trusting our shaker. It says "just a pinch" and it has said that since our wedding. I weighed it. Brady, it is a lot more than a pinch.',
+  shad: 'Every postcard from the department! They gave me your shadow in a paper bag with a ticket on it. I hung it on the back of the door, darling, and it has already tried on your coat.'   // The Department of Unclaimed Shadows (hidden land A10)
 };
 const noteOf = C => (NOTES[C.id] || ('Every postcard from ' + C.name + '! I keep them all in a shoebox.')) + ' ♥ C';
 

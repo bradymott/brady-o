@@ -320,6 +320,11 @@ Object.assign(ENEMY_SAFE_TYPES, { seatsCrawler: 'on a scaffold: touches only Bra
 // The Table Salt Sea (34): A Pinch is cork behind his pot (his crystals and lumps hurt, never his body:
 // 29_tour_y_salt_c_boss.js touch())
 Object.assign(BOSS_SAFE, { salt_pinch: ['idle', 'tell', 'coarse', 'gap', 'pour', 'season'] });
+// The Department of Unclaimed Shadows (35): touching the Understudy never hurts (it is a shadow on the wall); only its
+// reach, its kick and its rush do (29_tour_y_shad_c_boss.js touch()); the thumb rabbit is harmless while it is a hand
+// duck; the filing wall's flea touches only Brady on its own face (customCollide)
+Object.assign(BOSS_SAFE, { shad_understudy: ['palm', 'reach', 'hold', 'back', 'rest1', 'rest2', 'heel', 'kick', 'split', 'hats', 'rush', 'stamp', 'gone'] });
+Object.assign(ENEMY_SAFE_TYPES, { shadRabbit: 'harmless while it is a hand duck (29_tour_y_shad.js harmlessWhen)', shadCrawler: 'on a filing wall: touches only Brady on its own face (customCollide)' });
 const OLD_TYPES = { greeter: 1, pony: 1 };   // the old Black Rock City enemies (08a_chunks.js / 10b_burners.js): in no tour level
 if (!noSweep) {
   const noHurt = [];
