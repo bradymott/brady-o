@@ -260,7 +260,11 @@ TourHats.NOT = new Set([].concat(
   'w22Alarm w22Envelope w22Hourglass w22Echo w22Loop w22Mirror w22Pane w22Strike w22Pendulum w22Copy w22Slab w22Lake w22ReflectDoor w22Key w22Ink w22TimeFall w22NumDoorE rbPage rbStamp rbTornPage'.split(' '),
   // Wrong Side of the Wash (26): the drying nets and their critters (drawn behind the cloth on the far face), the
   // beetle's trouser wall, the peephole tell, sweaters, seams, felt, pockets, peg jaws, loose sheets, the bakery hem
-  'washNet washCrawler washBeetleGate washPeep washSweater washSeam washFeltArt washPocket washJaws washLooseSheet washHem'.split(' ')
+  'washNet washCrawler washBeetleGate washPeep washSweater washSeam washFeltArt washPocket washJaws washLooseSheet washHem'.split(' '),
+  // The Orchard After Closing (28): trellises, forks, trellis critters (drawn behind the slats on the far face), the bitten
+  // pear tell, blossoms, bells, buds, sleeves, grafts, loaded branches, the basket, the hedge gate, room and perch marks,
+  // Japan's last pear tree
+  'orchTrellis orchFork orchCrawler orchBite orchBlossom orchBell orchBud orchSleeve orchGraft orchLoaded orchBasket orchHedgeGate orchRoomMark orchPerchMark orchJpTree'.split(' ')
 ));
 
 /* ---------- the animals: [fx, fxFlip, fy, size] (see the header) ---------- */
@@ -323,7 +327,9 @@ Object.assign(TourHats.HEADS, {
   // Table for Two (36): the pepper flea, the knife-rest dachshund, the butter-curl snail
   tabPepper: [0.15, 0.15, -1.55, 0], tabRest: [0.62, 0.62, -1.3, 0], tabButter: [0.45, 0.45, -1.0, 0],
   // Wrong Side of the Wash (26): the peg beetle, the lint lamb, the hanger heron, the sock moth
-  washBeetle: [0.45, 0.45, -1.3, 0], washLamb: [0.55, 0.55, -1.1, 0], washHeron: [0.4, 0.4, -1.42, 0], washMoth: [0.08, 0.08, -1.2, 0]
+  washBeetle: [0.45, 0.45, -1.3, 0], washLamb: [0.55, 0.55, -1.1, 0], washHeron: [0.4, 0.4, -1.42, 0], washMoth: [0.08, 0.08, -1.2, 0],
+  // The Orchard After Closing (28): the pear fly, the tie worm, the pip finch, the bark snail
+  orchFly: [0.3, 0.3, -1.1, 0], orchWorm: [0.4, 0.4, -0.9, 0], orchFinch: [0.3, 0.3, -1.3, 0], orchSnail: [0.5, 0.5, -1.15, 0]
 
 });
 
