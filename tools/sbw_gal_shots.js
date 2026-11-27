@@ -313,6 +313,45 @@ LEVELS.hall = async (page, shot, run, pano) => {
   });
 };
 
+// ---------------- the hidden entrance: Italy 14-1, the piazza before the finish ----------------
+LEVELS.entry = async (page, shot, run, pano) => {
+  await run('entry', async () => {
+    await page.evaluate(helpers);
+    let r = await page.evaluate(() => { fresh(); const T = window.BRADY_TOUR; return { stop: T.TourMap ? T.TourMap.stopState(T.Tour.stops.gal) : null, open: T.TourProgress.countryUnlocked(T.Tour.countries.gal) }; });
+    check('entrance: on a fresh save the gallery is hidden (no pin, not open)', r.stop === 'hidden' && !r.open, r);
+    // ride the scooter in from before the last oil spill (no input: it cruises), as a player does
+    r = await page.evaluate(() => {
+      playP('14-1'); P().invuln = 999; const g = S(), gate = g.entities.find(e => e.constructor.name === 'GalFountainGate'), oil = g.entities.filter(e => e.constructor.name === 'ItOil' && e.x < gate.x).sort((a, b) => b.x - a.x)[0];
+      const x0 = Math.floor(oil.x / 32) - 6; let y = 0; const A = g.area, SOL = window.BRADY.SOLID; for (y = 2; y < A.H; y++) if (SOL[A.tiles[y * A.W + x0]]) break; place(x0, y - 1); sim(0.3);
+      window.__gate = gate; return { gate: Math.floor(gate.cx / 32), row: gate.row, start: x0 };
+    });
+    const gx = r.gate;
+    r = await page.evaluate(() => { const gate = window.__gate, p = P(); const A = S().area, SOL = window.BRADY.SOLID; let hold = 0; for (let k = 0; k < 120 * 12 && gate.cx - p.cx > 6 * 32; k++) { const ahead = Math.floor((p.cx + 16) / 32), gap = p.onGround && !SOL[A.tiles[p.groundTy * A.W + ahead]] && A.tiles[p.groundTy * A.W + ahead] !== window.BRADY.T.SEMI; if (gap && hold <= 0) { sim(1 / 120, { jump: true, jumpPressed: true, right: true }); hold = 0.6; } else { sim(1 / 120, hold > 0 ? { jump: true, right: true } : {}); hold -= 1 / 120; } } return { at: tileOf(), dead: p.dead }; });
+    check('entrance: across the last oil spill and its trench into the piazza on the scooter', !r.dead && r.at[1] === (await page.evaluate(() => window.__gate.row)), r);
+    await page.evaluate(() => { freeze(); }); await shot('01-entrance-14-1-piazza.png');
+    // brake to a stop over the reflected frame
+    r = await page.evaluate(() => { thaw(); const gate = window.__gate, p = P(); for (let k = 0; k < 120 * 6; k++) { const d = gate.cx - p.cx; if (Math.abs(d) < 10 && Math.abs(p.vx) < 5) break; const brake = d < p.vx * p.vx / (2 * 48 * 32) + 8; sim(1 / 120, d < -10 ? { left: true } : brake ? { down: true } : {}); } for (let k = 0; k < 30; k++) sim(1 / 120, { down: true }); return { off: Math.round(P().cx - gate.cx), vx: Math.round(P().vx) }; });
+    check('entrance: braked to a stop over the reflected frame', Math.abs(r.off) < 22, r);
+    await page.evaluate(() => { sim(1 / 120, { down: true }); freeze(); }); await shot('02-entrance-before-the-reflection.png');
+    // walking past, or jumping without UP, does nothing; UP alone does nothing
+    r = await page.evaluate(() => { thaw(); sim(1 / 120, { down: true, jump: true, jumpPressed: true }); sim(0.6, { down: true }); const a = S().state === 'play' && P().state === 'play'; sim(0.6, { up: true }); const b = S().state === 'play' && P().state === 'play'; return { a, b, off: Math.round(P().cx - window.__gate.cx) }; });
+    check('entrance: a plain hop or pushing UP alone does nothing (no accident)', r.a && r.b, r);
+    r = await page.evaluate(() => { sim(0.35, { up: true }); const g = window.__gate, p = P(); const dbg = { upT: g.upT, at: g.at(p), gty: p.groundTy, row: g.row, up: p.inp && p.inp.up, on: p.onGround, vx: p.vx, cx: p.cx - g.cx, ps: p.state }; sim(1 / 120, { up: true, jump: true, jumpPressed: true }); sim(0.1, { up: true, jump: true }); return { state: P().state, dbg }; });
+    check('entrance: push UP against the reflected frame, then JUMP: Brady dives into the reflection', r.state === 'portal', r);
+    await page.evaluate(() => { sim(0.5); freeze(); }); await shot('03-entrance-diving-in.png');
+    r = await page.evaluate(() => { thaw(); sim(1.8); const g = S(); return { state: g.state, key: g.exitKey, banner: g.bannerText }; });
+    check('entrance: the land\'s name shows and 14-1 clears through its hidden exit', r.state !== 'play' && r.key === 'gal', r);
+    r = await page.evaluate(() => { const T = window.BRADY_TOUR, d = window.BRADY.Save.data; return { land: !!T.TourProgress.data().lands.gal, open: T.TourProgress.countryUnlocked(T.Tour.countries.gal), first: !!d.unlocked['30-1'], done: !!d.done['14-1'] }; });
+    check('entrance: the gallery is open, 30-1 unlocked; 14-1 itself is not marked done by the secret way', r.land && r.open && r.first && !r.done, r);
+    r = await page.evaluate(() => { const T = window.BRADY_TOUR.TourProgress.data(); T.seen.it = true; window.BRADY.goToMap('world', 14, '14-1'); const out = []; for (let k = 0; k < 40; k++) { sim(0.1); const s = S(); if (s.card) s.card = null; out.push(s.mode + (s.rReveal ? ':' + s.rReveal.r.kind : '')); if (s.rReveal && s.rReveal.r.kind === 'land' && s.rReveal.t > 0.6) break; } return { seq: [...new Set(out)] }; });
+    await page.evaluate(() => freeze()); await shot('04-entrance-arrival-new-land.png'); await page.evaluate(() => thaw());
+    check('entrance: back on the map the route map plays the NEW LAND reveal', r.seq.some(q => /land/.test(q)), r);
+    r = await page.evaluate(() => { for (let k = 0; k < 60; k++) { const s = S(); if (s.card) s.card = null; sim(0.25); if (s.mode === 'land' && s.ow && s.ow.cc === 'gal') break; } const s = S(); return { mode: s.mode, cc: s.ow && s.ow.cc }; });
+    check('entrance: the route map reveals the new land and flies Brady to the gallery\'s own map', r.cc === 'gal', r);
+    await page.evaluate(() => { sim(1.5); freeze(); }); await shot('05-entrance-arrival-gallery-map.png'); await page.evaluate(() => thaw());
+  });
+};
+
 (async () => {
   await session({ width: 844, height: 390 }, async (page, shot, run, pano) => {
     for (const k of Object.keys(LEVELS).filter(k => k !== 'entry' && k !== 'map' && k !== 'bot').concat(['entry', 'map', 'bot'])) if (LEVELS[k]) await LEVELS[k](page, shot, run, pano);

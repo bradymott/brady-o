@@ -45,6 +45,9 @@ const setRect = (g, r, t) => { for (let y = r[1]; y <= r[3]; y++) for (let x = r
 const hideRect = (g, r, v) => { const A = g.area; if (!A.hide) return; for (let y = r[1]; y <= r[3]; y++) for (let x = r[0]; x <= r[2]; x++) if (x >= 0 && y >= 0 && x < A.W && y < A.H) A.hide[y * A.W + x] = v; };
 const buildRect = (B, r, t, hide) => { for (let y = r[1]; y <= r[3]; y++) for (let x = r[0]; x <= r[2]; x++) { B.set(x, y, t); if (hide) B.setHide(x, y, 1); } };
 const bodyIn = (p, r) => p && p.x < (r[2] + 1) * TS && p.x + p.w > r[0] * TS && p.y < (r[3] + 1) * TS && p.y + p.h > r[1] * TS;
+// a stair's tiles: one column per tile, rising to the right from the rect's bottom-left to its top-right
+const stairRects = O => { const out = []; for (let c = O[0]; c <= O[2]; c++) out.push([c, O[3] - Math.round((c - O[0]) * (O[3] - O[1]) / Math.max(1, O[2] - O[0])), c, O[3]]); return out; };
+const objRects = (O, kind) => kind === 'stair' ? stairRects(O) : [O.slice(0, 4)];
 const box = (e, x0, y0, x1, y1) => { e.x = x0 * TS; e.y = y0 * TS; e.w = (x1 - x0 + 1) * TS; e.h = (y1 - y0 + 1) * TS; };
 const say = (g, x, y, text, col) => K.pill(g, x, y, text, col);
 const breathRing = (ctx, x, y, k, r) => { ctx.save(); ctx.strokeStyle = 'rgba(28,20,38,0.6)'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(x, y, r || 14, 0, TAU); ctx.stroke(); ctx.strokeStyle = MUS_HI; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(x, y, r || 14, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(k, 0, 1)); ctx.stroke(); ctx.restore(); };
@@ -203,7 +206,7 @@ class GalViewer extends Ent {
     if (this.s.decoy != null && carriage.sx(this) === this.s.decoy && !this.decoySaid && this.still > 0.6) { this.decoySaid = true; say(this.g, this.cxF, this.s.rail[2] * TS - 90, 'THE RAIL MEETS... THE STAIR DOESN\'T', '#c8d8ff'); }
     if (this.k >= 1) {
       this.done = true; const g = this.g, O = this.s.obj;
-      setRect(g, O, this.s.kind === 'stair' ? T.HARD : T.SEMI); hideRect(g, O, 1); g.refreshPlatforms && g.refreshPlatforms();
+      for (const r of objRects(O, this.s.kind)) { setRect(g, r, this.s.kind === 'stair' ? T.HARD : T.SEMI); hideRect(g, r, 1); } g.refreshPlatforms && g.refreshPlatforms();
       Sound.play('secret', { vol: 0.5 }); g.burst((O[0] + O[2] + 1) * TS / 2, O[1] * TS, 18, BLUE, 'spark');
       say(g, (O[0] + O[2] + 1) * TS / 2, O[1] * TS - 20, 'IT\'S REAL NOW!', '#ffe08a');
     }
@@ -254,7 +257,7 @@ class GalViewer extends Ent {
 ENTITY_TYPES.galViewer = GalViewer;
 Tour.pieces['gal.viewer'] = function (st, o) {
   const B = st.B; B.spawn('galViewer', st.x, st.gy - 1, o);
-  if (o.g != null) { B.toggle(o.g, [], [o.obj.slice(0, 4).concat(o.kind === 'stair' ? [T.HARD] : [T.SEMI])], { kind: 'galViewer' }); B.switchAt(o.g, o.good, o.rail[2] - 1); }
+  if (o.g != null) { B.toggle(o.g, [], objRects(o.obj, o.kind).map(r => r.concat([o.kind === 'stair' ? T.HARD : T.SEMI])), { kind: 'galViewer' }); B.switchAt(o.g, o.good, o.rail[2] - 1); }
   return st.x;
 };
 
@@ -481,13 +484,16 @@ TourHooks.on('afterEntities', (play, ctx) => {
 class GalSitting extends Ent {
   constructor(g, s) {
     super(g, s, 4, 4); this.friendly = true; this.back = true; this.s = s; carriage.init(this, s); this.k = 0; this.done = false;
-    const R = s.rail, xs = [R[0], R[1] + 2, s.card[0], s.eye[0]]; this.x = Math.min(...xs) * TS - 60; this.w = (Math.max(...xs) - Math.min(...xs)) * TS + 120; this.y = (s.eye[1] - 3) * TS; this.h = (R[2] - s.eye[1] + 4) * TS;
+    // the card sits on the sight line from the portrait's eye to the mark's right spot (u of the way down)
+    const ex = s.eye[0] * TS + TS / 2, ey = s.eye[1] * TS + TS / 2, mx = (s.good + 1) * TS, my = s.rail[2] * TS - 6, u = s.u || 0.62;
+    this.card = [ex + (mx - ex) * u, ey + (my - ey) * u];
+    const R = s.rail, xs = [R[0], R[1] + 2, s.eye[0] - 4, s.eye[0] + 4]; this.x = Math.min(...xs) * TS - 60; this.w = (Math.max(...xs) - Math.min(...xs)) * TS + 120; this.y = (s.eye[1] - 4) * TS; this.h = (R[2] - s.eye[1] + 5) * TS;
   }
   update(dt) {
     this.t += dt; carriage.update(this, dt); if (this.done) return;
     const ok = carriage.sx(this) === this.s.good && Math.abs(this.cxF - (this.s.good + 1) * TS) < 3;
     this.k = ok ? this.k + dt / BREATH : 0; if (ok && !this.wasOk) TourKit.sfx('click', 'select', { vol: 0.3, pitch: 1.4 }); this.wasOk = ok;
-    if (this.k >= 1) { this.done = true; openRopes(this.g, this.s.lock); say(this.g, this.s.card[0] * TS, this.s.card[1] * TS - 30, 'CAPTURED: ' + (this.s.label || 'HIS BAD SIDE'), '#ffe08a'); }
+    if (this.k >= 1) { this.done = true; openRopes(this.g, this.s.lock); say(this.g, this.card[0], this.card[1] - 30, 'CAPTURED: ' + (this.s.label || 'HIS BAD SIDE'), '#ffe08a'); }
   }
   touchPlayer() {}
   draw(ctx) {
@@ -495,12 +501,15 @@ class GalSitting extends Ent {
     ctx.save(); carriage.drawRail(ctx, this);
     // the self-portrait's painted eye looks down at the mark: a powder-blue sight line through to the floor beyond
     const dx = mx - ex, dy = fy - 6 - ey, L = 1.6, x2 = ex + dx * L, y2 = ey + dy * L;
-    const cx = s.card[0] * TS + TS / 2, cy = s.card[1] * TS + TS / 2;
+    const cx = this.card[0], cy = this.card[1];
+    // the huge self-portrait the sight line comes from: his painted eye is the line's start
+    GA.frame(ctx, ex - 3 * TS, ey - 2.2 * TS, 6 * TS, 4.6 * TS, (c, ix, iy, iw, ih) => { c.fillStyle = '#4a3a5a'; c.fillRect(ix, iy, iw, ih); GA.piwi(c, ex + 18, ey + 18, 4.2, t, { jaw: 0, look: clamp((mx - ex) / 200, -1, 1), lookY: 1 }); }, { b: 12 });
+    ctx.fillStyle = BLUE; ctx.beginPath(); ctx.arc(ex, ey, 5, 0, TAU); ctx.fill();
     // does the line pass the card?
     const u = ((cx - ex) * dx + (cy - ey) * dy) / (dx * dx + dy * dy), px = ex + dx * u, py = ey + dy * u, hit = Math.hypot(px - cx, py - cy) < 14 && u > 0;
     ctx.strokeStyle = this.done ? MUS_HI : hit ? MUS_HI : BLUE; ctx.lineWidth = 3; ctx.setLineDash([8, 6]); ctx.lineDashOffset = -t * 14; ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(x2, y2); ctx.stroke(); ctx.setLineDash([]);
     // the card on its little easel: the embarrassing feature
-    ctx.strokeStyle = '#6a4a2a'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(cx - 8, cy + 40); ctx.lineTo(cx, cy + 10); ctx.lineTo(cx + 8, cy + 40); ctx.stroke();
+    ctx.strokeStyle = '#6a4a2a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(cx - 14, fy); ctx.lineTo(cx, cy + 10); ctx.lineTo(cx + 14, fy); ctx.moveTo(cx, cy + 10); ctx.lineTo(cx + 3, fy); ctx.stroke();
     GA.frame(ctx, cx - 18, cy - 16, 36, 30, (c, ix, iy, iw, ih) => { c.fillStyle = '#f0e0c8'; c.fillRect(ix, iy, iw, ih); GA.piwi(c, ix + iw / 2, iy + ih * 0.5, iw / 30, t, { jaw: 5, look: 0 }); c.fillStyle = '#4a9a3a'; c.fillRect(ix + iw / 2 - 1, iy + ih * 0.5 + 6, 4, 3); }, { b: 4, lip: hit || this.done ? MUS_HI : MUS });
     if (this.k > 0) breathRing(ctx, cx, cy - 32, this.k);
     // the posing mark: a gilt X plate on castors

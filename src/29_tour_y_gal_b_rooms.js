@@ -328,7 +328,7 @@ const VASES = [SOL_X - 5 * TS, SOL_X - 2.5 * TS, SOL_X, SOL_X + 2.5 * TS].filter
 TourRooms.def('galEyes', {
   title: 'EYES FRONT', rule: 'BOTH GAZES ON ONE VASE. THEN THROW', need: 'STRIKE THE POSE FIRST!',
   make(o, keep, ctx, A, rng) {
-    const { g } = frame(keep, A, o, { doorRight: false, cageX: 19, cageH: 3 });
+    const { g } = frame(keep, A, o, { cageX: 16 });
     g.spawn(8, Y, 'galRoomProp', { role: 'eyes', w: 6, h: 6 });
     g.spawn(Math.floor(SOL_H / TS), Y, 'galRoomProp', { role: 'pose', w: 16, h: 2 });
     g.winSpot(A.id, Math.floor(SOL_H / TS), Y);
