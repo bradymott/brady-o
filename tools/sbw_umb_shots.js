@@ -257,6 +257,7 @@ STAGES.hooks = async ({ ev, shot, run, pano }) => {
       sim(1 / 120, { action: true, actionPressed: true }); sim(3.0, { action: true }); sim(0.2); const rigid = h.rigid;
       for (let k = 0; k < 600 && p.cx < 130 * 32 + 16; k++) sim(1 / 120, { right: true }); sim(0.3);
       const ledge = Math.floor((p.y + p.h - 1) / 32) === 15 && p.cx > 127 * 32;
+      for (let k = 0; k < 200 && Math.abs(p.cx - (130 * 32 + 16)) > 6; k++) { sim(1 / 60, { right: p.cx < 130 * 32 + 16, left: p.cx > 130 * 32 + 16 }); sim(1 / 30); }
       sim(0.1, { up: true, upPressed: true }); for (let k = 0; k < 600 && (S().fade.a > 0.05 || p.state !== 'play'); k++) sim(1 / 120); sim(0.5);
       return { onPillar, rigid, ledge, area: S().area.aid };
     });
