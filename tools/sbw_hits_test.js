@@ -285,6 +285,10 @@ const ENEMY_SAFE_TYPES = {
   aqEggSkua: 'a bird overhead: its egg hurts, not the bird', nlGull: 'a bird overhead: its drop hurts', esStork: 'a stork overhead: its bundle hurts',
   frOyster: 'opens and shuts: hurts while open', w22Envelope: 'a fluttering letter (scenery)',
 };
+// Wrong Side of the Wash (26): Her Fitted Majesty is cloth (her corners hurt, never her body: 29_tour_y_wash_c_boss.js
+// touch()); a net critter touches only Brady on its own face of the net, peg jaws only while snapped shut (customCollide)
+Object.assign(BOSS_SAFE, { wash_majesty: ['drift', 'aim', 'snap', 'back', 'pucker', 'sweep', 'balloon', 'shake'] });
+Object.assign(ENEMY_SAFE_TYPES, { washCrawler: 'on a drying net: touches only Brady on its own face (customCollide)', washJaws: 'peg jaws on a timer: hurt only while snapped shut (customCollide)' });
 const OLD_TYPES = { greeter: 1, pony: 1 };   // the old Black Rock City enemies (08a_chunks.js / 10b_burners.js): in no tour level
 if (!noSweep) {
   const noHurt = [];

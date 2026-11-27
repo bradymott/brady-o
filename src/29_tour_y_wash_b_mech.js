@@ -344,7 +344,7 @@ class WashPocket extends Ent {
   constructor(g, s) {
     super(g, s, 2 * TS, 2 * TS); this.x = s.x - TS / 2; this.y = s.y - 2 * TS; this.back = true;
     this.target = s.target; this.lining = LININGS[s.lining] ? s.lining : 'dots'; this.hem = s.hem || 'straight'; this.col = s.col || WA.NAVY_L; this.main = s.main !== false; this.ph = (s.x * 0.013) % 3;
-    this.cool = 0;
+    this.cool = 0; this.portal = this.main && this.target ? { kind: 'pipe', target: this.target } : null;   // (what a pocket does, for the room tests)
   }
   // the lip flops open for a moment every few seconds (the tell: its lining)
   lip() { const k = ((this.t + this.ph) % 3.4); return k < 0.9 ? Math.sin(k / 0.9 * Math.PI) : 0; }

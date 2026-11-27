@@ -211,6 +211,213 @@ STAGES.peg = async ({ ev, shot, run, pano }) => {
   });
 };
 
+/* ---------------- 26-2 Cold Wash Only: the sweaters ---------------- */
+STAGES.cold = async ({ ev, shot, run, pano }) => {
+  await run('cold', async () => {
+    await ev(ROOM_HELPERS);
+    await ev(() => { fresh(); play('26-2'); place(8, 20); sim(0.3); freeze(); }); await shot('20-26-2-start.png');
+    // the teach: straight off the roof onto the sweater, along it (the sleeve stretches ahead), off the cuff
+    let r = await ev(() => {
+      thaw(); place(18, 20); sim(0.2); const sw = ents('WashSweater')[0], p = P();
+      for (let k = 0; k < 600 && p.cx < (sw.tx1 + 1) * 32 + 8; k++) sim(1 / 120, { right: true });
+      const len = sw.len[1];
+      for (let k = 0; k < 600 && p.cx < (sw.tx1 + len) * 32 + 4; k++) sim(1 / 120, { right: true });
+      sim(0.6, { right: true, jump: true, jumpPressed: true }); sim(0.6, { right: true }); sim(0.3);
+      return { len, at: at() };
+    });
+    check('26-2: walking along the sweater stretches the sleeve ahead (two tiles a tile); off the cuff onto the next roof', r.len >= 8 && r.at.x >= 35 && r.at.y === 20 && !r.at.dead, r);
+    await ev(() => { place(19, 20); sim(0.1); const p = P(); for (let k = 0; k < 120; k++) sim(1 / 120, { right: true }); freeze(); }); await shot('21-26-2-sleeve-stretching.png');
+    // the twist: down the hole onto the RIGHT shoulder of the short-sleeved sweater; from there the sleeve is too
+    // short; back to the left shoulder, then the whole run: it reaches the roof
+    r = await ev(() => {
+      thaw(); place(168, 10); sim(0.2); const p = P(); const sw = ents('WashSweater').find(e => e.max[1] === 7);
+      for (let k = 0; k < 300 && p.cx < 170.5 * 32; k++) sim(1 / 120, { right: true }); sim(0.8);
+      const landed = at();
+      for (let k = 0; k < 200 && Math.floor(p.cx / 32) <= sw.tx1; k++) sim(1 / 120, { right: true }); const short = sw.len[1]; sim(0.05);
+      walkTo(sw.tx1 * 32 + 16); sim(1.2);   // back on the body; the short stretch springs back off the sweater only
+      walkTo(sw.tx0 * 32 + 12); sim(0.3);
+      for (let k = 0; k < 600 && p.cx < 179 * 32; k++) sim(1 / 120, { right: true });
+      sim(0.3); return { landed, short, full: sw.len[1], at: at() };
+    });
+    check('26-2: the twist: dropped on the right shoulder, the short sleeve comes up short; from the left shoulder it reaches the roof', r.landed.x >= 169 && r.landed.y === 14 && r.short < 6 && r.full >= 6 && r.at.x >= 179 && r.at.y === 14 && !r.at.dead, r);
+    await ev(() => freeze()); await shot('22-26-2-short-sleeve.png');
+    // room B2: the gap with the hanky over it is a soft drop into the launderette
+    await ev(() => { thaw(); place(94, 18); sim(0.3); freeze(); }); await shot('23-26-2-room-hanky-gap.png');
+    r = await ev(() => { thaw(); const p = P(); for (let k = 0; k < 120 && S().area.aid === 'tub'; k++) sim(1 / 120, { right: true }); for (let k = 0; k < 600 && S().area.aid === 'tub'; k++) sim(1 / 120); for (let k = 0; k < 600 && (S().fade.a > 0.05 || P().state !== 'play'); k++) sim(1 / 120); return { area: S().area.aid, dead: P().dead }; });
+    check('26-2 B2: the gap by the hanky drops into the launderette (not a fall)', r.area === 'launder' && !r.dead, r);
+    await roomGame({ ev, shot }, '24-26-2-room-room-with-a-view',
+      "waitPhase('pick'); const R = room(); hopOn(kit().data.slots[R.pics.findIndex(v => v !== R.order[0])]);",
+      "waitPhase('pick'); const R = room(); for (let i = 0; i < 3 && !R.won; i++) hopOn(kit().data.slots[R.pics.indexOf(R.order[R.got])]);", 1);
+    r = await ev(() => leave());
+    check('26-2 B2: the launderette\'s door lets Brady out further along the roofs', r && r.area === 'tub' && r.x >= 105, r);
+    await ev(() => { thaw(); play('26-2'); }); await pano('pano-26-2.png', 0.3);
+  });
+};
+
+/* ---------------- 26-3 Loose End: the seams ---------------- */
+STAGES.loose = async ({ ev, shot, run, pano }) => {
+  await run('loose', async () => {
+    await ev(ROOM_HELPERS);
+    let r = await ev(() => {
+      fresh(); play('26-3'); place(18, 20); sim(0.3); const p = P(), sm = ents('WashSeam')[0];
+      press('action'); for (let k = 0; k < 900 && p.cx < 30 * 32; k++) sim(1 / 120, { action: true, right: true });
+      sim(0.3); return { n: sm.n, of: sm.cells.length, at: at() };
+    });
+    check('26-3: hold THROW by the loose thread and walk: the seam unzips into floor across the gap', r.n === r.of && r.at.x >= 29 && r.at.y === 20 && !r.at.dead, r);
+    await ev(() => { place(16, 20); const sm = ents('WashSeam')[0]; freeze(); }); await shot('30-26-3-unzipped.png');
+    // the hem that steps up: jump the steps while still holding the thread
+    r = await ev(() => {
+      thaw(); place(95, 20); sim(0.3); const p = P();
+      press('action'); for (let k = 0; k < 1200 && p.cx < 109 * 32; k++) { const hop = p.onGround && p.hitWall; sim(hop ? 0.25 : 1 / 120, { action: true, right: true, jump: hop, jumpPressed: hop }); }
+      sim(0.3); return { at: at() };
+    });
+    check('26-3: a hem that rises: jump each step holding THROW, up onto the ledge', r.at.x >= 108 && r.at.y === 17 && !r.at.dead, r);
+    await ev(() => { place(100, 19); freeze(); }); await shot('31-26-3-rising-hem.png');
+    // the peg jaws gape and rattle before they snap
+    await ev(() => { thaw(); place(55, 20); const j = ents('WashJaws')[0]; for (let k = 0; k < 600 && j.cyc()[0] !== 'tell'; k++) sim(1 / 120); sim(0.3); freeze(); }); await shot('32-26-3-peg-jaws-tell.png');
+    // the last hem: the navy thread under his feet drops him to the retry ledge; back up, the red one across
+    r = await ev(() => {
+      thaw(); place(174, 17); sim(0.3); const p = P();
+      press('action'); sim(1.0); const dropped = at();
+      walkTo(178.5 * 32, 8); sim(0.4, { jump: true, jumpPressed: true }); sim(0.5);
+      sim(0.5, { jump: true, jumpPressed: true, left: true }); sim(0.4, { left: true }); sim(0.5); walkTo(175 * 32 + 16, 6); const back = at();
+      press('action'); for (let k = 0; k < 900 && p.cx < 189 * 32; k++) sim(1 / 120, { action: true, right: true });
+      sim(0.3); return { dropped, back, at: at() };
+    });
+    check('26-3: the last hem: the navy thread under his feet drops him to the retry ledge; back up, the red one unzips the bridge', r.dropped.y === 22 && r.back.x === 175 && r.back.y === 17 && r.at.x >= 188 && r.at.y === 17 && !r.at.dead, r);
+    // room B3: walk into the chimney's painted side
+    await ev(() => { place(114, 17); sim(0.3); freeze(); }); await shot('33-26-3-room-chimney.png');
+    r = await ev(() => { thaw(); place(117, 17); sim(0.2); walkTo(121 * 32 + 16, 6); sim(0.1, { up: true, upPressed: true }); for (let k = 0; k < 600 && (S().fade.a > 0.05 || P().state !== 'play'); k++) sim(1 / 120); return { area: S().area.aid }; });
+    check('26-3 B3: the chimney\'s side is only painted cloth: walk through it, the cupboard door inside', r.area === 'loft', r);
+    await roomGame({ ev, shot }, '34-26-3-room-one-more-peg',
+      "waitPhase('pick'); const R = room(); hopOn(kit().data.slots[[0, 1, 2, 3, 4, 5].find(k => k !== R.newer)]);",
+      "waitPhase('pick'); hopOn(kit().data.slots[room().newer]);", 3);
+    r = await ev(() => leave());
+    check('26-3 B3: the peg loft lets Brady out further along', r && r.area === 'hem' && r.x >= 126, r);
+    await ev(() => { thaw(); play('26-3'); }); await pano('pano-26-3.png', 0.3);
+  });
+};
+
+/* ---------------- 26-4 The Cling Section: wool and felt ---------------- */
+STAGES.cling = async ({ ev, shot, run, pano }) => {
+  await run('cling', async () => {
+    await ev(ROOM_HELPERS);
+    await ev(() => { window.scuff = (x0, x1) => { for (let n = 0; n < 6; n++) { walkTo(x1 * 32 + 16, 12); walkTo(x0 * 32 + 16, 12); } }; });
+    let r = await ev(() => {
+      fresh(); play('26-4'); place(20, 22); sim(0.3); const p = P();
+      scuff(17, 23); const charge = p.wash && p.wash.charge;
+      walkTo(24 * 32 + 14, 6); sim(0.7, { right: true, jump: true, jumpPressed: true }); const s1 = !!(p.wash && p.wash.stick);
+      sim(0.15); press('jump', { right: true }); sim(0.7, { right: true }); const s2 = !!(p.wash && p.wash.stick);
+      sim(0.1); press('jump', { right: true }); sim(0.7, { right: true }); sim(0.4);
+      return { charge, s1, s2, at: at() };
+    });
+    check('26-4: scuff the wool (the socks crackle), leap at the felt: stick; spring up, stick again; up onto the wall', r.charge === 2 && r.s1 && r.s2 && r.at.y === 12 && r.at.x >= 25 && r.at.x <= 27, r);
+    await ev(() => { place(21, 22); scuff(18, 23); walkTo(24 * 32 + 14, 6); sim(0.7, { right: true, jump: true, jumpPressed: true }); freeze(); }); await shot('40-26-4-stuck-on-felt.png');
+    // the label: it doesn't hold
+    r = await ev(() => { thaw(); place(30, 22); sim(0.2); const p = P(); p.x = 79 * 32 + 16 - p.w / 2; p.y = 16.5 * 32 - p.h; p.vy = 0; if (p.wash) { p.wash.charge = 2; p.wash.stick = null; } sim(0.4, { right: true }); return { stuck: !!(p.wash && p.wash.stick) }; });
+    check('26-4: a bare white washing label does not hold', !r.stuck, r);
+    // the last climb: stick, spring to the wool sill, a fresh charge, the last felt, the top
+    r = await ev(() => {
+      thaw(); place(124, 22); sim(0.3); const p = P();
+      scuff(122, 126); walkTo(127 * 32 + 14, 6); sim(0.7, { right: true, jump: true, jumpPressed: true }); const s1 = !!(p.wash && p.wash.stick);
+      sim(0.1); press('jump', { left: true }); sim(0.9, { left: true }); sim(0.3); const sill = at();
+      scuff(121, 124); walkTo(124 * 32 + 20, 6); sim(0.75, { right: true, jump: true, jumpPressed: true }); const s2 = !!(p.wash && p.wash.stick);
+      sim(0.1); press('jump', { right: true }); sim(0.7, { right: true }); const s3 = !!(p.wash && p.wash.stick);
+      sim(0.1); press('jump', { right: true }); sim(0.8, { right: true }); sim(0.3);
+      return { s1, sill, s2, s3, at: at() };
+    });
+    check('26-4: the twist: out of sparks halfway, down to the wool sill for a fresh charge, then the last felt and the top', r.s1 && r.sill.y === 15 && r.s2 && r.at.y === 5 && r.at.x >= 128, r);
+    await ev(() => freeze()); await shot('41-26-4-the-last-climb.png');
+    // room B4: from the rug on the wall's top, leap at the hanging felt block, hop up to the window ledge
+    r = await ev(() => {
+      thaw(); place(81, 10); sim(0.3); const p = P();
+      scuff(80, 82); walkTo(82 * 32 + 20, 6); sim(0.8, { right: true, jump: true, jumpPressed: true }); const s1 = !!(p.wash && p.wash.stick);
+      sim(0.1); press('jump', { left: true }); sim(0.8, { left: true }); sim(0.3); return { s1, at: at() };
+    });
+    check('26-4 B4: from the rug on the wall\'s top, stick to the hanging felt and hop up to the window ledge (only the felt reaches it)', r.s1 && r.at.y === 5 && r.at.x >= 81 && r.at.x <= 84, r);
+    await ev(() => freeze()); await shot('42-26-4-room-window-ledge.png');
+    r = await ev(() => { thaw(); walkTo(82 * 32 + 16, 6); sim(0.1, { up: true, upPressed: true }); for (let k = 0; k < 600 && (S().fade.a > 0.05 || P().state !== 'play'); k++) sim(1 / 120); return { area: S().area.aid }; });
+    check('26-4 B4: the window door goes into lost property', r.area === 'lost', r);
+    await roomGame({ ev, shot }, '43-26-4-room-still-packed',
+      "waitPhase('pick'); const R = room(); hopOn(kit().data.slots[(R.answer + 1) % 4]);",
+      "waitPhase('pick'); hopOn(kit().data.slots[room().answer]);", 2);
+    r = await ev(() => leave());
+    check('26-4 B4: lost property lets Brady out further along', r && r.area === 'lint' && r.x >= 100, r);
+    await ev(() => { thaw(); play('26-4'); }); await pano('pano-26-4.png', 0.3);
+  });
+};
+
+/* ---------------- 26-5 Pocket Address: the pockets ---------------- */
+STAGES.pockets = async ({ ev, shot, run, pano }) => {
+  await run('pockets', async () => {
+    await ev(ROOM_HELPERS);
+    await ev(() => { window.intoPocket = x => { walkTo((x - 2) * 32 + 16, 6); sim(0.55, { jump: true, jumpPressed: true, right: true }); sim(0.4); for (let k = 0; k < 600 && (S().fade.a > 0.05 || P().state !== 'play'); k++) sim(1 / 120); sim(0.3); return at(); }; });
+    let r = await ev(() => { fresh(); play('26-5'); place(10, 20); sim(0.3); return intoPocket(16); });
+    check('26-5: jump into a pocket: out of the one with the same lining (up on the high shelf)', r.x >= 39 && r.x <= 43 && r.y === 8, r);
+    await ev(() => { place(14, 20); const pk = ents('WashPocket')[0]; pk.t = 3.4 - pk.ph + 0.45; sim(0.01); freeze(); }); await shot('50-26-5-pocket-lip-open.png');
+    // the wrong pocket: the sock heap in the basin, the way back
+    r = await ev(() => { thaw(); place(53, 20); sim(0.3); const a = intoPocket(56); sim(1.5); const b = at(); walkTo(90 * 32 - 40, 6); const c = intoPocket(90); return { a, b, c }; });
+    check('26-5: a wrong pocket drops Brady in the basin of socks (in sight of the right lining); a pocket there brings him back', r.a.y === 7 && r.b.y === 20 && r.b.x >= 75 && r.c.x <= 50, r);
+    r = await ev(() => { place(58, 20); sim(0.3); const a = intoPocket(61); walkTo(99.5 * 32, 6); for (let k = 0; k < 200; k++) sim(1 / 120, { right: true }); sim(0.8); return { a, at: at() }; });
+    check('26-5: the pocket with the right lining: up on the high shelf and over the wall', r.a.y === 6 && r.at.x >= 101 && r.at.y === 20, r);
+    await ev(() => freeze()); await shot('51-26-5-the-way-on.png');
+    // room B5: the gold-lined pocket
+    r = await ev(() => { thaw(); place(118, 20); sim(0.3); freeze(); return 1; }); await shot('52-26-5-room-gold-pocket.png');
+    r = await ev(() => { thaw(); intoPocket(122); return { area: S().area.aid }; });
+    check('26-5 B5: the gold-lined pocket by the hanky opens into the drying room', r.area === 'drying', r);
+    await roomGame({ ev, shot }, '53-26-5-room-your-seat-sir',
+      "waitPhase('seat'); const R = room(); const m = R.queue[R.qi]; hopOn(kit().data.slots[(R.seat[m] + 1) % 4]);",
+      "waitPhase('seat'); const R = room(); for (let i = 0; i < 3 && !R.won; i++) hopOn(kit().data.slots[R.seat[R.queue[R.qi]]]);", 1);
+    r = await ev(() => leave());
+    check('26-5 B5: the drying room lets Brady out further along', r && r.area === 'pockets' && r.x >= 128, r);
+    // the twist: two mint pockets; the scalloped one goes on
+    r = await ev(() => { place(143, 20); sim(0.3); const a = intoPocket(146); walkTo(163.5 * 32, 6); for (let k = 0; k < 200; k++) sim(1 / 120, { right: true }); sim(0.8); return { a, at: at() }; });
+    check('26-5: the twist: of the two mint pockets, the scalloped one comes out on the shelf over the last wall', r.a.y === 9 && r.at.x >= 165 && r.at.y === 20, r);
+    await ev(() => { thaw(); play('26-5'); }); await pano('pano-26-5.png', 0.3);
+  });
+};
+
+/* ---------------- 26-6 Fitted Sheet for One: the lead-in, the Sock Divorce, the bed ---------------- */
+STAGES.bed = async ({ ev, shot, run, pano }) => {
+  await run('bed', async () => {
+    await ev(ROOM_HELPERS);
+    let r = await ev(() => {
+      fresh(); play('26-6'); place(4, 15); sim(0.3); const p = P(); const sh = ents('WashLooseSheet')[0];
+      walkTo(20 * 32 + 16, 6); let aim = 0; for (let k = 0; k < 600 && sh.state !== 'aim'; k++) sim(1 / 120);
+      while (sh.state === 'aim' && sh.st < 0.7) { sim(1 / 120); aim = sh.st; }
+      sim(0.5, { jump: true, jumpPressed: true }); sim(0.6);
+      return { aim: +aim.toFixed(2), open: sh.open, tile: tile(16, 15) };
+    });
+    check('26-6: a loose sheet\'s corner aims (a tell), snaps: jumped in front of the post, it hooks the post and the way opens', r.aim >= 0.5 && r.open && r.tile === 0, r);
+    await ev(() => { place(19, 15); sim(0.1); const sh = ents('WashLooseSheet')[1]; freeze(); }); await shot('60-26-6-loose-sheet.png');
+    // room: up through the hole in the shelf, along the top shelf (jaws), the sock drawer
+    r = await ev(() => { thaw(); place(26, 15); sim(0.2); sim(0.5, { jump: true, jumpPressed: true }); sim(0.4); const a = at(); return a; });
+    check('26-6 Sock Divorce: up through the hole in the shelf by the hanky, onto the top shelf', r.y === 10, r);
+    await ev(() => { walkTo(40 * 32, 8); freeze(); }); await shot('61-26-6-top-shelf.png');
+    r = await ev(() => { thaw(); P().invuln = 999; walkTo(64 * 32 + 16, 6); sim(0.1, { up: true, upPressed: true }); for (let k = 0; k < 600 && (S().fade.a > 0.05 || P().state !== 'play'); k++) sim(1 / 120); return { area: S().area.aid }; });
+    check('26-6 Sock Divorce: the sock drawer at the shelf\'s end', r.area === 'drawer', r);
+    await ev(() => { sim(0.7); freeze(); }); await shot('62-26-6-room-sock-divorce-entry.png');
+    r = await ev(() => {
+      thaw(); const R = room(), K = kit(), p = P(), cuffX = (K.data.post + 1) * 32 + 8;
+      const take = () => { walkTo(cuffX, 6); press('action'); };
+      // a miss: let go before they peel
+      take(); sim(0.4, { action: true, right: true }); sim(0.2); const f1 = R.fails || 0;
+      sim(0.8);
+      // the win: hold on, walk away until they peel, let go before the toe mark
+      for (let n = 0; n < 2 && !R.won; n++) { take(); for (let k = 0; k < 900 && !R.peeled; k++) sim(1 / 120, { action: true, right: true }); sim(0.15, { action: true }); sim(0.4); }
+      sim(1.0); return { f1, won: R.won, cage: cageOpen() };
+    });
+    check('26-6 Sock Divorce: letting go too soon is a miss (no harm); held till they peel and let go before the toe: won, the cage opens', r.f1 >= 1 && r.won && r.cage, r);
+    await ev(() => freeze()); await shot('63-26-6-room-sock-divorce-won.png'); await ev(() => thaw());
+    r = await ev(() => leave());
+    check('26-6 Sock Divorce: the drawer lets Brady out by the bedroom door (further along)', r && r.area === 'cupboard' && r.x >= 60, r);
+    r = await ev(() => { const p = P(); walkTo(72 * 32 + 16, 6); sim(0.1, { up: true, upPressed: true }); for (let k = 0; k < 600 && (S().fade.a > 0.05 || P().state !== 'play'); k++) sim(1 / 120); walkTo(P().cx + 6 * 32, 8); sim(2.5); return { area: S().area.aid, boss: !!S().boss }; });
+    check('26-6: the bedroom door; the bed; Her Fitted Majesty wakes', r.area === 'bed' && r.boss, r);
+    await ev(() => { sim(1.5); freeze(); }); await shot('64-26-6-boss-her-fitted-majesty.png');
+    await ev(() => { thaw(); play('26-6'); }); await pano('pano-26-6.png', 0.3);
+  });
+};
+
 /* ---------------- the secret rooms: shared moves ---------------- */
 // in the page: walk on the stage to slot column x, then jump onto its top (real stick and JUMP)
 const ROOM_HELPERS = () => {
@@ -241,6 +448,8 @@ async function roomGame({ ev, shot }, tag, pickWrong, pickRight, rounds) {
   });
   await session({ width: 402, height: 874 }, async ({ ev, shot, run }) => {
     await run('p-peg', async () => { await ev(() => { fresh(); play('26-1'); place(13, 22); sim(0.2); sim(0.35, { jump: true, jumpPressed: true, up: true }); sim(0.4, { up: true }); freeze(); }); await shot('90-portrait-26-1-net.png'); });
+    await run('p-boss', async () => { await ev(() => { thaw(); fresh(); play('26-6'); const g = S(), k = areaOf(g, 'bed'), A = g.level.areas[k]; g.loadArea(k, A.anchors.in.x, A.anchors.in.y); P().invuln = 999; sim(0.2); const p = P(); for (let n = 0; n < 300; n++) sim(1 / 120, { right: true }); sim(2.8); freeze(); }); await shot('91-portrait-26-6-boss.png'); });
+    await run('p-map', async () => { await ev(() => { thaw(); fresh(); const d = window.BRADY.Save.data; d.tour.lands.wash = true; d.unlocked['26-1'] = true; window.BRADY.goToMap('world', 1, '26-1'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } freeze(); }); await shot('92-portrait-wash-map.png'); });
   });
   console.log(failures ? `${failures} WASH CHECK(S) FAILED` : 'ALL WASH CHECKS PASSED');
   process.exit(failures ? 1 : 0);

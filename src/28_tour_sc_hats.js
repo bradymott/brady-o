@@ -251,7 +251,10 @@ TourHats.NOT = new Set([].concat(
   // World 22: alarm clocks, envelopes, hourglasses, echoes, loops, mirrors, panes, strikes, pendulums, copies, slabs, lakes, doors, keys, ink, falling time; 22-6's pages and stamps
   // Iceland (17): aurora ribbons, icebergs, rift slabs, organ pipes, lava blobs, the hidden folk's planks / gates / eye, the sun shields, the secret rooms' bells / organ keys / lanterns, the steam tell
   'isRibbon isBerg isPlate isPipe isEmber isShyEye isShyPlat isShyWall isSunShield isBell isOrganKey isFolkLight isSteamTell'.split(' '),
-  'w22Alarm w22Envelope w22Hourglass w22Echo w22Loop w22Mirror w22Pane w22Strike w22Pendulum w22Copy w22Slab w22Lake w22ReflectDoor w22Key w22Ink w22TimeFall w22NumDoorE rbPage rbStamp rbTornPage'.split(' ')
+  'w22Alarm w22Envelope w22Hourglass w22Echo w22Loop w22Mirror w22Pane w22Strike w22Pendulum w22Copy w22Slab w22Lake w22ReflectDoor w22Key w22Ink w22TimeFall w22NumDoorE rbPage rbStamp rbTornPage'.split(' '),
+  // Wrong Side of the Wash (26): the drying nets and their critters (drawn behind the cloth on the far face), the
+  // beetle's trouser wall, the peephole tell, sweaters, seams, felt, pockets, peg jaws, loose sheets, the bakery hem
+  'washNet washCrawler washBeetleGate washPeep washSweater washSeam washFeltArt washPocket washJaws washLooseSheet washHem'.split(' ')
 ));
 
 /* ---------- the animals: [fx, fxFlip, fy, size] (see the header) ---------- */
@@ -308,7 +311,9 @@ Object.assign(TourHats.HEADS, {
   // Italy (14): the city pigeon, the alley cat
   itPigeon: [0.39, 0.4, -1.5, 0], itCat: [0.53, 0.53, -1.25, 0], itPigeonTell: [0.39, 0.4, -1.5, 0],
   // The Moon (world 18): the moon bunny, the dust mite, the luna moth
-  moonBunny: [0.3, 0.3, -1.3, 0], moonMite: [0.2, 0.2, -1.05, 0], moonMoth: [0.02, 0.02, -0.95, 0]
+  moonBunny: [0.3, 0.3, -1.3, 0], moonMite: [0.2, 0.2, -1.05, 0], moonMoth: [0.02, 0.02, -0.95, 0],
+  // Wrong Side of the Wash (26): the peg beetle, the lint lamb, the hanger heron, the sock moth
+  washBeetle: [0.45, 0.45, -1.3, 0], washLamb: [0.55, 0.55, -1.1, 0], washHeron: [0.4, 0.4, -1.42, 0], washMoth: [0.08, 0.08, -1.2, 0]
 
 });
 
