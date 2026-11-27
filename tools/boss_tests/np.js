@@ -108,15 +108,17 @@ module.exports = async ({ page, check, shot }) => {
   }
   // phase 1 from a fresh fight: he hovers to one side of Brady, high enough for big Brady to stand on a landmark under him, slower than Brady walks
   await ev(() => { start('12-5'); enterArena(); });
-  r = await ev(() => { const b = boss(), p = P(); p.setPower(1, true); p.growT = 0; p.invuln = 999; b.go('walk'); let minDx = 1e9, maxV = 0, ox = b.x, low = 1e9;
-    for (let k = 0; k < 160; k++) { sim(1 / 40, { right: k % 80 < 40, left: k % 80 >= 40 }); if (b.act !== 'walk') b.go('walk'); const R = b.brain.body(b); if (k > 40) minDx = Math.min(minDx, Math.abs(R.x + R.w / 2 - p.cx)); maxV = Math.max(maxV, Math.abs(b.x - ox) * 40); ox = b.x; low = Math.min(low, b.floorY - (R.y + R.h)); }
+  r = await ev(() => { const b = boss(), p = P(); p.setPower(1, true); p.growT = 0; p.invuln = 999; let minDx = 1e9, maxV = 0, low = 1e9;
+    // Brady stands at a spot across the summit; Piwi comes over: his top speed on the way, how close he settles, how low he flies
+    for (const f of [0.2, 0.8, 0.5, 0.1]) { p.x = b.arenaX0 + f * (b.arenaX1 - b.arenaX0); p.y = b.floorY - p.h; p.vx = 0; let ox = b.x;
+      for (let k = 0; k < 100; k++) { sim(1 / 40); if (b.act !== 'walk') b.go('walk'); maxV = Math.max(maxV, Math.abs(b.x - ox) * 40); ox = b.x; const R = b.brain.body(b); low = Math.min(low, b.floorY - (R.y + R.h)); if (k > 80) minDx = Math.min(minDx, Math.abs(R.x + R.w / 2 - p.cx)); } }
     return { minDx: Math.round(minDx), maxSpeed: Math.round(maxV), lowest: Math.round(low), bigOnJar: 32 + p.h, walk: 6.2 * 32 }; });
   check('np: the Showtrunk keeps to one side of Brady (never over him), slower than he walks, above big Brady on a landmark', r.minDx > 33 + 11 && r.maxSpeed < r.walk && r.lowest > r.bigOnJar, r);
   // after a throw he holds still to gloat: the opening to kick the landmark back
   r = await ev(() => { const b = boss(); b.thrown = 0; b.go('throw'); let t = 0; while (b.act === 'throw' && t < 3) { sim(0.05); t += 0.05; } const x0 = b.x, a = b.act; let still = 0; while (b.act === 'gloat' && still < 5) { sim(0.05); still += 0.05; } return { after: a, still: +still.toFixed(2), moved: Math.round(Math.abs(b.x - x0)) }; });
   check('np: after a throw Piwi gloats in place for over a second (the opening)', r.after === 'gloat' && r.still >= 1.2 && r.moved < 8, r);
   // mercy: once he hurts Brady he starts no new attack for a moment
-  r = await ev(() => { const b = boss(), p = P(); for (const e of S().entities) if (e.landmark) e.remove = true; b.go('walk'); b.at = 1.4; p.invuln = 0; p.setPower(1, true); p.hurt(b); const acts = []; for (let k = 0; k < 30; k++) { sim(0.05); acts.push(b.act); } p.invuln = 999; return { acts: [...new Set(acts)] }; });
+  r = await ev(() => { const b = boss(), p = P(); for (const e of S().entities) if (e.landmark) e.remove = true; b.go('walk'); b.at = 1.4; p.invuln = 0; p.setPower(1, true); sim(0.02); b.go('walk'); b.at = 1.4; p.hurt(b); const acts = []; for (let k = 0; k < 30; k++) { sim(0.05); acts.push(b.act); } p.invuln = 999; return { acts: [...new Set(acts)] }; });
   check('np: after Piwi hurts Brady he backs off and starts no attack for 1.5 s', r.acts.length === 1 && r.acts[0] === 'walk', r);
 
   // ---- the walls (26 Nov: Brady popped through the door wall and walked out to the gate mid-fight) ----

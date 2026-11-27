@@ -1036,7 +1036,7 @@ const boss = {
         b.pose = 'run'; if (first) b.face();
         b.vx = b.dir * NP.run * TS; if (b.onGround && Math.random() < dt * 1.5) b.vy = -7 * TS;
         if (b.at > 0.2 && (b.hitWall || b.x <= b.arenaX0 + 2 || b.x >= b.arenaX1 - b.w - 2)) { b.cycle++; b.go(!baronOut(b) && b.thrown < b.quota ? 'throw' : ['taunt', 'flash', 'hop'][b.cycle % 3]); }
-        else if (b.at > 2.6) b.go('taunt');
+        else if (b.at > 2.6) b.go(!baronOut(b) && b.thrown < b.quota ? 'throw' : 'taunt');   // (at his slower pace he may not reach a wall)
       } else if (b.act === 'taunt') {
         b.vx = 0; b.face(); b.pose = 'taunt';
         if (first) K.say(g, b, pick(['YOU\'LL NEVER GET THIS ONE!', 'THE SHOW MUST GO ON!', 'CATCH ME IF YOU CAN!']), '#ffd84a');
