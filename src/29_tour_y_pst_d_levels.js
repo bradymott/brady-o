@@ -102,6 +102,123 @@ const L1 = { n: 1, name: 'Hold That Thought', mapLabel: 'Hold That Thought', arc
     { id: 'forts', gen: 'room', role: 'secret', room: 'pstKnock', theme: 'pst_room_forts', stamp: 'pstFortsOld', pst: { room: true } }
   ] };
 
-Tour.amend('pst', { stamps, levels: [L1] });
+/* ---------------- 32-2 The Long Blink ---------------- */
+// the floor is row 21. ① the teach: a lid bridge over a soft pit (shut it's a walkway; it trembles before it opens),
+// a lash ladder up a wall (one outer rung that always stays, two inner ones only while shut) to P1; ② two lid bridges
+// on two rhythms with an island between (the pit under the first one has a gap in its floor: a lone z: the pillow
+// sample, B32), a tall ladder with an outer rung to rest on, a high lid over a deep pit (an outer ladder climbs back
+// out), the high ledge (P2); ③ the twist: up a ladder to the plateau, then DOWN the short outer lashes and across the
+// last long lid before it opens over the pillow (a fall means the climb again); P3 over the lid; the gate
+const L = (dy, k) => [dy, k];
+const blinkRows = (() => {
+  const W = 200, H = 28, Gr = grid(W, H, '.');
+  // ① the teach
+  ground(Gr, 0, 13, 21); put(Gr, 3, 20, '@'); put(Gr, 6, 20, 'n'); put(Gr, 9, 16, '?');
+  ground(Gr, 14, 21, 24); put(Gr, 14, 21, '1'); put(Gr, 15, 18, 'o.o.o.o');
+  ground(Gr, 22, 29, 21); put(Gr, 24, 20, 'N'); put(Gr, 28, 20, '2'); ground(Gr, 30, 40, 13); put(Gr, 35, 9, '*'); put(Gr, 32, 11, 'o.o.o');
+  ground(Gr, 41, 57, 21); put(Gr, 45, 20, 'l'); put(Gr, 50, 20, 'c'); put(Gr, 54, 16, '?');
+  // ② the two rhythms; the pit under the first lid hides the way down to the pillow sample
+  ground(Gr, 58, 65, 24); put(Gr, 58, 21, '3'); fillG(Gr, 61, 24, 62, 26, '.'); put(Gr, 61, 26, 'K'); put(Gr, 62, 23, 'Z');
+  ground(Gr, 66, 68, 21); put(Gr, 67, 20, 'a'); put(Gr, 66, 18, 'o.o');
+  ground(Gr, 69, 76, 24); put(Gr, 69, 21, '4'); put(Gr, 73, 15, 'w');
+  ground(Gr, 77, 83, 21); put(Gr, 79, 20, 'k');
+  put(Gr, 84, 20, '5'); ground(Gr, 86, 96, 9); put(Gr, 92, 8, 'l'); put(Gr, 88, 7, 'o.o.o');
+  ground(Gr, 97, 104, 24); put(Gr, 97, 9, '6'); put(Gr, 97, 22, '7'); put(Gr, 99, 6, 'o.o.o.o');
+  ground(Gr, 105, 112, 9); put(Gr, 108, 5, '?'); put(Gr, 110, 6, 'A');
+  ground(Gr, 113, 139, 21); put(Gr, 118, 20, 'c'); put(Gr, 124, 20, 'p'); put(Gr, 130, 20, 'u'); put(Gr, 133, 20, 'M');
+  // ③ the twist: up to the plateau, down the outer lashes, across the last lid before it opens over the pillow
+  put(Gr, 138, 20, '8'); fillG(Gr, 140, 9, 152, 10, '#'); put(Gr, 143, 8, 'c'); put(Gr, 149, 8, 'l'); put(Gr, 146, 4, 'w'); put(Gr, 144, 6, 'o.o.o');
+  put(Gr, 153, 8, '9'); put(Gr, 151, 8, 'V');
+  ground(Gr, 140, 164, 25); put(Gr, 140, 24, 'E'); put(Gr, 155, 19, 'J'); put(Gr, 160, 15, 'R'); put(Gr, 156, 16, 'o.o.o.o.o');
+  ground(Gr, 165, 175, 19); put(Gr, 170, 18, 'p');
+  ground(Gr, 176, 199, 21); put(Gr, 179, 20, 'c'); put(Gr, 184, 16, '?'); put(Gr, 190, 20, 'G'); fillG(Gr, 199, 0, 199, 20, 'H');
+  return rowsOf(Gr);
+})();
+stamps.pstBlink = { floor: 21, rows: blinkRows, gold: { '*': 'must', A: 'high', R: 'risky' }, items: ['power', 'power', 'power', 'oneup'], legend: {
+  n: SIGN('PUPO IS FAST ASLEEP AND BLINKING SLOWLY. WHILE AN EYE IS SHUT ITS LIDS MEET AND ITS LASHES LOCK INTO RUNGS'),
+  N: SIGN('WHEN THE LASHES TREMBLE THE EYE IS ABOUT TO OPEN. THE SHORT DARK OUTER LASHES NEVER MOVE: REST ON THOSE'),
+  M: SIGN('TWO EYES, TWO RHYTHMS. WAIT FOR THE BLINK'),
+  V: SIGN('THE LAST BLINK: DOWN THE SHORT OUTER LASHES, THEN ACROSS THE LONG LID BEFORE IT OPENS'),
+  l: ['enemy', 'pstLouse'], u: ['enemy', 'pstSlug'], p: ['enemy', 'pstPea'], w: ['enemy', 'pstBat'], k: ['decor', 'pstLamp'],
+  '1': ['piece', 'pst.lid', { g: 0, n: 8 }], '3': ['piece', 'pst.lid', { g: 0, n: 8 }], '4': ['piece', 'pst.lid', { g: 1, n: 8 }],
+  '6': ['piece', 'pst.lid', { g: 0, n: 8 }], J: ['piece', 'pst.lid', { g: 1, n: 10 }],
+  '2': ['piece', 'pst.lashes', { g: 0, rows: [L(-2, 'out'), L(-4, 'in'), L(-6, 'in')] }],
+  '5': ['piece', 'pst.lashes', { g: 1, rows: [L(-2, 'out'), L(-4, 'in'), L(-6, 'in'), L(-8, 'out'), L(-10, 'in')] }],
+  '7': ['piece', 'pst.lashes', { g: 0, rows: [L(0, 'out'), L(-2, 'out'), L(-4, 'out'), L(-6, 'out'), L(-8, 'out'), L(-10, 'out'), L(-12, 'out')] }],
+  '8': ['piece', 'pst.lashes', { g: 0, rows: [L(-2, 'out'), L(-4, 'in'), L(-6, 'in'), L(-8, 'out'), L(-10, 'in')] }],
+  '9': ['piece', 'pst.lashes', { g: 1, rows: [L(2, 'out'), L(4, 'out'), L(6, 'out'), L(8, 'out')] }],
+  E: ['piece', 'pst.lashes', { g: 0, rows: [L(-2, 'out')] }],
+  Z: ['piece', 'pst.z', {}],
+  K: ['spawn', 'portal', { kind: 'door', look: 'pstNook', targetRef: 'lab@in' }], a: ['anchor', 'labOut']
+} };
+stamps.pstLabOld = roomStamp('blink@labOut', ['oneup']);
+const L2 = { n: 2, name: 'The Long Blink', mapLabel: 'The Long Blink', arch: 'blink', theme: 'pst_lid',
+  gimmick: 'Along Pupo\'s enormous eyelids: while an eye is shut its lids meet into a bridge and its long lashes lock into a ladder. They tremble before it opens',
+  hint: 'Cross and climb while the eye is shut; rest on the short dark outer lashes when they tremble. A lone z drifts up out of the floor of one soft pit...',
+  postcard: 'Pupo blinked during lunch and I read half a novel. Your lashes would never. You blink like a hummingbird. ♥ C',
+  enemies: [['pstLouse', 3], ['pstBat', 3], ['pstPea', 2], ['pstSlug', 1]],
+  mapCell: [1, 0], mapFrom: 0,
+  exits: { main: { to: '32-3' } },
+  areas: [
+    { id: 'blink', gen: 'room', theme: 'pst_lid', stamp: 'pstBlink', camera: 'free', bottomKill: true, pst: { blink: [0, 1] } },
+    { id: 'lab', gen: 'room', role: 'secret', room: 'pstCore', theme: 'pst_room_lab', stamp: 'pstLabOld', pst: { room: true } }
+  ] };
+
+/* ---------------- 32-3 Half a Yawn ---------------- */
+// the floor is row 19. ① the teach: a mouth between two places: stretch left for a feather up to P1, right for one
+// up the wall; ② a feather as the one stepping stone over a pit (the other corner's spot is no use), a mouth between
+// two high spots (P2 on the left one), a cushion wall with a soft patch in it (a lone z: the cocoa tray, B33);
+// ③ a feather staircase up a wall, then the last mouth: its feather is caught on a tooth: stretch the far cheek to
+// shake it loose, then the near one to send it out over the pit (P3 above it); the gate
+const MOUTH = (g, n, a, b, more) => ['piece', 'pst.mouth', Object.assign({ g, n, a, b }, more || {})];
+const yawnRows = (() => {
+  const W = 206, H = 24, Gr = grid(W, H, '.');
+  // ① the teach
+  ground(Gr, 0, 25, 19); put(Gr, 3, 18, '@'); put(Gr, 6, 18, 'n'); put(Gr, 11, 14, '?');
+  fillG(Gr, 2, 13, 7, 14, '#'); put(Gr, 4, 10, '*'); put(Gr, 3, 12, 'o.o');
+  put(Gr, 14, 18, '1'); ground(Gr, 26, 33, 13); put(Gr, 27, 12, 'o.o.o');
+  ground(Gr, 34, 69, 19); put(Gr, 40, 18, 'l'); put(Gr, 46, 18, 'p'); put(Gr, 52, 18, 'c'); put(Gr, 56, 14, '?');
+  // ② a feather as the stepping stone over the pit
+  put(Gr, 60, 18, 'N'); put(Gr, 64, 18, '2'); put(Gr, 75, 14, 'w');
+  ground(Gr, 80, 112, 19); put(Gr, 82, 18, 'u');
+  // the mouth between two high spots: the left one has P2 over it, the right one leads on up
+  put(Gr, 88, 18, '3'); ground(Gr, 97, 104, 12); put(Gr, 85, 11, 'A'); put(Gr, 98, 11, 'o.o.o.o'); put(Gr, 102, 11, 'l');
+  put(Gr, 110, 18, 'c');
+  // the cushion wall with a soft patch: walk into it (a lone z drifts out of it)
+  fillG(Gr, 116, 16, 121, 18, '#'); fillG(Gr, 116, 17, 116, 18, 'F'); fillG(Gr, 117, 17, 120, 18, '.'); put(Gr, 119, 18, 'K'); put(Gr, 115, 15, 'Z');
+  ground(Gr, 112, 154, 19); put(Gr, 125, 18, 'p'); put(Gr, 128, 18, 'a');
+  // ③ a feather staircase up the wall
+  put(Gr, 130, 18, '4'); ground(Gr, 140, 148, 13); put(Gr, 143, 12, 'l'); put(Gr, 141, 11, 'o.o.o');
+  put(Gr, 149, 18, 'M'); put(Gr, 150, 18, '5'); put(Gr, 152, 13, 'w');
+  ground(Gr, 167, 205, 19); put(Gr, 162, 13, 'R'); put(Gr, 170, 18, 'c'); put(Gr, 175, 14, '?'); put(Gr, 180, 18, 'p'); put(Gr, 192, 18, 'G'); fillG(Gr, 205, 0, 205, 18, 'H');
+  return rowsOf(Gr);
+})();
+stamps.pstYawn = { floor: 19, rows: yawnRows, gold: { '*': 'must', A: 'high', R: 'risky' }, items: ['power', 'power', 'power', 'oneup'], legend: {
+  n: SIGN('A YAWNING MOUTH! STAND ON A CORNER TO STRETCH IT THAT WAY. AT THE NEXT YAWN A FEATHER FLOATS OUT AND SETTLES ON THAT SIDE AS A FOOTHOLD'),
+  N: SIGN('ONE FEATHER PER MOUTH: PICK THE SIDE YOU NEED, THEN WAIT FOR THE YAWN'),
+  M: SIGN('THIS FEATHER IS CAUGHT ON A TOOTH. TRY STRETCHING THE OTHER CHEEK FIRST'),
+  l: ['enemy', 'pstLouse'], u: ['enemy', 'pstSlug'], p: ['enemy', 'pstPea'], w: ['enemy', 'pstBat'],
+  '1': MOUTH(0, 5, [-6, -3, 3], [8, -3, 3]),
+  '2': MOUTH(1, 5, [6, 0, 2], [9, 0, 3]),
+  '3': MOUTH(2, 5, [-4, -4, 2], [7, -4, 2]),
+  '4': MOUTH(1, 5, [-5, -3, 2], [7, -3, 2]),
+  '5': MOUTH(0, 5, null, [10, -2, 3], { stuck: true, free: 0 }),
+  Z: ['piece', 'pst.z', {}],
+  K: ['spawn', 'portal', { kind: 'door', look: 'pstNook', targetRef: 'kitchen@in' }], a: ['anchor', 'kitchenOut']
+} };
+stamps.pstKitchenOld = roomStamp('yawn@kitchenOut', ['oneup']);
+const L3 = { n: 3, name: 'Half a Yawn', mapLabel: 'Half a Yawn', arch: 'yawn', theme: 'pst_yawn',
+  gimmick: 'Pupo yawns, and the yawns blow feathers. Stand on either corner of a yawning mouth to stretch it that way: the next feather settles on that side as a foothold',
+  hint: 'Pick a corner, wait for the yawn, hop on the feather. One feather is caught on a tooth: stretch the other cheek first. A lone z drifts out of a cushion wall...',
+  postcard: 'Pupo yawned and three feathers and a sock came out. The sock is yours. I have stopped asking questions. ♥ C',
+  enemies: [['pstLouse', 3], ['pstPea', 3], ['pstSlug', 1], ['pstBat', 2]],
+  mapCell: [2, 0], mapFrom: 1,
+  exits: { main: { to: '32-4' } },
+  areas: [
+    { id: 'yawn', gen: 'room', theme: 'pst_yawn', stamp: 'pstYawn', camera: 'free', bottomKill: true },
+    { id: 'kitchen', gen: 'room', role: 'secret', room: 'pstTray', theme: 'pst_room_kitchen', stamp: 'pstKitchenOld', pst: { room: true } }
+  ] };
+
+Tour.amend('pst', { stamps, levels: [L1, L2, L3] });
 Tour.pstLevels = { grid, put, fillG, ground, pit, rowsOf, roomStamp, SIGN, CUSH, stamps };
 })();

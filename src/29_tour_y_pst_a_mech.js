@@ -211,7 +211,7 @@ Tour.pieces['pst.lashes'] = function (st, o) {
 Tour.pieces['pst.lid'] = function (st, o) {
   const B = st.B, gi = o.g || 0, n = o.n || 6, y = st.gy - 1;
   B.toggle(gi, [], [[st.x, y, st.x + n - 1, y, T.SEMI]], { kind: 'blink', auto: true });
-  B.spawn('pstLid', st.x, y, { g: gi, n });
+  B.spawn('pstLid', st.x, y - 1, { g: gi, n });
   return st.x;
 };
 // toggle tiles that are drawn by their entity: hide them from the tile painter once the area is built
@@ -226,13 +226,15 @@ TourHooks.on('areaLoaded', (play, A) => {
 class PstMouth extends Ent {
   constructor(g, s) {
     super(g, s, (s.n || 5) * TS, 2 * TS); this.x = s.x - TS / 2; this.y = s.y - 2 * TS + 4; this.n = s.n || 5; this.gi = s.g || 0; this.friendly = true;
-    this.spots = [s.a, s.b]; this.stuck = !!s.stuck; this.sel = s.stuck ? -1 : 0; this.free = !s.stuck; this.stretch = 0;
+    this.spots = [s.a, s.b]; this.stuck = !!s.stuck; this.sel = s.stuck ? -1 : 0; this.free = !s.stuck; this.stretch = 0; this.own = s.stuck ? null : 0;
     this.period = s.period || 3.2; this.cyc = 1.2; this.fly = null; this.wide = 0; this.floorY = s.y; this.lx = s.lx; this.rx = s.rx; this.stuckFree = s.stuckFree || 0;
   }
   // the feather is where the toggle says (0: spot a, 1: spot b), unless it is still caught on the tooth
-  at() { if (!this.free && this.stuck && !this.landed) return null; return this.g.toggleBit(this.gi) ? 1 : 0; }
+  at() { return this.own; }
   update(dt) {
     const g = this.g, p = g.player; this.t += dt;
+    // groups are shared by mouths far apart: the one Brady is near keeps the tiles matching its own feather
+    if (p && Math.abs(p.cx - this.cx) < 16 * TS && g.toggleBit(this.gi) !== (this.own === 1)) g.flipToggle(this.gi, true);
     // which corner is Brady standing on?
     if (p && p.onGround && !p.dead && Math.abs(p.y + p.h - this.floorY) < 6) {
       const tx = Math.floor(p.cx / TS);
@@ -242,7 +244,7 @@ class PstMouth extends Ent {
           if (side === (this.stuckFree || 0)) { if (!this.freedT) { this.freedT = 1; this.free = true; g.parts.text(this.cx, this.y - 8, 'IT CAME LOOSE!', '#fff4dc'); Sound.play('pick', { vol: 0.5, pitch: 0.6 }); } }
           else if (!(this.toldT > this.t)) { this.toldT = this.t + 2.5; g.parts.text(this.cx, this.y - 8, 'IT\'S CAUGHT ON A TOOTH...', '#fff4dc'); }
         }
-        if (this.free && this.sel !== side) { this.sel = side; Sound.play('select', { vol: 0.35, pitch: side ? 1.2 : 0.9 }); }
+        if (this.free && this.sel !== side && !(this.stuck && side === this.stuckFree)) { this.sel = side; Sound.play('select', { vol: 0.35, pitch: side ? 1.2 : 0.9 }); }
       }
     }
     this.stretch = approach(this.stretch, this.sel < 0 ? 0 : this.sel ? 1 : -1, dt * 3);
@@ -256,9 +258,8 @@ class PstMouth extends Ent {
     }
     if (this.fly) {
       this.fly.t += dt;
-      // the old foothold is gone as soon as it lifts off
-      if (this.fly.from != null && !this.fly.lift) { this.fly.lift = true; this.held = true; }
-      if (this.fly.t >= 1.0) { const want = this.fly.to; if ((g.toggleBit(this.gi) ? 1 : 0) !== want) g.flipToggle(this.gi, true); this.fly = null; this.landed = true; this.held = false; Sound.play('land', { vol: 0.3, pitch: 1.6 }); }
+      // the new feather settles; the old one puffs away as it lands
+      if (this.fly.t >= 1.0) { this.own = this.fly.to; if (g.toggleBit(this.gi) !== (this.own === 1)) g.flipToggle(this.gi, true); if (this.fly.from != null) { const o = this.spotXY(this.fly.from); g.burst(o.x, o.y, 8, CREAM, 'dust'); } this.fly = null; Sound.play('land', { vol: 0.3, pitch: 1.6 }); }
     }
   }
   spotXY(k) { const s = this.spots[k]; return { x: (s[0] + s[2] / 2) * TS, y: s[1] * TS }; }
@@ -279,8 +280,9 @@ class PstMouth extends Ent {
     // the stuck feather on its tooth
     if (this.stuck && !this.free) { PstArt.feather(ctx, cx + mw * 0.2, y - 14 - mh / 2 + 4, 30, 0.6 + Math.sin(t * 6) * 0.15); }
     // the feather in flight or on its spot
+    if (this.fly && this.fly.from != null) { const s = this.spots[this.fly.from], b = this.spotXY(this.fly.from); PstArt.feather(ctx, b.x, b.y + 4 + Math.sin(t * 9) * 2, s[2] * TS + 10, Math.sin(t * 7) * 0.08); }
     if (this.fly) {
-      const a = this.fly.from == null ? { x: cx, y: y - 20 } : this.spotXY(this.fly.from), b = this.spotXY(this.fly.to), k = clamp(this.fly.t / 1.0, 0, 1);
+      const a = { x: cx, y: y - 20 }, b = this.spotXY(this.fly.to), k = clamp(this.fly.t / 1.0, 0, 1);
       const fx = lerp(a.x, b.x, k), fy = lerp(a.y, b.y, k) - Math.sin(k * Math.PI) * 60;
       PstArt.feather(ctx, fx, fy, this.spots[this.fly.to][2] * TS, Math.sin(t * 9) * 0.35);
     } else {
@@ -299,9 +301,10 @@ ENTITY_TYPES.pstMouth = PstMouth;
 Tour.pieces['pst.mouth'] = function (st, o) {
   const B = st.B, gi = o.g || 0, n = o.n || 5, y = st.gy;
   const spot = s => [st.x + s[0], y + s[1], s[2] || 2];
-  const a = spot(o.a), b = spot(o.b);
+  const b = spot(o.b), a = o.a ? spot(o.a) : b.slice();
   const rect = s => [[s[0], s[1], s[0] + s[2] - 1, s[1], T.SEMI]];
   B.toggle(gi, o.stuck ? [] : rect(a), rect(b), { kind: 'feather' });
+  if (!o.stuck) for (let q = 0; q < a[2]; q++) B.set(a[0] + q, a[1], T.SEMI);   // state 0 is the area as built: the feather starts on spot a
   if (!o.stuck) B.switchAt(gi, st.x, y - 1);
   B.switchAt(gi, st.x + n - 1, y - 1);
   B.spawn('pstMouth', st.x, y - 1, { g: gi, n, a, b, stuck: !!o.stuck, stuckFree: o.free || 0, lx: st.x, rx: st.x + n - 1, period: o.period || 3.2 });
