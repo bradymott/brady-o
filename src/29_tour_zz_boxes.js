@@ -383,6 +383,25 @@ const BoxArt = (() => {
       E(c, 16, yy, r * 0.62, ry * 0.62, 0, mix(Pu2, '#8a5cc8', jaw * 0.6), 1.1); E(c, 16, yy, r * 0.26, ry * 0.26, 0, '#c9a8f0', 1);
       c.fillStyle = 'rgba(255,255,255,0.3)'; c.beginPath(); c.ellipse(16, yy, r * 0.85, ry * 0.85, 0, PI * 1.1, PI * 1.4); c.lineTo(16, yy); c.closePath(); c.fill();
     } },
+    // ---- Table for Two (36, a hidden land): a midnight-blue butter dish on a red-striped foot, a cream dome lid with
+    // an olive for a knob; hit, the olive knob jumps and the lid tips off to the right; empty, the lid lies tipped
+    // against the dish's right side, the dish open ----
+    table: { name: 'Table for Two', draw(c, p) {
+      const Nv = '#2a3a8a', Nv2 = '#1a2660', Cr = '#fbf3e0', Cr2 = '#e4d6bc', Rd = '#e0403a', Ol = '#7d8a2a';
+      const tip = io(seg(p, 0.15, 1)), hop = Math.sin(seg(p, 0, 0.3) * PI);
+      // the red-and-cream striped foot
+      R(c, 6, 27, 20, 4.5, 1.5, Cr); for (let k = 0; k < 4; k++) { c.fillStyle = Rd; c.fillRect(7.5 + k * 5, 27.5, 2.5, 3.5); }
+      // the dish
+      R(c, 3, 17, 26, 11, 3, Nv); shine(c, 6, 19, 20, 1.2); L(c, [[3.5, 18.6], [28.5, 18.6]], Nv2, 1);
+      if (tip > 0.3) { R(c, 5, 15.5, 22, 3, 1.5, '#3a2a20', 1); }
+      // the dome lid: lifts, then tips off to the right and comes to rest leaning on the dish
+      const ang = tip * 1.25, px = 16 + tip * 11, py = 17 - hop * 2 - Math.sin(tip * PI) * 4 + tip * 6;
+      rot(c, px, py, ang, () => {
+        c.beginPath(); c.moveTo(px - 12, py); c.quadraticCurveTo(px - 12, py - 11, px, py - 11); c.quadraticCurveTo(px + 12, py - 11, px + 12, py); c.closePath(); fs(c, Cr);
+        c.fillStyle = Cr2; c.fillRect(px - 12, py - 1.6, 24, 1.6);
+        O(c, px, py - 13.5 - hop * 2.5, 3.6, Ol); c.fillStyle = Rd; c.beginPath(); c.arc(px + 1.4, py - 14 - hop * 2.5, 1.2, 0, TAU); c.fill();
+      });
+    } },
     // ---- Lost & Found: worn ochre leather suitcase, mismatched corner caps, a big blank tag; catches pop, the tag whips over ----
     // ---- The Spare Bone Quarry (hidden land A12): a petrol-green fossil specimen case, bone-white strap latch, a bone
     // across the front pinned by a persimmon knob; hit: the knob pops, the bone swings down and the lid flips up;

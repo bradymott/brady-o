@@ -287,6 +287,8 @@ const ENEMY_SAFE_TYPES = {
   frMagpie: 'a thief: it snatches, it does not hurt', idMacaque: 'a thief', tourThief: 'a thief',
   aqEggSkua: 'a bird overhead: its egg hurts, not the bird', nlGull: 'a bird overhead: its drop hurts', esStork: 'a stork overhead: its bundle hurts',
   frOyster: 'opens and shuts: hurts while open', w22Envelope: 'a fluttering letter (scenery)',
+  // Table for Two (36): the butter curl melts into a harmless puddle (its joke), then pulls itself together
+  tabButter: 'a puddle of butter while melted (29_tour_y_table.js harmlessWhen)',
 };
 const OLD_TYPES = { greeter: 1, pony: 1 };   // the old Black Rock City enemies (08a_chunks.js / 10b_burners.js): in no tour level
 if (!noSweep) {

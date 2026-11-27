@@ -56,7 +56,8 @@ const NOTES = {
   eye: 'Every Red-Eye card! I wrote these at thirty thousand feet. Excuse the turbulence.',
   fest: 'All of Festival Fields! The llamas signed it. That smudge is a hoof.',
   lost: 'Every Lost & Found card! I found this box in Lost & Found. It had your name on it.',
-  bone: 'Every card from the quarry! I sent you a spare bone with a label that says APPROX. Keep it for the next flat-pack wardrobe you build from memory, darling. The last one still has a door on its ceiling.'   // The Spare Bone Quarry (hidden land A12)
+  bone: 'Every card from the quarry! I sent you a spare bone with a label that says APPROX. Keep it for the next flat-pack wardrobe you build from memory, darling. The last one still has a door on its ceiling.',   // The Spare Bone Quarry (hidden land A12)
+  table: 'Every card from our table! I saved you the last olive. Madame Manners says you have to offer it to me first.'   // Table for Two (36)
 };
 const noteOf = C => (NOTES[C.id] || ('Every postcard from ' + C.name + '! I keep them all in a shoebox.')) + ' ♥ C';
 
