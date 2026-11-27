@@ -202,7 +202,8 @@ async function session(browser, viewport, fn) {
         sim(0.1); sim(0.25, { right: true, jump: true, jumpPressed: true });
         const rode = until(() => p.ride === gi, 1.2, { right: true });
         if (!rode) return { rode };
-        const y0 = p.y; const up = until(() => gi.pos >= gi.len - 1, 6, { up: true });
+        // (the path goes on up past the cliff top, to the hidden ledge: here he stops at the cliff top)
+        const y0 = p.y; const up = until(() => (p.y + p.h) / 32 <= 8.05, 6, { up: true });
         const rise = Math.round((y0 - p.y) / 32 * 10) / 10;
         until(() => p.x > (cliffX + 2) * 32 && p.onGround && p.ride !== gi, 2.5, { right: true });
         return { rode, up, rise, onCliff: p.onGround && p.ride !== gi && (p.y + p.h) / 32 < 9, row: (p.y + p.h) / 32, alive: alive() };
@@ -213,7 +214,7 @@ async function session(browser, viewport, fn) {
       await shot('21-15-2-giraffe-lift.png');
       // the bridge: the head goes out across the gap and down to the far side
       const r3 = await page.evaluate(() => {
-        thaw(); const g = S(), p = P(); const L = ents('KeGiraffe').sort((a, b) => a.x - b.x); const gi = L[2];
+        thaw(); const g = S(), p = P(); const L = ents('KeGiraffe').sort((a, b) => a.x - b.x); const gi = L[1];
         const a = gi.path[0], b = gi.path[gi.path.length - 1];
         place(Math.floor(a[0] / 32) - 3, 13); sim(0.2);
         until(() => gi.pos < 4, 4);
@@ -225,7 +226,7 @@ async function session(browser, viewport, fn) {
         return { rode, crossed, farSide: p.cx > b[0] - 16 && p.onGround && alive(), x: Math.round(p.cx / 32), bx: Math.round(b[0] / 32) };
       });
       check('15-2: a giraffe\'s neck is a bridge: hold UP and it carries Brady over the gap to the far side', r3.rode && r3.crossed && r3.farSide, r3);
-      await page.evaluate(() => { const p = P(), gi = ents('KeGiraffe').sort((a, b) => a.x - b.x)[2], a = gi.path[0]; place(Math.floor(a[0] / 32) - 3, 13); until(() => gi.pos < 4, 9); sim(0.1); sim(0.25, { right: true, jump: true, jumpPressed: true }); until(() => p.ride === gi, 1.2, { right: true }); until(() => gi.pos > gi.len * 0.5, 4, { up: true }); freeze(); });
+      await page.evaluate(() => { const p = P(), gi = ents('KeGiraffe').sort((a, b) => a.x - b.x)[1], a = gi.path[0]; place(Math.floor(a[0] / 32) - 3, 13); until(() => gi.pos < 4, 9); sim(0.1); sim(0.25, { right: true, jump: true, jumpPressed: true }); until(() => p.ride === gi, 1.2, { right: true }); until(() => gi.pos > gi.len * 0.5, 4, { up: true }); freeze(); });
       await shot('22-15-2-giraffe-bridge.png');
       await page.evaluate(() => { thaw(); toArea('manor'); place(8, 11); sim(0.4); freeze(); });
       await shot('23-15-2-meerkat-burrow.png');
