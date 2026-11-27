@@ -105,7 +105,7 @@ const L1 = { n: 1, name: 'Elbows on the Trellis', mapLabel: 'Elbows on the Trell
 const beeRows = (() => {
   const W = 212, H = 26, Gr = grid(W, H, '.');
   ground(Gr, 0, 24, 21); put(Gr, 3, 20, '@'); put(Gr, 6, 20, 'k'); put(Gr, 12, 17, '?'); put(Gr, 14, 20, 'x');
-  put(Gr, 18, 20, 'f'); put(Gr, 22, 20, '1');
+  put(Gr, 19, 20, 'f'); put(Gr, 23, 20, '1');
   ground(Gr, 25, 50, 15); put(Gr, 40, 14, 'c'); put(Gr, 34, 12, '*'); put(Gr, 28, 13, 'o.o.o'); put(Gr, 45, 10, 'd');
   pit(Gr, 51, 63); put(Gr, 49, 14, 'e'); put(Gr, 54, 25, '2'); put(Gr, 54, 14, 'i'); put(Gr, 59, 25, '3'); put(Gr, 59, 12, 'R');
   ground(Gr, 64, 92, 15); put(Gr, 72, 14, 'r'); put(Gr, 68, 11, '?'); put(Gr, 78, 14, 'c');

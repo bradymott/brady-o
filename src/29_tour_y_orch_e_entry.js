@@ -75,7 +75,7 @@ class OrchJpTree extends Ent {
       return;
     }
     // behind the trunk, rising, his head into the fork's underside
-    if (p.vy < 0 && Math.abs(p.cx - this.trunkX) < 14 && p.y <= this.forkY + 4 && p.y > this.forkY - TS) {
+    if (p.vy < 0 && Math.abs(p.cx - this.trunkX) < 0.9 * TS && p.y <= this.forkY + 4 && p.y > this.forkY - TS) {
       this.arr = 0; p.stunT = 3; g.burst(this.trunkX, this.forkY, 14, JPC.leaf2, 'confetti'); TourKit.sfx('rustle', 'kick', { vol: 0.5, pitch: 1.4 });
     }
   }

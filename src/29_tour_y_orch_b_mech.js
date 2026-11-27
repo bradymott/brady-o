@@ -406,6 +406,8 @@ Object.assign(Tour.pieces, {
 });
 // the committee's gate: a clipped hedge with a rust-tied wicket that swings up once the motion is carried
 class OrchHedgeGate extends ENTITY_TYPES.lock {
+  // it opens by itself the moment the motion is carried (the key is the basket's vote)
+  update(dt) { super.update(dt); if (!this.open && this.g.keys.has(this.id) && this.g.player) this.touchPlayer(this.g.player); }
   draw(ctx) {
     const k = this.open ? clamp((this.openT || 0) / 0.6, 0, 1) : 0, x = this.x, y = this.y, w = TS, h = this.h;
     ctx.save(); ctx.globalAlpha = 1 - k * 0.85;

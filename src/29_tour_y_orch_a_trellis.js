@@ -42,7 +42,7 @@ const forksOf = g => g.entities.filter(e => e instanceof OrchFork && !e.remove);
     if (!W.grip) {
       const z = W.cool <= 0 && inp.up && !p.inWater ? netAt(A, p.x + p.w / 2, gripY(p)) : null;
       if (!z) return ppf(p, inp, A, dt, platforms, opts);
-      W.grip = z; W.face = 0; p.vx = 0; p.vy = 0; p.onGround = false; p.jumping = false; p.ride = null;
+      W.grip = z; W.face = 0; W.crossT = 0; p.vx = 0; p.vy = 0; p.onGround = false; p.jumping = false; p.ride = null;
       TourKit.sfx('grip', 'select', { vol: 0.3, pitch: 1.6 });
     }
     const z = W.grip, ev = quiet();
@@ -66,6 +66,7 @@ const forksOf = g => g.entities.filter(e => e instanceof OrchFork && !e.remove);
     if (dx) p.facing = dx;
     // a fork at the edge he is pushing against: the push bends it
     for (const f of forksOf(p.g)) f.push(p, W, dx, dt);
+    if (!W.grip) return ppf(p, inp, A, dt, platforms, opts);
     p.vx = dx * sp; p.vy = dy * sp;
     const x0 = p.x, y0 = p.y;
     moveBody(p, A, dt, { semis: false, hidden: true });
@@ -219,7 +220,9 @@ class OrchFork extends Ent {
   spring() {
     this.bent = false; this.relT = 0; TourKit.sfx('boing', 'spring', { vol: 0.4, pitch: 1.3 });
     OK.say(this.g, this.rootX + this.dir * 2 * TS, this.y - 10, 'BOING! FROM BEHIND, WITH THE TIE', '#ffffff');
-    const p = this.g.player, W = p && p.orchTr; if (W && W.grip === this.zone) { W.grip = null; W.cool = NET.cool; W.face = 0; }
+    // Brady on it is sprung back onto the trellis at its root (no fall: the lesson is the spring)
+    const p = this.g.player, W = p && p.orchTr;
+    if (W && W.grip === this.zone) { const gx = this.rootX - this.dir * TS * 0.6, z = netAt(this.g.area, gx, gripY(p)); if (z) { W.grip = z; p.x = gx - p.w / 2; } else { W.grip = null; W.cool = NET.cool; W.face = 0; } }
   }
   update(dt) { this.t += dt; this.ang = approach(this.ang, this.bent ? 0 : 1, dt * (this.bent ? 5 : 7)); }
   touchPlayer() {}
