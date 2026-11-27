@@ -14,7 +14,10 @@
      seatsGap     33-4 THE GREEN ROOM         PERFECT GAP: walking on the plank over the tureen tips the soup; the two
                                              crackers slide (the current spreads them); the olive sits on both while
                                              the gap is narrow: a slow count of three. If the gap opens, it plops in.
-     (33-5 and 33-6: see their blocks below.)
+     seatsRest    33-5 THE BAND PIT           LEAVE ME A REST: four tin stagehands, the fourth naps. A count-in bar, then
+                                             two bars: THROW on beats 1, 2, 3; thumb off the fourth.
+     seatsCall    33-6 THE CURTAIN CALL       CURTAIN CALL SHEET: four bows under the curtain (three stagehands and one
+                                             cheeky sleeve that bows twice); a flower to each DIFFERENT pair of shoes.
    A miss costs nothing (a raspberry, the turn starts again). The prize cage opens at the win. Each kind scripts its
    own win for tools/sbw_rooms_test.js (testWin). The title comes alone first, then the rule on a pill, then the
    room's counter in one spot under the HUD.
@@ -333,6 +336,145 @@ TourRooms.def('seatsGap', {
     for (let q = 0; q < 240; q++) frame(g, {});
     // stand over the crackers' middle, nudging toward the far one
     const want = cx + GAP.half * 0.7; for (let q = 0; q < 120 * 25 && !R.won; q++) frame(g, { right: p.cx < want - 6, left: p.cx > want + 6 });
+  }
+});
+
+/* ================= seatsRest: LEAVE ME A REST (the band pit) ================= */
+// the way in on the right (mirrored); the band (four tin stagehands) on a riser at the back; the beat lamps over them;
+// the mark in front. A count-in bar first (watch: three bob, the fourth naps), then two bars to play: THROW on beats
+// 1, 2 and 3; keep your thumb off the fourth
+const BEAT = 0.75, TAP = 0.2;
+TourRooms.def('seatsRest', {
+  title: 'LEAVE ME A REST', rule: 'TAP THROW ON THREE BEATS. NOT THE FOURTH', need: 'PLAY TWO BARS FIRST!',
+  make(o, keep, ctx, A, rng) {
+    const g = stageRoom(keep, A, o, { st: 8, cx: 17 });
+    mk(g, 11, 7, 0, 'TAP THROW');
+    g.winSpot(A.id, 11, 7);
+    g.coins(8, 9, 5); g.coins(13, 14, 5);
+    mirror(g, []);
+    return g;
+  },
+  cx(A) { return ((A.roomKit.data && A.roomKit.data.mirror ? W - 1 - 11 : 11) + 0.5) * TS; },
+  enter(play, A, R) { if (!R.won) { R.ph = 'wait'; R.k0 = 0; R.hits = {}; } },
+  restart(play, A, R) { R.ph = 'count'; R.t0 = play.t; R.hits = {}; },
+  reset(play, A, R, why) { R.fails = (R.fails || 0) + 1; RK.raspberry(play, why); R.ph = 'wait'; R.hits = {}; R.waitT = play.t + 1.2; },
+  beatAt(play, R) { return (play.t - R.t0) / BEAT; },
+  mark(play, A, R, kit, m, p) {
+    if (R.ph !== 'play') return;
+    const b = this.beatAt(play, R) - 4, k = Math.round(b), off = (b - k) * BEAT;
+    if (k < 0 || k > 7 || Math.abs(off) > TAP) return;
+    if (k % 4 === 3) { this.reset(play, A, R, 'SHH! THAT ONE IS A REST'); return; }
+    if (!R.hits[k]) { R.hits[k] = true; chime(k % 4, true); play.burst(this.cx(A), 6 * TS, 6, SA.GOLD, 'spark'); }
+  },
+  update(play, dt, A, R, kit) {
+    if (R.won) return;
+    if (!R.ph) this.enter(play, A, R);
+    const p = P(play), on = Math.abs(p.cx - this.cx(A)) < TS && p.onGround;
+    if (R.ph === 'wait') { if (on && quiet(play, R) && !(play.t < (R.waitT || 0))) this.restart(play, A, R); return; }
+    const b = this.beatAt(play, R), kb = Math.floor(b);
+    if (kb !== R.lastB) { R.lastB = kb; if (kb >= 0 && kb < 12 && kb % 4 !== 3) Sound.play('select', { vol: kb < 4 ? 0.25 : 0.12, pitch: kb % 4 === 0 ? 1.0 : 0.8 }); }
+    if (R.ph === 'count' && b >= 3.6) R.ph = 'play';
+    if (R.ph === 'play') {
+      if (!on) { this.reset(play, A, R, 'STAY ON YOUR MARK!'); return; }
+      const k = Math.floor(b - 4 - TAP / BEAT);
+      for (let q = 0; q <= Math.min(7, k); q++) if (q % 4 !== 3 && !R.hits[q]) { this.reset(play, A, R, 'MISSED A BEAT! FROM THE TOP'); return; }
+      if (b - 4 > 8) { TourRooms.win(play, A, R, { text: 'TWO BARS, ONE PERFECT REST!', coins: 3 }); }
+    }
+  },
+  draw(play, ctx, A, R, kit) {
+    const t = play.t, cx = this.cx(A), y = 6.2 * TS, b = R.ph === 'count' || R.ph === 'play' ? this.beatAt(play, R) : -1, kb = Math.floor(b), q = ((kb % 4) + 4) % 4, fr = b - kb;
+    // the riser and the band: four tin stagehands; the one whose beat it is bobs; the fourth naps
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#3a3a52'; ctx.fillRect(cx - 4.2 * TS, y - 6, 8.4 * TS, 12); ctx.strokeRect(cx - 4.2 * TS, y - 6, 8.4 * TS, 12); ctx.restore();
+    for (let k = 0; k < 4; k++) {
+      const hx = cx + (k - 1.5) * 2 * TS, now = b >= 0 && kb < 12 && q === k && fr < 0.4, nap = k === 3;
+      SA.hand(ctx, hx, y - 6, t, nap ? '#8a8aa0' : SA.GOLD, now && !nap ? 'bow' : 'stand', 1, 1.1);
+      if (nap) { ctx.save(); ctx.font = TourBackstage.F9; ctx.fillStyle = '#c8d8ff'; ctx.fillText('z', hx + 14, y - 52 - Math.sin(t * 2) * 3); ctx.fillText('Z', hx + 22, y - 64 - Math.sin(t * 2 + 1) * 3); ctx.restore(); }
+      // its beat lamp (the fourth is a little pillow: a rest)
+      const ly = 3.4 * TS, lit = now;
+      ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+      if (nap) { ctx.fillStyle = lit ? '#c8d8ff' : '#6a6a88'; rr(ctx, hx - 16, ly - 9, 32, 18, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = INK; ctx.font = TourBackstage.F9; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('REST', hx, ly + 1); }
+      else { ctx.fillStyle = lit ? '#ffe68a' : '#5a4a2a'; ctx.beginPath(); ctx.arc(hx, ly, 13, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = lit ? INK : '#c8b890'; ctx.font = TourBackstage.F9; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(k + 1), hx, ly + 1); }
+      ctx.restore();
+    }
+    // the bars: a dot per beat played
+    if (R.ph === 'play' || R.ph === 'count') for (let k = 0; k < 8; k++) { ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.fillStyle = k % 4 === 3 ? '#6a6a88' : R.hits[k] ? '#9aff8a' : '#3a3a4a'; ctx.beginPath(); ctx.arc(cx + (k - 3.5) * 22, 4.6 * TS, 7, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore(); }
+    if (!R.won && quiet(play, R)) hud(play, ctx, R.ph === 'wait' ? 'STAND ON THE MARK' : R.ph === 'count' ? 'LISTEN: ONE, TWO, THREE, REST' : 'BAR ' + (b < 8 ? 1 : 2) + ' OF 2');
+  },
+  testWin(g, A, R, kit, frame) {
+    const p = g.player, cx = this.cx(A); hold(p, cx, 8 * TS);
+    for (let q = 0; q < 240; q++) frame(g, {});
+    const m = marks(g)[0];
+    for (let q = 0; q < 120 * 16 && !R.won; q++) { hold(p, cx, 8 * TS); if (R.ph === 'play') { const b = this.beatAt(g, R) - 4, k = Math.round(b); if (k >= 0 && k % 4 !== 3 && !R.hits[k] && Math.abs(b - k) * BEAT < 0.05) this.mark(g, A, R, kit, m, p); } frame(g, {}); }
+  }
+});
+
+/* ================= seatsCall: CURTAIN CALL SHEET (the curtain call) ================= */
+// the way in on the left; the curtain's hem along the stage; four bows, one at a time, a pair of shoes stepping out
+// under the hem each time: three stagehands, and one cheeky sleeve that bows twice (the same shoes, two places).
+// Then THROW at a pair's mark gives it a flower: one to each DIFFERENT pair (a second flower to the same shoes is a
+// miss)
+const CALL = { slots: [8, 11, 14, 17] };
+TourRooms.def('seatsCall', {
+  title: 'CURTAIN CALL SHEET', rule: 'A FLOWER FOR EACH DIFFERENT PAIR OF SHOES', need: 'FINISH THE CURTAIN CALL FIRST!',
+  make(o, keep, ctx, A, rng) {
+    const g = stageRoom(keep, A, o, { st: 9, cx: 18, s0: 6 });
+    for (const x of CALL.slots) mk(g, x, 8, x, 'GIVE A FLOWER');
+    g.winSpot(A.id, 12, 8);
+    g.coins(9, 16, 5);
+    return g;
+  },
+  enter(play, A, R) { if (!R.won) this.deal(play, A, R); },
+  deal(play, A, R) {
+    R.n = (R.n || 0) + 1;
+    // the four pairs: kinds 0, 2, 3 (stagehands) and 1 twice (the sleeve), shuffled by the attempt
+    const order = [[1, 0, 1, 2], [0, 1, 3, 1], [1, 3, 2, 1], [2, 1, 0, 1]][R.n % 4], kinds = order.map(k => [0, 1, 2, 3][k] === 1 ? 1 : k);
+    R.kinds = kinds.map(k => (k === 0 ? 0 : k === 1 ? 1 : k === 2 ? 2 : 3)); R.given = {}; R.flowers = []; R.ph = 'bows'; R.t0 = play.t;
+  },
+  reset(play, A, R, why) { R.fails = (R.fails || 0) + 1; RK.raspberry(play, why); this.deal(play, A, R); },
+  slot(m) { return CALL.slots.indexOf(m.k); },
+  mark(play, A, R, kit, m, p) {
+    if (R.ph !== 'give') return;
+    const i = this.slot(m); if (i < 0 || R.flowers.includes(i)) return;
+    const kd = R.kinds[i];
+    if (R.given[kd]) { this.reset(play, A, R, 'THOSE SHOES ALREADY HAVE A FLOWER!'); return; }
+    R.given[kd] = true; R.flowers.push(i); chime(R.flowers.length, true);
+    const need = new Set(R.kinds).size;
+    if (Object.keys(R.given).length >= need) TourRooms.win(play, A, R, { text: 'BRAVO! EVERYONE HAS A FLOWER', coins: 3 });
+  },
+  update(play, dt, A, R, kit) {
+    if (R.won) return;
+    if (!R.kinds) this.deal(play, A, R);
+    if (!quiet(play, R)) { R.t0 = play.t; return; }
+    if (R.ph === 'bows' && play.t - R.t0 > 4 * 1.1 + 0.4) R.ph = 'give';
+  },
+  draw(play, ctx, A, R, kit) {
+    const t = play.t, y9 = 9 * TS, el = R.ph === 'bows' ? (play.t - R.t0) : 99, cur = Math.floor(el / 1.1);
+    // the curtain: mulberry folds down to a gold hem a little over the stage
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    const x0 = 6.5 * TS, x1 = 19.2 * TS, hem = y9 - 26;
+    ctx.fillStyle = SA.MUL; ctx.fillRect(x0, 1 * TS, x1 - x0, hem - 1 * TS); ctx.strokeRect(x0, 1 * TS, x1 - x0, hem - 1 * TS);
+    ctx.fillStyle = SA.MUL_D; for (let x = x0 + 12; x < x1; x += 26) ctx.fillRect(x, 1 * TS + 4, 6, hem - 1 * TS - 8);
+    for (let i = 0; i < 4; i++) {
+      const sx = (CALL.slots[i] + 0.5) * TS, bowing = el < 4.4 && cur === i, k = bowing ? Math.sin((el - i * 1.1) / 1.1 * Math.PI) : 0;
+      // a bow: the curtain bulges where someone bows behind it
+      if (k > 0) { ctx.fillStyle = SA.MUL_L; ctx.beginPath(); ctx.ellipse(sx, hem - 50, 26, 40 * k, 0, 0, TAU); ctx.fill(); }
+    }
+    ctx.fillStyle = SA.GOLD; ctx.fillRect(x0, hem - 8, x1 - x0, 8); ctx.strokeRect(x0, hem - 8, x1 - x0, 8);
+    ctx.restore();
+    // the shoes under the hem: each pair shows once its bow has happened (all four once the bows are done)
+    for (let i = 0; i < 4; i++) {
+      const sx = (CALL.slots[i] + 0.5) * TS, shown = R.ph !== 'bows' || cur >= i;
+      if (shown && R.kinds) SA.shoes(ctx, sx, y9 - 2, R.kinds[i], 1.1);
+      if (R.flowers && R.flowers.includes(i)) { ctx.save(); ctx.strokeStyle = '#3a8a3a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(sx, y9 - 8); ctx.lineTo(sx + 2, y9 - 30); ctx.stroke(); ctx.fillStyle = '#ff7ab0'; ctx.strokeStyle = INK; ctx.lineWidth = 1.4; for (let q = 0; q < 5; q++) { ctx.beginPath(); ctx.arc(sx + 2 + Math.cos(q * 1.26) * 5, y9 - 32 + Math.sin(q * 1.26) * 5, 4, 0, TAU); ctx.fill(); ctx.stroke(); } ctx.fillStyle = SA.GOLD; ctx.beginPath(); ctx.arc(sx + 2, y9 - 32, 3, 0, TAU); ctx.fill(); ctx.restore(); }
+    }
+    if (!R.won && quiet(play, R)) hud(play, ctx, R.ph === 'bows' ? 'WATCH THE BOWS...' : 'FLOWERS: ' + (R.flowers ? R.flowers.length : 0) + ' OF ' + (R.kinds ? new Set(R.kinds).size : 3));
+  },
+  hideMark(play, A, R) { return R.ph !== 'give'; },
+  hideCue(play, A, R) { return R.ph !== 'give'; },
+  testWin(g, A, R, kit, frame) {
+    const p = g.player; for (let q = 0; q < 120 * 7; q++) frame(g, {});
+    const seen = {};
+    for (let i = 0; i < 4 && !R.won; i++) { const kd = R.kinds[i]; if (seen[kd]) continue; seen[kd] = true; const m = marks(g).find(e => e.k === CALL.slots[i]); this.mark(g, A, R, kit, m, p); frame(g, {}); }
   }
 });
 

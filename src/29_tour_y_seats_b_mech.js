@@ -274,6 +274,97 @@ class SeatsCurtainLock extends ENTITY_TYPES.lock {
 }
 ENTITY_TYPES.seatsCurtainLock = SeatsCurtainLock;
 
+/* ================= 33-5: the follow-spot ================= */
+// A follow-spot on a stand at the near edge of a pit; across the pit, the stage, where Piwi's tin stagehands mill about,
+// each with a numbered badge. The call board says whose bow it is. On the stand's mark the stick swings the spot along
+// the stage and holding THROW focuses it (wide and dim -> tight and bright). Hold the focused spot on the right
+// stagehand and he takes his bow and puts his plank down across the pit. The wrong one shrugs (NOT MY CUE). In the
+// last scene the right stagehand walks behind two enormous false moustaches on sticks (scenery): the spot cannot find
+// him there.
+const BADGE = [['#e84a4a', '1'], ['#3a8ae0', '2'], ['#e8c040', '3']];
+// { tx, fy (the stand's mark), sx0, sx1 (px: the stage the spot can reach), hands: [{ x0, x1 (px), sp, b }], right,
+// plank (tiles), mous: [x px] }
+class SeatsSpot extends Ent {
+  constructor(g, s) {
+    super(g, s, TS, TS * 2); this.back = true; this.seatsProp = true; this.seatsStick = true;
+    Object.assign(this, { tx: s.tx, fy: s.fy, sx0: s.sx0, sx1: s.sx1, right: s.right, plank: s.plank, mous: s.mous || [], sy: s.sy });
+    this.x = this.tx * TS; this.y = (this.fy - 2) * TS; this.spot = (this.sx0 + this.sx1) / 2; this.focus = 0; this.lit = 0; this.done = false; this.cool = 0; this.res = null;
+    this.hands = s.hands.map((h, k) => ({ x: h.x0, x0: h.x0, x1: h.x1, sp: h.sp || 0.8 * TS, d: k % 2 ? -1 : 1, b: h.b, pose: 'stand', t: 0 }));
+    hideTiles(g, this.plank);
+  }
+  seatsTouch(p) { return !this.done && onMark(p, this.tx, this.fy, 0.8); }
+  seatsInput(p, inp, dt) {
+    const d = (inp.right ? 1 : 0) - (inp.left ? 1 : 0);
+    this.spot = clamp(this.spot + d * 5 * TS * dt, this.sx0, this.sx1);
+    this.held = !!inp.action && this.cool <= 0;
+  }
+  hidden(h) { return this.mous.some(mx => Math.abs(h.x - mx) < 1.3 * TS); }
+  update(dt) {
+    this.t += dt;
+    const p = this.g.player, on = p && p.seatsProp === this;
+    if (!on) this.held = false;
+    if (this.cool > 0) this.cool -= dt;
+    this.focus = approach(this.focus, this.held ? 1 : 0, dt * (this.held ? 2.4 : 4));
+    for (const h of this.hands) {
+      h.t += dt;
+      if (h.pose === 'shrug') { if (h.t > 1.2) h.pose = 'stand'; continue; }
+      if (h.pose === 'bow' || h.pose === 'plank') continue;
+      h.x += h.d * h.sp * dt; if (h.x > h.x1) { h.x = h.x1; h.d = -1; } if (h.x < h.x0) { h.x = h.x0; h.d = 1; }
+    }
+    if (this.done) { const h = this.hands[this.right]; if (h.pose === 'bow' && h.t > 0.7) { h.pose = 'plank'; h.t = 0; growTiles(this.g, this.plank); liftOut(this.g, this.plank); TourKit.sfx('plank', 'bump', { vol: 0.6, pitch: 0.8 }); this.g.burst((this.plank[0][0] + this.plank.length / 2) * TS, this.plank[0][1] * TS, 12, SA.CREAM, 'dust'); } return; }
+    // the focused spot on a stagehand (not behind the moustaches) for half a second
+    const H = this.focus > 0.9 ? this.hands.find(h => Math.abs(h.x - this.spot) < 20 && !this.hidden(h)) : null;
+    if (H && H === this.litH) this.lit += dt; else { this.lit = 0; this.litH = H; }
+    if (H && this.lit > 0.5) {
+      const k = this.hands.indexOf(H); this.lit = 0;
+      if (k === this.right) { this.done = true; this.seatsProp = false; H.pose = 'bow'; H.t = 0; Sound.play('select', { vol: 0.5, pitch: 1.5 }); say(this.g, H.x, this.sy - 3 * TS, 'No ' + BADGE[H.b][1] + ' TAKES A BOW!', '#9aff8a'); }
+      else { H.pose = 'shrug'; H.t = 0; this.cool = 0.9; this.held = false; TourKit.sfx('nope', 'bump', { vol: 0.4, pitch: 1.4 }); say(this.g, H.x, this.sy - 3 * TS, 'NOT MY CUE!', '#ffffff'); }
+    }
+  }
+  touchPlayer() {}
+  draw(ctx) {
+    const t = this.t, p = this.g.player, on = p && p.seatsProp === this, sy = this.sy, f = this.focus;
+    // the stand and its lamp, aimed at the spot
+    const lx = (this.tx + 0.5) * TS, ly = this.fy * TS - 70, a = Math.atan2(sy - 20 - ly, this.spot - lx);
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    ctx.fillStyle = SA.TIN_D; ctx.fillRect(lx - 3, ly, 6, 70); ctx.strokeRect(lx - 3, ly, 6, 70); ctx.beginPath(); ctx.moveTo(lx - 16, this.fy * TS); ctx.lineTo(lx, this.fy * TS - 20); ctx.lineTo(lx + 16, this.fy * TS); ctx.stroke();
+    ctx.translate(lx, ly); ctx.rotate(a); ctx.fillStyle = '#3a3a4a'; rr(ctx, -12, -10, 34, 20, 5); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#fff4c0'; ctx.fillRect(20, -7, 4, 14);
+    ctx.restore();
+    // the beam and the pool of light on the stage (wide and dim; tight and bright while THROW focuses it)
+    if (!this.done) {
+      const r = lerp(70, 26, f), al = lerp(0.18, 0.5, f);
+      ctx.save(); ctx.fillStyle = `rgba(255,244,190,${al * 0.5})`; ctx.beginPath(); ctx.moveTo(lx + Math.cos(a) * 24, ly + Math.sin(a) * 24); ctx.lineTo(this.spot - r, sy - 10); ctx.lineTo(this.spot + r, sy - 10); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = `rgba(255,248,200,${al})`; ctx.beginPath(); ctx.ellipse(this.spot, sy - 30, r, r * 1.1, 0, 0, TAU); ctx.fill();
+      if (f > 0.9) { ctx.strokeStyle = '#ffe68a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(this.spot, sy - 30, r + 3, r * 1.1 + 3, 0, 0, TAU); ctx.stroke(); }
+      ctx.restore();
+    }
+    // the stagehands with their badges
+    for (const h of this.hands) {
+      SA.hand(ctx, h.x, sy, t, BADGE[h.b][0], h.pose, h.d, 1.25);
+      if (!this.hidden(h)) { ctx.save(); ctx.font = TourBackstage.F9; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(BADGE[h.b][1], h.x + h.d * 2.5, sy - 28); ctx.restore(); }
+      if (h === this.litH && this.lit > 0) { ctx.save(); ctx.strokeStyle = '#9aff8a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(h.x, sy - 70, 9, -Math.PI / 2, -Math.PI / 2 + TAU * Math.min(1, this.lit / 0.5)); ctx.stroke(); ctx.restore(); }
+    }
+    // the false moustaches on their sticks, in front of anyone behind them
+    for (const mx of this.mous) {
+      ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2.4; ctx.fillStyle = '#8a6a4a'; ctx.fillRect(mx - 3, sy - 64, 6, 64); ctx.strokeRect(mx - 3, sy - 64, 6, 64);
+      ctx.fillStyle = '#2a1a14'; ctx.beginPath(); ctx.moveTo(mx, sy - 74); ctx.bezierCurveTo(mx - 20, sy - 104, mx - 56, sy - 92, mx - 62, sy - 62); ctx.bezierCurveTo(mx - 50, sy - 76, mx - 26, sy - 70, mx, sy - 52); ctx.bezierCurveTo(mx + 26, sy - 70, mx + 50, sy - 76, mx + 62, sy - 62); ctx.bezierCurveTo(mx + 56, sy - 92, mx + 20, sy - 104, mx, sy - 74); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.beginPath(); ctx.ellipse(mx - 30, sy - 80, 14, 4, -0.3, 0, TAU); ctx.fill();
+      ctx.restore();
+    }
+    // the call board over the stage: whose bow it is (its colour and number)
+    if (!this.done) {
+      const bx = (this.sx0 + this.sx1) / 2, by = sy - 5.2 * TS, B = BADGE[this.hands[this.right].b];
+      ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#2a1a24'; rr(ctx, bx - 62, by - 18, 124, 36, 6); ctx.fill(); ctx.stroke();
+      ctx.font = TourBackstage.F9; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ffffff'; ctx.fillText('BOW: No', bx - 50, by);
+      ctx.fillStyle = B[0]; ctx.beginPath(); ctx.arc(bx + 34, by, 13, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.fillText(B[1], bx + 34, by + 1);
+      ctx.restore();
+      SA.ring(ctx, (this.tx + 0.5) * TS, this.fy * TS, t, on, 17);
+      if (on && !this.held) SA.cue(ctx, (this.tx + 0.5) * TS, this.fy * TS - 2.6 * TS, t, 'STICK AIMS, HOLD THROW');
+    }
+  }
+}
+ENTITY_TYPES.seatsSpot = SeatsSpot;
+
 /* ---------------- the pieces (the letter's cell: st.x, st.gy - 1) ---------------- */
 Object.assign(Tour.pieces, {
   // a fold-up seat: the letter is its pan (one row over the floor); the backrest stands in the next column, h rows
@@ -298,12 +389,22 @@ Object.assign(Tour.pieces, {
   // a backdrop flat: the letter is its left column at its start on the floor row; { w, h, dl, dw, track (tiles it can
   // roll right; negative: left), fid, link, rear, art }
   'seats.backdrop'(st, o) {
-    const B = st.B, x = st.x, gy = st.gy, tr = o.track || 6, min = Math.min(x, x + tr) * TS, max = Math.max(x, x + tr) * TS;
+    const B = st.B, x = st.x, gy = st.gy + 1, tr = o.track || 6, min = Math.min(x, x + tr) * TS, max = Math.max(x, x + tr) * TS;
     B.spawn('seatsBackdrop', x, gy - 1, { fx: x * TS, w: o.w || 6, h: o.h || 5, dl: o.dl == null ? 2 : o.dl, dw: o.dw || 2, min, max, link: o.link, fid: o.fid, rear: !!o.rear, gy, art: o.art || 0 });
     return st.x;
   },
   // the finale's curtain: a lowered curtain across the way (a lock) the letter's column, h rows
   'seats.curtain'(st, o) { const B = st.B, x = st.x, y = st.gy - 1, n = B.spawns.length; B.lock(x, y - (o.h || 4) + 1, y, o.id, 'door'); for (let k = n; k < B.spawns.length; k++) if (B.spawns[k].type === 'lock') B.spawns[k].type = 'seatsCurtainLock'; return st.x; },
+  // a follow-spot: the letter is its mark on the floor row; { gap (tiles to the pit), pit (its width: the plank),
+  // stage: [dx0, dx1] (tiles from the letter: where the hands walk and the spot reaches), hands: [[dx0, dx1, speed, badge]],
+  // right (index), mous: [dx, ...] }
+  'seats.spot'(st, o) {
+    const B = st.B, x = st.x, fy = st.gy, p0 = x + 1 + (o.gap || 2), plank = [];
+    for (let q = 0; q < o.pit; q++) { plank.push([p0 + q, fy]); B.set(p0 + q, fy, T.SEMI); }
+    const X = d => (x + d + 0.5) * TS;
+    B.spawn('seatsSpot', x, fy - 1, { tx: x, fy, sx0: X(o.stage[0]), sx1: X(o.stage[1]), sy: fy * TS, right: o.right || 0, plank, mous: (o.mous || []).map(X), hands: o.hands.map(([a, b, sp, bd]) => ({ x0: X(a), x1: X(b), sp: (sp || 0.8) * TS, b: bd })) });
+    return st.x;
+  },
   // a flat: the letter is the first pit column on the floor row; { w (pit width), tail (tiles of rope tail ending
   // `gap` tiles before the pit), gap, target, win, mid (offset of a middle support), k }
   'seats.flat'(st, o) {
@@ -315,6 +416,6 @@ Object.assign(Tour.pieces, {
   }
 });
 
-Object.assign(TourLandscape.ARCH_LABEL, { slackline: 'FLATS', foldseat: 'SEATS', pushflat: 'SCENERY' });
+Object.assign(TourLandscape.ARCH_LABEL, { slackline: 'FLATS', foldseat: 'SEATS', pushflat: 'SCENERY', followspot: 'FOLLOW-SPOT' });
 Object.assign(Tour.seatsKit, { hideTiles, growTiles, liftOut, SeatsFlat });
 })();

@@ -254,9 +254,52 @@ const L4 = { n: 4, time: 380, name: 'Please Mind the Scenery', mapLabel: 'Please
     { id: 'green', gen: 'room', role: 'secret', theme: 'seats_room_green', stamp: 'seatsGreen', room: 'seatsGap' }
   ] };
 
+/* ---------------- 33-5 House Left ---------------- */
+// house left, ground tops row 17: three scenes. Each: a follow-spot on its stand at the edge of the orchestra pit,
+// the stage across it where the tin stagehands mill about. ① two stagehands; ② three, walking; then a gantry up from
+// the wings (the wrong-way seat at its top) to the band pit (room B40), which lets Brady out by the last scene;
+// ③ the last scene: the right stagehand walks behind two enormous false moustaches on sticks
+const houseRows = (() => {
+  const W = 200, H = 22, Gr = grid(W, H, '.');
+  ground(Gr, 0, 22, 17); put(Gr, 3, 16, '@'); put(Gr, 7, 16, 'k'); put(Gr, 10, 13, '?'); put(Gr, 3, 12, 'o.o.o');
+  put(Gr, 20, 16, '1'); ground(Gr, 31, 61, 17);
+  put(Gr, 49, 16, 'c'); fillG(Gr, 50, 13, 53, 13, '-'); put(Gr, 51, 10, '*'); put(Gr, 55, 16, 'r'); put(Gr, 45, 12, 'o.o');
+  put(Gr, 59, 16, '2'); ground(Gr, 71, 105, 17);
+  put(Gr, 90, 16, 'c'); put(Gr, 94, 13, '?'); put(Gr, 97, 16, 'j');
+  // the gantry: steps up from the wings to a walkway at row 7 with the band-pit door
+  fillG(Gr, 79, 14, 81, 14, '-'); fillG(Gr, 83, 11, 85, 11, '-'); fillG(Gr, 79, 8, 88, 8, '-'); put(Gr, 80, 7, 'u'); put(Gr, 86, 7, 'A'); put(Gr, 82, 5, 'o.o');
+  put(Gr, 100, 16, 'O'); put(Gr, 103, 16, '3'); ground(Gr, 116, W - 1, 17);
+  put(Gr, 137, 16, 'a'); put(Gr, 140, 16, 'c'); put(Gr, 146, 16, 'l'); fillG(Gr, 152, 13, 155, 13, '-'); fillG(Gr, 157, 10, 160, 10, '-'); put(Gr, 158, 7, 'P'); put(Gr, 150, 12, 'o.o');
+  put(Gr, 163, 13, 'R'); fillG(Gr, 162, 14, 164, 14, '-'); put(Gr, 170, 16, 'd'); put(Gr, 176, 13, '?'); put(Gr, 182, 16, 'r'); put(Gr, 192, 16, 'G');
+  fillG(Gr, W - 1, 0, W - 1, 16, 'H');
+  return rowsOf(Gr);
+})();
+const HL = {
+  k: SIGN('A FOLLOW-SPOT! ON ITS MARK THE STICK SWINGS IT AND THROW FOCUSES IT. LIGHT THE STAGEHAND THE BOARD CALLS'),
+  O: SIGN('LAST SCENE: SCENERY MOUSTACHES. THE SPOT CANNOT FIND ANYONE BEHIND THEM'),
+  l: ['enemy', 'seatsCrab'], r: ['enemy', 'seatsStoat'], j: ['enemy', 'seatsHen'], d: ['enemy', 'seatsShrew'],
+  '1': ['piece', 'seats.spot', { gap: 2, pit: 8, stage: [12, 26], hands: [[14, 17, 0.7, 0], [20, 25, 0.8, 1]], right: 1 }],
+  '2': ['piece', 'seats.spot', { gap: 2, pit: 9, stage: [13, 32], hands: [[13, 20, 1.0, 2], [18, 26, 0.9, 0], [24, 31, 1.1, 1]], right: 0 }],
+  '3': ['piece', 'seats.spot', { gap: 2, pit: 10, stage: [14, 33], hands: [[14, 20, 0.9, 1], [16, 31, 1.1, 2], [26, 33, 0.8, 0]], right: 1, mous: [20, 27] }],
+  A: ['spawn', 'portal', { kind: 'door', look: 'seatsDoor', targetRef: 'pit@in' }], u: TELL(), a: ['anchor', 'pitOut']
+};
+stamps.seatsHouse = { floor: 17, rows: houseRows, legend: HL, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power'] };
+stamps.seatsPit = roomStamp('house@pitOut', 'seatsDoor');
+const L5 = { n: 5, time: 380, name: 'House Left', mapLabel: 'House Left', arch: 'followspot', theme: 'seats_house',
+  gimmick: 'A follow-spot at the edge of the orchestra pit. The stick swings it along the stage, THROW focuses it. Light the stagehand the call board names and he takes his bow and puts his plank across the pit',
+  hint: 'Match the number and the colour on the call board. In the last scene the right stagehand walks behind the false moustaches: wait for him to come out. A little seat faces the floor up on the gantry...',
+  postcard: 'Brady! I worked the follow-spot. I lit the wrong tin man twice and he shrugged at me both times. Very professional. ♥ C',
+  enemies: [['seatsStoat', 2], ['seatsCrab', 1], ['seatsHen', 1], ['seatsShrew', 1]],
+  mapCell: [4, 0], mapFrom: 3,
+  exits: { main: { to: '33-6' } },
+  areas: [
+    { id: 'house', gen: 'room', theme: 'seats_house', stamp: 'seatsHouse', camera: 'free', bottomKill: true },
+    { id: 'pit', gen: 'room', role: 'secret', theme: 'seats_room_pit', stamp: 'seatsPit', room: 'seatsRest' }
+  ] };
+
 //NEXT
-Tour.amend('seats', { stamps, levels: [L1, L2, L3, L4] });
-Tour.seatsKit.L = { L1, L2, L3, L4 };
+Tour.amend('seats', { stamps, levels: [L1, L2, L3, L4, L5] });
+Tour.seatsKit.L = { L1, L2, L3, L4, L5 };
 
 /* ---------------- the land's map: a stage seen from the wings, the route a loop round the trap room ---------------- */
 if (typeof TOUR_OW_MAPS !== 'undefined') TOUR_OW_MAPS.seats = {
