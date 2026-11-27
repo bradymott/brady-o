@@ -153,24 +153,7 @@ async function session(viewport, fn) {
       check('17-1: real inputs: cross the ribbon that fades toward you before the fade meets you', r.ok && r.alive, r);
       await ev(() => { thaw(); play('17-1'); place(92, 14); const rb = ents('IsRibbon').find(e => Math.floor(e.x0 / 32) === 93); for (let k = 0; k < 500 && rb.S.front < 0; k++) sim(0.02); sim(0.6); freeze(); });
       await shot('13-17-1-reverse-ribbon.png');
-      // the hidden folk's door on the ridge: up the blinking ribbon to the ledge, in through the painted door
-      r = await ev(() => {
-        thaw(); play('17-1'); place(109, 14); sim(0.3);
-        const rb = ents('IsRibbon').find(e => Math.floor(e.x0 / 32) === 106);
-        for (let k = 0; k < 300 && !rb.dead; k++) sim(0.02);
-        for (let k = 0; k < 300 && rb.dead; k++) sim(0.02);
-        sim(0.05, { left: true, jump: true, jumpPressed: true }); sim(0.5, { left: true, jump: true });
-        sim(0.25, { left: true });
-        const on1 = P().onGround && ty() === 11;
-        sim(0.05, { left: true, jump: true, jumpPressed: true }); sim(0.45, { left: true, jump: true }); sim(0.3, { left: true });
-        const ledge = ty() === 8 && P().onGround;
-        sim(0.3); const d = S().entities.filter(e => e.kind === 'door' || e.constructor.name === 'Portal').sort((a, b) => Math.abs(a.cx - P().cx) - Math.abs(b.cx - P().cx))[0];
-        if (d) { place(Math.floor(d.cx / 32), 8); sim(0.4); sim(0.4, { up: true, upPressed: true }); sim(1.5); }
-        return { on1, ledge, door: d && Math.round(d.cx / 32), area: S().area.aid };
-      });
-      check('17-1: real inputs: up the blinking ribbon to the ridge and through the painted door to the hidden folk', r.ledge && r.area === 'huldu', r);
-      await ev(() => { sim(0.3); place(12, 11); sim(0.3); freeze(); });
-      await shot('14-17-1-hidden-folk-room.png');
+      // (the hidden folk's ridge and its room: the 'secrets' run below)
       await ev(() => { thaw(); play('17-1'); place(120, 14); const rb = ents('IsRibbon').find(e => Math.floor(e.x0 / 32) === 115); sim(0.1); freeze(); });
       await shot('15-17-1-puffins-over-ribbons.png');
       // the last stretch: three sweeping ribbons in a chain over one long pit (real inputs, a jump at each end)
@@ -295,11 +278,7 @@ async function session(viewport, fn) {
       check('17-4: real inputs: the twist: fast pipes and lifts', r.ok && r.alive, r);
       r = await ev(() => { thaw(); play('17-4'); place(156, 11); sim(0.2); const ok = hop(185, 12); return { ok, x: tx(), alive: alive() }; });
       check('17-4: real inputs: the last stretch of the fastest pipes', r.ok && r.alive, r);
-      // the lift up to the steaming crack, and in
-      r = await ev(() => { thaw(); play('17-4'); const pp = pipeAt(79); place(79, 11); waitFor(() => pp.rest - pp.y > 4.8 * 32, 4); sim(0.05, { right: true, jump: true, jumpPressed: true }); sim(0.5, { right: true, jump: true }); sim(0.4, { right: true }); const top = ty(); place(85, 4); sim(0.4); sim(0.4, { up: true, upPressed: true }); sim(1.5); return { top, area: S().area.aid }; });
-      check('17-4: real inputs: ride the lift and jump to the crater shelf; the crack leads to the vent', r.top === 4 && r.area === 'vent', r);
-      await ev(() => { sim(0.3); place(12, 11); sim(0.3); freeze(); });
-      await shot('42-17-4-vent.png');
+      // (the tall lift, the crater rim and the vent: the 'secrets' run below)
       await ev(() => { thaw(); play('17-4'); place(46, 11); sim(0.6); freeze(); });
       await shot('43-17-4-lava-lake.png');
       await ev(() => { thaw(); play('17-4'); place(130, 11); sim(0.4); freeze(); });
