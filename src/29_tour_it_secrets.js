@@ -113,7 +113,23 @@ TourSeams.TELLS.itSackTell = true; TourSeams.TELLS.itRopeTell = true;
   };
 }
 // the shell game's cups in the opera: top hats
-if (typeof TourRoomArt !== 'undefined' && TourRoomArt.CUPS) TourRoomArt.CUPS.tophat = { body: '#2a2236', band: '#c8283a', w: 30, h: 32 };
+// (the cups live on TourRoomCritters: registered on TourRoomArt they fell back to the shared white cup)
+if (typeof TourRoomCritters !== 'undefined' && TourRoomCritters.CUPS) {
+  TourRoomCritters.CUPS.tophat = { body: '#2a2236', band: '#c8283a', w: 30, h: 32 };
+  const cup0 = TourRoomCritters.cup;
+  TourRoomCritters.cup = function (c, look, x, y, t, glow) {
+    if (look !== 'tophat') return cup0.call(this, c, look, x, y, t, glow);
+    const w = 26, h = 30, brim = 42;
+    if (glow) { c.save(); c.globalAlpha = 0.25 + 0.15 * Math.sin(t * 6); c.fillStyle = '#fff4a0'; c.beginPath(); c.ellipse(x, y - h / 2, brim * 0.6, h * 0.8, 0, 0, TAU); c.fill(); c.restore(); }
+    Ink.around(c, x - brim / 2 - 4, y - h - 8, brim + 8, h + 12, g => {
+      g.fillStyle = '#2a2236';
+      g.beginPath(); g.moveTo(x - w / 2 + 2, y - 3); g.lineTo(x - w / 2, y - h); g.quadraticCurveTo(x, y - h - 5, x + w / 2, y - h); g.lineTo(x + w / 2 - 2, y - 3); g.closePath(); g.fill();   // the crown
+      g.beginPath(); g.ellipse(x, y - 2, brim / 2, 4.5, 0, 0, TAU); g.fill();                                                                                                    // the brim
+      g.fillStyle = '#c8283a'; g.fillRect(x - w / 2 + 2, y - 12, w - 4, 6);                                                                                                       // the silk band
+      g.fillStyle = 'rgba(255,255,255,0.3)'; g.fillRect(x - w / 2 + 5, y - h + 3, 3, h - 18);
+    }, { pad: 6 });
+  };
+}
 // the bean store's tokens: coffee beans
 TourMaze.addKeys({ tokBean: { name: 'COFFEE BEAN', col: '#6a3a1e', toast: 'BEAN!', icon: (c, x, y) => { c.fillStyle = '#6a3a1e'; c.beginPath(); c.ellipse(x, y, 7, 10, 0.4, 0, TAU); c.fill(); c.strokeStyle = INK; c.lineWidth = 1.5; c.stroke(); c.strokeStyle = '#c8945a'; c.lineWidth = 1.6; c.beginPath(); c.moveTo(x - 3, y - 7); c.quadraticCurveTo(x + 3, y, x - 2, y + 8); c.stroke(); } } });
 
