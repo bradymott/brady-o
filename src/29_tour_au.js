@@ -149,17 +149,19 @@ const snagHard = {
 };
 // the canopy: pale gum branches (a long horizontal limb is the ground), twigs as the one-way, bark knots, the trunk
 const limb = {
-  style: 'bark', cap: '#e8e0d0', capHi: '#fffaf0', dirt: BARK, dirt2: BARK2, rock: '#8a7a6a',
+  style: 'bark', cap: '#7a9a5a', capHi: '#a8c88a', dirt: '#b8956a', dirt2: '#8a6a4a', rock: '#6a5040',
   paint(ctx, rng) {
-    ctx.fillStyle = BARK; ctx.fillRect(0, 0, TS, TS);
-    ctx.fillStyle = '#c8b8a0'; for (let k = 0; k < 2; k++) { ctx.beginPath(); ctx.ellipse(rng() * TS, rng() * TS, 7, 3, 0, 0, TAU); ctx.fill(); }
-    ctx.fillStyle = '#e8b88a'; if (rng() < 0.4) { ctx.beginPath(); ctx.ellipse(rng() * TS, rng() * TS, 5, 2.5, 0, 0, TAU); ctx.fill(); }
-    ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.fillRect(0, TS - 4, TS, 4);
+    ctx.fillStyle = '#b08a60'; ctx.fillRect(0, 0, TS, TS);
+    ctx.fillStyle = '#8a6a48'; for (let x = 3; x < TS; x += 7 + Math.floor(rng() * 3)) ctx.fillRect(x, 0, 2, TS);
+    ctx.fillStyle = '#d8b88a'; if (rng() < 0.5) { ctx.beginPath(); ctx.ellipse(rng() * TS, rng() * TS, 6, 2.5, 0, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fillRect(0, TS - 5, TS, 5);
   },
   paintCap(ctx, x0, x1, rng) {
-    ctx.fillStyle = '#b8a890'; ctx.fillRect(x0, 0, x1 - x0, 9);
-    ctx.fillStyle = '#f4ece0'; ctx.fillRect(x0, 0, x1 - x0, 5);
-    ctx.fillStyle = '#e8a87a'; for (let x = x0 + 6; x < x1; x += 19 + Math.floor(rng() * 9)) ctx.fillRect(x, 1, 9, 2);
+    ctx.fillStyle = '#6a5038'; ctx.fillRect(x0, 0, x1 - x0, 9);
+    ctx.fillStyle = '#c8a070'; ctx.fillRect(x0, 0, x1 - x0, 5);
+    ctx.fillStyle = '#e8c898'; for (let x = x0 + 6; x < x1; x += 19 + Math.floor(rng() * 9)) ctx.fillRect(x, 1, 9, 2);
+    // gum leaves sprouting along the top of the limb
+    ctx.fillStyle = '#7a9a5a'; for (let x = x0 + 4; x < x1; x += 11 + Math.floor(rng() * 7)) { ctx.beginPath(); ctx.ellipse(x, -2, 2.5, 6, (rng() - 0.5) * 1.2, 0, TAU); ctx.fill(); }
     ctx.fillStyle = INK; ctx.fillRect(x0, 8, x1 - x0, 1.2);
   }
 };
@@ -471,6 +473,15 @@ const decor = {
   auGumLeaves(ctx, x, y, t) {
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 1.2;
     for (let k = 0; k < 5; k++) { const a = -0.6 + k * 0.3 + Math.sin(t + x) * 0.05; ctx.fillStyle = k % 2 ? GUM : '#a8c89a'; ctx.save(); ctx.translate(x - 10 + k * 5, y - 2); ctx.rotate(a); ctx.beginPath(); ctx.ellipse(0, -9, 3.5, 9, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore(); }
+    ctx.restore();
+  },
+  // a big clump of gum leaves hanging from a twig in the open sky of the canopy (16-4)
+  auLeafClump(ctx, x, y, t) {
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 1.4; const sw = Math.sin(t * 0.7 + x) * 3;
+    ctx.strokeStyle = '#8a6a48'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x - 60, y - 140); ctx.quadraticCurveTo(x - 10, y - 90, x + sw, y - 40); ctx.stroke();
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.4;
+    for (let k = 0; k < 16; k++) { const a = -2.6 + (k % 8) * 0.55, r = 14 + (k * 7) % 22, lx = x + sw + Math.cos(a) * r, ly = y - 40 + Math.sin(a) * r * 0.7 + (k > 7 ? 14 : 0); ctx.fillStyle = k % 3 ? '#6a8a5a' : '#9ab88a'; ctx.save(); ctx.translate(lx, ly); ctx.rotate(a + 1.5); ctx.beginPath(); ctx.ellipse(0, 0, 4, 12, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore(); }
+    ctx.fillStyle = '#a8a060'; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.arc(x + sw - 8 + k * 8, y - 18 + (k % 2) * 4, 3, 0, TAU); ctx.fill(); ctx.stroke(); }
     ctx.restore();
   },
   auLantern(ctx, x, y, t) {
