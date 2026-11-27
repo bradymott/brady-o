@@ -1,4 +1,8 @@
 // Renders the home-screen icons with the game's own art.
+// !! SUPER BRADY-O WORLD NO LONGER USES THIS. Since 27 Nov 2026 its five icons in dist/icons/world/ are hand-drawn art
+// !! (Brady and Pupo: "Golden sun" for 180/192/512, "Flat turquoise" for the 32 px tab icon and the maskable one).
+// !! Rendering 'world' here would overwrite them with the old code-drawn icon, so it is skipped unless you pass
+// !! --old-code-icon as well. The originals are kept in docs/design/icon/.
 //   dist/icons/<app>/icon-180.png, icon-192.png, icon-512.png, icon-maskable-512.png  (one set per app; kart: tools/cart_icon.js)
 //   dist/icons/icon-*.png + dist/icon.png/.b64 (the combined build; same art as Burning Man)
 // Run after a build (it renders from dist/brady-o.html), then build again so the apps pick the icons up.
@@ -16,10 +20,12 @@ const dist = process.env.BRADY_DIST ? path.resolve(process.env.BRADY_DIST) : pat
   await page.waitForTimeout(1800);
   const sizes = [['icon-180.png', 180, false], ['icon-192.png', 192, false], ['icon-512.png', 512, false], ['icon-maskable-512.png', 512, true]];
   const apps = { burningman: '__iconScene', world: '__iconWorld' };   // Super Art Kart (kart) has its own: node tools/cart_icon.js dist/icons/kart
-  const only = process.argv.slice(2);
+  const oldCodeIcon = process.argv.includes('--old-code-icon');
+  const only = process.argv.slice(2).filter(a => !a.startsWith('--'));
   if (await page.evaluate(() => typeof window.__sbwIcon === 'function')) apps.world = '__sbwIcon';
   for (const [app, fn] of Object.entries(apps)) {
     if (only.length && !only.includes(app)) continue;
+    if (app === 'world' && !oldCodeIcon) { console.log('world: skipped (hand-drawn icon installed; see the note at the top of this file)'); continue; }
     const out = path.join(dist, 'icons', app);
     fs.mkdirSync(out, { recursive: true });
     for (const [name, N, mask] of sizes.concat(app === 'world' ? [['icon-32.png', 32, false]] : [])) {
