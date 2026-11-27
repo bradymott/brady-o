@@ -144,16 +144,18 @@ const TabArt = {
     const m = /rgba\(([^,]+),([^,]+),([^,]+),([^)]+)\)/.exec(col.replace(/ /g, '')), alpha = m ? +m[4] : 0.45, solid = m ? `rgb(${m[1]},${m[2]},${m[3]})` : col;
     const C = TabArt._hc || (TabArt._hc = {}), key = solid;
     if (!C[key] && typeof makeCanvas === 'function') {
-      const cv = makeCanvas(240, 90), c = cv.getContext('2d'); c.translate(120, 50); c.scale(2, 2); c.fillStyle = solid; c.strokeStyle = solid; c.lineCap = 'round';
-      for (const d of [-1, 1]) {
-        c.beginPath(); c.moveTo(d * 52, 11); c.quadraticCurveTo(d * 32, 9, d * 15, 6); c.lineTo(d * 14, -7); c.quadraticCurveTo(d * 32, -6, d * 52, -3); c.closePath(); c.fill();
-        c.beginPath(); c.ellipse(d * 8, -1, 9, 8.5, 0, 0, TAU); c.fill();
-      }
-      // the laced fingers: four rows, alternately the left hand's (tips out on the right) and the right hand's
-      c.lineWidth = 3.6;
-      for (let k = 0; k < 4; k++) { const yy = -6.5 + k * 3.6, d = k % 2 ? -1 : 1; c.beginPath(); c.moveTo(-d * 6, yy); c.quadraticCurveTo(d * 8, yy - 1.5, d * 20, yy + 1.5); c.stroke(); }
-      // the thumbs crossed over the top
-      c.lineWidth = 4; c.beginPath(); c.moveTo(-12, -7); c.quadraticCurveTo(-4, -15, 5, -12); c.moveTo(12, -7); c.quadraticCurveTo(4, -16, -5, -13); c.stroke();
+      const cv = makeCanvas(240, 90), c = cv.getContext('2d'); c.translate(120, 50); c.scale(2, 2); c.fillStyle = solid; c.strokeStyle = solid; c.lineCap = 'round'; c.lineJoin = 'round';
+      // two slim forearms coming in from each side, narrowing to the wrists
+      for (const d of [-1, 1]) { c.beginPath(); c.moveTo(d * 56, 9); c.quadraticCurveTo(d * 36, 7, d * 15, 4); c.lineTo(d * 15, -4); c.quadraticCurveTo(d * 36, -1, d * 56, -1); c.closePath(); c.fill(); }
+      // the clasp: the two hands round each other, eight knuckles laced along the top, a thumb crossed over each way
+      rr(c, -17, -8, 34, 16, 7); c.fill();
+      for (let k = 0; k < 8; k++) { const fx = -14 + k * 4, fy = k % 2 ? -9 : -11; c.beginPath(); c.ellipse(fx, fy, 2.1, 3.4, k % 2 ? 0.35 : -0.35, 0, TAU); c.fill(); }
+      c.lineWidth = 3; c.beginPath(); c.moveTo(-15, -3); c.quadraticCurveTo(-8, -15, 2, -14); c.moveTo(15, -3); c.quadraticCurveTo(8, -16, -2, -15); c.stroke();
+      // the gaps between the fingers (cut out of the silhouette so each finger reads)
+      c.globalCompositeOperation = 'destination-out'; c.lineWidth = 0.9;
+      for (let k = 0; k < 7; k++) { const fx = -12 + k * 4; c.beginPath(); c.moveTo(fx, -12); c.lineTo(fx + (k % 2 ? 0.8 : -0.8), -2); c.stroke(); }
+      c.beginPath(); c.moveTo(-15, 1); c.lineTo(15, 1); c.stroke();
+      c.globalCompositeOperation = 'source-over';
       C[key] = cv;
     }
     const cv = C[key]; if (!cv) return;

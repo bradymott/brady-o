@@ -53,7 +53,7 @@ const china = (() => {
   G.put(30, 13, 'N');
   G.pit(33, 42); G.ground(33, 40, 17); G.ground(41, 41, 16); G.ground(42, 42, 15);
   G.put(33, 14, '2');                                   // plate 2 (x33-40, row 14) over the dip
-  G.ground(43, 57, F); G.fill(45, 11, 47, 11, 'B'); G.put(46, 8, '*'); G.coins(44, 48, 9); G.put(49, 13, 'c'); G.put(98, 13, 'f');
+  G.ground(43, 57, F); G.fill(45, 11, 47, 11, 'B'); G.put(46, 8, '*'); G.coins(44, 48, 9); G.put(49, 13, 'c'); G.put(180, 13, 'f');
   // ② up to the high shelf; plate 3 above plate 4; the pit beside plate 4; the bread basket wall over both
   G.ground(56, 57, 11); G.ground(58, 63, 8); G.put(60, 7, 'k');
   G.pit(64, 65);

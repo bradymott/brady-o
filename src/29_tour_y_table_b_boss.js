@@ -48,8 +48,7 @@ function drawManners(ctx, x, y, s, pose, t, dir) {
   }
   // the real offer: the spread tines blaze gold with sparkles round their tips (the feint's tines stay dull and shut)
   if (spread) {
-    ctx.save(); ctx.fillStyle = 'rgba(255,220,90,0.35)'; ctx.beginPath(); ctx.ellipse(0, -70, 40, 30, 0, 0, TAU); ctx.fill();
-    ctx.fillStyle = '#fff6b0'; for (let k = 0; k < 5; k++) { const a = t * 3 + k * TAU / 5, r = 30 + Math.sin(t * 9 + k) * 4; TourKit.star(ctx, Math.cos(a) * r, -76 + Math.sin(a) * r * 0.6, 5, 2, 4); ctx.fill(); }
+    ctx.save(); ctx.fillStyle = '#fff6b0'; for (let k = 0; k < 5; k++) { const a = t * 3 + k * TAU / 5, r = 30 + Math.sin(t * 9 + k) * 4; TourKit.star(ctx, Math.cos(a) * r, -76 + Math.sin(a) * r * 0.6, 5, 2, 4); ctx.fill(); }
     ctx.restore(); ctx.strokeStyle = INK; ctx.lineWidth = 2.4;
   }
   // what she holds on her tines: bread (1), the last olive (3)
@@ -188,6 +187,13 @@ const brain = {
 };
 const boss = { id: 'table_manners', name: 'Madame Manners', hp: 6, dims: [50, 132], floats: true, music: 'tour_table_boss', country: 'table', brain };
 Tour.boss(boss);
+// the real offer's glow (outside the ink pass, so it stays a soft light behind her blazing tines)
+TourHooks.on('afterEntities', (play, ctx) => {
+  const b = play.boss; if (!b || b.remove || b.style !== 'table_manners' || b.act !== 'spread') return;
+  const k = 0.6 + 0.4 * Math.sin(play.t * 10), x = b.cx, y = b.y + 12;
+  ctx.save(); const gr = ctx.createRadialGradient(x, y, 6, x, y, 70); gr.addColorStop(0, `rgba(255,226,110,${0.55 * k})`); gr.addColorStop(1, 'rgba(255,226,110,0)');
+  ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, 70, 0, TAU); ctx.fill(); ctx.restore();
+});
 if (typeof BOSS_INK_REACH !== 'undefined') BOSS_INK_REACH.table_manners = [70, 70, 40, 10];
 
 // the booth: the table's top, two saucers (one at each end), the sugar bowl with Chinka-O's live postcard against

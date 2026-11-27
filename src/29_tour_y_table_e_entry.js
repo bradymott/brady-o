@@ -77,9 +77,10 @@ Object.assign(Decor, {
   // silhouette, and over its top, two hands joined
   tabCafeWallShadow(ctx, x, y) {
     ctx.save(); const sh = 'rgba(48,22,26,0.3)';
-    ctx.fillStyle = sh; ctx.beginPath(); ctx.ellipse(x, y - 50, 32, 8, 0, 0, TAU); ctx.fill(); ctx.fillRect(x - 3, y - 46, 6, 46);
-    ctx.beginPath(); ctx.moveTo(x - 32, y - 50); ctx.lineTo(x - 30, y - 34); ctx.quadraticCurveTo(x, y - 30, x + 30, y - 34); ctx.lineTo(x + 32, y - 50); ctx.fill();
-    TabArt.hands(ctx, x, y - 66, 1.05, 'rgba(48,22,26,0.55)');
+    const sx = x + 24;
+    ctx.fillStyle = sh; ctx.beginPath(); ctx.ellipse(sx, y - 50, 32, 7, 0, 0, TAU); ctx.fill(); ctx.fillRect(sx - 3, y - 46, 6, 46);
+    ctx.beginPath(); ctx.moveTo(sx - 32, y - 50); ctx.lineTo(sx - 30, y - 34); ctx.quadraticCurveTo(sx, y - 30, sx + 30, y - 34); ctx.lineTo(sx + 32, y - 50); ctx.fill();
+    TabArt.hands(ctx, sx, y - 66, 1.0, 'rgba(48,22,26,0.62)');
     ctx.restore();
   },
   // a bentwood chair at the reserved table
@@ -155,7 +156,7 @@ Tour.pieces['table.cafe'] = function (st, o) {
   for (let q = 0; q < 2; q++) B.set(x + 2 + q, gy - 2, T.SEMI);
   B.prop('tabFlowerBox', x + 2, gy - 2, 2, 0.01, 'none', {});
   const ax0 = x + 4, ax1 = x + 12, ay = gy - 4;
-  B.decorAt('tabCafeWallShadow', x + 11, gy, 0);
+  B.decorAt('tabCafeWallShadow', x + 9, gy, 0);
   for (let q = ax0; q <= ax1; q++) { B.set(q, ay, T.SEMI); B.setHide(q, ay, 1); }
   B.decor.push({ kind: 'tabAwning', x: (ax0 + ax1 + 1) / 2 * TS, y: ay * TS, seed: 0, w: (ax1 - ax0 + 1) * TS });
   // the reserved table under the awning's far end, laid for one; its shadow (two hands) lies on the paving beside it

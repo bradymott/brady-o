@@ -294,6 +294,9 @@ const tableInit = () => {
         if (!p || p.dead || g.state !== 'play') return false;
         const e = foe(); if (!e) return true;
         const d = e.cx - p.cx, dir = Math.sign(d) || 1;
+        const A = S().area, SOL = window.BRADY.SOLID, gy = p.groundTy, solidAt = px => { const tt = A.tiles[gy * A.W + Math.floor(px / 32)]; return SOL[tt] || tt === window.BRADY.T.SEMI; };
+        const safe = solidAt(e.cx) && solidAt(e.cx + dir * 40) && solidAt((e.cx + p.cx) / 2);
+        if (!safe || p.ride) return true;
         if (Math.abs(d) < 3.4 * 32 && p.onGround) {
           sim(1 / 120, { jump: true, jumpPressed: true, left: dir < 0, right: dir > 0 });
           for (let k = 0; k < 90 && !p.onGround; k++) { const e2 = foe(); const dd = e2 ? e2.cx - p.cx : 0; sim(1 / 60, { jump: k < 14, left: dd < -4, right: dd > 4 }); }
@@ -582,12 +585,12 @@ LEVELS.rooms = async (page, shot, run) => {
     const b = await page.evaluate(() => {
       thaw(); const A = S().area, R = A.roomState, D = A.roomKit.data;
       const r1 = AP.go([D.lens[0], 8]); sim(0.4); const fooled = !R.won && R.poke > 0;
-      const r2 = AP.route([[12, 5], [14, 4], [17, 5], [D.prize[0], 8]]); sim(0.6);
+      const r2 = AP.route([[10, 5], [12, 4], [15, 5], [D.prize[0], 8]]); sim(0.6);
       return { fooled, r1: r1.ok, r2: r2.ok, won: R.won, cage: TB.cageOpen() };
     });
     check('B54: the giant prize in the lens is only the lens; round the tripod to the tiny real prize: won, the cage opens', b.fooled && b.won && b.cage, b);
     await page.evaluate(() => freeze()); await shot('67-B54-won.png');
-    const c = await page.evaluate(() => { thaw(); const d = TB.exitHatch(); AP.route([[17, 5], [14, 4], [12, 5]]); AP.go([Math.floor(d.cx / 32), Math.round((d.y + d.h) / 32)]); const aid = TB.door(); return { aid, x: Math.floor(P().cx / 32), row: P().groundTy }; });
+    const c = await page.evaluate(() => { thaw(); const d = TB.exitHatch(); AP.route([[15, 5], [12, 4], [10, 5]]); AP.go([Math.floor(d.cx / 32), Math.round((d.y + d.h) / 32)]); const aid = TB.door(); return { aid, x: Math.floor(P().cx / 32), row: P().groundTy }; });
     check('B54: its hatch lets Brady out on the high bank past the third bowl', c.aid === 'bowls' && c.x >= 96 && c.row === 9, c);
   });
   // B55 PULL TO ENTER (36-5): past the booth's door, a gap in the cloth with steam rising; the pantry under the table
@@ -697,8 +700,8 @@ LEVELS.bot = async (page) => {
         const died = S() !== scene0 || B.Save.data.lives < lives0 || (P() && P().dead);
         if (died || !ok) {
           tries++;
-          if (died) { deaths.push({ leg: i, x: Math.floor((scene0.player ? scene0.player.cx : 0) / 32) }); for (let k = 0; k < 80 && (S() === scene0 || S().state !== 'play'); k++) sim(0.1); for (let k = 0; k < 50 && S().state !== 'play'; k++) sim(0.2); sim(0.5); P().invuln = 0; }
-          const x = P().cx / 32; let j = 0; for (let q = 0; q < legs.length; q++) if (legs[q][0] <= x + 1) j = q; i = j; continue;
+          if (died) { deaths.push({ leg: i, x: Math.floor((scene0.player ? scene0.player.cx : 0) / 32) }); for (let k = 0; k < 120 && (S() === scene0 || S().state !== 'play' || !P()); k++) sim(0.1); for (let k = 0; k < 50 && (S().state !== 'play' || !P()); k++) sim(0.2); sim(0.5); if (!P()) break; P().invuln = 0; }
+          const x = P() ? P().cx / 32 : 0; let j = 0; for (let q = 0; q < legs.length; q++) if (legs[q][0] <= x + 1) j = q; i = j; continue;
         }
         i++;
       }
