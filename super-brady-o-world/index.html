@@ -38180,6 +38180,9 @@ TourHats.NOT = new Set([].concat(
   // The Moon (world 18): wind-up stagehands (tin robots), golf balls, geysers, golf rain, air valves, junk, magnet
   // panels, star pads and bridges, the prop crescent
   'moonHand moonGolf moonGeyser moonGolfRain moonValve moonJunk moonMagPanel moonStarPad moonStarBridge moonCrescent moonGame'.split(' '),
+  // The Spare Bone Quarry (world 37, hidden land A12): the dust brush (a brush), a dropped tail, the trackways, vertebrae,
+  // rib rungs, clay presses, soft floors, chisels, limb sockets, the rooms' props, the fossil slab's way in
+  'bonePill boneBrush boneTail boneTrack boneVert boneRibs bonePress boneSoft boneChisel boneLimbGate boneRoomProp boneSlabGate'.split(' '),
   // Morocco: tagines, teapots, oranges, storms, pots, mirages, gales, lanterns, slabs, lines, portcullises, hooks, chains, grilles, winds
   'maTagine maTeapot maOrange maStorm maPot maMirage maGale maKickPot maShopLantern maMirageSlab maPhaseLine maPortcullis maLidHook maChain maRoofGrille maDownWind'.split(' '),
   // Mexico: peppers, elotes, popcorn, the piñata burro, lava blobs, salsa, melon carts, swingers, cannons, rails, sunbeams, bubbles, the Casa's gates
@@ -38252,7 +38255,9 @@ Object.assign(TourHats.HEADS, {
   // Italy (14): the city pigeon, the alley cat
   itPigeon: [0.39, 0.4, -1.5, 0], itCat: [0.53, 0.53, -1.25, 0], itPigeonTell: [0.39, 0.4, -1.5, 0],
   // The Moon (world 18): the moon bunny, the dust mite, the luna moth
-  moonBunny: [0.3, 0.3, -1.3, 0], moonMite: [0.2, 0.2, -1.05, 0], moonMoth: [0.02, 0.02, -0.95, 0]
+  moonBunny: [0.3, 0.3, -1.3, 0], moonMite: [0.2, 0.2, -1.05, 0], moonMoth: [0.02, 0.02, -0.95, 0],
+  // The Spare Bone Quarry (world 37): the socket mouse, the plaster newt (and its rib-climbing cousin), the replica rook
+  boneMouse: [0.15, 0.15, -1.0, 0], boneNewt: [0.43, 0.43, -0.9, 0], boneClimber: [0, 0, -1.1, 0], boneRook: [0.3, 0.3, -1.05, 0]
 
 });
 
@@ -89067,6 +89072,2369 @@ const TourRulesUI = {
 try { if (typeof window !== 'undefined') { window.BRADY_TOUR = window.BRADY_TOUR || {}; Object.assign(window.BRADY_TOUR, { TourParty, TourRuleCut, TourRulebook: { level: L6, pieces: P, stamps } }); } } catch (e) { /* not in a browser */ }
 })();
 
+/* ---- 29_tour_y_bone.js ---- */
+/* ============================================================
+   THE SPARE BONE QUARRY (world 37, cc 'bone'): hidden land A12 (docs/design/CHATGPT_RELAY.md §A12).
+   "A crate of fossil replicas tipped down a quarry. The pieces have put themselves together from memory."
+   Ochre strata, bone-white arcs, petrol-green impressions and persimmon joint caps. Every fossil here is a PLASTER
+   REPLICA of an animal nobody ever invented properly: comic, never gruesome.
+   Its door: in Ecuador 2-1, behind the trail's last rock ledge, jump up into the underside of the fossil slab (the
+   footprint with pressed toes and a RAISED heel is the clue): 29_tour_y_bone_d_entry.js.
+   This file: the stop, the looks (tiles, themes, painted backdrops, props), the critters, the route-map emblem, the
+   map's sprites, the music and the country. The mechanics: 29_tour_y_bone_a_mech.js; the secret rooms:
+   29_tour_y_bone_b_rooms.js; the boss: 29_tour_y_bone_c_boss.js; the levels and the map: 29_tour_y_bone_levels.js.
+   ============================================================ */
+(function () {
+Tour.addStop({ id: 'bone', world: 37, name: 'The Spare Bone Quarry', sub: 'a hidden land', lon: -88, lat: -13, secret: true, bonus: true, d0: 0.8, pin: 'bone' });
+const COL = { a: '#f06a2a', b: '#2e6a5a', c: '#f4ead2' };
+const INK = '#24160e';
+const OCHRE = '#d98a32', OCHRE_HI = '#f2b44e', OCHRE_LO = '#a85a22', RUST = '#7a3a18';
+const BONE = '#f4ead2', BONE_LO = '#d8c8a4', BONE_SH = '#b8a47c', PERS = '#f06a2a', PETROL = '#2e6a5a', PETROL_LO = '#1e4a40';
+
+/* ---------------- tiles ---------------- */
+// quarry strata: ochre bands under a sandy top, the odd petrol-green ammonite pressed in
+const strataGround = {
+  style: 'strata', cap: OCHRE_HI, capHi: '#ffd88a', dirt: OCHRE, dirt2: OCHRE_LO, rock: RUST,
+  paint(ctx, rng) {
+    // strata bands that wander a little from tile to tile (a few painted variants), pebbles, now and then a chip of bone
+    ctx.fillStyle = OCHRE; ctx.fillRect(0, 0, TS, TS);
+    const o1 = (rng() - 0.5) * 6, o2 = (rng() - 0.5) * 6;
+    ctx.fillStyle = '#c87a2a'; ctx.beginPath(); ctx.moveTo(0, 8 + o1); ctx.lineTo(TS, 10 + o2); ctx.lineTo(TS, 18 + o2); ctx.lineTo(0, 16 + o1); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = OCHRE_LO; ctx.beginPath(); ctx.moveTo(0, 24 + o2 * 0.5); ctx.lineTo(TS, 23 + o1 * 0.5); ctx.lineTo(TS, TS); ctx.lineTo(0, TS); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(120,60,20,0.55)'; ctx.fillRect(0, 16 + o1, TS, 1.2);
+    if (rng() < 0.5) { ctx.fillStyle = '#e8a04a'; ctx.beginPath(); ctx.ellipse(4 + rng() * 22, 4 + rng() * 3, 2.5, 1.5, 0, 0, TAU); ctx.fill(); }
+    if (rng() < 0.07) { ctx.fillStyle = '#efe2c4'; const x = 6 + rng() * 18, y = 14 + rng() * 12; ctx.fillRect(x, y, 6, 2); ctx.beginPath(); ctx.arc(x, y + 1, 1.6, 0, TAU); ctx.arc(x + 6, y + 1, 1.6, 0, TAU); ctx.fill(); }
+  },
+  paintCap(ctx, x0, x1) {
+    ctx.fillStyle = OCHRE_LO; ctx.fillRect(x0, 0, x1 - x0, 11);
+    ctx.fillStyle = OCHRE_HI; ctx.fillRect(x0, 0, x1 - x0, 8);
+    ctx.fillStyle = '#ffd88a'; ctx.fillRect(x0, 0, x1 - x0, 2.5);
+    ctx.fillStyle = '#e09a3a'; for (let x = x0 + 5; x < x1; x += 19) { ctx.beginPath(); ctx.ellipse(x, 5, 3, 1.4, 0, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = INK; ctx.fillRect(x0, 10, x1 - x0, 1.5);
+  }
+};
+// a bone shelf on a persimmon ball joint (the one-way platform)
+const boneSemi = {
+  style: 'boneshelf', c1: BONE, c2: BONE_SH,
+  paint(ctx, part, x0, x1) {
+    ctx.fillStyle = BONE_SH; ctx.beginPath(); ctx.moveTo(x0, 0); ctx.lineTo(x1, 0); ctx.lineTo(x1 - 1, 10); ctx.lineTo(x0 + 1, 10); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = BONE; ctx.fillRect(x0, 0, x1 - x0, 6);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(x0, 0, x1 - x0, 1.5);
+    ctx.fillStyle = INK; ctx.fillRect(x0, 9.5, x1 - x0, 1.5);
+    ctx.fillStyle = PERS; for (let x = x0 + 16; x < x1; x += 32) { ctx.beginPath(); ctx.arc(x, 13, 3.5, 0, TAU); ctx.fill(); }
+  }
+};
+// a plaster block (bricks): chalk white with a stencilled crate number
+const plasterBrick = {
+  style: 'plaster', c1: '#efe6d2', c2: '#b8a888', mortar: '#7a6a50',
+  paint(ctx) {
+    ctx.fillStyle = '#8a7a5a'; ctx.fillRect(0, 0, TS, TS);
+    ctx.fillStyle = '#efe6d2'; ctx.fillRect(1.5, 1.5, TS - 3, TS - 3);
+    ctx.fillStyle = '#d8ccb0'; ctx.fillRect(1.5, TS - 8, TS - 3, 6.5);
+    ctx.fillStyle = '#c8b898'; ctx.beginPath(); ctx.arc(9, 11, 2, 0, TAU); ctx.arc(22, 19, 1.5, 0, TAU); ctx.fill();
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.strokeRect(0.75, 0.75, TS - 1.5, TS - 1.5);
+  }
+};
+// the hard strata rock (overhangs, walls): darker rust bands that run on across tiles
+const strataHard = {
+  c1: '#9a5226', c2: '#6a3416',
+  paint(ctx) {
+    ctx.fillStyle = '#8a4620'; ctx.fillRect(0, 0, TS, TS);
+    ctx.fillStyle = '#a85a28'; ctx.fillRect(0, 2, TS, 8);
+    ctx.fillStyle = '#743a18'; ctx.fillRect(0, 14, TS, 4);
+    ctx.fillStyle = '#b8682e'; ctx.fillRect(0, 21, TS, 6);
+    ctx.fillStyle = '#5a2a10'; ctx.fillRect(0, 10, TS, 1.2); ctx.fillRect(0, 27, TS, 1.2);
+    ctx.fillStyle = '#c87a3a'; ctx.fillRect(5, 4, 6, 1.5); ctx.fillRect(18, 23, 7, 1.5);
+  }
+};
+const quarry = { ground: strataGround, semi: boneSemi, brick: plasterBrick, hard: strataHard, pillar: { c1: BONE, c2: BONE_SH, cap: PERS, style: 'column' }, accent: PERS, tint: {}, bloom: 0.12, liquid: null };
+// wet clay (37-3): a grey-brown slick top
+const clayGround = Object.assign({}, strataGround, { style: 'clay', cap: '#b89a7a', capHi: '#e0c8a8', paintCap(ctx, x0, x1) {
+  ctx.fillStyle = '#6a5040'; ctx.fillRect(x0, 0, x1 - x0, 11); ctx.fillStyle = '#a88a6a'; ctx.fillRect(x0, 0, x1 - x0, 8);
+  ctx.fillStyle = '#d8bc98'; ctx.fillRect(x0, 0, x1 - x0, 2); ctx.fillStyle = '#c8aa86'; for (let x = x0 + 9; x < x1; x += 21) { ctx.beginPath(); ctx.ellipse(x, 4, 5, 1.5, 0, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = INK; ctx.fillRect(x0, 10, x1 - x0, 1.5);
+} });
+
+/* ---------------- shared drawings ---------------- */
+const BoneArt = {
+  // a long bone between two knobbly ends (x0,y0)->(x1,y1), thickness w; caps: persimmon joint caps on the ends
+  bone(ctx, x0, y0, x1, y1, w, caps, col) {
+    const dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy) || 1, a = Math.atan2(dy, dx);
+    ctx.save(); ctx.translate(x0, y0); ctx.rotate(a); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = col || BONE;
+    ctx.beginPath(); ctx.moveTo(w * 0.6, -w * 0.42); ctx.quadraticCurveTo(L / 2, -w * 0.3, L - w * 0.6, -w * 0.42); ctx.lineTo(L - w * 0.6, w * 0.42); ctx.quadraticCurveTo(L / 2, w * 0.3, w * 0.6, w * 0.42); ctx.closePath(); ctx.fill(); ctx.stroke();
+    for (const ex of [0, L]) { ctx.fillStyle = caps ? PERS : (col || BONE); ctx.beginPath(); ctx.arc(ex, -w * 0.32, w * 0.42, 0, TAU); ctx.arc(ex, w * 0.32, w * 0.42, 0, TAU); ctx.fill(); ctx.stroke(); }
+    ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.fillRect(w * 0.7, -w * 0.3, L - w * 1.4, w * 0.16);
+    ctx.restore();
+  },
+  // a persimmon ball joint
+  joint(ctx, x, y, r) { ctx.save(); ctx.fillStyle = PERS; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#ffb07a'; ctx.beginPath(); ctx.arc(x - r * 0.35, y - r * 0.35, r * 0.3, 0, TAU); ctx.fill(); ctx.restore(); },
+  // an ammonite spiral
+  ammonite(ctx, x, y, r, col) {
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.fillStyle = col || '#3e8a74';
+    ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); for (let a = 0; a < 11; a += 0.25) { const q = r * (1 - a / 12); ctx.lineTo(x + Math.cos(a) * q, y + Math.sin(a) * q); } ctx.stroke();
+    ctx.restore();
+  },
+  // a footprint pressed into clay: kind 0 three-toed bird, 1 round paw, 2 hoof, 3 flipper, 4 long-toed lizard;
+  // dir: which way the toes point (1 right, -1 left, 0 up); s: size; pressed (dark hollow) or raised
+  print(ctx, x, y, kind, dir, s, col, raised) {
+    ctx.save(); ctx.translate(x, y); if (dir === 1) ctx.rotate(Math.PI / 2); else if (dir === -1) ctx.rotate(-Math.PI / 2); ctx.scale(s, s);
+    ctx.fillStyle = col || PETROL_LO; ctx.strokeStyle = raised ? '#fff0c8' : 'rgba(255,230,170,0.75)'; ctx.lineWidth = 1.2 / s;
+    const blob = (bx, by, rx, ry, rot) => { ctx.beginPath(); ctx.ellipse(bx, by, rx, ry, rot || 0, 0, TAU); ctx.fill(); ctx.stroke(); };
+    if (kind === 0) { ctx.lineWidth = 3.2; ctx.strokeStyle = col || PETROL_LO; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(0, 5); ctx.lineTo(0, -6); ctx.moveTo(0, 2); ctx.lineTo(-6, -5); ctx.moveTo(0, 2); ctx.lineTo(6, -5); ctx.stroke(); }
+    else if (kind === 1) { blob(0, 2, 5, 4); for (const [bx, by] of [[-5, -4], [-1.8, -6.5], [1.8, -6.5], [5, -4]]) blob(bx, by, 1.8, 2.2); }
+    else if (kind === 2) { blob(-2.6, 0, 2.6, 6, -0.1); blob(2.6, 0, 2.6, 6, 0.1); }
+    else if (kind === 3) { ctx.beginPath(); ctx.moveTo(0, 6); ctx.quadraticCurveTo(-9, -2, -4, -7); ctx.quadraticCurveTo(0, -4, 4, -7); ctx.quadraticCurveTo(9, -2, 0, 6); ctx.fill(); ctx.stroke(); }
+    else { blob(0, 3, 3.5, 3); ctx.lineWidth = 2; ctx.strokeStyle = col || PETROL_LO; for (const a of [-0.9, -0.3, 0.3, 0.9]) { ctx.beginPath(); ctx.moveTo(0, 1); ctx.lineTo(Math.sin(a) * 9, -Math.cos(a) * 8); ctx.stroke(); } }
+    ctx.restore();
+  },
+  // a museum label card on a stalk: one or two short words
+  label(ctx, x, y, text, w) {
+    w = w || 40; ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 1.6;
+    ctx.fillStyle = '#6a4a2a'; ctx.fillRect(x - 1.5, y - 14, 3, 14);
+    ctx.fillStyle = '#fbf4e0'; rr(ctx, x - w / 2, y - 30, w, 17, 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = INK; ctx.font = '7px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, x, y - 21.5);
+    ctx.restore();
+  },
+  // the tipped crate the replicas came in
+  crate(ctx, x, y, s) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(s || 1, s || 1); ctx.rotate(-0.12); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    ctx.fillStyle = '#c89a5a'; ctx.fillRect(-34, -44, 68, 44); ctx.strokeRect(-34, -44, 68, 44);
+    ctx.fillStyle = '#a8783a'; ctx.fillRect(-34, -32, 68, 4); ctx.fillRect(-34, -14, 68, 4);
+    ctx.fillStyle = INK; ctx.font = '6px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('REPLICAS', 0, -20); ctx.fillText('THIS WAY UP ↓', 0, -4);
+    ctx.restore();
+    BoneArt.bone(ctx, x + 30, y - 6, x + 62, y - 2, 9, true);
+  }
+};
+
+/* ---------------- painted backdrops ---------------- */
+const painters = {
+  // far quarry walls: stepped benches cut into the strata, each bench a band of a lighter ochre
+  boneTerraces(ctx, L, rng, H) {
+    const b = L.base, c = L.color;
+    let x = 0;
+    while (x < BG_W) {
+      const w = 140 + rng() * 120, h = 60 + rng() * 70, steps = 3 + Math.floor(rng() * 2);
+      wrapDraw(x, w, X => {
+        for (let k = 0; k < steps; k++) {
+          const y = b - h + k * (h / steps), inset = k * 18;
+          ctx.fillStyle = shade(c, 0.12 - k * 0.07); ctx.fillRect(X - inset, y, w + inset * 2, h / steps + 2);
+          ctx.fillStyle = shade(c, 0.28 - k * 0.05); ctx.fillRect(X - inset, y, w + inset * 2, 3);
+        }
+      });
+      x += w;
+    }
+    ctx.fillStyle = shade(c, -0.12); ctx.fillRect(0, b, BG_W, H - b);
+    ctx.fillStyle = shade(c, -0.2); for (let k = 0; k < 30; k++) ctx.fillRect(rng() * BG_W, b + rng() * (H - b), 18 + rng() * 30, 3);
+  },
+  // the giant replica bones sticking out of the near quarry face: arcs and ribs with persimmon caps, half buried
+  boneArcs(ctx, L, rng, H) {
+    const b = L.base;
+    ctx.fillStyle = L.color; ctx.beginPath(); ctx.moveTo(0, H); ctx.lineTo(0, b);
+    for (let x = 0; x <= BG_W; x += 32) ctx.lineTo(x, b - 10 - Math.abs(Math.sin(x * 0.013)) * 30 - Math.abs(Math.sin(x * 0.041 + 2)) * 12);
+    ctx.lineTo(BG_W, H); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = shade(L.color, 0.12); for (let x = 0; x <= BG_W; x += 32) ctx.fillRect(x, b - 10 - Math.abs(Math.sin(x * 0.013)) * 30 - Math.abs(Math.sin(x * 0.041 + 2)) * 12, 32, 3);
+    const boneCol = L.bone || '#e8dcc0';
+    for (let x = 60 + rng() * 60; x < BG_W - 40; x += 170 + rng() * 120) {
+      const kind = Math.floor(rng() * 3), y = b - 20;
+      wrapDraw(x - 90, 180, X => {
+        const cx = X + 90;
+        if (kind === 0) { // a rib arch
+          ctx.strokeStyle = shade(boneCol, -0.35); ctx.lineWidth = 15; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(cx, y + 20, 70, Math.PI * 1.08, Math.PI * 1.92); ctx.stroke();
+          ctx.strokeStyle = boneCol; ctx.lineWidth = 10; ctx.stroke();
+        } else if (kind === 1) { // a big leg bone leaning out
+          ctx.save(); ctx.globalAlpha = 0.95; BoneArt.bone(ctx, cx - 50, y + 10, cx + 30, y - 60, 16, !L.dull, boneCol); ctx.restore();
+        } else { // a skull-ish knob of a hip with a socket
+          ctx.fillStyle = boneCol; ctx.strokeStyle = shade(boneCol, -0.4); ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(cx, y - 10, 46, 30, 0.2, Math.PI, 0); ctx.fill(); ctx.stroke();
+          ctx.fillStyle = shade(boneCol, -0.3); ctx.beginPath(); ctx.arc(cx + 8, y - 18, 10, 0, TAU); ctx.fill();
+        }
+      });
+    }
+  },
+  // 37-2's scree slopes: long diagonal fans of grey-ochre stones under the quarry rim
+  boneScree(ctx, L, rng, H) {
+    const b = L.base;
+    // the quarry wall behind: tall slabs with vertical cut marks, its top edge ragged
+    ctx.fillStyle = shade(L.color, 0.06); ctx.beginPath(); ctx.moveTo(0, H); ctx.lineTo(0, b - 190);
+    for (let x = 0; x <= BG_W; x += 48) ctx.lineTo(x, b - 190 - Math.abs(Math.sin(x * 0.02)) * 26 - (x % 96 ? 6 : 0));
+    ctx.lineTo(BG_W, H); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = shade(L.color, -0.12); ctx.lineWidth = 3; for (let x = 20; x < BG_W; x += 37) { ctx.beginPath(); ctx.moveTo(x, b - 170); ctx.lineTo(x + 6, b - 40); ctx.stroke(); }
+    // fans of loose scree spilling down from notches in the wall (curved, never a tidy triangle), stones on them
+    for (let k = 0; k < 5; k++) {
+      const x = 80 + k * 200 + rng() * 60, w = 150 + rng() * 80;
+      wrapDraw(x - w / 2, w, X => {
+        const cx = X + w / 2, top = b - 150 - rng() * 30;
+        ctx.fillStyle = shade(L.color, -0.08); ctx.beginPath(); ctx.moveTo(cx - 14, top); ctx.quadraticCurveTo(cx - w * 0.2, b - 60, cx - w / 2, b + 10); ctx.lineTo(cx + w / 2, b + 10); ctx.quadraticCurveTo(cx + w * 0.15, b - 70, cx + 14, top); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = shade(L.color, 0.2); for (let q = 0; q < 16; q++) { const t = rng(), yy = top + t * (b - top), half = 14 + t * w * 0.45; ctx.beginPath(); ctx.ellipse(cx - half + rng() * half * 2, yy, 4 + rng() * 3, 2.5, 0, 0, TAU); ctx.fill(); }
+      });
+    }
+    ctx.fillStyle = shade(L.color, -0.15); ctx.fillRect(0, b, BG_W, H - b);
+  },
+  // 37-3's casting shed: plank wall, shelves of plaster casts (feet, a jaw, a tail), dripping clay buckets
+  boneShed(ctx, L, rng, H) {
+    const b = L.base;
+    ctx.fillStyle = L.color; ctx.fillRect(0, 0, BG_W, H);
+    for (let x = 0; x < BG_W; x += 44) { ctx.fillStyle = shade(L.color, (x / 44) % 2 ? -0.06 : 0.04); ctx.fillRect(x, 0, 44, H); ctx.fillStyle = shade(L.color, -0.25); ctx.fillRect(x, 0, 2, H); }
+    for (const y of [b - 220, b - 130]) {
+      ctx.fillStyle = shade(L.color, -0.35); ctx.fillRect(0, y, BG_W, 8);
+      for (let x = 20 + rng() * 40; x < BG_W; x += 70 + rng() * 50) {
+        const k = Math.floor(rng() * 4); ctx.fillStyle = '#e8e0cc'; ctx.strokeStyle = shade(L.color, -0.5); ctx.lineWidth = 2;
+        if (k === 0) { ctx.beginPath(); ctx.ellipse(x, y - 12, 16, 12, 0, Math.PI, 0); ctx.fill(); ctx.stroke(); BoneArt.print(ctx, x, y - 10, 0, 0, 0.9, '#9a8a6a'); }
+        else if (k === 1) { ctx.fillRect(x - 14, y - 22, 28, 22); ctx.strokeRect(x - 14, y - 22, 28, 22); BoneArt.print(ctx, x, y - 11, 1, 0, 0.9, '#9a8a6a'); }
+        else if (k === 2) { ctx.beginPath(); ctx.moveTo(x - 18, y); ctx.quadraticCurveTo(x, y - 30, x + 18, y); ctx.fill(); ctx.stroke(); }
+        else { ctx.fillStyle = '#8a7a6a'; ctx.fillRect(x - 9, y - 18, 18, 18); ctx.fillStyle = '#a88a6a'; ctx.fillRect(x - 9, y - 18, 18, 5); }
+      }
+    }
+    ctx.fillStyle = shade(L.color, -0.3); ctx.fillRect(0, b - 40, BG_W, 6);
+  },
+  // 37-4's cutting floor: a workshop wall with chisels on a board, a big chalk diagram of a joint, seam lines
+  boneWorkshop(ctx, L, rng, H) {
+    const b = L.base;
+    ctx.fillStyle = L.color; ctx.fillRect(0, 0, BG_W, H);
+    ctx.fillStyle = shade(L.color, -0.12); for (let y = 0; y < b; y += 36) ctx.fillRect(0, y, BG_W, 2);
+    for (let x = 80; x < BG_W; x += 340) {
+      ctx.fillStyle = '#5a3a22'; ctx.fillRect(x, b - 230, 150, 90); ctx.strokeStyle = '#3a2412'; ctx.lineWidth = 3; ctx.strokeRect(x, b - 230, 150, 90);
+      for (let k = 0; k < 6; k++) { const cx = x + 16 + k * 23; ctx.fillStyle = PERS; ctx.fillRect(cx - 3, b - 222, 6, 26); ctx.fillStyle = '#c8ccd4'; ctx.fillRect(cx - 2, b - 196, 4, 30 - k * 2); }
+      // a chalk diagram: a bone with a dashed seam that forks
+      ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x + 250, b - 180, 70, 22, -0.1, 0, TAU); ctx.stroke();
+      ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.moveTo(x + 190, b - 182); ctx.lineTo(x + 250, b - 178); ctx.lineTo(x + 290, b - 195); ctx.moveTo(x + 250, b - 178); ctx.lineTo(x + 292, b - 168); ctx.stroke(); ctx.setLineDash([]);
+    }
+    ctx.fillStyle = shade(L.color, -0.28); ctx.fillRect(0, b - 30, BG_W, H - b + 30);
+  },
+  // 37-5's dig pit at dusk: a deep excavation, string grid lines, little survey pegs, a lamp or two
+  boneDigPit(ctx, L, rng, H) {
+    const b = L.base;
+    ctx.fillStyle = L.color; ctx.beginPath(); ctx.moveTo(0, H); ctx.lineTo(0, b - 140); ctx.lineTo(120, b - 150); ctx.lineTo(180, b - 30); ctx.lineTo(BG_W - 180, b - 30); ctx.lineTo(BG_W - 120, b - 150); ctx.lineTo(BG_W, b - 140); ctx.lineTo(BG_W, H); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = shade(L.color, 0.15); ctx.fillRect(180, b - 30, BG_W - 360, 4);
+    ctx.strokeStyle = 'rgba(255,240,200,0.55)'; ctx.lineWidth = 1.5;
+    for (let x = 200; x < BG_W - 180; x += 64) { ctx.beginPath(); ctx.moveTo(x, b - 30); ctx.lineTo(x, b + 60); ctx.stroke(); }
+    for (let y = b - 10; y < b + 60; y += 24) { ctx.beginPath(); ctx.moveTo(180, y); ctx.lineTo(BG_W - 180, y); ctx.stroke(); }
+    for (const x of [140, BG_W - 140]) { ctx.fillStyle = '#3a2a1a'; ctx.fillRect(x - 2, b - 210, 4, 64); ctx.fillStyle = '#ffd88a'; ctx.beginPath(); ctx.arc(x, b - 212, 8, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(255,216,138,0.25)'; ctx.beginPath(); ctx.arc(x, b - 212, 28, 0, TAU); ctx.fill(); }
+  },
+  // the dig's clutter at the pit's edge: scaffold towers, stacked crates of replicas, bones sticking out of the spoil
+  // heaps (kept dark and dull so the boss and Brady pop)
+  boneDigClutter(ctx, L, rng, H) {
+    const b = L.base, c = L.color;
+    ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(0, H); ctx.lineTo(0, b - 20);
+    for (let x = 0; x <= BG_W; x += 64) ctx.lineTo(x, b - 20 - Math.abs(Math.sin(x * 0.009 + 1)) * 40);
+    ctx.lineTo(BG_W, H); ctx.closePath(); ctx.fill();
+    for (let x = 40 + rng() * 40; x < BG_W - 60; x += 150 + rng() * 90) {
+      const k = Math.floor(rng() * 3);
+      wrapDraw(x - 60, 120, X => {
+        const cx = X + 60;
+        if (k === 0) { ctx.strokeStyle = shade(c, 0.18); ctx.lineWidth = 4; for (const dx of [-26, 26]) { ctx.beginPath(); ctx.moveTo(cx + dx, b); ctx.lineTo(cx + dx, b - 130); ctx.stroke(); } for (let y = b - 20; y > b - 130; y -= 36) { ctx.beginPath(); ctx.moveTo(cx - 26, y); ctx.lineTo(cx + 26, y); ctx.moveTo(cx - 26, y); ctx.lineTo(cx + 26, y - 36); ctx.stroke(); } ctx.fillStyle = shade(c, 0.25); ctx.fillRect(cx - 32, b - 134, 64, 8); }
+        else if (k === 1) { for (let q = 0; q < 3; q++) { ctx.fillStyle = shade(c, 0.12 + q * 0.04); ctx.fillRect(cx - 40 + (q % 2) * 26, b - 30 - q * 28, 46, 28); ctx.fillStyle = shade(c, -0.1); ctx.fillRect(cx - 40 + (q % 2) * 26, b - 20 - q * 28, 46, 3); } }
+        else { ctx.strokeStyle = shade(c, 0.3); ctx.lineWidth = 9; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(cx - 20, b - 10); ctx.lineTo(cx + 10, b - 70); ctx.stroke(); ctx.fillStyle = shade(c, 0.3); ctx.beginPath(); ctx.arc(cx + 12, b - 74, 9, 0, TAU); ctx.arc(cx + 2, b - 78, 9, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.moveTo(cx + 30, b - 8); ctx.quadraticCurveTo(cx + 50, b - 60, cx + 70, b - 70); ctx.stroke(); }
+      });
+    }
+  },
+  /* ---------- the secret rooms' own backdrops (all different) ---------- */
+  // 37-1 RESERVED FOR A GIANT: the museum's great hall: green walls, a cornice, a huge skeleton's legs, a height chart
+  roomHall(ctx, L, rng, H) {
+    const b = L.base;
+    ctx.fillStyle = '#2e6a5a'; ctx.fillRect(0, 0, BG_W, H);
+    ctx.fillStyle = '#245448'; for (let x = 0; x < BG_W; x += 128) ctx.fillRect(x, 0, 10, H);
+    ctx.fillStyle = '#e8dcc0'; ctx.fillRect(0, 40, BG_W, 14); ctx.fillStyle = '#c8b898'; ctx.fillRect(0, 54, BG_W, 4);
+    for (const x of [120, 900]) { BoneArt.bone(ctx, x, b - 10, x + 20, b - 190, 22, true, '#e8dcc0'); BoneArt.bone(ctx, x + 70, b - 10, x + 52, b - 190, 22, true, '#e8dcc0'); }
+    ctx.fillStyle = '#c8b898'; ctx.fillRect(0, b - 6, BG_W, H - b + 6);
+    ctx.fillStyle = '#b8a888'; for (let x = 0; x < BG_W; x += 64) ctx.fillRect(x, b - 6, 2, H - b + 6);
+  },
+  // 37-2 THE BACK OF THE QUEUE: the gift shop: shelves of plaster bones and snow-globes, a CLOSED blind on the counter
+  roomShop(ctx, L, rng, H) {
+    const b = L.base;
+    ctx.fillStyle = '#f2d6a8'; ctx.fillRect(0, 0, BG_W, H);
+    ctx.fillStyle = '#e8c690'; for (let x = 0; x < BG_W; x += 48) ctx.fillRect(x, 0, 24, H);
+    for (const y of [90, 160, 230]) {
+      ctx.fillStyle = '#8a5a2a'; ctx.fillRect(0, y, BG_W, 8);
+      for (let x = 16; x < BG_W; x += 40) { const k = (x / 40 + y) % 3; if (k < 1) BoneArt.bone(ctx, x, y - 8, x + 26, y - 8, 8, false); else if (k < 2) { ctx.fillStyle = '#bfe4f0'; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x + 12, y - 12, 10, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#8a5a2a'; ctx.fillRect(x + 4, y - 4, 16, 4); } else BoneArt.ammonite(ctx, x + 12, y - 11, 9, '#e8a04a'); }
+    }
+    ctx.fillStyle = '#c86a3a'; ctx.fillRect(0, b - 20, BG_W, H - b + 20);
+  },
+  // 37-3 OUT OF ORDER: the cast room: white tiles, a plaster mixer, sacks, dust in the air
+  roomCast(ctx, L, rng, H) {
+    const b = L.base;
+    ctx.fillStyle = '#dfe6e8'; ctx.fillRect(0, 0, BG_W, H);
+    ctx.strokeStyle = '#c4ccd0'; ctx.lineWidth = 2; for (let x = 0; x < BG_W; x += 32) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); } for (let y = 0; y < H; y += 32) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(BG_W, y); ctx.stroke(); }
+    for (let x = 60; x < BG_W; x += 260) { ctx.fillStyle = '#c8b88a'; ctx.strokeStyle = '#8a7a5a'; ctx.lineWidth = 3; for (let k = 0; k < 3; k++) { rr(ctx, x + k * 14, b - 46 - k * 30, 60, 34, 8); ctx.fill(); ctx.stroke(); } }
+    ctx.fillStyle = '#7a8a90'; ctx.fillRect(0, b - 12, BG_W, H - b + 12);
+    ctx.fillStyle = 'rgba(255,255,255,0.5)'; for (let k = 0; k < 40; k++) ctx.fillRect(rng() * BG_W, rng() * b, 2, 2);
+  },
+  // 37-4 NO FISHING: the tar pool grotto: dark rock, reeds, a brown-black pool with an oily sheen, fossil fish in the wall
+  roomTar(ctx, L, rng, H) {
+    const b = L.base;
+    ctx.fillStyle = '#3a2a22'; ctx.fillRect(0, 0, BG_W, H);
+    ctx.fillStyle = '#4a362a'; for (let k = 0; k < 18; k++) { const x = rng() * BG_W, y = rng() * b; ctx.beginPath(); ctx.ellipse(x, y, 40 + rng() * 60, 16 + rng() * 20, rng(), 0, TAU); ctx.fill(); }
+    for (let x = 90; x < BG_W; x += 210) { ctx.strokeStyle = '#c8b898'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(x, 120, 34, 14, 0, 0, TAU); ctx.stroke(); for (let q = -24; q <= 24; q += 8) { ctx.beginPath(); ctx.moveTo(x + q, 108); ctx.lineTo(x + q, 132); ctx.stroke(); } ctx.beginPath(); ctx.moveTo(x + 34, 120); ctx.lineTo(x + 50, 108); ctx.lineTo(x + 50, 132); ctx.closePath(); ctx.stroke(); }
+    ctx.strokeStyle = '#5a7a3a'; ctx.lineWidth = 3; for (let x = 10; x < BG_W; x += 23) { ctx.beginPath(); ctx.moveTo(x, b + 10); ctx.quadraticCurveTo(x + 6, b - 40, x + 2 + (x % 7), b - 70 - (x % 30)); ctx.stroke(); }
+  },
+  // 37-5 THE CLEARLY EMPTY JAR: the specimen store: dark shelves of labelled jars, one hanging bulb
+  roomStore(ctx, L, rng, H) {
+    const b = L.base;
+    ctx.fillStyle = '#2a2436'; ctx.fillRect(0, 0, BG_W, H);
+    for (const y of [100, 180, 260]) {
+      ctx.fillStyle = '#5a4a3a'; ctx.fillRect(0, y, BG_W, 7);
+      for (let x = 14; x < BG_W; x += 34) { const h = 22 + ((x * 7 + y) % 3) * 6; ctx.fillStyle = 'rgba(190,230,220,0.35)'; ctx.strokeStyle = 'rgba(220,240,240,0.6)'; ctx.lineWidth = 1.5; rr(ctx, x, y - h, 22, h, 4); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#e8dcc0'; ctx.fillRect(x + 3, y - h * 0.6, 16, 7); }
+    }
+    ctx.fillStyle = '#ffe8a0'; ctx.beginPath(); ctx.arc(BG_W / 2, 30, 9, 0, TAU); ctx.fill(); const g = ctx.createRadialGradient(BG_W / 2, 30, 4, BG_W / 2, 30, 220); g.addColorStop(0, 'rgba(255,232,160,0.35)'); g.addColorStop(1, 'rgba(255,232,160,0)'); ctx.fillStyle = g; ctx.fillRect(BG_W / 2 - 220, 0, 440, 260);
+    ctx.fillStyle = '#3a3048'; ctx.fillRect(0, b - 10, BG_W, H - b + 10);
+  }
+};
+const SKY_DAY = ['#4a9ad8', '#9ad0f0', '#fbe8c8'];
+// each secret room its own floor and walls: the museum hall's green marble, the gift shop's checked lino, the cast
+// room's white tiles, the tar cave's black basalt, the specimen store's dark planks
+const MATS = {
+  marble: { base: '#2a5a4c', line: '#cfe8dc', cap: '#e8e2cc', capLo: '#a8a088', pat(ctx, rng) { ctx.strokeStyle = 'rgba(210,240,225,0.45)'; ctx.lineWidth = 1.2; ctx.beginPath(); let x = rng() * TS, y = 0; ctx.moveTo(x, y); while (y < TS) { x += (rng() - 0.5) * 12; y += 6; ctx.lineTo(x, y); } ctx.stroke(); } },
+  checker: { base: '#c84a3a', line: '#f2e2c4', cap: '#f2e2c4', capLo: '#a83a2a', pat(ctx) { ctx.fillStyle = '#f2e2c4'; ctx.fillRect(0, 0, TS / 2, TS / 2); ctx.fillRect(TS / 2, TS / 2, TS / 2, TS / 2); } },
+  tile: { base: '#e8eef0', line: '#b8c4c8', cap: '#8a969c', capLo: '#5a666c', pat(ctx) { ctx.strokeStyle = '#b8c4c8'; ctx.lineWidth = 2; ctx.strokeRect(1, 1, TS / 2 - 1, TS / 2 - 1); ctx.strokeRect(TS / 2, 1, TS / 2 - 1, TS / 2 - 1); ctx.strokeRect(1, TS / 2, TS / 2 - 1, TS / 2 - 1); ctx.strokeRect(TS / 2, TS / 2, TS / 2 - 1, TS / 2 - 1); } },
+  basalt: { base: '#2a2228', line: '#4a3e44', cap: '#1a1012', capLo: '#0a0606', pat(ctx, rng) { ctx.fillStyle = '#3a3036'; ctx.beginPath(); ctx.moveTo(4, 2); ctx.lineTo(TS - 6, 4); ctx.lineTo(TS - 3, TS / 2); ctx.lineTo(TS - 8, TS - 3); ctx.lineTo(5, TS - 5); ctx.lineTo(2, TS / 2); ctx.closePath(); ctx.fill(); ctx.fillStyle = 'rgba(120,180,200,0.2)'; ctx.fillRect(6 + rng() * 14, 8, 6, 2); } },
+  planks: { base: '#4a3424', line: '#2a1a10', cap: '#6a4a30', capLo: '#3a2414', pat(ctx, rng) { ctx.fillStyle = '#5a4030'; ctx.fillRect(0, 0, TS, 10); ctx.fillRect(0, 21, TS, 11); ctx.fillStyle = '#2a1a10'; ctx.fillRect(0, 10, TS, 1.5); ctx.fillRect(0, 21, TS, 1.5); ctx.fillRect(8 + rng() * 14, 0, 1.5, 10); ctx.fillStyle = '#7a5a3a'; ctx.beginPath(); ctx.arc(20, 26, 1.5, 0, TAU); ctx.fill(); } }
+};
+const mat = k => {
+  const M = MATS[k];
+  const ground = { style: 'room_' + k, cap: M.cap, capHi: M.cap, dirt: M.base, dirt2: M.capLo, rock: M.base,
+    paint(ctx, rng) { ctx.fillStyle = M.base; ctx.fillRect(0, 0, TS, TS); M.pat(ctx, rng || (() => 0.5)); },
+    paintCap(ctx, x0, x1) { ctx.fillStyle = M.capLo; ctx.fillRect(x0, 0, x1 - x0, 10); ctx.fillStyle = M.cap; ctx.fillRect(x0, 0, x1 - x0, 7); ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(x0, 0, x1 - x0, 1.5); ctx.fillStyle = INK; ctx.fillRect(x0, 9.5, x1 - x0, 1.5); } };
+  return { ground, hard: { c1: M.base, c2: M.capLo, paint(ctx, rng) { ctx.fillStyle = M.base; ctx.fillRect(0, 0, TS, TS); M.pat(ctx, rng || (() => 0.5)); } } };
+};
+const room = (name, painter, extra) => Object.assign({}, quarry, { name, music: 'tour_bone_room', particles: 'none', rays: null, sky: ['#2a2024', '#3a2a2a', '#4a3a30'], horizonGlow: '#ffd88a', celestial: { type: 'none' }, stars: 0, layers: [{ kind: painter, base: 400, f: 0.05 }], fog: '#4a3a30', decor: [] }, extra || {});
+const themes = {
+  bone_quarry: Object.assign({}, quarry, {
+    name: 'The Spare Bone Quarry', music: 'tour_bone', particles: 'dust', rays: '#fff0c8',
+    sky: SKY_DAY, horizonGlow: '#ffe0a8', celestial: { type: 'sun', x: 0.78, y: 0.14, r: 30, color: '#fff8e0', glow: '#ffd88a' }, stars: 0, cloudsDyn: true,
+    layers: [{ kind: 'mountains', color: '#b8a8c8', base: 270, amp: 120, f: 0.03, blur: true, snow: true }, { kind: 'boneTerraces', color: '#e0a868', base: 330, f: 0.08 }, { kind: 'boneArcs', color: '#b8743a', bone: '#efe2c4', base: 390, f: 0.2 }],
+    fog: '#ffe8c8', decor: ['boneTuft', 'boneRock', 'boneTuft', 'boneAmmo']
+  }),
+  bone_scree: Object.assign({}, quarry, {
+    name: 'Assembly Optional', music: 'tour_bone', particles: 'dust', rays: '#fff0c8',
+    sky: ['#5a8ac8', '#a8c8e0', '#f8dcb0'], horizonGlow: '#ffd0a0', celestial: { type: 'sun', x: 0.2, y: 0.18, r: 28, color: '#fff8e0', glow: '#ffd88a' }, stars: 0, cloudsDyn: true,
+    layers: [{ kind: 'boneTerraces', color: '#c8a078', base: 300, f: 0.05 }, { kind: 'boneScree', color: '#a8906e', base: 360, f: 0.12 }, { kind: 'boneArcs', color: '#8a5a32', bone: '#e8dcc0', base: 410, f: 0.25 }],
+    fog: '#f0d8b8', decor: ['boneRock', 'boneTuft', 'boneAmmo']
+  }),
+  bone_clay: Object.assign({}, quarry, { ground: clayGround,
+    name: 'Make an Impression', music: 'tour_bone_shed', particles: 'dust', rays: null,
+    sky: ['#6a5a4a', '#8a7a62', '#a8967a'], horizonGlow: '#ffe0b0', celestial: { type: 'none' }, stars: 0,
+    layers: [{ kind: 'boneShed', color: '#9a7a5a', base: 380, f: 0.1 }],
+    fog: '#a8907a', darkness: 0.05, decor: ['boneBucket', 'boneRock']
+  }),
+  bone_cut: Object.assign({}, quarry, {
+    name: 'Clean Break', music: 'tour_bone_shed', particles: 'dust', rays: null,
+    sky: ['#4a5a6a', '#6a7a8a', '#8a9aa8'], horizonGlow: '#ffe0b0', celestial: { type: 'none' }, stars: 0,
+    layers: [{ kind: 'boneWorkshop', color: '#7a6a5a', base: 390, f: 0.1 }],
+    fog: '#8a8a8a', darkness: 0.05, decor: ['boneBucket', 'boneRock']
+  }),
+  bone_dig: Object.assign({}, quarry, {
+    name: 'Some Reassembly Required', music: 'tour_bone', particles: 'dust', rays: '#ffd8a0',
+    sky: ['#3a2a5a', '#a85a6a', '#f8b878'], horizonGlow: '#ffb878', celestial: { type: 'sun', x: 0.5, y: 0.42, r: 34, color: '#ffe0a0', glow: '#ff9a6a' }, stars: 0.3,
+    layers: [{ kind: 'mountains', color: '#6a4a6a', base: 280, amp: 110, f: 0.03, blur: true, snow: true }, { kind: 'boneTerraces', color: '#a8643a', base: 330, f: 0.07 }, { kind: 'boneArcs', color: '#6a3a22', bone: '#d8c8a8', base: 400, f: 0.2 }],
+    fog: '#c87a5a', decor: ['boneRock', 'boneTuft']
+  }),
+  bone_arena: Object.assign({}, quarry, {
+    name: 'The Dig', music: 'tour_bone_boss', particles: 'dust', rays: null,
+    sky: ['#24183a', '#6a3a5a', '#c8705a'], horizonGlow: '#ff9a6a', celestial: { type: 'none' }, stars: 0.6,
+    layers: [{ kind: 'mountains', color: '#4a3050', base: 250, amp: 90, f: 0.03, blur: true, snow: true }, { kind: 'boneTerraces', color: '#6a3a2a', base: 300, f: 0.06 }, { kind: 'boneArcs', color: '#4a2a1e', bone: '#8a7a64', dull: true, base: 350, f: 0.12 }, { kind: 'boneDigClutter', color: '#3a2218', base: 400, f: 0.22 }],
+    fog: '#5a3a3a', decor: []
+  }),
+  bone_room_hall: room('The Great Hall', 'roomHall', mat('marble')),
+  bone_room_shop: room('The Gift Shop', 'roomShop', mat('checker')),
+  bone_room_cast: room('The Cast Room', 'roomCast', mat('tile')),
+  bone_room_tar: room('The Tar Pool', 'roomTar', Object.assign({ liquid: 'canal' }, mat('basalt'))),
+  bone_room_store: room('The Specimen Store', 'roomStore', mat('planks'))
+};
+
+/* ---------------- props (Decor: drawn each frame, plain shapes only) ---------------- */
+const decor = {
+  // a tuft of dry paramo grass
+  boneTuft(ctx, x, y, t, th, d) {
+    ctx.save(); ctx.strokeStyle = '#a88a3a'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    for (let k = -3; k <= 3; k++) { ctx.beginPath(); ctx.moveTo(x + k * 2, y); ctx.quadraticCurveTo(x + k * 3, y - 10, x + k * 5 + Math.sin(t * 1.5 + k) * 1.5, y - 16 - Math.abs(k) * -1); ctx.stroke(); }
+    ctx.strokeStyle = '#e0c060'; ctx.lineWidth = 1; for (let k = -2; k <= 2; k += 2) { ctx.beginPath(); ctx.moveTo(x + k * 2, y - 2); ctx.lineTo(x + k * 4, y - 13); ctx.stroke(); }
+    ctx.restore();
+  },
+  // a lump of quarry rock
+  boneRock(ctx, x, y, t, th, d) {
+    const s = 0.7 + (((d && d.seed) || 0) % 4) * 0.12;
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.fillStyle = '#b8743a';
+    ctx.beginPath(); ctx.moveTo(x - 13 * s, y); ctx.lineTo(x - 10 * s, y - 9 * s); ctx.lineTo(x - 1 * s, y - 14 * s); ctx.lineTo(x + 11 * s, y - 9 * s); ctx.lineTo(x + 13 * s, y); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#e0a060'; ctx.beginPath(); ctx.moveTo(x - 8 * s, y - 8 * s); ctx.lineTo(x - 1 * s, y - 12 * s); ctx.lineTo(x + 3 * s, y - 8 * s); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  },
+  // an ammonite lying in the dust
+  boneAmmo(ctx, x, y, t, th, d) { BoneArt.ammonite(ctx, x, y - 8, 8, ((d && d.seed) || 0) % 2 ? '#3e8a74' : '#c8a060'); },
+  // a bucket of wet plaster with a trowel in it
+  boneBucket(ctx, x, y, t) {
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 1.8; ctx.fillStyle = '#7a8a96';
+    ctx.beginPath(); ctx.moveTo(x - 11, y - 20); ctx.lineTo(x + 11, y - 20); ctx.lineTo(x + 9, y); ctx.lineTo(x - 9, y); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#f4f0e8'; ctx.beginPath(); ctx.ellipse(x, y - 20, 11, 3, 0, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#5a3a22'; ctx.fillRect(x + 2, y - 34, 3, 14); ctx.strokeRect(x + 2, y - 34, 3, 14);
+    ctx.restore();
+  },
+  // the tipped crate of replicas (37-1's start)
+  boneCrate(ctx, x, y, t) { BoneArt.crate(ctx, x, y, 1); },
+  // a museum label on a stalk (decor seed picks the word)
+  boneLabel(ctx, x, y, t, th, d) { BoneArt.label(ctx, x, y, ['APPROX.', 'REPLICA', 'PROBABLY', 'A FOOT?', 'UNSURE'][((d && d.seed) || 0) % 5], 44); },
+  // a lantern on a survey pole
+  boneLamp(ctx, x, y, t) {
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.fillStyle = '#5a3a22'; ctx.fillRect(x - 2, y - 50, 4, 50); ctx.strokeRect(x - 2, y - 50, 4, 50);
+    ctx.fillStyle = '#ffd88a'; rr(ctx, x - 7, y - 64, 14, 14, 3); ctx.fill(); ctx.stroke(); ctx.restore();
+  }
+};
+const decorLights = { boneLamp: [80, '#ffd88a', -57] };
+
+/* ---------------- door looks: the dig team's plywood hatch, a crack in the strata ---------------- */
+{
+  const dr0 = DoorArt.draw;
+  DoorArt.draw = function (ctx, x, y, look, t, near) {
+    if (look === 'boneHatch' || look === 'boneCrack') {
+      ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+      if (look === 'boneHatch') {
+        ctx.fillStyle = '#c89a5a'; rr(ctx, x - 20, y - 58, 40, 58, 4); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#a8783a'; for (let k = 0; k < 4; k++) ctx.fillRect(x - 18, y - 52 + k * 14, 36, 3);
+        ctx.fillStyle = PERS; ctx.beginPath(); ctx.arc(x + 12, y - 28, 3.5, 0, TAU); ctx.fill(); ctx.stroke();
+        if (near) { ctx.fillStyle = '#ffffff'; ctx.font = '9px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('▲', x, y - 66 + Math.sin(t * 6) * 2); }
+      } else {
+        ctx.fillStyle = '#2a140a'; ctx.beginPath(); ctx.moveTo(x - 6, y); ctx.lineTo(x - 12, y - 30); ctx.lineTo(x - 4, y - 46); ctx.lineTo(x + 3, y - 58); ctx.lineTo(x + 10, y - 40); ctx.lineTo(x + 14, y - 18); ctx.lineTo(x + 8, y); ctx.closePath(); ctx.fill(); ctx.stroke();
+        if (near) { ctx.fillStyle = '#ffffff'; ctx.font = '9px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('▲', x, y - 66 + Math.sin(t * 6) * 2); }
+      }
+      ctx.restore(); return;
+    }
+    return dr0.call(this, ctx, x, y, look, t, near);
+  };
+}
+
+/* ---------------- the critters ---------------- */
+// SOCKET MOUSE: an orange mouse living in a hollow bone socket. It moves house every time a bigger joint comes free:
+// when Brady gets close it twitches its whiskers (the tell), then springs out on its tail in a high arc AWAY from him
+// (it is moving house, not attacking: only its landing and its scurry can bump into him), and scurries to a new socket (it lives in the hollow bone it carries along on its back... sort of).
+const mouseArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, m === 'flat' ? 0.4 : 1); ctx.strokeStyle = INK; ctx.lineWidth = 1.7;
+  const home = m === 'hide' || m === 'idle' || m === 'notice', air = m === 'hop';
+  if (home) {
+    // the hollow bone socket it lives in, the mouse peeking out
+    const tw = m === 'notice' ? Math.sin(t * 60) * 1.5 : 0;
+    ctx.fillStyle = '#f2b44e'; ctx.beginPath(); ctx.arc(2, -15, 7, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#ffb0a0'; ctx.beginPath(); ctx.arc(-5, -20, 4, 0, TAU); ctx.arc(8, -20, 4, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(5, -16, 1.4, 0, TAU); ctx.fill();
+    ctx.strokeStyle = INK; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(8, -13 + tw); ctx.lineTo(15, -14 - tw); ctx.moveTo(8, -12); ctx.lineTo(15, -10 + tw); ctx.stroke(); ctx.lineWidth = 1.7;
+    ctx.fillStyle = BONE; ctx.beginPath(); ctx.moveTo(-11, 0); ctx.lineTo(-11, -12); ctx.quadraticCurveTo(0, -9, 11, -12); ctx.lineTo(11, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = BONE_LO; ctx.beginPath(); ctx.ellipse(0, -11, 11, 3, 0, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = BONE_SH; ctx.beginPath(); ctx.arc(-6, -5, 2.5, 0, TAU); ctx.fill();
+    if (m === 'notice') { ctx.fillStyle = '#ffd84a'; ctx.font = '10px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('!', 2, -28); }
+    ctx.restore(); return;
+  }
+  // out: springing on its curled tail, or scurrying
+  const st = air ? 0 : Math.sin(t * 22) * 2;
+  ctx.strokeStyle = '#e07a50'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(-8, -6); if (air) { ctx.bezierCurveTo(-16, 0, -10, 8, -14, 10); } else ctx.quadraticCurveTo(-18, -8, -20, -2); ctx.stroke();
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.7; ctx.fillStyle = '#f2a03a';
+  ctx.beginPath(); ctx.ellipse(-1, -7, 9, 6, air ? -0.3 : 0, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#f2b44e'; ctx.beginPath(); ctx.arc(7, -11, 5.5, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#ffb0a0'; ctx.beginPath(); ctx.arc(4, -17, 3.5, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(9, -12, 1.3, 0, TAU); ctx.fill(); ctx.fillStyle = '#ff7a8a'; ctx.beginPath(); ctx.arc(12.5, -10, 1.3, 0, TAU); ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.5; for (const lx of [-5, 3]) { ctx.beginPath(); ctx.moveTo(lx, -2); ctx.lineTo(lx + st, 0); ctx.stroke(); }
+  ctx.restore();
+};
+// PLASTER NEWT: a spotted petrol-green newt. Stomp it once and its tail drops off (it wriggles away on its own); the
+// newt holds up THREE replacement tails, picks one and carries on, faster. The second stomp is the real one.
+const newtArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, m === 'flat' ? 0.4 : 1); ctx.strokeStyle = INK; ctx.lineWidth = 1.7;
+  const tail = !(e.tailless > 0), st = Math.sin(t * 14) * 2;
+  if (tail) { ctx.fillStyle = e.hp > 1 ? '#3e8a6a' : '#c8b898'; ctx.beginPath(); ctx.moveTo(-8, -6); ctx.quadraticCurveTo(-22, -10 + Math.sin(t * 6) * 3, -26, -2); ctx.quadraticCurveTo(-18, -2, -8, -1); ctx.closePath(); ctx.fill(); ctx.stroke(); if (e.hp <= 1) { ctx.fillStyle = PERS; ctx.beginPath(); ctx.arc(-9, -4, 2.5, 0, TAU); ctx.fill(); ctx.stroke(); } }
+  ctx.fillStyle = '#3e8a6a';
+  for (const lx of [-6, 6]) { ctx.beginPath(); ctx.moveTo(lx, -4); ctx.lineTo(lx - 3 + st * (lx > 0 ? 1 : -1), 1); ctx.stroke(); }
+  ctx.beginPath(); ctx.ellipse(0, -7, 11, 5.5, 0, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(12, -10, 6, 4.5, 0.2, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = BONE; for (const [sx, sy] of [[-5, -9], [1, -10], [6, -7], [-2, -5]]) { ctx.beginPath(); ctx.arc(sx, sy, 1.4, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(14, -13, 2.8, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(15, -13, 1.3, 0, TAU); ctx.fill();
+  // the three replacement tails it holds up while it decides
+  if (e.tailless > 0) for (let k = 0; k < 3; k++) { ctx.save(); ctx.translate(-2 + k * 8, -18 - k % 2 * 3); ctx.rotate(-0.4 + k * 0.4); ctx.fillStyle = ['#c8b898', '#e8a04a', '#8ac8b8'][k]; ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(-3, -8, 0, -14); ctx.quadraticCurveTo(3, -8, 3, 0); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); }
+  ctx.restore();
+};
+// DUST BRUSH: a grumpy orange-handled dig brush on two green boots. It runs ahead of shoes to erase the evidence: when
+// Brady comes near it scowls and scrubs the ground (the tell, a dust puff), then dashes at him sweeping.
+const brushArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, m === 'flat' ? 0.4 : 1); ctx.strokeStyle = INK; ctx.lineWidth = 1.7;
+  const run = m === 'charge', wind = m === 'notice', step = run ? Math.sin(t * 26) * 3 : Math.sin(t * 8) * 1.5;
+  ctx.rotate(run ? 0.25 : wind ? Math.sin(t * 40) * 0.08 : 0);
+  ctx.fillStyle = PETROL; rr(ctx, -9 + step, -6, 7, 6, 2); ctx.fill(); ctx.stroke(); rr(ctx, 2 - step, -6, 7, 6, 2); ctx.fill(); ctx.stroke();
+  // the bristles
+  ctx.fillStyle = BONE; ctx.beginPath(); ctx.moveTo(-12, -5); ctx.lineTo(12, -5); ctx.lineTo(9, -17); ctx.lineTo(-9, -17); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = BONE_SH; ctx.lineWidth = 1; for (let k = -9; k <= 9; k += 3) { ctx.beginPath(); ctx.moveTo(k, -6); ctx.lineTo(k * 0.8, -16); ctx.stroke(); }
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.7;
+  // the ferrule with its face, and the handle
+  ctx.fillStyle = PERS; rr(ctx, -10, -27, 20, 11, 3); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(-3, -22, 2.6, 0, TAU); ctx.arc(4, -22, 2.6, 0, TAU); ctx.fill(); ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(-2, -22, 1.2, 0, TAU); ctx.arc(5, -22, 1.2, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-6, -26); ctx.lineTo(-1, -24.5); ctx.moveTo(8, -26); ctx.lineTo(3, -24.5); ctx.stroke();
+  ctx.fillStyle = '#e8763a'; rr(ctx, -4, -42, 8, 16, 3); ctx.fill(); ctx.stroke(); ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(0, -38, 1.5, 0, TAU); ctx.fill();
+  ctx.restore();
+  if (run && Math.random() < 0.3 && e.g) e.g.burst(x - (e.dir || 1) * 14, y - 2, 1, '#e8c898', 'dust');
+};
+// REPLICA ROOK: a dark green bird with an orange eye-ring and a bone-white beak. It drifts about pecking at its own
+// reflection in freshly varnished bone; when Brady comes under it, it squawks and swoops.
+const rookArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(-(e.dir || 1), 1); ctx.strokeStyle = INK; ctx.lineWidth = 1.7;
+  const f = Math.sin(t * (m === 'swoop' ? 22 : 10));
+  ctx.fillStyle = '#245a48'; ctx.beginPath(); ctx.moveTo(4, -2); ctx.quadraticCurveTo(14, -10 - f * 10, 24, -4 - f * 8); ctx.quadraticCurveTo(14, 0, 4, 4); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#2e6a5a'; ctx.beginPath(); ctx.ellipse(0, 0, 11, 7, 0.1, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(8, 2); ctx.lineTo(18, 6); ctx.lineTo(16, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(-9, -5, 6, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = BONE; ctx.beginPath(); ctx.moveTo(-14, -6); ctx.lineTo(-24, -3); ctx.lineTo(-14, -2); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = PERS; ctx.beginPath(); ctx.arc(-10, -6, 2.8, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(-10.5, -6, 1.1, 0, TAU); ctx.fill();
+  ctx.strokeStyle = BONE_LO; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(-2, 6); ctx.lineTo(-3, 11); ctx.moveTo(2, 6); ctx.lineTo(2, 11); ctx.stroke();
+  ctx.restore();
+};
+// the newt's dropped tail: it wriggles away on its own for a moment (harmless scenery)
+class BoneTail extends Ent {
+  constructor(g, s) { super(g, s, 16, 8); this.x = s.x - 8; this.y = s.y - 8; this.life = 1.6; this.dir = s.dir || 1; this.friendly = true; this.back = true; }
+  update(dt) { this.t += dt; this.x += this.dir * 40 * dt; if (this.t > this.life) this.remove = true; }
+  touchPlayer() {}
+  draw(ctx) { ctx.save(); ctx.globalAlpha = clamp((this.life - this.t) * 2, 0, 1); ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.fillStyle = '#3e8a6a'; ctx.beginPath(); const w = Math.sin(this.t * 20) * 3; ctx.moveTo(this.x, this.y + 6); ctx.quadraticCurveTo(this.x + 8, this.y + w, this.x + 16, this.y + 6); ctx.quadraticCurveTo(this.x + 8, this.y + 8, this.x, this.y + 8); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); }
+}
+ENTITY_TYPES.boneTail = BoneTail;
+// the socket mouse's own think: in its socket until Brady comes within 5 tiles; whiskers twitch (0.6 s), then it
+// springs out at him on its tail; after landing it scurries about and moves into a new socket a few seconds later
+const mouseThink = (e, dt) => {
+  const p = e.g.player;
+  e.st = (e.st || 0) + dt;
+  if (!e.phase) e.phase = 'home';
+  if (e.phase === 'home') { e.vx = 0; e.mode = 'hide'; if (e.cool <= 0 && p && !p.dead && Math.abs(p.cx - e.cx) < 5 * TS && Math.abs(p.cy - e.cy) < 3 * TS) { e.phase = 'notice'; e.st = 0; e.dir = -(sign(p.cx - e.cx) || e.dir); TourKit.sfx('squeak', 'select', { vol: 0.35, pitch: 2.2 }); } }
+  else if (e.phase === 'notice') { e.vx = 0; e.mode = 'notice'; if (e.st > 0.6) { e.phase = 'spring'; e.st = 0; e.vy = -10 * TS; e.vx = e.dir * 2.4 * TS; e.onGround = false; e.g.burst(e.cx, e.y + e.h, 4, BONE, 'dust'); } }
+  else if (e.phase === 'spring') { e.mode = 'hop'; if (e.onGround && e.st > 0.15) { e.phase = 'scurry'; e.st = 0; e.vx = e.dir * e.speed; } }
+  else { e.mode = 'walk'; if (!e.vx) e.vx = e.dir * e.speed; if (e.st > 2.6 && e.onGround) { e.phase = 'home'; e.st = 0; e.cool = 1.6; Tour.boneKit.pill(e.g, e.cx, e.y - 8, 'NEW HOUSE!', '#ffd88a'); } }
+};
+const enemies = {
+  boneMouse: { cls: TourEnemy.make({ w: 22, h: 22, speed: 1.6, edgeTurn: true, art: mouseArt, burst: '#f2a03a', think: mouseThink, init: e => { const tp0 = e.touchPlayer; e.touchPlayer = p => { if (e.phase === 'home' || !e.phase) return; return tp0.call(e, p); }; } }), place: 'walk' },
+  boneNewt: { cls: TourEnemy.make({ w: 28, h: 16, speed: 0.9, hp: 2, edgeTurn: true, art: newtArt, burst: '#3e8a6a',
+    think: (e, dt) => { if (e.tailless > 0) { e.tailless -= dt; e.vx = 0; e.mode = 'idle'; if (e.tailless <= 0) { e.speed = 1.5 * TS; e.vx = e.dir * e.speed; Tour.boneKit.pill(e.g, e.cx, e.y - 10, 'THAT ONE.', '#c8f0d8'); } return; } e.mode = 'walk'; if (!e.vx) e.vx = e.dir * e.speed; },
+    onHurt: e => { e.tailless = 0.9; e.g.spawn(new BoneTail(e.g, { x: e.cx - e.dir * 14, y: e.y + e.h, dir: -e.dir })); Tour.boneKit.pill(e.g, e.cx, e.y - 12, 'MY TAIL!', '#c8f0d8'); } }), place: 'walk' },
+  boneBrush: { cls: TourEnemy.make({ w: 24, h: 40, speed: 0.8, behavior: 'charge', range: 7, chargeSpeed: 4.2, windup: 0.8, chargeT: 1.1, edgeTurn: true, art: brushArt, burst: '#f06a2a',
+    onNotice: e => { Tour.boneKit.pill(e.g, e.cx, e.y - 12, 'SWEEP SWEEP!', '#ffd88a'); e.g.burst(e.cx, e.y + e.h, 6, '#e8c898', 'dust'); TourKit.sfx('brush', 'select', { vol: 0.35, pitch: 0.7 }); } }), place: 'walk' },
+  boneRook: { cls: TourFlyer.make({ w: 30, h: 20, range: 3, speed: 0.7, swoop: true, art: rookArt, burst: '#2e6a5a',
+    onSwoop: e => { if (e.g.onScreen(e)) Tour.boneKit.pill(e.g, e.cx, e.y - 10, 'CAW!', '#c8f0d8'); } }), place: 'fly' }
+};
+
+/* ---------------- the route map: a little bone in the pin ---------------- */
+const emblem = (ctx, x, y, r, t) => {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(-0.6 + Math.sin(t * 1.5) * 0.05);
+  ctx.fillStyle = BONE; ctx.strokeStyle = INK; ctx.lineWidth = 1.2;
+  ctx.fillRect(-r * 0.55, -r * 0.16, r * 1.1, r * 0.32);
+  for (const sx of [-1, 1]) for (const sy of [-1, 1]) { ctx.beginPath(); ctx.arc(sx * r * 0.62, sy * r * 0.2, r * 0.24, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = PERS; ctx.beginPath(); ctx.arc(0, 0, r * 0.15, 0, TAU); ctx.fill();
+  ctx.restore();
+};
+
+/* ---------------- the land's map: sprites ---------------- */
+Object.assign(TourOWPaint.art, {
+  // a quarry bench cut into the land: two stepped ochre ledges
+  boneBench(c, r) { this.P(c, [[-r, 0], [-r, -r * 0.4], [-r * 0.3, -r * 0.4], [-r * 0.3, -r * 0.8], [r, -r * 0.8], [r, 0]], '#e0a060'); c.fillStyle = '#c87a3a'; c.fillRect(-r, -r * 0.12, r * 2, r * 0.12); },
+  // a giant replica bone lying on the map
+  boneBig(c, r) { BoneArt.bone(c, -r, 0, r, -r * 0.4, r * 0.35, true); },
+  // a rib arch
+  boneRibs(c, r) { c.strokeStyle = INK; c.lineWidth = r * 0.32; c.lineCap = 'round'; for (let k = 0; k < 3; k++) { c.beginPath(); c.arc(k * r * 0.5 - r * 0.5, 0, r * 0.7, Math.PI * 1.1, Math.PI * 1.9); c.stroke(); } c.strokeStyle = BONE; c.lineWidth = r * 0.2; for (let k = 0; k < 3; k++) { c.beginPath(); c.arc(k * r * 0.5 - r * 0.5, 0, r * 0.7, Math.PI * 1.1, Math.PI * 1.9); c.stroke(); } },
+  // the tipped crate where the arrival trail starts
+  boneCrateS(c, r) { c.save(); c.rotate(-0.15); this.P(c, [[-r, 0], [-r, -r * 0.9], [r, -r * 0.9], [r, 0]], '#c89a5a'); c.fillStyle = '#a8783a'; c.fillRect(-r, -r * 0.6, r * 2, r * 0.1); c.restore(); },
+  // the fossil sitting down at last (the boss's stop)
+  boneSit(c, r) { BoneArt.bone(c, -r * 0.8, -r * 0.2, r * 0.6, -r * 0.6, r * 0.3, true); BoneArt.joint(c, r * 0.7, -r * 0.7, r * 0.22); c.fillStyle = BONE; c.strokeStyle = INK; c.lineWidth = 1.4; c.beginPath(); c.ellipse(r * 0.8, -r * 1.05, r * 0.35, r * 0.22, 0.3, 0, TAU); c.fill(); c.stroke(); }
+});
+// a quarry rim instead of a coast: a soft shadow, a rust cliff band, then the ochre floor
+TourOWLands.coast.boneRim = function (c, ow, ring) {
+  const L = ow.look, ink = this.INK;
+  c.save(); c.translate(8, 14); OWGeo.path(c, ring, true); c.fillStyle = 'rgba(40,20,10,0.35)'; c.fill(); c.restore();
+  c.save(); c.translate(0, 9); OWGeo.path(c, ring, true); c.fillStyle = '#8a4620'; c.fill(); c.strokeStyle = ink; c.lineWidth = 2.6; c.stroke(); c.restore();
+  OWGeo.path(c, ring, true); c.fillStyle = L.land; c.fill();
+  c.save(); OWGeo.path(c, ring, true); c.clip(); c.strokeStyle = '#f2c070'; c.lineWidth = 12; OWGeo.path(c, ring, true); c.stroke(); c.restore();
+  OWGeo.path(c, ring, true); c.strokeStyle = ink; c.lineWidth = 2.8; c.stroke();
+};
+// the quarry floor under the trails: strata bands, scattered ammonites and bones
+TourOWScenes.groundPaint.bone = function (c, ow) {
+  const R = TourOWPaint.rng('boneground'), A = TourOWPaint.art, ink = TourOWPaint.INK;
+  c.lineJoin = 'round'; c.lineCap = 'round';
+  c.strokeStyle = 'rgba(160,90,30,0.28)'; c.lineWidth = 3;
+  for (let k = 0; k < 14; k++) { const y = 180 + k * 40 + R() * 10; c.beginPath(); c.moveTo(200, y); for (let x = 200; x < 1340; x += 60) c.lineTo(x, y + Math.sin(x * 0.01 + k) * 8); c.stroke(); }
+  for (let k = 0; k < 16; k++) { c.save(); c.translate(240 + R() * 1060, 200 + R() * 500); BoneArt.ammonite(c, 0, 0, 5 + R() * 4, R() < 0.5 ? '#3e8a74' : '#c8a060'); c.restore(); }
+  for (let k = 0; k < 8; k++) { c.save(); c.translate(260 + R() * 1000, 220 + R() * 460); c.strokeStyle = ink; c.lineWidth = 1.2; A.boneBig.call(TourOWPaint, c, 8 + R() * 6); c.restore(); }
+};
+TourLandscape.looks.bone = ['#9ad0f0', '#4a9ad8', '#c87a3a', '#e0a060', '#f2c070', '#f4ead2', 'boneQuarry'];
+{
+  // the land's landmark miniature: a sitting fossil on a quarry bench
+  const lm0 = TourLandscape.landmark;
+  TourLandscape.landmark = function (ctx, kind, x, y, size, ink, accent) {
+    if (kind !== 'boneQuarry') return lm0.call(this, ctx, kind, x, y, size, ink, accent);
+    ctx.save(); ctx.translate(x, y); ctx.scale(size / 40, size / 40); ctx.lineWidth = 2; ctx.strokeStyle = ink || INK; ctx.lineJoin = 'round';
+    ctx.fillStyle = '#e0a060'; ctx.beginPath(); ctx.moveTo(-26, 0); ctx.lineTo(-26, -12); ctx.lineTo(-8, -12); ctx.lineTo(-8, -20); ctx.lineTo(26, -20); ctx.lineTo(26, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+    BoneArt.bone(ctx, -14, -26, 14, -40, 7, true);
+    ctx.restore();
+  };
+}
+
+/* ---------------- music: a jaunty dig-site marimba, a clanky shed shuffle, a music-box room tune, the boss ---------- */
+const tracks = {
+  tour_bone: {
+    bpm: 118, bars: 8, rv: 0.25, hx: 0.05, sw: 0.12,
+    ch: 'D D G A D Bm G A',
+    ld: 'F#6:2 A6:2 D7:4 A6:2 F#6:2 | E6:4 F#6:2 E6:2 D6:8 | G6:2 B6:2 D7:4 B6:2 G6:2 | A6:4 C#7:4 E7:8 |' +
+        'F#6:2 A6:2 D7:2 C#7:2 B6:4 A6:4 | B6:2 D7:2 F#7:4 D7:4 B6:4 | G6:2 B6:2 E7:4 D7:2 B6:2 | A6:4 G6:2 E6:2 D6:8',
+    li: 'marimba', lv: 0.14,
+    bp: 'r..f..r.r..f..o.', bi: 'pluck', bv: 0.28,
+    ap: '..c...c...c...c.', ai: 'pluck', av: 0.05, ao: 60,
+    dr: ['k.....k...k.....', '....s.......s...', 'h.h.h.h.h.h.h.h.'], dv: 0.32
+  },
+  tour_bone_shed: {
+    bpm: 104, bars: 8, rv: 0.3, sw: 0.15, hx: 0.05,
+    ch: 'Am Am Dm E Am Am F E7',
+    ld: 'E6:2 .:2 A6:2 .:2 C7:4 B6:4 | A6:2 G#6:2 A6:4 E6:8 | F6:2 .:2 A6:2 .:2 D7:4 C7:4 | B6:4 G#6:4 E6:8 |' +
+        'C7:2 B6:2 A6:2 E6:2 A6:4 C7:4 | E7:4 D7:2 C7:2 B6:8 | A6:2 C7:2 F7:4 E7:2 D7:2 | C7:4 B6:4 G#6:8',
+    li: 'clav', lv: 0.12,
+    bp: 'r.r.f...r.r.o...', bi: 'slapb', bv: 0.28,
+    ap: '.c...c...c...c..', ai: 'vibes', av: 0.05, ao: 58,
+    dr: ['k...k...k...k...', '..s...s...s...s.', 'h.hhh.h.h.hhh.h.'], dv: 0.3
+  },
+  tour_bone_room: {
+    bpm: 92, bpb: 3, bars: 8, rv: 0.5, dl: 0.2, hx: 0.03,
+    ch: 'C G Am F C G F G',
+    ld: 'E6:3 G6:3 C7:6 | D7:3 B6:3 G6:6 | C7:3 A6:3 E6:6 | F6:6 A6:6 | E7:3 D7:3 C7:6 | B6:3 D7:3 G6:6 | A6:3 C7:3 F7:6 | D7:12',
+    li: 'mbox', lv: 0.13,
+    bp: 'r.....r.....', bi: 'sub', bv: 0.22,
+    ap: 'c.c.c.c.c.c.', ai: 'harp', av: 0.05, ao: 64,
+    dr: ['k...........', '......s.....', '..h...h...h.'], dv: 0.16
+  },
+  tour_bone_boss: {
+    bpm: 136, bars: 8, rv: 0.3, hx: 0.07,
+    ch: 'Em Em C D Em Em Am B7',
+    ld: 'E6:2 G6:2 B6:2 E7:2 D7:4 B6:4 | C7:2 B6:2 A6:2 G6:2 E6:8 | C7:2 E7:2 G7:2 E7:2 D7:4 C7:4 | D7:4 F#7:4 A7:8 |' +
+        'B6:2 A6:2 G6:2 E6:2 G6:4 B6:4 | A6:2 G6:2 F#6:2 G6:2 E6:8 | A6:2 C7:2 E7:2 A7:2 G7:4 E7:4 | F#7:4 D#7:4 B6:8',
+    li: 'marimba', lv: 0.15,
+    bp: 'r-.r-.r-.r-.r-o-', bi: 'reese', bv: 0.3,
+    ap: '..c...c...c...c.', ai: 'brass', av: 0.05, ao: 55,
+    dr: ['k...k...k...k...', '....s.......s..s', 'h.h.h.h.h.h.h.h.'], dv: 0.42
+  }
+};
+
+Tour.country({
+  id: 'bone', secret: true, bonus: true, colors: COL, tagline: 'A hidden land: a quarry of fossil replicas that put themselves together from memory',
+  themes, painters, decor, decorLights, enemies, tracks,
+  music: { level: 'tour_bone', boss: 'tour_bone_boss', map: null },
+  landmark: 'the quarry where the replicas landed', emblem,
+  arrival: 'Brady! A whole crate of plaster fossils fell down a quarry and put themselves back together from memory. Nobody remembered properly. I love them already. ♥ C',
+  coin: { name: 'BONE CHIPS', draw(ctx, x, y) {
+    ctx.fillStyle = '#f2c070'; ctx.beginPath(); ctx.arc(x, y, 8.5, 0, TAU); ctx.fill();
+    ctx.fillStyle = BONE; ctx.fillRect(x - 4.5, y - 1.6, 9, 3.2); for (const sx of [-1, 1]) for (const sy of [-1, 1]) { ctx.beginPath(); ctx.arc(x + sx * 4.8, y + sy * 1.8, 1.9, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillRect(x - 5, y - 6, 2, 2);
+  } },
+  levels: []
+});
+// a floating line on a dark rounded pill (every word the land floats: readable on any sky), kept clear of Brady's
+// head and the top bar, inside the view
+class BonePill extends Ent {
+  constructor(g, x, y, text, col) { super(g, null, 4, 4); this.x = x; this.y = y; this.text = String(text); this.col = col || '#ffd88a'; this.life = 1.7; this.friendly = true; }
+  update(dt) { this.t += dt; this.y -= 10 * dt; if (this.t > this.life) this.remove = true; }
+  touchPlayer() {}
+  draw(ctx) {
+    const g = this.g, p = g.player, a = Math.min(1, (this.life - this.t) * 3, this.t * 8);
+    ctx.save(); ctx.globalAlpha = a; ctx.font = '10px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const w = ctx.measureText(this.text).width + 18;
+    let x = clamp(this.x, g.camX + w / 2 + 6, g.camX + Game.viewW - w / 2 - 6), y = this.y;
+    if (p && Math.abs(x - p.cx) < w / 2 + 16 && y > p.y - 30 && y < p.y + p.h) y = p.y - 30;
+    y = Math.max(y, g.camY + 64);
+    ctx.fillStyle = 'rgba(36,22,14,0.86)'; rr(ctx, x - w / 2, y - 10, w, 20, 10); ctx.fill();
+    ctx.fillStyle = this.col; ctx.fillText(this.text, x, y + 1); ctx.restore();
+  }
+}
+ENTITY_TYPES.bonePill = BonePill;
+const pill = (g, x, y, text, col) => { if (g && g.spawn) g.spawn(new BonePill(g, x, y, text, col)); };
+// for the other bone files and the tests
+Tour.boneKit = { pill, COL, INK, BoneArt, OCHRE, OCHRE_HI, OCHRE_LO, RUST, BONE, BONE_LO, BONE_SH, PERS, PETROL, PETROL_LO };
+})();
+
+/* ---- 29_tour_y_bone_a_mech.js ---- */
+/* ============================================================
+   THE SPARE BONE QUARRY: the land's mechanics (world 37).
+   Shared: the area system `bone` (rides onto the built area and the checker's copy), the THROW claim (a prop takes
+   the action button only while Brady touches it or stands on its mark: no puffs or lasers fly then), the land's
+   secret tell (a hollow bone end in the rock with a mouse's whiskers twitching in it).
+   37-1 TRACKWAY  footprint trackways: a plinth shows the creature's next foot; JUMP onto the print that fits; each
+                  finished pair raises giant stone steps. The last trackway walked backwards: follow the toes.
+   37-2 ASSEMBLY  a vertebra on a socket: THROW at its crank turns it one notch; only one angle lays its rib(s) flat
+                  as a bridge over the scree. Late on, one vertebra turns two unequal ribs.
+                  The replica-rib RUNGS: a climbable surface. Push UP into it to grip, steer all four ways, JUMP at a
+                  persimmon collar to cross to the far face, JUMP elsewhere to let go. Critters climb it too, each on
+                  its own face: climb round them (cross faces at a collar).
+   37-3 MOULD     a clay tray under a plaster press: crouch or stand as the press comes down and the cast that pops
+                  out is low and broad or tall; only the right one fits where it lands.
+   37-4 CHISEL    a cracked replica: hold THROW on its mark to draw the chisel along the seam, release at the fork
+                  (generous window) and the unwanted half falls away. The last cut ends just before the joint.
+   The checker: each puzzle's result is a toggle group (B tiles: the steps, the bridge, the cast; A tiles: the half
+   that falls away) with its switch where the puzzle is solved; the game sets the tiles itself when it is solved.
+   The rungs are the checker's ghosts (one-way rungs every other row), and in the game a full jump can be made from
+   any grip, so every rung the checker stands on is a grip Brady can jump from.
+   ============================================================ */
+(function () {
+const K = Tour.boneKit, INK = K.INK, BA = K.BoneArt, BONE = K.BONE, PERS = K.PERS, PETROL = K.PETROL;
+
+/* ---------------- the `bone` area system ---------------- */
+if (TourBuild.SYSTEMS.indexOf('bone') < 0) TourBuild.SYSTEMS.push('bone');
+{
+  const px0 = Validator.proxyArea;
+  Validator.proxyArea = function (area, mask) { const A = px0.call(this, area, mask); if (area.bone) A.bone = area.bone; return A; };
+}
+const inBone = g => !!(g && g.area && g.area.bone);
+// standing on tile (x, floor row y)?
+const standsOn = (p, x, y, r) => p && !p.dead && p.onGround && p.groundTy === y && Math.abs(p.cx - (x * TS + TS / 2)) < TS * (r || 0.6);
+// set a rect of tiles at run time (only cells that are not already something else when making solid)
+const setRect = (g, r, t, onlyEmpty) => { for (let y = r[1]; y <= r[3]; y++) for (let x = r[0]; x <= r[2]; x++) { if (onlyEmpty && t !== T.EMPTY && tileAt(g.area, x, y) !== T.EMPTY) continue; g.setTile(x, y, t); } };
+const bbox = pts => { let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const [x, y] of pts) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); } return [x0, y0, x1, y1]; };
+
+/* ---------------- the THROW claim ---------------- */
+// every frame in a bone area: if a prop wants the action button (Brady touches it / stands on its mark), the press and
+// the hold go to g.boneIn and Brady's own action (puffs, lasers, gear) does not fire
+{
+  const up0 = Player.prototype.update;
+  Player.prototype.update = function (dt, inp) {
+    const g = this.g;
+    if (inBone(g) && inp && this.state === 'play' && !this.dead) {
+      let claim = null;
+      for (const e of g.entities) if (e.boneClaim && !e.remove && e.boneClaim(this)) { claim = e; break; }
+      g.boneIn = claim ? { pressed: !!inp.actionPressed, held: !!inp.action, by: claim } : null;
+      g.boneClaimT = claim ? (g.boneClaimT || 0) + dt : 0;
+      if (claim) inp = Object.assign({}, inp, { actionPressed: false, action: false });
+    }
+    return up0.call(this, dt, inp);
+  };
+  if (typeof TourPicker !== 'undefined') {
+    const vis0 = TourPicker.visible;
+    TourPicker.visible = function (play) { if (play && play.boneIn) return false; return vis0.call(this, play); };
+  }
+}
+// the THROW hint over a prop Brady stands at (once per prop until used)
+const throwHint = (e, ctx, x, y, word) => {
+  const g = e.g; if (!g.boneIn || g.boneIn.by !== e) return;
+  const p = g.player; if (p) { y = Math.min(y, p.y - 30); x = clamp(x, p.cx - 60, p.cx + 60); }
+  ctx.save(); ctx.font = '9px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const w = ctx.measureText(word).width + 14; ctx.fillStyle = 'rgba(36,22,14,0.8)'; rr(ctx, x - w / 2, y - 9 + Math.sin(e.t * 5) * 1.5, w, 18, 9); ctx.fill();
+  ctx.fillStyle = '#ffd88a'; ctx.fillText(word, x, y + Math.sin(e.t * 5) * 1.5); ctx.restore();
+};
+
+/* ---------------- the land's secret tell ---------------- */
+// a hollow bone end sticking out of the rock with a socket mouse's whiskers twitching in it: there is room behind
+const tell = (ctx, x, y, t, rot) => {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.6;
+  ctx.fillStyle = BONE; ctx.beginPath(); ctx.ellipse(0, -5, 8, 6, 0, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#3a200e'; ctx.beginPath(); ctx.ellipse(0, -5, 4.5, 3.4, 0, 0, TAU); ctx.fill();
+  const k = Math.sin(t * 7) > 0.3 ? Math.sin(t * 40) * 1.5 : 0;
+  ctx.strokeStyle = '#f4ead2'; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(1.5, -5); ctx.lineTo(9, -8 + k); ctx.moveTo(1.5, -4); ctx.lineTo(9, -3 - k); ctx.moveTo(-1.5, -5); ctx.lineTo(-9, -8 - k); ctx.stroke();
+  ctx.fillStyle = '#ff9aa0'; ctx.beginPath(); ctx.arc(0, -4.5, 1.2, 0, TAU); ctx.fill();
+  ctx.restore();
+};
+Object.assign(Decor, {
+  // on a floor (the letter stands on it), under a ceiling (the letter hangs from the tile above), in a wall (the letter
+  // is the cell left of the wall)
+  boneTell(ctx, x, y, t) { tell(ctx, x, y + 2, t, 0); },
+  boneTellCeil(ctx, x, y, t) { tell(ctx, x, y - TS - 2, t, Math.PI); },
+  boneTellWall(ctx, x, y, t) { tell(ctx, x + TS / 2 + 2, y - TS / 2, t, -Math.PI / 2); },
+  boneTellWallR(ctx, x, y, t) { tell(ctx, x - TS / 2 - 2, y - TS / 2, t, Math.PI / 2); }
+});
+
+/* ======================= 37-1 TRACKWAY ======================= */
+// one trackway: { prints: [[x, y, kind, toes]] (y: the floor row it is pressed into), order: [print index...],
+// mode: 'shape' (the plinth shows the next foot) | 'toes' (follow the toes), plinth: [x, y], raise: [[n, rects]...]
+// (after n correct prints those rects rise as stone steps) }
+class BoneTrack extends Ent {
+  constructor(g, s) {
+    super(g, s, 4, 4); this.friendly = true; this.back = true;
+    this.prints = s.prints; this.order = s.order; this.mode = s.mode || 'shape'; this.plinth = s.plinth; this.raise = s.raise || [];
+    const pts = this.prints.map(q => [q[0], q[1]]).concat(this.plinth ? [this.plinth] : []);
+    for (const [, R] of this.raise) for (const r of R) pts.push([r[0], r[1]], [r[2], r[3]]);
+    const b = bbox(pts); this.x = (b[0] - 2) * TS; this.y = (b[1] - 4) * TS; this.w = (b[2] - b[0] + 5) * TS; this.h = (b[3] - b[1] + 6) * TS;
+    this.next = 0; this.base = 0; this.lit = []; this.glow = {}; this.risen = this.raise.map(() => 0); this.done = false; this.wasG = true; this.failT = 0;
+  }
+  update(dt) {
+    this.t += dt; const g = this.g, p = g.player;
+    for (const k in this.glow) this.glow[k] = Math.max(0, this.glow[k] - dt);
+    if (this.failT > 0) this.failT -= dt;
+    this.raise.forEach(([n], i) => { if (this.next >= n) this.risen[i] = Math.min(1, this.risen[i] + dt * 2.5); });
+    if (!p || p.dead || this.done) { this.wasG = p ? p.onGround : true; return; }
+    const landed = p.onGround && !this.wasG; this.wasG = p.onGround;
+    if (!landed) return;
+    const i = this.prints.findIndex(([x, y]) => standsOn(p, x, y, 0.7));
+    if (i < 0 || this.lit.indexOf(i) >= 0) return;
+    if (i === this.order[this.next]) {
+      this.lit.push(i); this.next++; this.glow[i] = 0.6;
+      TourKit.sfx('chime', 'pick', { vol: 0.5, pitch: 1 + this.next * 0.12 });
+      g.burst(p.cx, p.y + p.h, 8, '#ffd88a', 'spark');
+      for (const [n, R] of this.raise) if (this.next === n) {
+        for (const r of R) setRect(g, r, T.HARD, true);
+        this.base = n; g.shake(3); Sound.play('stomp', { pitch: 0.5, vol: 0.6 });
+        Tour.boneKit.pill(g, p.cx, p.y - 26, n >= this.order.length ? (this.mode === 'toes' ? 'IT WALKED BACKWARDS!' : 'THE STEPS RISE!') : 'A PAIR!', '#ffd88a');
+      }
+      if (this.next >= this.order.length) this.done = true;
+    } else {
+      // the wrong foot: back to the start of this pair (steps already raised stay)
+      this.lit = this.lit.filter(k => this.order.indexOf(k) < this.base); this.next = this.base; this.failT = 1.2;
+      TourKit.sfx('fizz', 'bump', { vol: 0.5, pitch: 0.6 });
+      g.burst(p.cx, p.y + p.h, 10, '#e8c898', 'dust');
+      Tour.boneKit.pill(g, p.cx, p.y - 22, this.mode === 'toes' ? 'NOT THAT WAY! FOLLOW THE TOES' : 'THAT FOOT DOESN\'T FIT!', '#ffb0a0');
+    }
+  }
+  touchPlayer() {}
+  draw(ctx) {
+    const t = this.t;
+    ctx.save();
+    // the stone steps: a faint chalk outline until they rise, then the stones slide up out of the ground
+    this.raise.forEach(([n, R], ri) => {
+      const k = this.risen[ri];
+      for (const r of R) {
+        const x = r[0] * TS, y = r[1] * TS, w = (r[2] - r[0] + 1) * TS, h = (r[3] - r[1] + 1) * TS;
+        if (k <= 0) { ctx.strokeStyle = 'rgba(255,240,200,0.5)'; ctx.setLineDash([4, 5]); ctx.lineWidth = 2; ctx.strokeRect(x + 2, y + 2, w - 4, h - 4); ctx.setLineDash([]); continue; }
+        const hh = h * k, yy = y + h - hh;
+        ctx.fillStyle = '#c8a070'; ctx.strokeStyle = INK; ctx.lineWidth = 2; rr(ctx, x + 1, yy, w - 2, hh, 4); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#e8c890'; ctx.fillRect(x + 3, yy + 2, w - 6, Math.min(6, hh - 2));
+        if (hh > 20) BA.print(ctx, x + w / 2, yy + Math.min(hh / 2, 18), 2 + (ri % 2), 0, 1.1, '#8a6a3a');
+      }
+    });
+    // the prints
+    this.prints.forEach(([x, y, kind, toes], i) => {
+      const cx = x * TS + TS / 2, cy = y * TS + 5, lit = this.lit.indexOf(i) >= 0;
+      // a pad of wet clay pressed into the ground, the print in it seen from a little above
+      ctx.fillStyle = lit ? '#ffc078' : '#b8906a'; ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.ellipse(cx, cy, 17, 7, 0, 0, TAU); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = lit ? '#ffd8a0' : '#cca480'; ctx.beginPath(); ctx.ellipse(cx, cy - 1.5, 14, 4.5, 0, 0, TAU); ctx.fill();
+      ctx.save(); ctx.translate(cx, cy - 1); ctx.scale(1.15, 0.5);
+      BA.print(ctx, 0, 0, kind, toes || 0, 1.15, lit ? '#f06a2a' : PETROL);
+      ctx.restore();
+      if (this.glow[i]) { ctx.strokeStyle = `rgba(255,216,138,${this.glow[i]})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(cx, cy, 16 + (0.6 - this.glow[i]) * 20, 6, 0, 0, TAU); ctx.stroke(); }
+    });
+    // the plinth: a stone pedestal with a card showing the next foot (or, backwards, the toes)
+    if (this.plinth) {
+      const [px, py] = this.plinth, x = px * TS + TS / 2, y = py * TS;
+      ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#b8743a'; rr(ctx, x - 10, y - 26, 20, 26, 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#e0a060'; ctx.fillRect(x - 12, y - 30, 24, 6); ctx.strokeRect(x - 12, y - 30, 24, 6);
+      const bob = Math.sin(t * 3) * 1.5, shake = this.failT > 0 ? Math.sin(t * 50) * 2 : 0;
+      ctx.fillStyle = '#fbf4e0'; rr(ctx, x - 20 + shake, y - 74 + bob, 40, 42, 4); ctx.fill(); ctx.stroke();
+      if (this.done) { ctx.fillStyle = '#3a8a4a'; ctx.font = '14px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('✓', x + shake, y - 47 + bob); }
+      else if (this.mode === 'toes') { BA.print(ctx, x - 6 + shake, y - 54 + bob, 4, -1, 0.9, PETROL); ctx.fillStyle = PERS; ctx.font = '7px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('TOES?', x + shake, y - 37 + bob); }
+      else { const q = this.prints[this.order[this.next]]; BA.print(ctx, x + shake, y - 55 + bob, q[2], 0, 1.35, PETROL); ctx.fillStyle = INK; ctx.font = '6px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('NEXT FOOT', x + shake, y - 37 + bob); }
+    }
+    ctx.restore();
+  }
+}
+ENTITY_TYPES.boneTrack = BoneTrack;
+let toggleN = {};
+// the piece: absolute tiles in o (the letter only says where the controller lives); the checker: toggle group o.gs[k]
+// for each raise, its switch on the print that finishes it
+Tour.pieces['bone.track'] = function (st, o) {
+  const B = st.B;
+  B.spawn('boneTrack', st.x, st.gy - 1, o);
+  (o.raise || []).forEach(([n, R], k) => {
+    const g = o.gs[k]; B.toggle(g, [], R.map(r => r.slice(0, 4)), { kind: 'boneTrack' });
+    for (const r of R) for (let y = r[1]; y <= r[3]; y++) for (let x = r[0]; x <= r[2]; x++) B.set(x, y, T.EMPTY);
+    const q = o.prints[o.order[n - 1]]; B.switchAt(g, q[0], q[1] - 1);
+  });
+  return st.x;
+};
+
+/* ======================= 37-2 ASSEMBLY: the vertebra on its socket ======================= */
+// { socket: [x, y] (the crank's floor tile: stand there and THROW), pivot: [x, y] (the vertebra's tile), ribs: [[len,
+// off]] (tiles long; off: notches from the first rib), notch (start), good (the notch that bridges), g }
+const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+class BoneVert extends Ent {
+  constructor(g, s) {
+    super(g, s, 4, 4); this.friendly = true; this.back = true; this.s = s;
+    this.notch = s.notch || 0; this.ang = this.notch; this.from = this.notch; this.turnT = 0; this.set = [];
+    const [px, py] = s.pivot, L = Math.max(...s.ribs.map(r => r[0]));
+    this.x = (Math.min(px - L, s.socket[0]) - 1) * TS; this.y = (py - L - 1) * TS; this.w = (Math.max(px + L, s.socket[0]) - Math.min(px - L, s.socket[0]) + 3) * TS; this.h = (2 * L + 3) * TS;
+    this.placed = false;
+  }
+  boneClaim(p) { return standsOn(p, this.s.socket[0], this.s.socket[1], 0.9); }
+  ribTiles(n) {
+    const out = [], [px, py] = this.s.pivot;
+    for (const [len, off] of this.s.ribs) { const [dx, dy] = DIRS[(n + off) % 4]; if (dy) continue; for (let k = 1; k <= len; k++) out.push([px + dx * k, py]); }
+    return out;
+  }
+  settle() {
+    const g = this.g;
+    for (const [x, y] of this.set) g.setTile(x, y, T.EMPTY);
+    this.set = [];
+    for (const [x, y] of this.ribTiles(this.notch)) if (tileAt(g.area, x, y) === T.EMPTY) { g.setTile(x, y, T.SEMI); this.set.push([x, y]); }
+  }
+  update(dt) {
+    this.t += dt; const g = this.g;
+    if (!this.placed) { this.placed = true; this.settle(); }
+    if (this.turnT > 0) { this.turnT = Math.max(0, this.turnT - dt); const k = 1 - this.turnT / 0.3; this.ang = this.from + k; if (this.turnT === 0) { this.ang = this.notch; this.settle(); if (this.notch === this.s.good) { Tour.boneKit.pill(g, this.s.pivot[0] * TS + 16, this.s.pivot[1] * TS - 20, 'CLICK! A BRIDGE', '#ffd88a'); TourKit.sfx('click', 'select', { vol: 0.6, pitch: 0.8 }); } } }
+    const I = g.boneIn;
+    if (I && I.by === this && I.pressed && this.turnT === 0) {
+      this.from = this.notch; this.notch = (this.notch + 1) % 4; this.turnT = 0.3;
+      for (const [x, y] of this.set) g.setTile(x, y, T.EMPTY); this.set = [];
+      TourKit.sfx('crank', 'select', { vol: 0.5, pitch: 1.4 }); this.used = true;
+    }
+  }
+  touchPlayer() {}
+  draw(ctx) {
+    const s = this.s, [sx, sy] = s.socket, [px, py] = s.pivot, cx = px * TS + TS / 2, cy = py * TS + TS / 2;
+    ctx.save();
+    // the crank on its post (the mark): a bone lever with a persimmon knob, turned with the vertebra
+    const kx = sx * TS + 4, ky = sy * TS;
+    ctx.fillStyle = 'rgba(240,106,42,0.5)'; ctx.beginPath(); ctx.ellipse(sx * TS + TS / 2, ky + 2, 15, 4, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#8a5a2a'; ctx.fillRect(kx - 3, ky - 30, 6, 30); ctx.strokeRect(kx - 3, ky - 30, 6, 30);
+    const a = this.ang * Math.PI / 2;
+    BA.bone(ctx, kx, ky - 30, kx + Math.cos(a - Math.PI / 2) * 16, ky - 30 + Math.sin(a - Math.PI / 2) * 16, 6, false);
+    BA.joint(ctx, kx, ky - 30, 5);
+    // notch marks on the crank's dial: the current one lit
+    for (let n = 0; n < 4; n++) { const aa = n * Math.PI / 2 - Math.PI / 2; ctx.fillStyle = n === this.notch ? PERS : '#5a3a1a'; ctx.beginPath(); ctx.arc(kx + Math.cos(aa) * 10, ky - 30 + Math.sin(aa) * 10, 2, 0, TAU); ctx.fill(); }
+    // a dotted line from crank to vertebra (they turn together)
+    ctx.strokeStyle = 'rgba(255,240,200,0.45)'; ctx.setLineDash([3, 6]); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(kx, ky - 30); ctx.lineTo(cx, cy); ctx.stroke(); ctx.setLineDash([]);
+    // the ribs (long bones with persimmon caps), then the vertebra itself
+    // (clipped out of any solid rock it swings past: an overhang stays in front of it)
+    ctx.save(); ctx.beginPath(); ctx.rect(this.x - TS, this.y - TS, this.w + 2 * TS, this.h + 2 * TS);
+    { const A = this.g.area; for (let ty = Math.floor(this.y / TS) - 1; ty <= Math.floor((this.y + this.h) / TS) + 1; ty++) for (let tx = Math.floor(this.x / TS) - 1; tx <= Math.floor((this.x + this.w) / TS) + 1; tx++) { if (tx === px && ty === py) continue; const tt = tileAt(A, tx, ty); if (SOLID[tt] && !(A.hide && A.hide[ty * A.W + tx])) ctx.rect(tx * TS, ty * TS, TS, TS); } }
+    ctx.clip('evenodd');
+    for (const [len, off] of s.ribs) {
+      const aa = (this.ang + off) * Math.PI / 2 - Math.PI / 2, ex = cx + Math.cos(aa) * (len * TS + 12), ey = cy + Math.sin(aa) * (len * TS + 12);
+      // lying flat: its top is the walkable edge of the bridge row
+      const lift = Math.abs(Math.sin(aa)) < 0.05 ? -8 : 0;
+      BA.bone(ctx, cx, cy + lift, ex, ey + lift, 14, true);
+    }
+    ctx.restore();
+    ctx.fillStyle = BONE; ctx.strokeStyle = INK; ctx.lineWidth = 2.2;
+    ctx.beginPath(); for (let k = 0; k < 6; k++) { const aa = this.ang * Math.PI / 2 + k * TAU / 6; ctx.lineTo(cx + Math.cos(aa) * 20, cy + Math.sin(aa) * 20); ctx.lineTo(cx + Math.cos(aa + 0.5) * 13, cy + Math.sin(aa + 0.5) * 13); } ctx.closePath(); ctx.fill(); ctx.stroke();
+    BA.joint(ctx, cx, cy, 8);
+    throwHint(this, ctx, kx, ky - 86, 'THROW: TURN');
+    ctx.restore();
+  }
+}
+ENTITY_TYPES.boneVert = BoneVert;
+Tour.pieces['bone.vert'] = function (st, o) {
+  const B = st.B; B.spawn('boneVert', st.x, st.gy - 1, o);
+  const [px, py] = o.pivot, R = [];
+  for (const [len, off] of o.ribs) { const [dx, dy] = DIRS[(o.good + off) % 4]; if (dy) continue; for (let k = 1; k <= len; k++) { const x = px + dx * k; if (B.get(x, py) === T.EMPTY) R.push([x, py, x, py, T.SEMI]); } }
+  B.toggle(o.g, [], R, { kind: 'boneVert' }); B.switchAt(o.g, o.socket[0], o.socket[1] - 1);
+  return st.x;
+};
+
+/* ---------------- the replica-rib rungs (climbing) ---------------- */
+// { x0, y0, x1, y1 (tiles), collars: [[x, y]] }: the near face's rungs every other row; the far face drawn behind,
+// darker and hatched. The checker: ghost rungs every other row.
+class BoneRibs extends Ent {
+  constructor(g, s) { super(g, s, 4, 4); this.friendly = true; this.back = true; this.s = s; this.x = s.x0 * TS; this.y = s.y0 * TS; this.w = (s.x1 - s.x0 + 1) * TS; this.h = (s.y1 - s.y0 + 1) * TS; this.collars = s.collars || []; }
+  update(dt) { this.t += dt; }
+  touchPlayer() {}
+  rungs(ctx, far) {
+    const s = this.s, x0 = this.x, x1 = this.x + this.w, o = far ? -7 : 0;
+    ctx.save(); ctx.lineCap = 'round';
+    for (let y = s.y0 + 1; y <= s.y1; y += 2) {
+      const yy = y * TS + 6 + o;
+      ctx.strokeStyle = far ? '#5a3a22' : INK; ctx.lineWidth = far ? 9 : 11; ctx.beginPath(); ctx.moveTo(x0 + 6 + o, yy + 4); ctx.quadraticCurveTo((x0 + x1) / 2 + o, yy - 6, x1 - 6 + o, yy + 4); ctx.stroke();
+      ctx.strokeStyle = far ? '#a8906a' : BONE; ctx.lineWidth = far ? 5 : 7; ctx.stroke();
+    }
+    for (const xx of [x0 + 6, x1 - 6]) {
+      ctx.strokeStyle = far ? '#5a3a22' : INK; ctx.lineWidth = far ? 9 : 11; ctx.beginPath(); ctx.moveTo(xx + o, this.y + 4 + o); ctx.lineTo(xx + o, this.y + this.h - 2 + o); ctx.stroke();
+      ctx.strokeStyle = far ? '#a8906a' : BONE; ctx.lineWidth = far ? 5 : 7; ctx.stroke();
+      for (let y = s.y0 + 1; y <= s.y1; y += 2) { ctx.fillStyle = far ? '#a85a32' : PERS; ctx.strokeStyle = far ? '#5a3a22' : INK; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(xx + o, y * TS + 8 + o, far ? 5 : 6.5, 0, TAU); ctx.fill(); ctx.stroke(); }
+    }
+    if (far) { ctx.strokeStyle = 'rgba(60,36,20,0.35)'; ctx.lineWidth = 1.5; for (let x = x0; x < x1; x += 10) { ctx.beginPath(); ctx.moveTo(x, this.y + 4); ctx.lineTo(x - 8, this.y + this.h); ctx.stroke(); } }
+    ctx.restore();
+  }
+  drawCollars(ctx) {
+    for (const [x, y] of this.collars) {
+      const cx = x * TS + TS / 2, cy = y * TS + TS / 2, k = 0.5 + 0.5 * Math.sin(this.t * 4);
+      ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.fillStyle = 'rgba(40,20,10,0.55)'; ctx.beginPath(); ctx.ellipse(cx, cy, 15, 11, 0, 0, TAU); ctx.fill();
+      ctx.strokeStyle = PERS; ctx.lineWidth = 6; ctx.stroke(); ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.ellipse(cx, cy, 18, 14, 0, 0, TAU); ctx.stroke();
+      ctx.strokeStyle = `rgba(255,220,150,${0.4 + 0.4 * k})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(cx, cy, 21 + k * 3, 17 + k * 2, 0, 0, TAU); ctx.stroke();
+      ctx.restore();
+    }
+  }
+  draw(ctx) { this.rungs(ctx, true); this.drawCollars(ctx); this.rungs(ctx, false); }
+}
+ENTITY_TYPES.boneRibs = BoneRibs;
+Tour.pieces['bone.ribs'] = function (st, o) {
+  const B = st.B;
+  B.spawn('boneRibs', st.x, st.gy - 1, o);
+  B.zone(o.x0, o.y0, o.x1 - o.x0 + 1, o.y1 - o.y0 + 1, 0, 0, 0, 'boneClimb', { collars: o.collars || [] });
+  for (let y = o.y0 + 1; y <= o.y1; y += 2) for (let x = o.x0; x <= o.x1; x++) B.ghosts.push([x, y]);
+  return st.x;
+};
+// the climb itself (the game only): Brady grips when he pushes UP inside a rib zone
+const CLIMB = 3.8 * TS;
+const climbZone = (A, p) => (A.zones || []).find(z => z.kind === 'boneClimb' && p.cx >= z.x && p.cx <= z.x + z.w && p.cy >= z.y && p.cy <= z.y + z.h);
+{
+  const pu = Player.prototype.update;
+  Player.prototype.update = function (dt, inp) {
+    const g = this.g, A = g && g.area;
+    if (!(A && A.bone && A.bone.ribs) || this.state !== 'play' || this.dead || !inp) { if (this.boneGrip) this.boneGrip = null; return pu.call(this, dt, inp); }
+    const z = climbZone(A, this);
+    if (!this.boneGrip && z && inp.up && !(this.boneLetGo > 0)) { this.boneGrip = z; this.boneFace = 0; this.vx = 0; this.vy = 0; this.jumping = false; TourKit.sfx('grip', 'select', { vol: 0.3, pitch: 1.8 }); }
+    if (this.boneLetGo > 0) this.boneLetGo -= dt;
+    if (!this.boneGrip) return pu.call(this, dt, inp);
+    // climbing: the stick steers all four ways; a collar swaps faces; JUMP elsewhere lets go with a full jump
+    this.inp = inp;
+    if (this.invuln > 0) this.invuln -= dt;
+    if (this.faceT > 0) { this.faceT -= dt; if (this.faceT <= 0) this.boneFace = 1 - this.boneFace; }
+    const Z = this.boneGrip;
+    if (inp.jumpPressed && !(this.faceT > 0)) {
+      const col = (Z.collars || []).find(([x, y]) => Math.abs(this.cx - (x * TS + TS / 2)) < TS * 1.0 && Math.abs(this.cy - (y * TS + TS / 2)) < TS * 1.5);
+      if (col) { this.faceT = 0.3; this.x = col[0] * TS + TS / 2 - this.w / 2; TourKit.sfx('swish', 'jump', { vol: 0.4, pitch: 0.7 }); g.burst(this.cx, this.cy, 6, '#ffd88a', 'spark'); }
+      else { this.boneGrip = null; this.boneFace = 0; this.boneLetGo = 0.25; this.vy = -PHYS.jumpV; this.jumping = true; this.onGround = false; Sound.play('jump', { vol: 0.5 }); return pu.call(this, dt, Object.assign({}, inp, { jumpPressed: false })); }
+    }
+    const dx = (inp.right ? 1 : 0) - (inp.left ? 1 : 0), dy = (inp.down ? 1 : 0) - (inp.up ? 1 : 0);
+    if (dx) this.facing = dx;
+    const sp = this.faceT > 0 ? 0 : CLIMB;
+    this.vx = dx * sp; this.vy = dy * sp;
+    moveBody(this, A, dt, { semis: false });
+    this.onGround = false;
+    // off the edge of the cage: let go (out of the top with a little hop so he lands on what is up there)
+    if (!climbZone(A, this)) {
+      const top = this.cy < Z.y + 4; this.boneGrip = null; this.boneFace = 0; this.boneLetGo = 0.3;
+      if (top) { this.vy = -7 * TS; this.jumping = true; }
+    }
+    this.anim.t += dt; this.anim.state = 'hang'; this.updateHair(dt);
+  };
+  // on the far face Brady is behind the near rungs: dimmer, and the near face is redrawn over him
+  const dr0 = Player.prototype.draw;
+  Player.prototype.draw = function (ctx, t) {
+    if (this.boneGrip && this.boneFace === 1) { ctx.save(); ctx.globalAlpha *= 0.62; const r = dr0.call(this, ctx, t); ctx.restore(); return r; }
+    return dr0.call(this, ctx, t);
+  };
+  TourHooks.on('afterEntities', (play, ctx) => {
+    const p = play.player; if (!p || !p.boneGrip || p.boneFace !== 1) return;
+    for (const e of play.entities) if (e instanceof BoneRibs && overlap(p, e)) { ctx.save(); ctx.beginPath(); ctx.rect(p.x - 20, p.y - 20, p.w + 40, p.h + 40); ctx.clip(); e.rungs(ctx, false); ctx.restore(); }
+  });
+  // a hit while climbing: he lets go
+  const hu0 = Player.prototype.hurt;
+  Player.prototype.hurt = function (src) { const inv0 = this.invuln || 0, r = hu0.apply(this, arguments); if (this.boneGrip && inv0 <= 0 && (this.invuln > 0 || this.dead)) { this.boneGrip = null; this.boneFace = 0; this.boneLetGo = 0.6; } return r; };
+}
+// a critter that climbs the rungs, up and down one column, on one face (it only meets Brady on its own face)
+const climberArt = (ctx, e, x, y, far, t) => {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(e.vy > 0 ? Math.PI : 0); if (far) ctx.globalAlpha = 0.7;
+  ctx.strokeStyle = far ? '#3a2412' : INK; ctx.lineWidth = 1.7; ctx.fillStyle = far ? '#2a5a4a' : '#3e8a6a';
+  const st = Math.sin(t * 12) * 3;
+  for (const [lx, ly] of [[-7, -4], [7, -4], [-7, 6], [7, 6]]) { ctx.beginPath(); ctx.moveTo(lx * 0.5, ly); ctx.lineTo(lx, ly + (lx * ly > 0 ? st : -st)); ctx.stroke(); }
+  ctx.beginPath(); ctx.moveTo(0, 8); ctx.quadraticCurveTo(-4 + Math.sin(t * 5) * 3, 18, 0, 22); ctx.lineTo(2, 8); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(0, 0, 6, 10, 0, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(0, -11, 5, 6, 0, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = BONE; for (const [sx, sy] of [[-2, -3], [2, 2], [-1, 5]]) { ctx.beginPath(); ctx.arc(sx, sy, 1.3, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(-2.5, -13, 2, 0, TAU); ctx.arc(2.5, -13, 2, 0, TAU); ctx.fill(); ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(-2.5, -13.5, 1, 0, TAU); ctx.arc(2.5, -13.5, 1, 0, TAU); ctx.fill();
+  ctx.restore();
+};
+class BoneClimber extends Ent {
+  constructor(g, s) {
+    super(g, s, 20, 28); this.enemy = true; this.customCollide = true; this.face = s.face || 0;
+    this.y0 = s.y0 * TS; this.y1 = s.y1 * TS; this.x = s.x - this.w / 2; this.y = this.y0; this.vy = (s.speed || 1.6) * TS; this.wait = 0; this.ph = s.phase || 0; this.y += ((this.y1 - this.y0) * this.ph) | 0;
+    this.back = this.face === 1;
+  }
+  update(dt) {
+    this.t += dt; if (this.dead) { this.flatT -= dt; if (this.flatT <= 0) this.remove = true; return; }
+    if (this.wait > 0) { this.wait -= dt; return; }
+    this.y += this.vy * dt;
+    if (this.y < this.y0) { this.y = this.y0; this.vy = Math.abs(this.vy); this.wait = 0.6; }
+    if (this.y > this.y1) { this.y = this.y1; this.vy = -Math.abs(this.vy); this.wait = 0.6; }
+  }
+  collidePlayer(p) { const pf = p.boneGrip ? p.boneFace : 0; return !this.dead && pf === this.face && !(p.faceT > 0) ? 'body' : null; }
+  hit(kind, src) {
+    if (this.dead) return false;
+    if (kind === 'stomp' || kind === 'spin' || kind === 'star' || kind === 'disc' || kind === 'laser') { this.dead = true; this.flatT = 0.5; Sound.play('stomp'); this.g.burst(this.cx, this.cy, 8, '#3e8a6a', 'dust'); return true; }
+    return false;
+  }
+  touchPlayer(p) { if (!this.dead) p.hurt(this); }
+  draw(ctx) { if (this.dead) { ctx.save(); ctx.globalAlpha = Math.max(0, this.flatT * 2); climberArt(ctx, this, this.cx, this.cy, this.face === 1, this.t); ctx.restore(); return; } climberArt(ctx, this, this.cx, this.cy, this.face === 1, this.t); }
+}
+ENTITY_TYPES.boneClimber = BoneClimber;
+Tour.pieces['bone.climber'] = function (st, o) { st.B.spawn('boneClimber', o.x != null ? o.x : st.x, 0, { y0: o.y0, y1: o.y1, face: o.face || 0, speed: o.speed, phase: o.phase || 0 }); return st.x; };
+
+/* ======================= 37-3 MOULD: the clay press ======================= */
+// { tray: [x0, x1, y] (clay tiles, floor row y), need: 'low' | 'tall', casts: { low: rect, tall: rect } (where the
+// cast lands; only `need` fits), g, phase }
+class BonePress extends Ent {
+  constructor(g, s) {
+    super(g, s, 4, 4); this.friendly = true; this.s = s;
+    const [x0, x1, y] = s.tray; this.x = (x0 - 1) * TS; this.y = (y - 9) * TS; this.w = (x1 - x0 + 3) * TS; this.h = 10 * TS;
+    const all = [[x0, y], [x1, y]]; for (const k in s.casts) { const r = s.casts[k]; all.push([r[0], r[1]], [r[2], r[3]]); }
+    const b = bbox(all); this.x = (b[0] - 1) * TS; this.w = (b[2] - b[0] + 3) * TS; this.y = Math.min(this.y, (b[1] - 2) * TS); this.h = (b[3] + 2) * TS - this.y;
+    this.st = 'idle'; this.at = (s.phase || 0); this.done = false; this.cast = null; this.castK = 0; this.bad = null; this.badT = 0;
+  }
+  // the press's bottom edge, rows above the tray floor: up 5 rows, down to just over Brady's head as he stands / crouches
+  update(dt) {
+    this.t += dt; this.at += dt; const g = this.g, p = g.player, [x0, x1, y] = this.s.tray;
+    const inTray = p && !p.dead && p.onGround && p.groundTy === y && p.cx >= x0 * TS && p.cx <= (x1 + 1) * TS;
+    if (this.st === 'idle' && this.at > 1.8) { this.st = 'tell'; this.at = 0; if (g.onScreen(this, 60)) TourKit.sfx('creak', 'select', { vol: 0.35, pitch: 0.5 }); }
+    else if (this.st === 'tell' && this.at > 0.9) { this.st = 'down'; this.at = 0; }
+    else if (this.st === 'down' && this.at > 0.22) {
+      this.st = 'hold'; this.at = 0; g.shake(3); Sound.play('stomp', { pitch: 0.4, vol: 0.6 }); g.burst((x0 + x1 + 1) * TS / 2, y * TS, 10, '#c8aa86', 'dust');
+      if (inTray && !this.done) {
+        const mould = p.crouch ? 'low' : 'tall';
+        p.stunT = Math.max(p.stunT || 0, 0.35);
+        if (mould === this.s.need) { this.done = true; this.cast = mould; this.castK = 0; setRect(g, this.s.casts[mould], T.HARD, true); Tour.boneKit.pill(g, p.cx, p.y - 30, mould === 'low' ? 'LOW AND BROAD: A PERFECT FIT!' : 'TALL: A PERFECT FIT!', '#ffd88a'); TourKit.sfx('chime', 'pick', { vol: 0.6 }); }
+        else { this.bad = mould; this.badT = 1.4; Tour.boneKit.pill(g, p.cx, p.y - 30, mould === 'low' ? 'TOO FLAT! IT CRUMBLES' : 'TOO TALL! IT JAMS', '#ffb0a0'); TourKit.sfx('fizz', 'bump', { vol: 0.5, pitch: 0.6 }); }
+      }
+    }
+    else if (this.st === 'hold' && this.at > 0.5) { this.st = 'up'; this.at = 0; }
+    else if (this.st === 'up' && this.at > 0.6) { this.st = 'idle'; this.at = 0; }
+    if (this.cast) this.castK = Math.min(1, this.castK + dt * 2);
+    if (this.badT > 0) this.badT -= dt;
+  }
+  touchPlayer() {}
+  pressY() {
+    // its resting height: a little over Brady's head; it comes down onto whatever shape is in the tray
+    const y = this.s.tray[2] * TS, top = y - 4.4 * TS, p = this.g.player, [x0, x1] = this.s.tray;
+    const inTray = p && !p.dead && p.cx >= x0 * TS && p.cx <= (x1 + 1) * TS && p.y + p.h > y - 4;
+    const low = inTray ? Math.max(p.y - 2, y - 2.2 * TS) : y - 0.6 * TS;
+    if (this.st === 'idle') return top;
+    if (this.st === 'tell') return top + Math.sin(this.t * 40) * 2.5 + this.at * 8;
+    if (this.st === 'down') return lerp(top + 7, low, this.at / 0.22);
+    if (this.st === 'hold') return this.holdY != null ? this.holdY : (this.holdY = low);
+    this.holdY = null; return lerp(low, top, this.at / 0.6);
+  }
+  draw(ctx) {
+    const s = this.s, [x0, x1, y] = s.tray, X0 = x0 * TS, X1 = (x1 + 1) * TS, by = this.pressY();
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    // the tray of wet clay (a mould-shaped dip when a cast was taken)
+    ctx.fillStyle = '#8a6a50'; ctx.fillRect(X0 - 4, y * TS - 6, X1 - X0 + 8, 10); ctx.strokeRect(X0 - 4, y * TS - 6, X1 - X0 + 8, 10);
+    ctx.fillStyle = '#b89a78'; ctx.fillRect(X0, y * TS - 4, X1 - X0, 5);
+    // the gantry and the press block (a plaster slab with a persimmon handle); its shadow grows on the tray
+    const gx = (X0 + X1) / 2, gTop = y * TS - 5.6 * TS;
+    ctx.fillStyle = '#6a4a2a'; ctx.fillRect(X0 - 10, gTop, 8, 5.6 * TS - 6); ctx.strokeRect(X0 - 10, gTop, 8, 5.6 * TS - 6); ctx.fillRect(X1 + 2, gTop, 8, 5.6 * TS - 6); ctx.strokeRect(X1 + 2, gTop, 8, 5.6 * TS - 6);
+    ctx.fillRect(X0 - 14, gTop - 8, X1 - X0 + 28, 10); ctx.strokeRect(X0 - 14, gTop - 8, X1 - X0 + 28, 10);
+    ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(gx, gTop + 2); ctx.lineTo(gx, by - 20); ctx.stroke(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    const tell = this.st === 'tell' || this.st === 'down';
+    ctx.fillStyle = `rgba(30,15,5,${tell || this.st === 'hold' ? 0.4 : 0.15})`; ctx.beginPath(); ctx.ellipse(gx, y * TS - 2, (X1 - X0) / 2, 5, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#efe6d2'; rr(ctx, X0 - 2, by - 22, X1 - X0 + 4, 22, 4); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#d8ccb0'; ctx.fillRect(X0, by - 7, X1 - X0, 5);
+    BA.joint(ctx, gx, by - 24, 6);
+    if (tell) { ctx.fillStyle = '#ffd84a'; ctx.font = '12px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('!', gx, by - 36 + Math.sin(this.t * 20) * 2); }
+    // where the cast goes: a chalk outline of the shape that fits, then the cast slides into place
+    const r = s.casts[s.need], rx = r[0] * TS, ry = r[1] * TS, rw = (r[2] - r[0] + 1) * TS, rh = (r[3] - r[1] + 1) * TS;
+    if (!this.cast) { ctx.strokeStyle = 'rgba(255,245,220,0.6)'; ctx.setLineDash([4, 5]); ctx.lineWidth = 2; ctx.strokeRect(rx + 2, ry + 2, rw - 4, rh - 4); ctx.setLineDash([]); ctx.fillStyle = 'rgba(255,245,220,0.7)'; ctx.font = '7px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText(s.need === 'low' ? 'LOW & BROAD' : 'TALL', rx + rw / 2, ry + rh / 2 + 3); }
+    else {
+      const k = this.castK; ctx.strokeStyle = INK; ctx.lineWidth = 2;
+      ctx.fillStyle = '#efe6d2'; rr(ctx, rx + 1, ry + rh * (1 - k), rw - 2, rh * k, 5); ctx.fill(); ctx.stroke();
+      if (k > 0.6) { ctx.fillStyle = '#c8b898'; if (this.cast === 'low') { for (let q = rx + 14; q < rx + rw - 8; q += 28) { ctx.beginPath(); ctx.ellipse(q, ry + rh / 2, 8, 4, 0, 0, TAU); ctx.fill(); } } else { ctx.beginPath(); ctx.ellipse(rx + rw / 2, ry + 14, 6, 6, 0, 0, TAU); ctx.fill(); ctx.fillRect(rx + rw / 2 - 5, ry + 22, 10, rh - 30); } }
+    }
+    // a cast that doesn't fit: it pops out over the tray and crumbles
+    if (this.badT > 0) { const k = this.badT / 1.4, h = this.bad === 'low' ? 18 : 60, w = this.bad === 'low' ? 60 : 24; ctx.globalAlpha = k; ctx.fillStyle = '#efe6d2'; rr(ctx, gx - w / 2 + (1 - k) * 30, y * TS - 8 - h - (1 - k) * 20, w, h, 4); ctx.fill(); ctx.stroke(); ctx.globalAlpha = 1; }
+    ctx.restore();
+  }
+}
+ENTITY_TYPES.bonePress = BonePress;
+Tour.pieces['bone.press'] = function (st, o) {
+  const B = st.B, [x0, x1, y] = o.tray;
+  B.spawn('bonePress', st.x, st.gy - 1, o);
+  const r = o.casts[o.need]; for (let yy = r[1]; yy <= r[3]; yy++) for (let x = r[0]; x <= r[2]; x++) B.set(x, yy, T.EMPTY);
+  // the checker: a toggle group (the cast's tiles) switched in the tray, or (o.g null) a one-way edge from the tray
+  // to o.edge, the tile the cast lets Brady reach
+  if (o.g != null) { B.toggle(o.g, [], [r.slice(0, 4)], { kind: 'bonePress' }); B.switchAt(o.g, Math.floor((x0 + x1) / 2), y - 1); }
+  else if (o.edge) B.edge([Math.floor((x0 + x1) / 2), y - 1], o.edge);
+  return st.x;
+};
+// a soft patch of plaster floor: press DOWN on it (crouch) and it gives way: { x, y (the floor row), w, to: [x, y] the
+// tile where Brady lands below (the checker's one-way edge) }
+class BoneSoft extends Ent {
+  constructor(g, s) { super(g, s, s.w * TS, TS); this.x = s.tx * TS; this.y = s.ty * TS; this.friendly = true; this.k = 0; this.gone = false; this.press = 0; }
+  update(dt) {
+    this.t += dt; const g = this.g, p = g.player;
+    if (this.gone) { this.k = Math.min(1, this.k + dt * 2); return; }
+    const on = p && !p.dead && p.onGround && p.groundTy === this.s.ty && p.cx > this.x && p.cx < this.x + this.w;
+    this.press = on && p.inp && p.inp.down ? this.press + dt : Math.max(0, this.press - dt * 2);
+    if (this.press > 0.35) {
+      this.gone = true; for (let k = 0; k < this.s.w; k++) g.setTile(this.s.tx + k, this.s.ty, T.EMPTY);
+      g.burst(this.cx, this.y + 8, 14, '#efe6d2', 'dust'); Sound.play('stomp', { pitch: 0.7, vol: 0.6 }); Tour.boneKit.pill(g, p.cx, p.y - 20, 'IT GIVES WAY!', '#ffd88a');
+    }
+  }
+  touchPlayer() {}
+  draw(ctx) {
+    const x = this.x, y = this.y, w = this.w, sh = this.press > 0 ? Math.sin(this.t * 50) * 1.5 : 0;
+    ctx.save();
+    if (this.gone) { ctx.globalAlpha = 1 - this.k; ctx.translate(0, this.k * 60); }
+    // the patch looks like the floor around it, with a faint plaster seam
+    ctx.strokeStyle = 'rgba(80,40,10,0.55)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x + 4 + sh, y + 3); ctx.lineTo(x + w * 0.4 + sh, y + 7); ctx.lineTo(x + w * 0.6 + sh, y + 4); ctx.lineTo(x + w - 4 + sh, y + 8); ctx.stroke();
+    ctx.restore();
+  }
+}
+ENTITY_TYPES.boneSoft = BoneSoft;
+Tour.pieces['bone.soft'] = function (st, o) {
+  const B = st.B; B.spawn('boneSoft', st.x, st.gy - 1, { tx: o.x, ty: o.y, w: o.w || 2 });
+  B.edge([o.x, o.y - 1], o.to);
+  return st.x;
+};
+
+/* ======================= 37-4 CHISEL: a clean break ======================= */
+// { mark: [x, y] (stand here), body: [rects] (the whole replica, hidden solid tiles drawn by the entity), drop: [rects]
+// (the half that falls away), seam: [[x, y]...] (pixels, absolute), stop: d (px along the seam to release at), tol (px),
+// fork: { d, to: [x, y] } (the drawn fork: where it splits; to = its branch end), joint: [x, y] (a persimmon joint on
+// the seam: the twist), g }
+class BoneChisel extends Ent {
+  constructor(g, s) {
+    super(g, s, 4, 4); this.friendly = true; this.back = true; this.s = s;
+    const pts = []; for (const r of s.body) pts.push([r[0], r[1]], [r[2], r[3]]); pts.push(s.mark);
+    const b = bbox(pts); this.x = (b[0] - 1) * TS; this.y = (b[1] - 2) * TS; this.w = (b[2] - b[0] + 3) * TS; this.h = (b[3] - b[1] + 4) * TS;
+    this.seam = s.seam; this.lens = [0]; for (let k = 1; k < this.seam.length; k++) this.lens.push(this.lens[k - 1] + Math.hypot(this.seam[k][0] - this.seam[k - 1][0], this.seam[k][1] - this.seam[k - 1][1]));
+    this.L = this.lens[this.lens.length - 1]; this.prog = 0; this.done = false; this.fallK = 0; this.failT = 0; this.wasHeld = false;
+  }
+  boneClaim(p) { return !this.done && standsOn(p, this.s.mark[0], this.s.mark[1], 0.9); }
+  at(d) { d = clamp(d, 0, this.L); let k = 1; while (k < this.lens.length - 1 && this.lens[k] < d) k++; const a = this.seam[k - 1], b = this.seam[k], q = (d - this.lens[k - 1]) / Math.max(1, this.lens[k] - this.lens[k - 1]); return [lerp(a[0], b[0], q), lerp(a[1], b[1], q)]; }
+  update(dt) {
+    this.t += dt; const g = this.g, I = g.boneIn, s = this.s;
+    if (this.done) { this.fallK = Math.min(1, this.fallK + dt * 1.2); return; }
+    if (this.failT > 0) { this.failT -= dt; if (this.failT <= 0) this.prog = 0; this.wasHeld = false; return; }
+    const held = !!(I && I.by === this && I.held);
+    if (held) {
+      if (!this.wasHeld) TourKit.sfx('scrape', 'select', { vol: 0.3, pitch: 0.6 });
+      this.prog += (s.speed || 2.4) * TS * dt;
+      if (Math.random() < 0.4) { const [x, y] = this.at(this.prog); g.burst(x, y, 1, '#f4ead2', 'dust'); }
+      if (this.prog >= this.L) { this.fail('TOO FAR! START AGAIN'); }
+    } else if (this.wasHeld) {
+      if (Math.abs(this.prog - s.stop) <= (s.tol || 0.75 * TS)) this.split();
+      else this.fail(this.prog < s.stop ? 'CRUNCH! NOT THERE YET' : (s.joint ? 'CRUNCH! THAT TOOK THE ANKLE' : 'CRUNCH! PAST THE FORK'));
+    }
+    this.wasHeld = held;
+  }
+  fail(text) { const g = this.g, p = g.player; this.failT = 0.7; TourKit.sfx('fizz', 'bump', { vol: 0.5, pitch: 0.5 }); g.shake(2); if (p) Tour.boneKit.pill(g, p.cx, p.y - 24, text, '#ffb0a0'); }
+  split() {
+    const g = this.g, p = g.player; this.done = true;
+    for (const r of this.s.drop) setRect(g, r, T.EMPTY);
+    g.shake(5); Sound.play('stomp', { pitch: 0.6 }); TourKit.sfx('crack', 'bump', { vol: 0.7, pitch: 0.8 });
+    if (p) Tour.boneKit.pill(g, p.cx, p.y - 26, 'A CLEAN BREAK!', '#ffd88a');
+    for (const r of this.s.drop) g.burst((r[0] + r[2] + 1) * TS / 2, (r[1] + r[3] + 1) * TS / 2, 12, '#f4ead2', 'dust');
+  }
+  touchPlayer() {}
+  inDrop(x, y) { return this.s.drop.some(r => x >= r[0] && x <= r[2] && y >= r[1] && y <= r[3]); }
+  draw(ctx) {
+    const s = this.s, t = this.t;
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2.2;
+    // the replica: its kept part, and the dropped half (shaking loose, then tumbling away)
+    // a moulded replica: plaster with a bone in relief, dowel holes, a crate stencil; the half that stays is tinted
+    // warm, the scrap half is hatched grey (so the player sees which half goes)
+    const paint = (r, off, rot, scrap) => {
+      const x = r[0] * TS, y = r[1] * TS, w = (r[2] - r[0] + 1) * TS, h = (r[3] - r[1] + 1) * TS;
+      ctx.save(); ctx.translate(x + w / 2 + off[0], y + h / 2 + off[1]); ctx.rotate(rot);
+      ctx.fillStyle = scrap ? '#d4cec2' : '#f6e2b8'; rr(ctx, -w / 2, -h / 2, w, h, 9); ctx.fill(); ctx.stroke();
+      ctx.save(); rr(ctx, -w / 2, -h / 2, w, h, 9); ctx.clip();
+      if (scrap) { ctx.strokeStyle = 'rgba(90,80,70,0.45)'; ctx.lineWidth = 2; for (let q = -w - h; q < w + h; q += 9) { ctx.beginPath(); ctx.moveTo(q, -h / 2); ctx.lineTo(q + h, h / 2); ctx.stroke(); } }
+      else { ctx.fillStyle = 'rgba(240,106,42,0.18)'; ctx.fillRect(-w / 2, -h / 2, w, h); }
+      ctx.restore();
+      ctx.strokeStyle = INK; ctx.lineWidth = 2.2; rr(ctx, -w / 2, -h / 2, w, h, 9); ctx.stroke();
+      if (w >= TS * 2 || h >= TS * 2) { const L = Math.max(w, h) * 0.32; ctx.save(); ctx.globalAlpha = 0.55; if (w >= h) BA.bone(ctx, -L, 0, L, 0, Math.min(14, h * 0.35), false, '#e8d8b0'); else BA.bone(ctx, 0, -L, 0, L, Math.min(14, w * 0.35), false, '#e8d8b0'); ctx.restore(); }
+      ctx.fillStyle = '#9a8a6a'; for (const [dx, dy] of [[-w / 2 + 7, -h / 2 + 7], [w / 2 - 7, -h / 2 + 7], [-w / 2 + 7, h / 2 - 7], [w / 2 - 7, h / 2 - 7]]) { ctx.beginPath(); ctx.arc(dx, dy, 2.4, 0, TAU); ctx.fill(); }
+      if (h >= TS * 2 && w >= TS * 2) { ctx.fillStyle = 'rgba(80,50,20,0.55)'; ctx.font = '6px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText(scrap ? 'SPARE' : 'REPLICA', 0, h / 2 - 12); }
+      ctx.restore();
+    };
+    for (const r of s.keep || []) paint(r, [0, 0], 0);
+    if (this.fallK < 1) for (const r of s.drop) { const k = this.fallK; paint(r, [k * 40, k * k * 260], k * 1.2, true); }
+    // the seam: a dark dashed crack along the replica, its fork, and the persimmon joint (37-4's twist)
+    if (!this.done) {
+      ctx.strokeStyle = '#5a3a1a'; ctx.lineWidth = 2.5; ctx.setLineDash([5, 4]); ctx.beginPath(); this.seam.forEach(([x, y], k) => k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke();
+      if (s.fork) { const [fx, fy] = this.at(s.fork.d); ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(s.fork.to[0], s.fork.to[1]); ctx.stroke(); }
+      ctx.setLineDash([]);
+      if (s.end) { const [ex, ey] = this.at(s.stop); ctx.strokeStyle = '#5a3a1a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(ex - 5, ey - 6); ctx.lineTo(ex + 5, ey + 6); ctx.stroke(); }
+      if (s.joint) BA.joint(ctx, s.joint[0], s.joint[1], 9);
+      // the carved part behind the chisel, and the chisel itself
+      if (this.prog > 0) {
+        ctx.strokeStyle = '#2a1408'; ctx.lineWidth = 4; ctx.beginPath(); let d = 0; ctx.moveTo(this.seam[0][0], this.seam[0][1]); for (d = 6; d < this.prog; d += 6) { const [x, y] = this.at(d); ctx.lineTo(x, y); } const [cx, cy] = this.at(this.prog); ctx.lineTo(cx, cy); ctx.stroke();
+        const sh = this.failT > 0 ? Math.sin(t * 60) * 3 : 0;
+        ctx.save(); ctx.translate(cx + sh, cy); ctx.rotate(-0.7); ctx.strokeStyle = INK; ctx.lineWidth = 1.8; ctx.fillStyle = '#c8ccd4'; ctx.fillRect(-2.5, -18, 5, 14); ctx.strokeRect(-2.5, -18, 5, 14); ctx.fillStyle = PERS; rr(ctx, -4, -34, 8, 17, 3); ctx.fill(); ctx.stroke(); ctx.restore();
+      }
+    }
+    // the mark where Brady stands to chisel
+    const mx = s.mark[0] * TS + TS / 2, my = s.mark[1] * TS;
+    if (!this.done && !s.hideMark) { ctx.fillStyle = 'rgba(240,106,42,0.5)'; ctx.beginPath(); ctx.ellipse(mx, my + 2, 14, 4, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = PERS; ctx.lineWidth = 2; ctx.stroke(); }
+    if (!s.hideMark) throwHint(this, ctx, mx, my - 104, 'HOLD THROW... LET GO AT THE FORK');
+    ctx.restore();
+  }
+}
+ENTITY_TYPES.boneChisel = BoneChisel;
+Tour.pieces['bone.chisel'] = function (st, o) {
+  const B = st.B;
+  o = Object.assign({}, o, { body: (o.keep || []).concat(o.drop) });
+  B.spawn('boneChisel', st.x, st.gy - 1, o);
+  for (const r of o.body) for (let y = r[1]; y <= r[3]; y++) for (let x = r[0]; x <= r[2]; x++) { B.set(x, y, T.HARD); B.setHide(x, y, 1); }
+  if (o.g != null) { B.toggle(o.g, o.drop.map(r => r.slice(0, 4)), [], { kind: 'boneChisel' }); B.switchAt(o.g, o.mark[0], o.mark[1] - 1); }
+  else if (o.edge) B.edge([o.mark[0], o.mark[1] - 1], o.edge);
+  return st.x;
+};
+
+/* ======================= 37-5's lead-in: send a loose limb to the socket it suits ======================= */
+// a replica skeleton lies across the path, one socket empty; loose limbs lie about. Stand over a limb and THROW: it
+// flies to the socket; only the one whose end fits the socket's shape clicks in, and the skeleton gets up out of the
+// way. { gate: rect (the skeleton's tiles), socket: 'hip' | 'shoulder' | 'tail', limbs: [[x, y, kind]], good, g }
+const FITS = { hip: 'heel', shoulder: 'paddle', tail: 'tail' };
+const limbEnd = (ctx, x, y, kind, s) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(s || 1, s || 1); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = BONE;
+  if (kind === 'heel' || kind === 'hip') { ctx.beginPath(); ctx.arc(0, 0, 7, 0, TAU); kind === 'hip' ? ctx.stroke() : (ctx.fill(), ctx.stroke()); }
+  else if (kind === 'paddle' || kind === 'shoulder') { ctx.beginPath(); ctx.rect(-8, -3.5, 16, 7); kind === 'shoulder' ? ctx.stroke() : (ctx.fill(), ctx.stroke()); }
+  else { ctx.beginPath(); for (let a = 0; a < 10; a += 0.3) { const r = 2 + a * 0.6; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); } ctx.stroke(); }
+  ctx.restore();
+};
+class BoneLimbGate extends Ent {
+  constructor(g, s) {
+    super(g, s, 4, 4); this.friendly = true; this.back = true; this.s = s; this.open = 0; this.done = false; this.fly = null; this.back2 = 0;
+    const pts = s.limbs.map(l => [l[0], l[1]]).concat([[s.gate[0], s.gate[1]], [s.gate[2], s.gate[3]]]), b = bbox(pts);
+    this.x = (b[0] - 1) * TS; this.y = (b[1] - 3) * TS; this.w = (b[2] - b[0] + 3) * TS; this.h = (b[3] - b[1] + 4) * TS; this.at = s.limbs.map(() => 1);
+  }
+  under(p) { return this.s.limbs.findIndex(([x, y], i) => this.at[i] && standsOn(p, x, y, 0.8)); }
+  boneClaim(p) { return !this.done && !this.fly && this.under(p) >= 0; }
+  sock() { const r = this.s.gate; return [(r[0] + r[2] + 1) * TS / 2, r[1] * TS + 20]; }
+  update(dt) {
+    this.t += dt; const g = this.g, I = g.boneIn;
+    if (this.done) { this.open = Math.min(1, this.open + dt * 1.5); return; }
+    if (this.fly) {
+      const F = this.fly; F.t += dt; const k = Math.min(1, F.t / 0.6);
+      if (k >= 1 && !F.hit) {
+        F.hit = true;
+        if (F.kind === FITS[this.s.socket]) { this.done = true; setRect(g, this.s.gate, T.EMPTY); Tour.boneKit.pill(g, F.x1, F.y1 - 20, 'CLICK! IT FITS', '#ffd88a'); TourKit.sfx('click', 'select', { vol: 0.7, pitch: 0.8 }); g.burst(F.x1, F.y1, 12, BONE, 'dust'); g.shake(3); }
+        else { Tour.boneKit.pill(g, F.x1, F.y1 - 20, 'DOESN\'T SUIT IT', '#ffb0a0'); TourKit.sfx('fizz', 'bump', { vol: 0.5, pitch: 0.6 }); F.back = true; F.t = 0; }
+      }
+      if (F.back && F.t > 0.5) { this.at[F.i] = 1; this.fly = null; }
+      return;
+    }
+    if (I && I.by === this && I.pressed) {
+      const p = g.player, i = this.under(p); if (i < 0) return;
+      const [x, y, kind] = this.s.limbs[i], [sx, sy] = this.sock();
+      this.at[i] = 0; this.fly = { i, kind, t: 0, x0: x * TS + TS / 2, y0: y * TS - 6, x1: sx, y1: sy };
+      TourKit.sfx('throw', 'jump', { vol: 0.5, pitch: 1.2 });
+    }
+  }
+  touchPlayer() {}
+  limbArt(ctx, x, y, kind, rot) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot || 0);
+    BA.bone(ctx, -14, 0, 12, 0, 8, false); limbEnd(ctx, 16, 0, kind, 1);
+    ctx.restore();
+  }
+  draw(ctx) {
+    const s = this.s, r = s.gate, gx = r[0] * TS, gy = r[1] * TS, gw = (r[2] - r[0] + 1) * TS, gh = (r[3] - r[1] + 1) * TS, k = this.open, t = this.t;
+    ctx.save();
+    // the reclining skeleton: a stack of bones across the path, a skull on top, its empty socket marked
+    if (k < 1) {
+      ctx.globalAlpha = 1 - k; ctx.translate(k * 60, -k * 30);
+      for (let q = 0; q < 4; q++) BA.bone(ctx, gx - 4, gy + 14 + q * (gh - 20) / 3, gx + gw + 4, gy + 10 + q * (gh - 20) / 3, 12, q % 2 === 0);
+      ctx.fillStyle = BONE; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(gx + gw / 2, gy + 2, 16, 11, 0.2, 0, TAU); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(gx + gw / 2 + 6, gy, 2.4, 0, TAU); ctx.fill();
+      const [sx, sy] = this.sock(); ctx.fillStyle = 'rgba(40,20,10,0.7)'; ctx.beginPath(); ctx.arc(sx, sy, 11, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 2; ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
+      ctx.strokeStyle = '#fbf4e0'; limbEnd(ctx, sx, sy, s.socket, 0.9);
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+    // the loose limbs, and the one in flight
+    s.limbs.forEach(([x, y, kind], i) => { if (this.at[i]) this.limbArt(ctx, x * TS + TS / 2, y * TS - 6, kind, 0); });
+    if (this.fly) { const F = this.fly, q = F.back ? 1 - Math.min(1, F.t / 0.5) : Math.min(1, F.t / 0.6); const fx = lerp(F.x0, F.x1, q), fy = lerp(F.y0, F.y1, q) - Math.sin(q * Math.PI) * 50; this.limbArt(ctx, fx, fy, F.kind, q * TAU); }
+    const p = this.g.player, i = p ? this.under(p) : -1;
+    if (i >= 0 && !this.fly && !this.done) throwHint(this, ctx, s.limbs[i][0] * TS + TS / 2, s.limbs[i][1] * TS - 96, 'THROW: SEND IT HOME');
+  }
+}
+ENTITY_TYPES.boneLimbGate = BoneLimbGate;
+Tour.pieces['bone.limbGate'] = function (st, o) {
+  const B = st.B; B.spawn('boneLimbGate', st.x, st.gy - 1, o);
+  const r = o.gate; for (let y = r[1]; y <= r[3]; y++) for (let x = r[0]; x <= r[2]; x++) { B.set(x, y, T.HARD); B.setHide(x, y, 1); }
+  B.toggle(o.g, [r.slice(0, 4)], [], { kind: 'boneLimb' });
+  const good = o.limbs.find(l => l[2] === FITS[o.socket]); B.switchAt(o.g, good[0], good[1] - 1);
+  return st.x;
+};
+
+Object.assign(TourLandscape.ARCH_LABEL, { trackway: 'TRACKWAY', vertebra: 'ASSEMBLY', mould: 'MOULD', chisel: 'CHISEL' });
+Object.assign(Tour.boneKit, { standsOn, setRect, throwHint, BoneTrack, BoneVert, BoneRibs, BonePress, BoneChisel, BoneClimber, BoneLimbGate, FITS });
+// for the shots tool: the game's own physics on a copy of Brady's body
+try { if (typeof window !== 'undefined') { window.BRADY_TOUR = window.BRADY_TOUR || {}; window.BRADY_TOUR.TourMap = TourMap; } } catch (e) { /* not in a browser */ }
+try { if (typeof window !== 'undefined') window.BRADY_BONE = { phys: (b, inp, A, dt, pl, o) => playerPhysicsFlip(b, inp, A, dt, pl, o), spikeContact: (b, A) => spikeContact(b, A), lavaContact: (b, A) => lavaContact(b, A), kit: Tour.boneKit }; } catch (e) { /* not in a browser */ }
+})();
+
+/* ---- 29_tour_y_bone_b_rooms.js ---- */
+/* ============================================================
+   THE SPARE BONE QUARRY: the secret rooms (world 37), one per stage, B56 to B60 of the relay (docs/design/
+   CHATGPT_RELAY.md §B, the trick rooms), every one a different game in a different place:
+     boneGiant  37-1 RESERVED FOR A GIANT   the great hall's height chart says you're too short: stand under the bar
+                                            and JUMP: it measures the top of your jump
+     boneQueue  37-2 THE BACK OF THE QUEUE  cardboard skeletons queue at a closed counter: walk behind the last one
+                                            and THROW to lift its hinged ribcage coat: the only open hatch
+     boneOrder  37-3 OUT OF ORDER           the cast dispenser's blank placard hides the real slot: bump it from
+                                            below, then take the prize behind it
+     boneFish   37-4 NO FISHING             a wooden fish holds a line out of the tar pool: from the dry end, jump on
+                                            its float and the fish reels BRADY in
+     boneJar    37-5 THE CLEARLY EMPTY JAR  three EMPTY jars, one with a bump under its paper liner: THROW to turn it
+                                            upside down and catch what falls out of the lid
+   Every room fits one landscape phone view (20 tiles of play, the floor raised into the middle band, the camera
+   held still), shows its rule in motion as Brady comes in, and opens its prize cage at the moment it is won. A miss
+   costs nothing: the turn resets. The checker sees each room's game as a virtual key on the spot where it is won.
+   ============================================================ */
+(function () {
+if (typeof TourRooms === 'undefined') return;
+const K = Tour.boneKit, INK = K.INK, BA = K.BoneArt, BONE = K.BONE, PERS = K.PERS, PETROL = K.PETROL, RK = TourRoomKit;
+const Y = 6, F = 7;   // the row Brady stands on, the floor's top row (raised into the middle of the view)
+// the shared frame: a 28 x 14 room, play between columns 1 and 21, the way in at the left, the cage at the right
+function frame(keep, A, o, opts) {
+  opts = opts || {};
+  const g = RK.room(28, 14, F);
+  g.fill(22, 1, 26, Y, '#');
+  if (opts.roof) g.fill(1, 1, 21, opts.roof, '#');
+  // the way in and out: on the left (the kit's) or on the right
+  if (opts.doorRight) { g.put(19, Y, '@'); if (keep.door) g.door(20, Y, keep.door); }
+  else g.west(keep, Y);
+  // the prize cage: on the right at the floor (the kit's, lock facing left), or on the left (lock facing right),
+  // optionally up on a plinth
+  const items = RK.prize(o, keep);
+  if (opts.cageLeft) {
+    const y = opts.plinth ? Y - 1 : Y, h = opts.cageH || 4, w = 3, x = 2, top = y - h + 1;
+    if (opts.plinth) g.fill(1, Y, 6, Y, '#');
+    g.fill(1, top - 1, x + w, top - 1, '#'); g.fill(x, top, x + w - 1, y, '.');
+    g.vline(x + w, top, y, g.L(['lock', 'room:' + A.id]));
+    items.forEach((it, k) => g.box(x + 1 + k, top, it));
+    g.data.cage = { x: x + w, top, y, w };
+  } else g.cage(A.id, opts.cageX || 17, Y, items, { w: 3, h: opts.cageH || 4 });
+  return { g };
+}
+const fail = (play, txt) => { TourKit.sfx('fizz', 'bump', { vol: 0.5, pitch: 0.6 }); const p = play.player; if (p) Tour.boneKit.pill(play, p.cx, p.y - 24, txt, '#ffb0a0'); };
+// the room's counter / hint line in its one fixed spot (after the title banner)
+const hud = (play, ctx, str) => { if (play.bannerT > 0) return; TourRooms.hudText(play, ctx, str, '#ffd88a', 13, 0); };
+// the camera holds still on the room (the play band in the middle of a landscape phone view)
+{
+  const uc0 = Play.prototype.updateCamera;
+  Play.prototype.updateCamera = function (dt) {
+    const r = uc0.call(this, dt), A = this.area;
+    if (A && A.bone && A.bone.room) { this.camX = clamp(11.5 * TS - Game.viewW / 2, 0, Math.max(0, A.W * TS - Game.viewW)); this.camY = clamp(1 * TS, 0, Math.max(0, A.H * TS - Game.viewH)); }
+    return r;
+  };
+  const ct0 = Play.prototype.camTargetY;
+  Play.prototype.camTargetY = function (snap) { const A = this.area; if (A && A.bone && A.bone.room) return clamp(1 * TS, 0, Math.max(0, A.H * TS - Game.viewH)); return ct0.call(this, snap); };
+}
+// the room's own props take THROW where Brady touches them (the land's claim in 29_tour_y_bone_a_mech.js)
+class BoneRoomProp extends Ent {
+  constructor(g, s) { super(g, s, (s.w || 1) * TS, (s.h || 2) * TS); this.x = s.x - this.w / 2; this.y = s.y - this.h; this.friendly = true; this.role = s.role; this.k = s.k || 0; this.back = true; this.anim = 0; this.flip = 0; this.claims = ['counter', 'cutout', 'machine', 'jar'].indexOf(s.role) >= 0; }
+  boneClaim(p) { return !!this.claims && overlap(p, { x: this.x - 14, y: this.y, w: this.w + 28, h: this.h }); }
+  update(dt) { this.t += dt; this.anim = Math.max(0, this.anim - dt); }
+  touchPlayer() {}
+  draw(ctx) { const R = this.g.area && this.g.area.roomState; const D = DRAW[this.role]; if (D) D(ctx, this, R || {}); }
+}
+ENTITY_TYPES.boneRoomProp = BoneRoomProp;
+const props = (play, role) => play.entities.filter(e => e instanceof BoneRoomProp && e.role === role && !e.remove);
+const DRAW = {};
+
+/* ================= boneGiant: RESERVED FOR A GIANT ================= */
+const GIANT_X = 12, BAR_ROW = 3;   // the measuring bar: Brady's head must reach the top of row 3 (a full jump does)
+TourRooms.def('boneGiant', {
+  title: 'RESERVED FOR A GIANT', rule: 'TOO SHORT? STAND UNDER THE BAR AND JUMP: IT MEASURES THE TOP OF YOUR JUMP', need: 'MEASURE UP FIRST!',
+  make(o, keep, ctx, A, rng) {
+    const { g } = frame(keep, A, o, { doorRight: true, cageLeft: true, plinth: true, cageH: 3 });
+    g.spawn(GIANT_X, Y, 'boneRoomProp', { role: 'chart', w: 3, h: 6 });
+    g.winSpot(A.id, GIANT_X, Y);
+    g.coins(14, 16, 4);
+    return g;
+  },
+  enter(play, A, R) { R.demo = 2.2; R.air = false; R.top = null; },
+  update(play, dt, A, R) {
+    if (R.demo > 0) R.demo -= dt;
+    if (R.won) return;
+    const p = play.player, under = Math.abs(p.cx - (GIANT_X * TS + TS / 2)) < TS * 1.3;
+    if (!p.onGround && under) { R.air = true; R.top = Math.min(R.top == null ? 1e9 : R.top, p.y); }
+    if (p.onGround && R.air) {
+      R.air = false;
+      if (R.top <= BAR_ROW * TS) TourRooms.win(play, A, R, { text: 'TALL ENOUGH! (AT THE TOP)', coins: 4 });
+      else fail(play, 'TOO SHORT! JUMP HIGHER (HOLD JUMP)');
+      R.mark = R.top; R.markT = 1.5; R.top = null;
+    }
+    if (R.markT > 0) R.markT -= dt;
+  }
+});
+DRAW.chart = (ctx, e, R) => {
+  const x = e.cx, y0 = e.y + e.h, t = e.t, barY = BAR_ROW * TS;
+  ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+  // the post with its height marks: GIANT up top, VERY TALL, then a little "you?" far below
+  ctx.fillStyle = '#e8dcc0'; rr(ctx, x - 40, e.y + 4, 14, e.h - 4, 3); ctx.fill(); ctx.stroke();
+  for (let yy = e.y + 14; yy < y0 - 4; yy += 16) { ctx.fillStyle = INK; ctx.fillRect(x - 40, yy, 7, 2); }
+  ctx.fillStyle = '#fbf4e0'; rr(ctx, x - 132, y0 - 60, 86, 26, 3); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#6a4a2a'; ctx.fillRect(x - 92, y0 - 34, 4, 34);
+  ctx.fillStyle = INK; ctx.font = '7px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('YOU MUST BE', x - 89, y0 - 52); ctx.fillText('THIS TALL →', x - 89, y0 - 42);
+  // the bar: a bone on a slider; it drops to the top of Brady's last jump for a moment, then back up
+  let by = barY; if (R.markT > 0 && R.mark != null) by = R.won ? barY : lerp(barY, R.mark, Math.min(1, R.markT));
+  if (R.demo > 0) by = barY + Math.abs(Math.sin(t * 3)) * 0;
+  BA.bone(ctx, x - 34, by, x + 30, by, 10, true);
+  ctx.fillStyle = R.won ? '#3a8a4a' : PERS; ctx.font = '9px ' + FONT_DISPLAY; ctx.fillText(R.won ? 'GIANT!' : 'GIANT', x + 50, by);
+  // the demo in motion: a ghost of Brady jumps up under the bar and touches it with his bun
+  if (R.demo > 0 && !R.won) {
+    const k = Math.abs(Math.sin((2.2 - R.demo) * 2.4)), gy = y0 - k * 3.4 * TS;
+    ctx.globalAlpha = 0.45; ctx.fillStyle = '#ffffff'; rr(ctx, x - 9, gy - 54, 18, 54, 6); ctx.fill(); ctx.beginPath(); ctx.arc(x, gy - 58, 6, 0, TAU); ctx.fill(); ctx.globalAlpha = 1;
+  }
+  // a dashed line where his head reached last time
+  if (R.markT > 0 && R.mark != null && !R.won) { ctx.strokeStyle = '#ffb0a0'; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(x - 30, R.mark); ctx.lineTo(x + 30, R.mark); ctx.stroke(); ctx.setLineDash([]); }
+  ctx.restore();
+};
+
+/* ================= boneQueue: THE BACK OF THE QUEUE ================= */
+const Q_X = [8, 10, 12, 14], COUNTER_X = 6;
+TourRooms.def('boneQueue', {
+  title: 'THE BACK OF THE QUEUE', rule: 'THE COUNTER IS CLOSED. FIND THE ONE OPEN HATCH (THROW TO LIFT A COAT)', need: 'FIND THE OPEN HATCH FIRST!',
+  make(o, keep, ctx, A, rng) {
+    const { g } = frame(keep, A, o);
+    g.spawn(COUNTER_X, Y, 'boneRoomProp', { role: 'counter', w: 2, h: 3 });
+    Q_X.forEach((x, k) => g.spawn(x, Y, 'boneRoomProp', { role: 'cutout', k, w: 1, h: 3 }));
+    g.winSpot(A.id, 15, Y);
+    return g;
+  },
+  enter(play, A, R) { R.demo = 2; for (const e of play.entities) if (e instanceof BoneRoomProp) e.claims = true; },
+  update(play, dt, A, R) {
+    if (R.demo > 0) R.demo -= dt;
+    const I = play.boneIn; if (!I || !I.pressed || R.won) return;
+    const e = I.by, p = play.player;
+    if (!(e instanceof BoneRoomProp)) return;
+    if (e.role === 'counter') { fail(play, 'CLOSED! THE QUEUE STARTS AT THE BACK'); e.anim = 0.5; return; }
+    const last = e.k === Q_X.length - 1;
+    if (last && p.cx > e.cx + 4) { e.flip = 1; TourRooms.win(play, A, R, { text: 'AN OPEN HATCH! (BEHIND THE LAST ONE)', coins: 4 }); }
+    else { e.anim = 0.6; fail(play, last ? 'FROM THE BACK, PLEASE' : 'NO PUSHING IN!'); }
+  }
+});
+DRAW.counter = (ctx, e, R) => {
+  const x = e.x, y = e.y, w = e.w, h = e.h, sh = e.anim > 0 ? Math.sin(e.t * 50) * 2 : 0;
+  ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+  ctx.fillStyle = '#8a5a2a'; ctx.fillRect(x - 4, y + 34, w + 8, h - 34); ctx.strokeRect(x - 4, y + 34, w + 8, h - 34);
+  ctx.fillStyle = '#c8b898'; ctx.fillRect(x + sh, y - 10, w, 44); ctx.strokeRect(x + sh, y - 10, w, 44);
+  ctx.strokeStyle = '#8a7a5a'; for (let yy = y - 4; yy < y + 32; yy += 6) { ctx.beginPath(); ctx.moveTo(x + 2 + sh, yy); ctx.lineTo(x + w - 2 + sh, yy); ctx.stroke(); }
+  ctx.fillStyle = '#c83a2a'; rr(ctx, x + 6 + sh, y + 4, w - 12, 16, 3); ctx.fill(); ctx.strokeStyle = INK; ctx.stroke();
+  ctx.fillStyle = '#ffffff'; ctx.font = '8px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('CLOSED', x + w / 2 + sh, y + 12);
+  ctx.restore();
+};
+DRAW.cutout = (ctx, e, R) => {
+  const x = e.cx, y = e.y + e.h, t = e.t, last = e.k === Q_X.length - 1, sh = e.anim > 0 ? Math.sin(t * 40) * 3 : 0;
+  // cardboard skeleton standees facing the counter (left): each a different invented beast, a stand at the back
+  ctx.save(); ctx.translate(x + sh, y); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+  ctx.fillStyle = '#a8784a'; ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(14, -40); ctx.lineTo(10, -40); ctx.lineTo(2, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#e8c890'; rr(ctx, -12, -86, 24, 86, 5); ctx.fill(); ctx.stroke();
+  // the skeleton printed on the front (it faces left: head on the left)
+  ctx.strokeStyle = '#5a4a3a'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(-2, -78); ctx.lineTo(-2, -20); ctx.stroke();
+  for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.arc(-2, -64 + k * 9, 8, Math.PI * 0.6, Math.PI * 1.4); ctx.stroke(); }
+  ctx.fillStyle = BONE; ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.ellipse(-8 - e.k % 2 * 2, -80, 7, 5 + e.k % 3, -0.2, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(-11, -81, 1.4, 0, TAU); ctx.fill();
+  // the last one's hinged coat: a flap over its ribcage at the BACK; the demo flaps it once; a win swings it open
+  if (last) {
+    const open = e.flip ? Math.min(1, (e.flipT = (e.flipT || 0) + 0.02)) : (R.demo > 0 ? Math.max(0, Math.sin((2 - R.demo) * 4)) * 0.25 : 0);
+    ctx.save(); ctx.translate(12, -70); ctx.scale(1 - open * 1.6, 1);
+    ctx.fillStyle = '#d8a870'; ctx.strokeStyle = INK; ctx.lineWidth = 2; rr(ctx, -2, 0, 12, 44, 3); ctx.fill(); ctx.stroke();
+    ctx.restore();
+    if (open > 0.3) { ctx.fillStyle = '#2a140a'; rr(ctx, 4, -64, 10, 30, 3); ctx.fill(); ctx.fillStyle = '#ffd88a'; ctx.fillRect(6, -60, 6, 4); }
+  }
+  ctx.restore();
+};
+
+/* ================= boneOrder: OUT OF ORDER ================= */
+const SLOT_X = 13, PLAC_X = 16;   // the fake coin slot; the placard hangs in front of the cage
+TourRooms.def('boneOrder', {
+  title: 'OUT OF ORDER', rule: 'THE CAST DISPENSER IS OUT OF ORDER... OR IS THAT PLACARD JUST LOOSE?', need: 'THE PLACARD IS IN THE WAY!',
+  make(o, keep, ctx, A, rng) {
+    const { g } = frame(keep, A, o, { cageX: 17, roof: 1 });
+    g.spawn(SLOT_X, Y, 'boneRoomProp', { role: 'machine', w: 4, h: 5 });
+    g.spawn(PLAC_X, 3, 'boneRoomProp', { role: 'placard', w: 2, h: 1 });
+    g.winSpot(A.id, PLAC_X, Y);
+    return g;
+  },
+  enter(play, A, R) { R.demo = 1.6; for (const e of props(play, 'machine')) e.claims = true; },
+  update(play, dt, A, R) {
+    if (R.demo > 0) R.demo -= dt;
+    const p = play.player, I = play.boneIn;
+    if (I && I.pressed && I.by && I.by.role === 'machine' && !R.won) { fail(play, 'OUT OF ORDER. (CLUNK.)'); I.by.anim = 0.4; }
+    const pl = props(play, 'placard')[0]; if (!pl) return;
+    pl.swing = Math.max(0, (pl.swing || 0) - dt / 3);
+    // a bump from below: Brady's head comes up into the placard's bottom edge
+    if (p.vy < 0 && p.y < pl.y + pl.h + 4 && p.y > pl.y && p.cx > pl.x - 6 && p.cx < pl.x + pl.w + 6 && !(pl.swing > 0.6)) {
+      pl.swing = 1; p.vy = Math.max(p.vy, 2 * TS); Sound.play('bump', { vol: 0.6 });
+      if (!R.won) TourRooms.win(play, A, R, { text: 'THE REAL SLOT WAS BEHIND IT!', coins: 3 });
+    }
+  }
+});
+DRAW.machine = (ctx, e, R) => {
+  const x = e.x, y = e.y, w = e.w, h = e.h, sh = e.anim > 0 ? Math.sin(e.t * 50) * 2 : 0;
+  ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2.2;
+  ctx.fillStyle = '#7a9a9a'; rr(ctx, x + sh, y, w, h, 8); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#c8e0e0'; rr(ctx, x + 10 + sh, y + 10, w - 20, h * 0.45, 4); ctx.fill(); ctx.stroke();
+  // little plaster casts on display inside the glass
+  for (let k = 0; k < 3; k++) BA.print(ctx, x + 26 + k * 26 + sh, y + 40 + (k % 2) * 12, k, 0, 1, '#8a7a6a');
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  if (!(e.g.bannerT > 0)) { ctx.fillStyle = '#ffd84a'; rr(ctx, x + w / 2 - 30 + sh, y + h * 0.6, 60, 14, 3); ctx.fill(); ctx.stroke(); ctx.fillStyle = INK; ctx.font = '7px ' + FONT_DISPLAY; ctx.fillText('OUT OF ORDER', x + w / 2 + sh, y + h * 0.6 + 7); }
+  ctx.fillStyle = '#3a4a4a'; rr(ctx, x + w / 2 - 4 + sh, y + h * 0.78, 8, 14, 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#ffffff'; ctx.font = '6px ' + FONT_DISPLAY; ctx.fillText('INSERT BONE', x + w / 2 + sh, y + h - 6);
+  ctx.restore();
+};
+DRAW.placard = (ctx, e, R) => {
+  // a blank placard on two rings: it swings up (from below) for a moment; the demo nudges it on the way in
+  const s = Math.max(e.swing || 0, R.demo > 0 ? Math.abs(Math.sin((1.6 - R.demo) * 5)) * 0.25 : 0), a = -s * 1.9;
+  ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+  ctx.fillStyle = '#5a5a5a'; ctx.beginPath(); ctx.arc(e.x + 8, e.y - 6, 3, 0, TAU); ctx.arc(e.x + e.w - 8, e.y - 6, 3, 0, TAU); ctx.fill();
+  ctx.translate(e.x + e.w / 2, e.y - 4); ctx.rotate(a); ctx.scale(1, Math.max(0.15, Math.cos(s * 1.4)));
+  ctx.fillStyle = '#fbf4e0'; rr(ctx, -e.w / 2, 0, e.w, e.h + 18, 3); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#e8dcc0'; ctx.fillRect(-e.w / 2 + 4, e.h + 10, e.w - 8, 4);
+  ctx.restore();
+};
+
+/* ================= boneFish: NO FISHING ================= */
+const DRY1 = 7, POOL0 = 8, POOL1 = 13, ISLE0 = 14;
+TourRooms.def('boneFish', {
+  title: 'NO FISHING', rule: 'THE TAR WON\'T HOLD YOU, AND IT\'S TOO LOW TO JUMP. HOP ON THE FLOAT: LET THE FISH REEL YOU IN', need: 'GET REELED IN FIRST!',
+  make(o, keep, ctx, A, rng) {
+    const { g } = frame(keep, A, o);
+    // a low rock ceiling over the pool: no jumping across it
+    g.fill(POOL0 + 1, 1, POOL1, 4, '#');
+    g.spawn(POOL0, Y, 'boneRoomProp', { role: 'pool', w: POOL1 - POOL0 + 1, h: 1 });
+    g.spawn(15, Y, 'boneRoomProp', { role: 'fish', w: 2, h: 2 });
+    g.winSpot(A.id, 15, Y);
+    return g;
+  },
+  enter(play, A, R) { R.demo = 2; R.reel = null; },
+  update(play, dt, A, R) {
+    if (R.demo > 0) R.demo -= dt;
+    const p = play.player;
+    if (R.reel != null) {
+      R.reel += dt; const k = Math.min(1, R.reel / 1.6);
+      p.x = lerp(POOL0, ISLE0 + 1, k * k * (3 - 2 * k)) * TS + TS / 2 - p.w / 2; p.vx = 0; p.stunT = 0.05; p.invuln = Math.max(p.invuln, 0.3);
+      if (k >= 1) { R.reel = null; if (!R.won) TourRooms.win(play, A, R, { text: 'REELED IN! (THE FISH CAUGHT YOU)', coins: 3 }); }
+      return;
+    }
+    if (!p.onGround || p.groundTy !== F) { R.wasAir = !p.onGround; return; }
+    const tx = Math.floor(p.cx / TS);
+    if (tx === POOL0 || tx === POOL0 + 1) { R.reel = 0; TourKit.sfx('reel', 'select', { vol: 0.5, pitch: 1.6 }); Tour.boneKit.pill(play, p.cx, p.y - 20, 'A BITE!', '#ffd88a'); }
+    else if (tx > POOL0 + 1 && tx <= POOL1) { play.burst(p.cx, p.y + p.h, 10, '#2a1a10', 'dust'); fail(play, 'SPLOSH! THE FISH SPITS YOU BACK'); RK.raspberry(play, 'SPLOSH!'); p.x = 4 * TS + TS / 2 - p.w / 2; p.y = F * TS - p.h; p.vx = p.vy = 0; }
+    R.wasAir = false;
+  }
+});
+DRAW.pool = (ctx, e, R) => {
+  const x = e.x, y = F * TS, w = e.w, t = e.t;
+  ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+  ctx.fillStyle = '#1e1410'; ctx.fillRect(x, y - 4, w, 14); ctx.strokeRect(x, y - 4, w, 14);
+  ctx.fillStyle = 'rgba(120,180,200,0.35)'; for (let q = 0; q < 4; q++) { const xx = x + ((t * 20 + q * 60) % w); ctx.fillRect(xx, y - 2, 18, 2); }
+  // the float: a persimmon-and-white bobber on the tar by the dry end, the line up to the fish's rod
+  const reel = R.reel != null ? Math.min(1, R.reel / 1.6) : 0, fx = lerp(x + TS / 2, (ISLE0 + 1) * TS + TS / 2, reel), fy = y - 6 + Math.sin(t * 3) * 2;
+  const p = e.g.player;
+  ctx.strokeStyle = '#e8e0c8'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(fx, fy - 8); ctx.quadraticCurveTo((fx + 15.5 * TS) / 2, fy - 30 + (R.demo > 0 ? Math.sin(t * 8) * 6 : 0), 15.5 * TS + 10, y - 50); ctx.stroke();
+  if (!(reel > 0 && p)) { ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.fillStyle = PERS; ctx.beginPath(); ctx.arc(fx, fy - 4, 6, Math.PI, 0); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(fx, fy - 4, 6, 0, Math.PI); ctx.fill(); ctx.stroke(); }
+  ctx.restore();
+};
+DRAW.fish = (ctx, e, R) => {
+  // a wooden replica fish sitting up on its tail on the island, a little rod in its fin
+  const x = e.cx, y = e.y + e.h, t = e.t, wink = Math.sin(t * 1.3) > 0.95;
+  ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+  ctx.fillStyle = '#b8743a'; ctx.beginPath(); ctx.ellipse(x, y - 26, 14, 22, 0.15, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x - 4, y - 6); ctx.lineTo(x - 14, y); ctx.lineTo(x + 8, y); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = '#8a4a1e'; for (let q = 0; q < 4; q++) { ctx.beginPath(); ctx.arc(x - 2, y - 28 + q * 7, 8, 0.3, 2.8); ctx.stroke(); }
+  ctx.strokeStyle = INK; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x + 2, y - 40, 4, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = INK; if (wink) ctx.fillRect(x - 2, y - 41, 8, 2); else { ctx.beginPath(); ctx.arc(x + 1, y - 40, 1.8, 0, TAU); ctx.fill(); }
+  ctx.strokeStyle = '#5a3a1a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x - 10, y - 24); ctx.lineTo(x - 2, y - 52); ctx.stroke();
+  ctx.restore();
+};
+
+/* ================= boneJar: THE CLEARLY EMPTY JAR ================= */
+const JAR_X = [9, 12, 15];
+TourRooms.def('boneJar', {
+  title: 'THE CLEARLY EMPTY JAR', rule: 'THREE EMPTY JARS. ONE HAS A BUMP UNDER ITS LABEL: THROW TO TIP IT, CATCH WHAT FALLS OUT', need: 'CATCH IT FIRST!',
+  make(o, keep, ctx, A, rng) {
+    const { g } = frame(keep, A, o, { doorRight: true, cageLeft: true });
+    const odd = o.odd != null ? o.odd : 1;
+    JAR_X.forEach((x, k) => g.spawn(x, Y, 'boneRoomProp', { role: 'jar', k, w: 1, h: 2, odd: k === odd }));
+    g.data.odd = odd;
+    g.winSpot(A.id, JAR_X[odd], Y);
+    return g;
+  },
+  enter(play, A, R) { R.demo = 1.8; R.drop = null; for (const e of props(play, 'jar')) e.claims = true; },
+  update(play, dt, A, R, kit) {
+    if (R.demo > 0) R.demo -= dt;
+    const p = play.player, I = play.boneIn;
+    for (const e of props(play, 'jar')) { if (e.tip > 0) { e.tip -= dt; if (e.tip <= 0 && !(R.won && e.s.odd)) e.flip = 0; } }
+    if (R.drop) {
+      // the key out of the lid: up in an arc and down 3 tiles along; catch it before it reaches the floor
+      const D = R.drop; D.t += dt; const k = D.t / 1.8;
+      D.x = lerp(D.x0, D.x1, Math.min(1, k)); D.y = D.y0 - Math.sin(Math.min(1, k) * Math.PI) * 1.7 * TS + k * k * 1.2 * TS;
+      if (Math.abs(p.cx - D.x) < 30 && Math.abs(p.cy - D.y) < 46) { R.drop = null; TourRooms.win(play, A, R, { text: 'CAUGHT IT! NOT SO EMPTY', coins: 4 }); return; }
+      if (k >= 1 || D.y > F * TS - 8) { R.drop = null; fail(play, 'IT ROLLED BACK IN! TRY AGAIN'); for (const e of props(play, 'jar')) if (e.s.odd) { e.flip = 0; e.tip = 0; } }
+      return;
+    }
+    if (!I || !I.pressed || R.won || !(I.by && I.by.role === 'jar')) return;
+    const e = I.by; if (e.flip) return;
+    e.flip = 1; e.tip = 1.2; TourKit.sfx('clink', 'select', { vol: 0.5, pitch: 1.3 });
+    if (e.s.odd) { const dir = p.cx < e.cx ? -1 : 1; R.drop = { t: 0, x0: e.cx, y0: e.y + e.h - 6, x1: e.cx + dir * 3 * TS, x: e.cx, y: e.y }; e.tip = 9; Tour.boneKit.pill(play, e.cx, e.y - 20, 'SOMETHING FELL OUT!', '#ffd88a'); }
+    else { play.burst(e.cx, e.y + e.h, 8, '#e8dcc0', 'dust'); fail(play, 'CLEARLY EMPTY. (A LITTLE DUST.)'); }
+  },
+  draw(play, ctx, A, R) {
+    if (R.drop) { const D = R.drop; ctx.save(); ctx.translate(D.x, D.y); ctx.rotate(D.t * 8); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#ffd84a'; ctx.beginPath(); ctx.arc(-6, 0, 6, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillRect(0, -2.5, 14, 5); ctx.strokeRect(0, -2.5, 14, 5); ctx.fillRect(9, 2, 3, 5); ctx.restore(); }
+  }
+});
+DRAW.jar = (ctx, e, R) => {
+  const x = e.cx, y = e.y + e.h, t = e.t, odd = !!e.s.odd, fl = e.flip ? 1 : 0;
+  const wob = odd && R.demo > 0 ? Math.sin(t * 18) * 0.12 : 0;
+  ctx.save(); ctx.translate(x, y - 28); ctx.rotate(fl * Math.PI + wob); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+  // the glass jar, its screw lid, the paper label EMPTY (the odd one's label bulges over something)
+  ctx.fillStyle = 'rgba(200,235,235,0.55)'; rr(ctx, -15, -22, 30, 48, 8); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#c8a060'; rr(ctx, -13, -30, 26, 9, 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#fbf4e0'; ctx.beginPath(); ctx.moveTo(-14, -6); ctx.lineTo(14, -6); if (odd) { ctx.lineTo(14, 4); ctx.quadraticCurveTo(4, 14, -2, 4); ctx.lineTo(-14, 6); } else { ctx.lineTo(14, 8); ctx.lineTo(-14, 8); } ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = INK; ctx.font = '7px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('EMPTY', 0, -1);
+  ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillRect(-11, -18, 3, 30);
+  ctx.restore();
+};
+
+/* the room test's scripted wins (tools/sbw_rooms_test.js calls K.testWin(g, A, R, kit, frame) for a kind it has no
+   script for): each plays its game through the room's own entities with the buttons a player uses */
+const steps = (g, frame, n, keys) => { for (let k = 0; k < n; k++) frame(g, keys || {}); };
+const stand = (g, tx) => { const p = g.player; p.x = tx * TS + TS / 2 - p.w / 2; p.y = F * TS - p.h; p.vx = p.vy = 0; };
+TourRooms.kinds.boneGiant.testWin = function (g, A, R, kit, frame) {
+  stand(g, GIANT_X); steps(g, frame, 30);
+  // a tap: too short (a miss resets the turn), then a full held jump
+  frame(g, { jump: true, jumpPressed: true }); steps(g, frame, 110);
+  frame(g, { jump: true, jumpPressed: true }); steps(g, frame, 60, { jump: true }); steps(g, frame, 120);
+};
+TourRooms.kinds.boneQueue.testWin = function (g, A, R, kit, frame) {
+  stand(g, 13); steps(g, frame, 10); frame(g, { action: true, actionPressed: true }); steps(g, frame, 20);
+  stand(g, 15); steps(g, frame, 10); frame(g, { action: true, actionPressed: true }); steps(g, frame, 20);
+};
+TourRooms.kinds.boneOrder.testWin = function (g, A, R, kit, frame) {
+  stand(g, SLOT_X); steps(g, frame, 10); frame(g, { action: true, actionPressed: true }); steps(g, frame, 20);
+  stand(g, PLAC_X); steps(g, frame, 10); frame(g, { jump: true, jumpPressed: true }); steps(g, frame, 40, { jump: true }); steps(g, frame, 60);
+};
+TourRooms.kinds.boneFish.testWin = function (g, A, R, kit, frame) {
+  stand(g, 11); steps(g, frame, 4); steps(g, frame, 30);
+  stand(g, 7); steps(g, frame, 10); frame(g, { jump: true, jumpPressed: true, right: true }); steps(g, frame, 34, { right: true }); for (let q = 0; q < 240 && R.reel == null; q++) frame(g, {}); steps(g, frame, 260);
+};
+TourRooms.kinds.boneJar.testWin = function (g, A, R, kit, frame) {
+  const odd = kit.data.odd, wrong = (odd + 1) % 3;
+  stand(g, JAR_X[wrong]); steps(g, frame, 10); frame(g, { action: true, actionPressed: true }); steps(g, frame, 180);
+  stand(g, JAR_X[odd] - 1); steps(g, frame, 10); frame(g, { action: true, actionPressed: true });
+  for (let q = 0; q < 200 && R.drop && !R.won; q++) { const D = R.drop, p = g.player; p.x = D.x - p.w / 2; frame(g, {}); }
+  steps(g, frame, 20);
+};
+// title first, then the rule: the kit toasts the rule as the banner shows; ours waits for the banner to go
+for (const k of ['boneGiant', 'boneQueue', 'boneOrder', 'boneFish', 'boneJar']) {
+  const Kd = TourRooms.kinds[k], e0 = Kd.enter, u0 = Kd.update;
+  Kd.enter = function (play, A, R, kit) { play.toastT = 0; R.ruleAt = true; if (e0) return e0.apply(this, arguments); };
+  Kd.update = function (play, dt, A, R, kit) { if (R.ruleAt && !(play.bannerT > 0)) { R.ruleAt = false; if (!R.won) { play.toast(kit.rule); play.toastT = 4; } } if (u0) return u0.apply(this, arguments); };
+}
+Tour.boneKit.roomRows = frame;
+})();
+
+/* ---- 29_tour_y_bone_c_boss.js ---- */
+/* ============================================================
+   THE SPARE BONE QUARRY: the boss, THE APPROXIMATELY CORRECT ANIMAL (37-5). A replica skeleton that put itself
+   together from memory: a museum label on its head, persimmon caps on every joint, each bone not quite where it
+   goes. Brady does not beat it by stomping (a stomp just bounces off a plaster back): he helps it fit, one wrong
+   bone at a time, and each time a bone is seated it shudders (a hit). Three phases, two seatings each:
+   1 THE PADDLE   a broad paddle stuck on its head spins faster and faster (the tell, 1 s; a shadow where it will
+                  land, in front of it), then SLAPS down. It lies there a moment: stand under the empty SHOULDER
+                  socket (the dashed ring on its side, away from the slap) and THROW to seat it there.
+   2 THE HEEL     one enormous heel kicks up dust (the tell; a footprint marks where it will come down, just short
+                  of Brady), then a headfirst HOP: a ripple of dust runs both ways along the floor (jump it). The heel pops off as it
+                  lands: touch it and THROW to send it back to the empty HIP.
+   3 THE NECK     its "neck" (a tail really) curls under (the tell; a ring on the floor shows how far it reaches),
+                  then it SITS and SWEEPS: stand clear (or jump the curl). The curl is left lying at its back: touch
+                  it and THROW to slot it into the TAIL socket. It sits down comfortably and refuses to get up.
+   Every window is generous (1.8 s); touching it while a bone lies loose never hurts.
+   ============================================================ */
+(function () {
+const K = Tour.boneKit, INK = K.INK, BA = K.BoneArt, BONE = K.BONE, PERS = K.PERS;
+// its lines show in one fixed spot under the boss bar, on a dark pill (never across its own head)
+const say = (b, t, c) => { b.line = { text: t, col: c || '#fbf4e0', t: 0 }; };
+const WIN = 1.8;
+const waveArt = (c, s) => { c.save(); c.fillStyle = 'rgba(240,220,180,0.95)'; c.strokeStyle = INK; c.lineWidth = 1.6; c.beginPath(); c.moveTo(s.x, s.y + s.h); c.quadraticCurveTo(s.x + s.w / 2, s.y - 6, s.x + s.w, s.y + s.h); c.closePath(); c.fill(); c.stroke(); c.restore(); };
+const nothing = () => {};
+const brain = {
+  phases: [4, 2],
+  guardText: 'PLASTER!',
+  wake(b) { b.phase = 1; b.homeX = b.x; say(b, 'I AM A VERY ACCURATE ANIMAL. PROBABLY.'); b.boneClaim = p => brain.claim(b, p); },
+  // where its sockets and its loose bone are (pixels)
+  shoulder(b) { return { x: b.cx + b.dir * 22, y: b.y + 34 }; },
+  hip(b) { return { x: b.cx - b.dir * 30, y: b.y + 30 }; },
+  tailSock(b) { return { x: b.cx - b.dir * (b.w / 2 + 2), y: b.y + 40 }; },
+  // THROW belongs to the fight while a loose bone can be seated from where Brady stands
+  claim(b, p) {
+    if (!p || p.dead || b.state !== 'fight') return false;
+    if (b.act === 'paddleDown') { const s = this.shoulder(b); return Math.abs(p.cx - s.x) < 1.5 * TS && p.onGround; }
+    if ((b.act === 'heelDown' || b.act === 'curlDown') && b.loose) return Math.abs(p.cx - b.loose.x) < 34 && Math.abs(p.y + p.h - b.floorY) < 2 * TS;
+    return false;
+  },
+  phase(b, n) {
+    const g = b.g;
+    if (n === 2) { g.bannerText = 'THE HEEL!'; g.bannerT = 2; say(b, 'THAT WAS A LEG? THEN WHAT IS THIS HEEL FOR?'); }
+    if (n === 3) { g.bannerText = 'THE NECK!'; g.bannerT = 2; say(b, 'MY NECK FEELS... CURLY.'); }
+    b.go('recover');
+  },
+  hurt(b) { b.go('recover'); },
+  hit(b, kind) { if (kind === 'stomp' || kind === 'spin') return 'bounce'; if (kind === 'star') return 'bounce'; return false; },
+  // a loose bone, a seated bone, recovering: touching it never hurts then
+  touch(b, p) { return b.act === 'paddleDown' || b.act === 'heelDown' || b.act === 'curlDown' || b.act === 'recover' || b.act === 'seated'; },
+  lastHit(b) { b.go('sit'); b.state = 'fight'; b.sitting = true; return true; },
+  seat(b, text) { const g = b.g; b.loose = null; b.damage(1, { text, col: '#ffd88a' }); TourKit.sfx('click', 'select', { vol: 0.8, pitch: 0.7 }); g.burst(b.cx, b.cy, 16, BONE, 'dust'); },
+  update(b, dt) {
+    const g = b.g, p = g.player, ph = b.phase || 1, I = g.boneIn, pressed = I && I.by === b && I.pressed;
+    b.guard = 'bounce'; if (b.line) b.line.t += dt;
+    if (b.act === 'sit') {
+      // the end: it sits down at last, very pleased, and will not get up
+      b.vx = 0; this.ground(b, dt);
+      if (b.first) { say(b, 'OH. OH THAT\'S NICE. I\'M NOT GETTING UP.', '#ffd88a'); g.burst(b.cx, b.floorY, 20, '#f2c070', 'dust'); }
+      if (b.at > 2.2 && !b.done) { b.done = true; b.die(); }
+      return;
+    }
+    if (b.act === 'walk') b.go('trot');
+    if (b.act === 'trot') {
+      b.face(); b.walk(ph >= 3 ? 1.5 : 1.2); this.ground(b, dt);
+      // it never herds Brady into a corner: close up (or after a short walk) it starts its next trick, with its tell
+      if (b.at > (ph >= 3 ? 0.9 : 1.3) || (p && Math.abs(p.cx - b.cx) < b.w / 2 + 48 && b.at > 0.2)) b.go(ph === 1 ? 'wind' : ph === 2 ? 'kick' : 'curl');
+    } else if (b.act === 'recover') {
+      b.vx = 0; this.ground(b, dt); if (b.at > 1.1) b.go('trot');
+    } else if (b.act === 'wind') {
+      // phase 1's tell: the paddle spins over its head, faster; a shadow where it will come down (in front)
+      b.vx = 0; this.ground(b, dt);
+      if (b.first) { b.face(); b.tx = clamp(b.cx + b.dir * (b.w / 2 + 44), b.arenaX0 + 30, b.arenaX1 - 30); say(b, 'A WING! NO, A FIN! NO...'); TourKit.sfx('whirr', 'select', { vol: 0.4, pitch: 0.5 }); }
+      if (b.at > 1.0) { b.go('slap'); g.shake(5); Sound.play('stomp', { pitch: 0.5 }); tourFire(g, b.tx, b.floorY - 30, { vx: 0, w: 72, h: 30, life: 0.3, art: nothing }); g.burst(b.tx, b.floorY, 14, '#f2c070', 'dust'); }
+    } else if (b.act === 'slap') {
+      b.vx = 0; this.ground(b, dt); if (b.at > 0.2) b.go('paddleDown');
+    } else if (b.act === 'paddleDown') {
+      // the paddle lies where it slapped; under the empty shoulder, THROW seats it
+      b.vx = 0; this.ground(b, dt);
+      if (b.first) say(b, 'WHERE DOES THIS GO...', '#ffd88a');
+      if (pressed) { b.go('seated'); this.seat(b, 'THE SHOULDER! A FRONT LEG!'); return; }
+      if (b.at > WIN) b.go('trot');
+    } else if (b.act === 'kick') {
+      // phase 2's tell: the big heel scrapes, dust flies; a footprint where it will come down (under Brady)
+      b.vx = 0; this.ground(b, dt);
+      if (b.first) { b.face(); const pc = p ? p.cx : b.cx, d = sign(pc - b.cx) || b.dir; b.tx = clamp(pc - d * (b.w / 2 + 64), b.arenaX0 + b.w / 2 + 8, b.arenaX1 - b.w / 2 - 8); b.sx = b.cx; say(b, 'STAMP STAMP!'); }
+      if (Math.random() < 0.4) g.burst(b.cx - b.dir * 30, b.floorY, 1, '#e8c898', 'dust');
+      if (b.at > 0.9) { b.go('hop'); Sound.play('spring', { pitch: 0.6, vol: 0.6 }); }
+    } else if (b.act === 'hop') {
+      // a headfirst hop onto the footprint (a fixed time aloft, so the footprint is honest)
+      const T = 0.9, k = Math.min(1, b.at / T), top = b.floorY - b.h;
+      b.x = lerp(b.sx, b.tx, k) - b.w / 2; b.y = top - Math.sin(k * Math.PI) * 5 * TS;
+      if (k >= 1) {
+        b.y = top; g.shake(8); Sound.play('stomp', { pitch: 0.45 }); g.burst(b.cx, b.floorY, 18, '#e8c898', 'dust');
+        for (const d of [-1, 1]) tourFire(g, b.cx + d * (b.w / 2 + 6), b.floorY - 10, { vx: d * 4.4 * TS, w: 26, h: 18, ground: true, life: 2.2, col: '#f0dcb4', art: waveArt });
+        // the heel pops off and lands a little behind it
+        b.loose = { x: clamp(b.cx - b.dir * (b.w / 2 + 40), b.arenaX0 + 20, b.arenaX1 - 20), kind: 'heel' };
+        b.go('heelDown');
+      }
+    } else if (b.act === 'heelDown') {
+      b.vx = 0; this.ground(b, dt);
+      if (b.first) say(b, 'I SEEM TO HAVE DROPPED A HEEL.', '#ffd88a');
+      if (pressed) { b.go('seated'); this.seat(b, 'THE HIP! A BACK LEG!'); return; }
+      if (b.at > WIN + 0.6) { b.loose = null; b.go('trot'); }
+    } else if (b.act === 'curl') {
+      // phase 3's tell: the curly "neck" tucks under; a ring on the floor shows the sweep
+      b.vx = 0; this.ground(b, dt);
+      if (b.first) { b.face(); say(b, 'TIME FOR A SIT. A BIG SIT.'); }
+      if (b.at > 1.0) {
+        b.go('sweep'); g.shake(4); Sound.play('stomp', { pitch: 0.6 });
+        for (const d of [-1, 1]) tourFire(g, b.cx + d * (b.w / 2 + 34), b.floorY - 12, { vx: d * 1 * TS, w: 68, h: 22, life: 0.45, art: nothing });
+      }
+    } else if (b.act === 'sweep') {
+      b.vx = 0; this.ground(b, dt);
+      if (b.at > 0.5) { b.loose = { x: clamp(b.cx - b.dir * (b.w / 2 + 26), b.arenaX0 + 20, b.arenaX1 - 20), kind: 'curl' }; b.go('curlDown'); }
+    } else if (b.act === 'curlDown') {
+      b.vx = 0; this.ground(b, dt);
+      if (b.first) say(b, 'THAT WAS NEVER A NECK, WAS IT.', '#ffd88a');
+      if (pressed) { b.go('seated'); this.seat(b, 'THE TAIL SOCKET! A TAIL!'); return; }
+      if (b.at > WIN + 0.6) { b.loose = null; b.go('trot'); }
+    } else if (b.act === 'seated') {
+      b.vx = 0; this.ground(b, dt); if (b.at > 0.9) b.go('recover');
+    } else b.go('trot');
+    b.clampArena();
+  },
+  ground(b, dt) { b.vy = Math.min((b.vy || 0) + PHYS.gDown * dt, PHYS.maxFall); b.y += b.vy * dt; if (b.y + b.h >= b.floorY) { b.y = b.floorY - b.h; b.vy = 0; } b.x += (b.vx || 0) * dt; },
+  draw(b, ctx, t) {
+    const A = b.act, d = b.dir || 1, ph = b.phase || 1, x = b.cx, y = b.y + b.h;
+    const sit = A === 'sit' || A === 'sweep' || A === 'curlDown', crouch = A === 'wind' || A === 'kick' || A === 'curl' ? 4 : 0;
+    ctx.save(); ctx.translate(x, y); ctx.scale(d, 1); ctx.strokeStyle = INK; ctx.lineJoin = 'round';
+    if (A === 'hop') ctx.rotate(0.35 * Math.sin(Math.min(1, b.at / 0.9) * Math.PI));
+    const hipY = sit ? -24 : -54 + crouch, shY = -58 + crouch;
+    // legs: front pair at x 26, back pair at x -26 (sitting: the back legs fold)
+    const step = A === 'trot' ? Math.sin(t * 10) * 6 : 0;
+    const leg = (lx, ly, fx, big) => { BA.bone(ctx, lx, ly, fx, -6, 9, true); ctx.fillStyle = BONE; ctx.lineWidth = 2; if (big) { ctx.beginPath(); ctx.ellipse(fx + 4, -6, 16, 9, 0, 0, TAU); ctx.fill(); ctx.stroke(); } else { ctx.beginPath(); ctx.ellipse(fx + 3, -4, 8, 4, 0, 0, TAU); ctx.fill(); ctx.stroke(); } };
+    if (sit) { BA.bone(ctx, -30, hipY, -10, -6, 10, true); BA.bone(ctx, -44, hipY, -40, -6, 10, true); }
+    else { leg(-34, hipY, -38 + step, false); leg(-22, hipY, -20 - step, false); }
+    leg(22, shY, 18 - step, false);
+    leg(32, shY, 34 + step, ph === 2 && !b.loose && A !== 'seated');
+    // the spine and the ribs
+    ctx.lineWidth = 2.4; BA.bone(ctx, -40, hipY - 4, 34, shY - 6, 11, false);
+    for (let k = 0; k < 5; k++) { const rx = -22 + k * 11, ry = lerp(hipY - 2, shY - 4, (k + 1) / 6); ctx.strokeStyle = INK; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(rx, ry + 12, 14, Math.PI * 1.15, Math.PI * 1.85, false); ctx.stroke(); ctx.strokeStyle = BONE; ctx.lineWidth = 3.4; ctx.stroke(); }
+    for (const [jx, jy] of [[-40, hipY - 4], [34, shY - 6]]) BA.joint(ctx, jx, jy, 7);
+    // the sockets it is missing: dashed rings (shoulder phase 1, hip phase 2, tail phase 3)
+    const ring = (rx, ry, on) => { ctx.save(); const k = on ? 0.5 + 0.5 * Math.sin(t * 9) : 0; ctx.fillStyle = 'rgba(30,14,6,0.85)'; ctx.beginPath(); ctx.arc(rx, ry, 13, 0, TAU); ctx.fill(); ctx.lineWidth = 4; ctx.setLineDash([5, 4]); ctx.strokeStyle = on ? '#ffe27a' : '#f2a060'; ctx.stroke(); ctx.setLineDash([]); if (on) { ctx.strokeStyle = `rgba(255,226,122,${0.35 + 0.5 * k})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(rx, ry, 18 + k * 6, 0, TAU); ctx.stroke(); } ctx.restore(); };
+    const open = A === 'paddleDown' || A === 'heelDown' || A === 'curlDown';
+    if (ph === 1) ring(22, shY + 6, open);
+    if (ph === 2) ring(-30, hipY + 4, open);
+    if (ph === 3) ring(-52, hipY + 2, open);
+    // the tail (phase 1-2: a short stub; phase 3: it is missing, its socket shows)
+    if (ph < 3) BA.bone(ctx, -44, hipY - 2, -66, hipY - 16, 7, true);
+    // the neck and the head: phase 3's neck is a curly tail (it curls under for the sweep)
+    const hx = 52, hy = shY - 26;
+    if (ph === 3 && A !== 'sit') {
+      const cu = A === 'curl' ? Math.min(1, b.at) : A === 'sweep' ? 1 : 0;
+      ctx.strokeStyle = INK; ctx.lineWidth = 11; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(34, shY - 6);
+      for (let k = 1; k <= 10; k++) { const a = -1.2 + k * 0.5 * (1 + cu), r = 26 - k * 1.6; ctx.lineTo(40 + Math.cos(a) * r, shY - 14 + Math.sin(a) * r + cu * 30); } ctx.stroke();
+      ctx.strokeStyle = BONE; ctx.lineWidth = 7; ctx.stroke();
+      for (let k = 1; k <= 10; k += 2) { const a = -1.2 + k * 0.5 * (1 + cu), r = 26 - k * 1.6; BA.joint(ctx, 40 + Math.cos(a) * r, shY - 14 + Math.sin(a) * r + cu * 30, 4); }
+    } else BA.bone(ctx, 34, shY - 6, hx - 6, hy + 8, 10, true);
+    // the skull: a long comic head, a big toothy grin, a museum label on a stick on top
+    const hyy = ph === 3 && A !== 'sit' ? hy - 10 : hy;
+    ctx.fillStyle = BONE; ctx.lineWidth = 2.4; ctx.strokeStyle = INK;
+    ctx.beginPath(); ctx.moveTo(hx - 14, hyy - 12); ctx.quadraticCurveTo(hx + 8, hyy - 20, hx + 30, hyy - 6); ctx.lineTo(hx + 30, hyy + 6); ctx.quadraticCurveTo(hx + 8, hyy + 14, hx - 14, hyy + 10); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#ffffff'; for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.moveTo(hx + 4 + k * 6, hyy + 4); ctx.lineTo(hx + 7 + k * 6, hyy + 10); ctx.lineTo(hx + 10 + k * 6, hyy + 4); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.ellipse(hx + 2, hyy - 6, 5, b.hurtT > 0 ? 1.5 : 6, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(hx + 3, hyy - 8, 1.8, 0, TAU); ctx.fill();
+    // the label stick (in phase 1 the paddle is stuck on it instead, spinning)
+    ctx.save(); ctx.translate(hx - 4, hyy - 16);
+    ctx.fillStyle = '#8a5a2a'; ctx.fillRect(-1.5, -20, 3, 20); ctx.strokeRect(-1.5, -20, 3, 20);
+    if (ph === 1 && A !== 'slap' && A !== 'paddleDown' && A !== 'seated') {
+      ctx.rotate(A === 'wind' ? t * (6 + b.at * 14) : Math.sin(t * 2) * 0.3);
+      ctx.fillStyle = BONE; ctx.beginPath(); ctx.ellipse(0, -24, 30, 9, 0, 0, TAU); ctx.fill(); ctx.stroke(); BA.joint(ctx, 0, -24, 5);
+    } else { ctx.fillStyle = '#fbf4e0'; rr(ctx, -22, -36, 44, 16, 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = INK; ctx.font = '7px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(A === 'sit' ? 'COMFY' : 'APPROX.', 0, -28); }
+    ctx.restore();
+    ctx.restore();
+    // the loose bone on the floor (glowing: it can be seated now)
+    if (b.loose) { const L = b.loose, k = 0.5 + 0.5 * Math.sin(t * 8); ctx.save(); ctx.fillStyle = `rgba(255,226,122,${0.18 + 0.2 * k})`; ctx.beginPath(); ctx.ellipse(L.x, b.floorY - 12, 34 + k * 8, 18 + k * 4, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = `rgba(255,226,122,${0.6 + 0.4 * k})`; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.ellipse(L.x, b.floorY - 8, 28 + k * 6, 11, 0, 0, TAU); ctx.stroke(); ctx.translate(L.x, b.floorY - 10); ctx.scale(1 + k * 0.12, 1 + k * 0.12); ctx.translate(-L.x, -(b.floorY - 10)); if (L.kind === 'heel') { ctx.fillStyle = BONE; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(L.x, b.floorY - 10, 18, 10, 0, 0, TAU); ctx.fill(); ctx.stroke(); BA.joint(ctx, L.x - 12, b.floorY - 14, 5); } else { ctx.strokeStyle = INK; ctx.lineWidth = 10; ctx.beginPath(); ctx.arc(L.x, b.floorY - 14, 12, 0.5, TAU - 0.3); ctx.stroke(); ctx.strokeStyle = BONE; ctx.lineWidth = 6; ctx.stroke(); } ctx.restore(); }
+  }
+};
+// the tells on the floor: the paddle's shadow, the footprint, the sweep ring; and the paddle lying where it slapped
+TourHooks.on('afterEntities', (play, ctx) => {
+  const b = play.boss; if (!b || b.style !== 'bone_animal' || b.remove || b.state !== 'fight') return;
+  const A = b.act, t = b.t;
+  ctx.save();
+  if (A === 'wind' || A === 'slap' || A === 'paddleDown') {
+    const k = A === 'wind' ? Math.min(1, b.at) : 1;
+    ctx.fillStyle = `rgba(30,15,5,${0.2 + 0.35 * k})`; ctx.beginPath(); ctx.ellipse(b.tx, b.floorY - 2, 30 + 10 * k, 7, 0, 0, TAU); ctx.fill();
+    if (A !== 'wind') { ctx.fillStyle = BONE; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(b.tx, b.floorY - 8, 32, 9, 0, 0, TAU); ctx.fill(); ctx.stroke(); BA.joint(ctx, b.tx - 28, b.floorY - 8, 5); }
+    if (A === 'paddleDown') { const s = brain.shoulder(b), k2 = 0.5 + 0.5 * Math.sin(t * 8); ctx.strokeStyle = `rgba(255,216,138,${0.5 + 0.4 * k2})`; ctx.lineWidth = 3; ctx.setLineDash([5, 5]); ctx.beginPath(); ctx.ellipse(s.x, b.floorY - 3, 1.5 * TS, 7, 0, 0, TAU); ctx.stroke(); ctx.setLineDash([]); }
+  }
+  if (A === 'kick') { const k = Math.min(1, b.at / 0.9); ctx.fillStyle = `rgba(30,15,5,${0.2 + 0.4 * k})`; ctx.save(); ctx.translate(b.tx, b.floorY - 3); ctx.scale(1, 0.4); BA.print(ctx, 0, 0, 2, 0, 2.4, 'rgba(60,30,10,0.7)'); ctx.restore(); ctx.strokeStyle = `rgba(255,90,60,${0.4 + 0.5 * k})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(b.tx, b.floorY - 3, 28, 7, 0, 0, TAU); ctx.stroke(); }
+  if (b.line) {
+    const L = b.line, a = Math.min(1, (2.6 - L.t) * 3); if (a <= 0) b.line = null;
+    else { ctx.save(); ctx.globalAlpha = a; ctx.font = '11px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; const x = play.camX + Game.viewW / 2, y = play.camY + 74, w = ctx.measureText(L.text).width + 22; ctx.fillStyle = 'rgba(36,22,14,0.88)'; rr(ctx, x - w / 2, y - 11, w, 22, 11); ctx.fill(); ctx.fillStyle = L.col; ctx.fillText(L.text, x, y + 1); ctx.restore(); }
+  }
+  if (A === 'curl') { const k = Math.min(1, b.at); ctx.strokeStyle = `rgba(255,90,60,${0.4 + 0.5 * k})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(b.cx, b.floorY - 3, b.w / 2 + 68, 9, 0, 0, TAU); ctx.stroke(); }
+  ctx.restore();
+});
+const boss = { id: 'bone_animal', name: 'The Approximately Correct Animal', hp: 6, dims: [104, 78], music: 'tour_bone_boss', country: 'bone', brain };
+Tour.boss(boss);
+if (typeof BOSS_INK_REACH !== 'undefined') BOSS_INK_REACH.bone_animal = [80, 90, 70, 20];
+// the dig: a pit floor with string lines, two low trestles to jump the ripples from, lamps
+Tour.pieces['bone.arena_dig'] = function (st, o) {
+  const B = st.B, { x0, w, GY } = o;
+  for (let q = 0; q < 3; q++) { B.set(x0 + 3 + q, GY - 3, T.SEMI); B.set(x0 + w - 6 + q, GY - 3, T.SEMI); }
+  B.decorAt('boneLamp', x0 + 1, GY, 1); B.decorAt('boneLamp', x0 + w - 2, GY, 2); B.decorAt('boneLabel', x0 + 9, GY, 3); B.decorAt('boneCrate', x0 + w - 12, GY, 4);
+};
+Tour.boneKit.animalBrain = brain;
+})();
+
+/* ---- 29_tour_y_bone_d_entry.js ---- */
+/* ============================================================
+   THE SPARE BONE QUARRY: the hidden way in (the land's best secret), in Ecuador 2-1 HEMISPHERE HOP.
+   ChatGPT's entrance: "walk behind the trail's last exposed rock ledge and jump up into the underside of the fossil
+   slab. One footprint on its face has pressed toes but a RAISED heel."
+   At the end of 2-1, past the last equator line, the trail climbs two rock ledges and runs along the top of a
+   fossil slab that juts out over the path down to the finish arch. The slab's face carries a little trackway of
+   three-toed prints; every one is pressed in, toes and heel, except the middle one, whose toes are pressed in but
+   whose heel stands UP out of the rock (lit on top, shadowed under: wrong). Behind the last ledge, under the slab,
+   is a low recess the trail never needs. Jump up into the slab's underside below the odd print: Brady slips up
+   through a crack, and the quarry is found.
+   No sign, no arrow, no coin trail, nothing on the level card. The host level's exits, postcards and totals are as
+   they were; its own files are not touched: this file re-registers 2-1 with one piece added before the finish.
+   ============================================================ */
+(function () {
+const EC = Tour.countries.ec, K = Tour.boneKit;
+if (!EC || !K || !EC.levels[0]) return;
+const INK = K.INK, BA = K.BoneArt;
+
+/* ---------------- the props: the rock ledges and the fossil slab ---------------- */
+Object.assign(Decor, {
+  // a lump of the Andean trail rock (grey-brown with lichen), the size of its box
+  boneEcLedge(ctx, x, y, t, th, d) {
+    const w = d.w, h = d.h, x0 = x - w / 2, y0 = y - h;
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+    ctx.fillStyle = '#8a7462'; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 + 2, y0 + 8); ctx.lineTo(x0 + 10, y0); ctx.lineTo(x0 + w - 8, y0 + 1); ctx.lineTo(x0 + w, y0 + 10); ctx.lineTo(x0 + w, y); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#a8907a'; ctx.beginPath(); ctx.moveTo(x0 + 6, y0 + 6); ctx.lineTo(x0 + 12, y0 + 2); ctx.lineTo(x0 + w - 10, y0 + 3); ctx.lineTo(x0 + w - 6, y0 + 10); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#5a4a3c'; ctx.lineWidth = 1.5; for (let yy = y0 + 22; yy < y - 6; yy += 22) { ctx.beginPath(); ctx.moveTo(x0 + 4, yy); ctx.lineTo(x0 + w * 0.6, yy + 4); ctx.stroke(); }
+    ctx.fillStyle = '#c8d0a0'; ctx.beginPath(); ctx.arc(x0 + w * 0.7, y0 + h * 0.5, 3, 0, TAU); ctx.arc(x0 + w * 0.3, y0 + h * 0.75, 2.4, 0, TAU); ctx.fill();
+    // a tuft of paramo grass on top
+    ctx.strokeStyle = '#7a9a3a'; ctx.lineWidth = 2; for (let k = -2; k <= 2; k++) { ctx.beginPath(); ctx.moveTo(x0 + w * 0.4 + k * 2, y0 + 2); ctx.lineTo(x0 + w * 0.4 + k * 4, y0 - 10 + Math.abs(k) * 2); ctx.stroke(); }
+    ctx.restore();
+  },
+  // the fossil slab jutting out over the trail: ochre sandstone with a trackway of three-toed prints along its face;
+  // the middle print (d.odd: its index) has a RAISED heel
+  boneEcSlab(ctx, x, y, t, th, d) {
+    const w = d.w, h = d.h, x0 = x - w / 2, y0 = y - h;
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2.2; ctx.lineJoin = 'round';
+    ctx.fillStyle = '#c8903e'; ctx.beginPath(); ctx.moveTo(x0, y0 + 2); ctx.lineTo(x0 + w - 10, y0); ctx.lineTo(x0 + w, y0 + 12); ctx.lineTo(x0 + w - 6, y); ctx.lineTo(x0 + 4, y - 2); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#e0aa58'; ctx.fillRect(x0 + 2, y0 + 3, w - 12, 7);
+    ctx.strokeStyle = '#9a6a2a'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(x0 + 6, y0 + 30); ctx.lineTo(x0 + w * 0.3, y0 + 28); ctx.lineTo(x0 + w * 0.55, y0 + 32); ctx.lineTo(x0 + w - 8, y0 + 29); ctx.stroke();
+    ctx.fillStyle = '#d8d0a8'; ctx.beginPath(); ctx.arc(x0 + 12, y0 + 16, 3, 0, TAU); ctx.arc(x0 + w - 20, y0 + 48, 2.5, 0, TAU); ctx.fill();
+    // the trackway: three-toed prints walking right along the face
+    for (let k = 0; k < 3; k++) {
+      const px = x0 + (2.5 + k * 3) * TS, py = y0 + 34 + (k % 2) * 6, raised = k === d.odd;
+      ctx.save(); ctx.translate(px, py); ctx.rotate(Math.PI / 2);
+      // the toes: three pressed grooves (dark inside, a light lip below)
+      ctx.lineCap = 'round';
+      for (const [ex, ey] of [[0, -11], [-7, -8], [7, -8]]) { ctx.strokeStyle = '#7a4a18'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(0, -1); ctx.lineTo(ex, ey); ctx.stroke(); ctx.strokeStyle = 'rgba(255,230,170,0.6)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(1.5, 0); ctx.lineTo(ex + 1.5, ey + 1); ctx.stroke(); }
+      // the heel: pressed (a dark hollow with a lit lower lip) or RAISED (a lit bump with a shadow under it)
+      if (!raised) { ctx.fillStyle = '#7a4a18'; ctx.beginPath(); ctx.ellipse(0, 4, 4.5, 5, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(255,230,170,0.7)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.ellipse(0, 4, 4.5, 5, 0, -0.4, 1.6); ctx.stroke(); }
+      else { ctx.fillStyle = '#f2c070'; ctx.strokeStyle = '#7a4a18'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.ellipse(0, 4, 4.5, 5, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#fff0c8'; ctx.beginPath(); ctx.ellipse(-1.6, 3, 1.8, 2.4, 0, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(80,40,10,0.45)'; ctx.beginPath(); ctx.ellipse(2.6, 5, 2.4, 4, 0, -1.2, 1.2); ctx.fill(); }
+      ctx.restore();
+    }
+    // the underside: a fine crack runs up into the rock right under the odd print (seen from the recess)
+    const cx = x0 + (2.5 + d.odd * 3) * TS;
+    ctx.strokeStyle = '#4a2a0a'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(cx - 6, y - 1); ctx.lineTo(cx - 1, y - 8); ctx.lineTo(cx + 3, y - 4); ctx.lineTo(cx + 7, y - 12); ctx.stroke();
+    ctx.restore();
+  }
+});
+
+/* ---------------- the way in: jump up into the underside under the odd print ---------------- */
+// a tour gate with exit 'bone': it only goes when Brady's head comes up into the slab's underside here (a jump from
+// the recess below). Then he slips up through the crack, the land's name shows, and the level clears through it.
+class BoneSlabGate extends ENTITY_TYPES.gate {
+  constructor(g, s) {
+    super(g, s); this.exitKey = s.exit || 'bone'; this.secret = true;
+    this.w = 2 * TS; this.h = TS; this.x = s.x - TS; this.y = s.y - TS; this.slip = null; this.friendly = false;
+  }
+  update(dt) {
+    this.t += dt;
+    if (this.slip == null) return;
+    this.slip += dt; const g = this.g, p = g.player;
+    if (p && p.state === 'portal') { p.x = lerp(p.x, this.cx - p.w / 2, Math.min(1, dt * 8)); p.y = Math.max(this.y - p.h - 4, p.y - 70 * dt); p.squeezeK = Math.min(1, this.slip / 0.8); }
+    if (this.slip > 0.4 && !this.named) { this.named = true; g.bannerText = 'THE SPARE BONE QUARRY'; g.bannerT = 2.2; TourKit.sfx('secret', 'secret', { vol: 0.8 }); g.burst(this.cx, this.y + this.h, 20, '#f4ead2', 'dust'); }
+    if (this.slip > 1.8 && !this.cleared) { this.cleared = true; if (p) p.squeezeK = 1; g.levelClear(this); }
+  }
+  touchPlayer(p) {
+    if (this.used || p.dead || p.state !== 'play' || this.g.state !== 'play') return;
+    // only a jump up into the underside (head first): never a walk-in, never from above
+    if (!(p.vy < 0 && p.y <= this.y + this.h + 2)) return;
+    this.used = true; this.slip = 0;
+    p.state = 'portal'; p.portalT = 0; p.vx = 0; p.vy = 0; p.invuln = 3;
+    Sound.play('bump', { vol: 0.5, pitch: 0.6 }); this.g.shake(3);
+  }
+  draw(ctx) {
+    if (this.slip == null) return;
+    // the crack opens a little as he goes through it
+    const k = Math.min(1, this.slip / 0.6);
+    ctx.save(); ctx.fillStyle = '#2a140a'; ctx.strokeStyle = INK; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.ellipse(this.cx, this.y + this.h - 2, 4 + 14 * k, 2 + 4 * k, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore();
+  }
+  get light() { return null; }
+}
+ENTITY_TYPES.boneSlabGate = BoneSlabGate;
+// the checker: a jump in the recess reaches this box (the top row of the recess, right under the slab)
+VALIDATOR_EXITS.boneSlabGate = { w: 2 * TS, h: TS };
+// Brady going through the crack: squeezed thin and fading upwards (the arrival's first second)
+{
+  const dr0 = Player.prototype.draw;
+  Player.prototype.draw = function (ctx, t) {
+    if (!(this.squeezeK > 0) || this.state !== 'portal') return dr0.call(this, ctx, t);
+    ctx.save(); const k = this.squeezeK; ctx.globalAlpha *= Math.max(0, 1 - k * 0.9);
+    ctx.translate(this.cx, this.y + this.h); ctx.scale(1 - k * 0.55, 1 + k * 0.25); ctx.translate(-this.cx, -(this.y + this.h));
+    const r = dr0.call(this, ctx, t); ctx.restore(); return r;
+  };
+}
+TourHooks.exitKind('boneSlab', { title: 'A HIDDEN LAND!', marksDone: false });
+
+// the piece: the trail's last stretch: a low rock ledge, the last (tall) ledge, the fossil slab jutting out from it
+// over a recess, the trail down to the finish. { odd: the slab's odd print (0-2) }
+Tour.pieces['ec.boneTrail'] = function (st, o) {
+  const B = st.B, x = st.x, gy = st.gy;
+  st.floor(x, x + 26);
+  B.prop('boneEcLedge', x + 4, gy - 2, 2, 2, 'body');
+  B.prop('boneEcLedge', x + 8, gy - 3, 3, 3, 'body');
+  // the slab: 11 wide, 2 thick, resting on the last ledge and jutting out over a recess 3 rows high (open to the
+  // right); the gate sits under the odd print (5.5 tiles along the slab)
+  B.prop('boneEcSlab', x + 8, gy - 5, 11, 2, 'body', { odd: 1 });
+  B.spawn('boneSlabGate', x + 13, gy - 3, { exit: 'bone' });
+  st.coins(x + 12, x + 17, gy - 7);
+  return x + 27;
+};
+
+/* ---------------- 2-1 again, with the trail's end added ---------------- */
+const L0 = EC.levels[0];
+const main = L0.areas[0];
+const fi = main.script.findIndex(s => Array.isArray(s) && s[0] === 'finish');
+if (fi < 0) { Tour.problems.push('bone: 2-1 has no finish to put the slab before'); return; }
+const script = main.script.slice(0, fi).concat([['boneTrail', {}]], main.script.slice(fi));
+const L1 = Object.assign({}, L0, {
+  n: 1,
+  exits: Object.assign({}, L0.exits, { bone: { to: 'land:bone', via: 'boneSlab' } }),
+  areas: [Object.assign({}, main, { script })].concat(L0.areas.slice(1))
+});
+delete L1.index; delete L1.kind; delete L1.v2; delete L1.legacySecret;
+Tour.amend('ec', { levels: [L1] });
+Tour.boneKit.hostLevel = '2-1';
+})();
+
+/* ---- 29_tour_y_bone_levels.js ---- */
+/* ============================================================
+   THE SPARE BONE QUARRY: the levels (world 37) and the land's map. A hidden bonus land at about Nepal's level
+   (d0 0.8): each stage teaches its one new idea where a slip costs nothing, tests it among the critters, then
+   twists it ("late on / the last one"); the last ordinary stage and the boss are the hardest.
+   37-1 WALK LIKE THIS (trackway)  footprint trackways raise giant stone steps; the last creature walked backwards
+   (37-2 to 37-5 below.)
+   ============================================================ */
+(function () {
+const C = Tour.countries.bone;
+if (!C) return;
+const grid = (W, H, ch) => Array.from({ length: H }, () => Array(W).fill(ch));
+const put = (Gr, x, y, str) => { for (let k = 0; k < str.length; k++) if (x + k >= 0 && x + k < Gr[0].length) Gr[y][x + k] = str[k]; };
+const fillG = (Gr, x0, y0, x1, y1, ch) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) Gr[y][x] = ch; };
+const ground = (Gr, x0, x1, top, ch) => fillG(Gr, x0, top, x1, Gr.length - 1, ch || '#');
+const pit = (Gr, x0, x1) => fillG(Gr, x0, 0, x1, Gr.length - 1, '.');
+const rowsOf = Gr => Gr.map(r => r.join(''));
+const stamps = {};
+// a secret room's old stamp: the way back out (its door) and its prize; the room kind builds the room from it
+const oldRoom = (to, items, look) => ({ floor: 12, rows: ['##############################', '#............................#'].concat(Array(9).fill('#............................#')).concat(['#.@D.....................?...#', '##############################', '##############################']), items, doors: [{ to, look: look || 'boneHatch' }] });
+const SIGN = text => ['spawn', 'sign', { text }];
+
+/* ---------------- 37-1 Walk Like This ---------------- */
+// ① the teach: a plinth, three prints, a pair raises two stone steps up the first cliff (P1 over it); ② the test: four
+// prints in two pairs with a dust brush sweeping between them and a rook overhead; each pair raises two steps up to
+// the high bench; ③ the low quarry floor: a tunnel under a thin strata ceiling (a gap in it, the whiskers' tell: the
+// run on top leads to the great hall), the scree pit (P3), and the twist: a trackway up a staircase whose toes all
+// point back down. Follow the toes: top print first, down to the bottom one, and the last steps rise to the gate.
+const walkRows = (() => {
+  const W = 236, H = 26, Gr = grid(W, H, '.');
+  // ① the teach
+  ground(Gr, 0, 32, 19); put(Gr, 3, 18, '@'); put(Gr, 7, 18, 'n'); put(Gr, 10, 18, 'k'); put(Gr, 13, 15, '?');
+  put(Gr, 16, 18, '1'); put(Gr, 19, 16, 'o.o.o.o');
+  ground(Gr, 33, 56, 13); put(Gr, 38, 10, '*'); put(Gr, 40, 11, 'o.o.o'); put(Gr, 46, 12, 'e'); put(Gr, 35, 12, 'l'); put(Gr, 52, 12, 'r');
+  // ② the test
+  ground(Gr, 57, 74, 19); put(Gr, 60, 18, 'c'); put(Gr, 64, 18, 'w'); put(Gr, 72, 18, 'r');
+  pit(Gr, 75, 77); put(Gr, 74, 15, 'o.o.o');
+  ground(Gr, 78, 104, 19); put(Gr, 79, 18, 'N'); put(Gr, 81, 18, '2'); put(Gr, 70, 18, 'u'); put(Gr, 91, 12, 'M');
+  ground(Gr, 105, 130, 9); put(Gr, 110, 8, 'c'); put(Gr, 112, 5, '?'); put(Gr, 116, 7, 'o.o.o.o'); put(Gr, 122, 8, 'e'); put(Gr, 127, 8, 'l');
+  // ③ the low floor: the tunnel under a thin strata ceiling, with walls up from its ends (the run on top is a secret)
+  ground(Gr, 131, W - 1, 21); put(Gr, 136, 20, 'c'); put(Gr, 125, 8, 'w');
+  fillG(Gr, 141, 17, 169, 17, 'H'); fillG(Gr, 140, 9, 140, 17, 'H'); fillG(Gr, 170, 9, 170, 17, 'H');
+  fillG(Gr, 154, 17, 155, 17, '.'); fillG(Gr, 154, 20, 155, 20, 'H'); put(Gr, 153, 18, 'x');
+  put(Gr, 144, 19, 'o.o.o'); put(Gr, 160, 19, 'o.o.o.o');
+  // the run on top of the ceiling: coins, a plaster block to hop, a rook, the hidden 1UP, P2, the hall's hatch
+  put(Gr, 143, 15, 'o.o.o.o.o'); put(Gr, 147, 12, 'h'); put(Gr, 158, 13, 'A'); fillG(Gr, 161, 15, 162, 16, 'B'); put(Gr, 156, 10, 'M'); put(Gr, 165, 14, 'o.o'); put(Gr, 168, 16, 'D');
+  put(Gr, 174, 20, 'a'); put(Gr, 176, 20, 'c');
+  // the scree pit (P3 over it), a rook
+  pit(Gr, 179, 182); put(Gr, 180, 15, 'R'); put(Gr, 178, 13, 'M'); put(Gr, 184, 20, 'e');
+  // the twist: the staircase trackway (toes point back down), the last steps up to the gate's bench
+  put(Gr, 187, 20, '3'); put(Gr, 186, 20, 'N');
+  ground(Gr, 190, 192, 19); ground(Gr, 193, 195, 17); ground(Gr, 196, 198, 15); ground(Gr, 199, 201, 13);
+  ground(Gr, 204, W - 1, 9); put(Gr, 212, 8, 'r'); put(Gr, 218, 8, 'l'); put(Gr, 228, 8, 'G'); put(Gr, 222, 8, 'k');
+  fillG(Gr, W - 1, 0, W - 1, 8, '#');
+  return rowsOf(Gr);
+})();
+const T1 = { prints: [[19, 19, 2, 0], [22, 19, 0, 0], [25, 19, 1, 0]], order: [2, 1], plinth: [16, 19], raise: [[2, [[29, 17, 30, 18], [31, 15, 32, 18]]]], gs: [0] };
+const T2 = { prints: [[84, 19, 4, 0], [88, 19, 3, 0], [92, 19, 2, 0], [96, 19, 0, 0]], order: [1, 3, 2, 0], plinth: [81, 19], raise: [[2, [[97, 17, 98, 18], [99, 15, 100, 18]]], [4, [[101, 13, 102, 18], [103, 11, 104, 18]]]], gs: [1, 2] };
+const T3 = { mode: 'toes', prints: [[191, 19, 4, -1], [194, 17, 4, -1], [197, 15, 4, -1], [200, 13, 4, -1]], order: [3, 2, 1, 0], plinth: [187, 21], raise: [[4, [[202, 11, 203, 20]]]], gs: [3] };
+stamps.boneWalk = { floor: 21, rows: walkRows, gold: { '*': 'must', A: 'hidden', R: 'risky' }, items: ['power', 'power'], hidden: ['oneup'], doors: [{ to: 'hall@in', look: 'boneHatch' }], legend: {
+  n: SIGN('A TRACKWAY! THE PLINTH SHOWS THE NEXT FOOT. JUMP ONTO THE PRINT THAT FITS. EACH PAIR RAISES THE STONE STEPS'),
+  N: SIGN('A WRONG FOOT ONLY STARTS THE PAIR AGAIN. WATCH THE BRUSH: IT SWEEPS AT YOUR SHOES'),
+  k: ['decor', 'boneCrate'], l: ['decor', 'boneLabel'], r: ['decor', 'boneRock'],
+  e: ['enemy', 'boneMouse'], w: ['enemy', 'boneNewt'], u: ['enemy', 'boneBrush'], M: ['enemy', 'boneRook'],
+  '1': ['piece', 'bone.track', T1], '2': ['piece', 'bone.track', T2], '3': ['piece', 'bone.track', T3],
+  x: ['decor', 'boneTellCeil'], a: ['anchor', 'hallOut']
+} };
+stamps.boneHallOld = oldRoom('quarry@hallOut', ['oneup']);
+const L1 = { n: 1, name: 'Walk Like This', mapLabel: 'Walk Like This', arch: 'trackway', theme: 'bone_quarry',
+  gimmick: 'Footprint trackways: the plinth shows the creature\'s next foot; jump onto the print that fits it, and every pair raises giant stone steps. The last one walked backwards',
+  hint: 'Jump ONTO the print: walking across one does nothing. At the end, follow the toes, not the slope. A mouse\'s whiskers twitch under a crack in the tunnel roof...',
+  postcard: 'Brady! A crate of plaster fossils fell down a quarry and they put themselves back together. One has a foot where its ear should be. He seems happy. ♥ C',
+  enemies: [['boneMouse', 2], ['boneNewt', 2], ['boneBrush', 1], ['boneRook', 2]],
+  mapCell: [0, 0], mapFrom: -1,
+  exits: { main: { to: '37-2' } },
+  areas: [
+    { id: 'quarry', gen: 'room', theme: 'bone_quarry', stamp: 'boneWalk', bone: { track: true }, bottomKill: true },
+    { id: 'hall', gen: 'room', role: 'secret', room: 'boneGiant', theme: 'bone_room_hall', stamp: 'boneHallOld', bone: { room: true } }
+  ] };
+
+/* ---------------- 37-2 Assembly Optional ---------------- */
+// ① the teach: one crank, one vertebra, one rib: a turn lays it flat over the scree (P1 over the bridge); the first
+// replica ribs to climb (push UP to grip) onto the cliff; ② the test: a vertebra three notches round, a rook over the
+// bridge; down to the floor and up a tall rib cage with a critter on each face (cross at a persimmon collar); a
+// vertebra with a long rib and a short one at right angles (the short one is a bridge too short); ③ the twist: one
+// vertebra turns two unequal ribs; one angle lays the long rib over the first pit and the short one useless; only one
+// puts both tips on solid ground. Then the last cage, critters on both faces, up to the gate.
+const ascentRows = (() => {
+  const W = 236, H = 26, Gr = grid(W, H, '.');
+  // ① the teach
+  ground(Gr, 0, 13, 19); put(Gr, 3, 18, '@'); put(Gr, 6, 18, 'n'); put(Gr, 9, 15, '?'); put(Gr, 11, 18, '1');
+  ground(Gr, 14, 14, 17); put(Gr, 18, 14, 'o.o.o'); put(Gr, 19, 12, '*');
+  ground(Gr, 24, 40, 17); put(Gr, 27, 16, 'r'); put(Gr, 33, 16, 'N'); put(Gr, 36, 16, 'i');
+  ground(Gr, 41, 58, 9); ground(Gr, 58, 58, 7); put(Gr, 44, 8, 'c'); put(Gr, 50, 8, 'e'); put(Gr, 55, 8, '2'); put(Gr, 80, 2, 'M');
+  // ② the test
+  ground(Gr, 68, 90, 7); put(Gr, 72, 3, '?'); put(Gr, 78, 6, 'w'); put(Gr, 86, 6, 'l');
+  ground(Gr, 91, 103, 19); put(Gr, 93, 18, 'c'); put(Gr, 96, 18, 'j'); put(Gr, 97, 18, 'K'); put(Gr, 95, 18, 'Z'); put(Gr, 92, 18, 'O');
+  ground(Gr, 104, 113, 7); ground(Gr, 113, 113, 6); put(Gr, 110, 6, '3');
+  ground(Gr, 123, 150, 6); put(Gr, 128, 5, 'w'); put(Gr, 134, 5, 'o.o.o'); put(Gr, 142, 5, 'l');
+  // the gift shop: a crack in the shelf's face at floor level, whiskers twitching out of it
+  fillG(Gr, 146, 17, 149, 18, '.'); fillG(Gr, 150, 17, 150, 18, 'F'); put(Gr, 147, 18, 'D'); put(Gr, 151, 17, 'x');
+  // ③ the twist
+  ground(Gr, 151, 166, 19); put(Gr, 155, 18, 'c'); put(Gr, 157, 15, '?'); put(Gr, 158, 12, '----'); put(Gr, 158, 11, 'X'); put(Gr, 158, 10, 'o.o'); put(Gr, 161, 18, 'N'); put(Gr, 164, 18, '4');
+  fillG(Gr, 166, 13, 185, 14, 'H'); ground(Gr, 173, 173, 17);
+  ground(Gr, 185, W - 1, 17); put(Gr, 188, 16, 'e'); put(Gr, 192, 16, 'r'); put(Gr, 196, 6, 'M'); put(Gr, 198, 7, 'A');
+  put(Gr, 199, 16, 'P'); put(Gr, 202, 16, 'E'); put(Gr, 203, 16, 'U'); put(Gr, 204, 16, 'V'); put(Gr, 203, 9, 'R');
+  ground(Gr, 206, W - 1, 5); put(Gr, 210, 4, 'c'); put(Gr, 216, 4, 'l'); put(Gr, 225, 4, 'G'); put(Gr, 221, 4, 'r');
+  fillG(Gr, W - 1, 0, W - 1, 4, '#');
+  return rowsOf(Gr);
+})();
+const VERT = (socket, pivot, ribs, notch, good, g) => ['piece', 'bone.vert', { socket, pivot, ribs, notch, good, g }];
+const RIBS = (x0, y0, x1, y1, collars) => ['piece', 'bone.ribs', { x0, y0, x1, y1, collars: collars || [] }];
+const CLIMBER = (x, y0, y1, face, speed, phase) => ['piece', 'bone.climber', { x, y0, y1, face, speed, phase }];
+stamps.boneAscent = { floor: 19, rows: ascentRows, gold: { '*': 'must', A: 'high', R: 'risky' }, items: ['power', 'power', 'power'], doors: [{ to: 'shop@in', look: 'boneCrack' }], legend: {
+  n: SIGN('A VERTEBRA! STAND AT ITS CRANK AND THROW: IT TURNS ONE NOTCH. TURN THE RIB FLAT TO BRIDGE THE SCREE'),
+  N: SIGN('REPLICA RIBS: PUSH UP INTO THEM TO GRIP, CLIMB ANY WAY, JUMP TO LET GO. JUMP AT A COLLAR TO CROSS TO THE FAR SIDE'),
+  l: ['decor', 'boneLabel'], r: ['decor', 'boneRock'], e: ['enemy', 'boneMouse'], w: ['enemy', 'boneNewt'], M: ['enemy', 'boneRook'],
+  '1': VERT([11, 19], [14, 17], [[9, 0]], 0, 1, 0),
+  '2': VERT([55, 9], [58, 7], [[9, 0]], 2, 1, 1),
+  '3': VERT([110, 7], [113, 6], [[9, 0], [3, 3]], 2, 1, 2),
+  '4': VERT([164, 19], [173, 17], [[11, 0], [6, 2]], 2, 1, 3),
+  i: RIBS(37, 8, 40, 16),
+  j: RIBS(98, 4, 103, 18, [[99, 12], [102, 9]]), K: CLIMBER(100, 6, 16, 0, 1.6, 0), Z: CLIMBER(102, 6, 16, 1, 1.4, 0.5), O: ['decor', 'boneRock'],
+  P: RIBS(199, 4, 205, 16, [[200, 11], [204, 7]]), E: CLIMBER(202, 6, 13, 0, 1.8, 0), U: CLIMBER(203, 6, 13, 1, 1.5, 0.6), V: CLIMBER(200, 8, 14, 0, 1.4, 0.3),
+  x: ['decor', 'boneTellWallR'], X: ['anchor', 'shopOut']
+} };
+stamps.boneShopOld = oldRoom('ascent@shopOut', ['oneup']);
+const L2 = { n: 2, name: 'Assembly Optional', mapLabel: 'Assembly Optional', arch: 'vertebra', theme: 'bone_scree',
+  gimmick: 'Vertebrae on sockets: THROW at a crank to turn one a notch until its rib lies flat over the scree. Replica-rib rungs to climb, critters on both faces. Late on, one vertebra turns two unequal ribs',
+  hint: 'Count the notches before you cross. On the ribs, cross to the far face at a persimmon collar to get round a critter. Whiskers twitch in a crack at the foot of the last high shelf...',
+  postcard: 'Brady! Every skeleton here was put together by someone in a hurry. One has its ribs on as a ladder. You climbed it. It was flattered. ♥ C',
+  enemies: [['boneMouse', 2], ['boneNewt', 2], ['boneRook', 2]],
+  mapCell: [1, 0], mapFrom: 0,
+  exits: { main: { to: '37-3' } },
+  areas: [
+    { id: 'ascent', gen: 'room', theme: 'bone_scree', stamp: 'boneAscent', bone: { ribs: true, vert: true }, bottomKill: true },
+    { id: 'shop', gen: 'room', role: 'secret', room: 'boneQueue', theme: 'bone_room_shop', stamp: 'boneShopOld', bone: { room: true } }
+  ] };
+
+/* ---------------- 37-3 Make an Impression ---------------- */
+// ① the teach: one clay tray under a press, a cliff that wants a TALL cast (stand as it comes down); ② a pit under a
+// low shelf that wants a LOW, broad one (crouch); a brush and a newt on the floor; a tall one under a rook up to the
+// high bench (a soft patch of plaster floor there gives way if you crouch on it: the cast room); ③ the twist: the
+// slab that must go under a long low shelf (bent knees, a broad low back), then a tall one straight after, to the gate.
+const clayRows = (() => {
+  const W = 212, H = 26, Gr = grid(W, H, '.');
+  ground(Gr, 0, 19, 19); put(Gr, 3, 18, '@'); put(Gr, 6, 18, 'n'); put(Gr, 9, 15, '?'); put(Gr, 11, 18, 'k'); put(Gr, 14, 18, '1');
+  ground(Gr, 20, 45, 13); put(Gr, 30, 9, '*'); put(Gr, 38, 12, 'e'); put(Gr, 25, 12, 'l');
+  ground(Gr, 46, 54, 19); put(Gr, 48, 18, 'c'); put(Gr, 49, 18, 'N'); put(Gr, 51, 18, '2');
+  pit(Gr, 55, 63); fillG(Gr, 54, 15, 64, 16, 'H');
+  ground(Gr, 64, 91, 19); put(Gr, 70, 18, 'u'); put(Gr, 74, 14, 'R'); put(Gr, 80, 18, 'w'); put(Gr, 86, 18, '3'); put(Gr, 84, 18, 'k');
+  ground(Gr, 92, 120, 13); put(Gr, 96, 12, 'c'); put(Gr, 100, 9, '?'); put(Gr, 104, 8, 'A'); put(Gr, 98, 6, 'M'); put(Gr, 116, 12, 'l');
+  // the cast room: a soft patch of floor (whiskers beside it), a shaft, the pocket and its door
+  fillG(Gr, 110, 14, 111, 20, '.'); fillG(Gr, 108, 19, 113, 20, '.'); put(Gr, 112, 20, 'D'); put(Gr, 110, 12, 'f'); put(Gr, 112, 12, 'x');
+  ground(Gr, 121, 136, 19); put(Gr, 124, 18, 'X'); put(Gr, 127, 18, 'c'); put(Gr, 129, 18, 'k'); put(Gr, 131, 18, '4');
+  pit(Gr, 137, 152); fillG(Gr, 134, 15, 153, 16, 'H'); put(Gr, 144, 18, 'o.o.o');
+  ground(Gr, 153, 173, 19); put(Gr, 156, 18, 'c'); put(Gr, 161, 18, 'w'); put(Gr, 164, 10, 'M'); put(Gr, 168, 18, '5');
+  ground(Gr, 174, W - 1, 13); put(Gr, 180, 12, 'r'); put(Gr, 186, 12, 'l'); put(Gr, 200, 12, 'G'); fillG(Gr, W - 1, 0, W - 1, 12, '#');
+  return rowsOf(Gr);
+})();
+const PRESS = (tray, need, casts, g, edge, phase) => ['piece', 'bone.press', { tray, need, casts, g, edge, phase: phase || 0 }];
+stamps.boneClay = { floor: 19, rows: clayRows, gold: { '*': 'must', A: 'high', R: 'risky' }, items: ['power', 'power'], doors: [{ to: 'cast@in', look: 'boneHatch' }], legend: {
+  n: SIGN('A CLAY PRESS! STAND IN THE TRAY AS IT COMES DOWN: STAND UP FOR A TALL CAST, CROUCH (DOWN) FOR A LOW ONE'),
+  N: SIGN('THE CHALK OUTLINE SAYS WHICH CAST FITS. TOO TALL FOR A LOW SHELF? BEND YOUR KNEES'),
+  k: ['decor', 'boneBucket'], l: ['decor', 'boneLabel'], r: ['decor', 'boneRock'], e: ['enemy', 'boneMouse'], w: ['enemy', 'boneNewt'], u: ['enemy', 'boneBrush'], M: ['enemy', 'boneRook'],
+  '1': PRESS([14, 15, 19], 'tall', { tall: [18, 16, 19, 18], low: [17, 18, 20, 18] }, 0),
+  '2': PRESS([51, 52, 19], 'low', { low: [55, 19, 63, 19], tall: [54, 15, 55, 18] }, 1),
+  '3': PRESS([86, 87, 19], 'tall', { tall: [90, 16, 91, 18], low: [89, 18, 92, 18] }, 2, null, 1.2),
+  '4': PRESS([131, 132, 19], 'low', { low: [137, 19, 152, 19], tall: [136, 15, 137, 18] }, 3),
+  '5': PRESS([168, 169, 19], 'tall', { tall: [172, 16, 173, 18], low: [171, 18, 174, 18] }, null, [174, 13], 0.8),
+  f: ['piece', 'bone.soft', { x: 110, y: 13, w: 2, to: [110, 21] }], x: ['decor', 'boneTell'], X: ['anchor', 'castOut']
+} };
+stamps.boneCastOld = oldRoom('clay@castOut', ['star']);
+const L3 = { n: 3, name: 'Make an Impression', mapLabel: 'Make an Impression', arch: 'mould', theme: 'bone_clay',
+  gimmick: 'Clay presses: stand in the tray as the press comes down and the cast takes your shape. Stand tall for a step up a wall, crouch for a low, broad slab under a shelf',
+  hint: 'Watch the chalk outline: it shows the cast that fits. The press shakes before it drops. On the high bench, mouse whiskers poke out of the floor by a patch that sounds hollow...',
+  postcard: 'Brady! You pressed yourself into the clay and it made a STEP. A step shaped like you. I stood on your shoulders. Lovely view. ♥ C',
+  enemies: [['boneMouse', 1], ['boneNewt', 2], ['boneBrush', 1], ['boneRook', 2]],
+  mapCell: [2, 0], mapFrom: 1,
+  exits: { main: { to: '37-4' } },
+  areas: [
+    { id: 'clay', gen: 'room', theme: 'bone_clay', stamp: 'boneClay', bone: { press: true }, bottomKill: true },
+    { id: 'cast', gen: 'room', role: 'secret', room: 'boneOrder', theme: 'bone_room_cast', stamp: 'boneCastOld', bone: { room: true } }
+  ] };
+
+/* ---------------- 37-4 Clean Break ---------------- */
+// ① the teach: a cracked replica standing in the path: hold THROW on the mark, let go at the fork, the top half
+// falls away and the stump is a hop; ② a tall slab against a cliff whose stepped seam leaves a staircase; down the
+// far side (a cracked plug low in the cliff face, whiskers beside it: the tar pool); a tall rib cage, three critters
+// on its faces; a replica wall standing on a bone bridge over a pit; ③ the twist: the last cut: the useful ankle is
+// the SMALL half, and the safe seam ends just before the persimmon joint (the obvious fork is past it: wrong).
+const cutRows = (() => {
+  const W = 172, H = 26, Gr = grid(W, H, '.');
+  ground(Gr, 0, 34, 19); put(Gr, 3, 18, '@'); put(Gr, 6, 18, 'n'); put(Gr, 9, 15, '?'); put(Gr, 11, 18, '1');
+  put(Gr, 20, 14, '*'); put(Gr, 24, 18, 'e'); put(Gr, 27, 18, 'k'); put(Gr, 30, 18, '2');
+  ground(Gr, 35, 60, 13); put(Gr, 38, 12, 'c'); put(Gr, 46, 12, 'u'); put(Gr, 50, 9, '?'); put(Gr, 55, 12, 'l');
+  // the tar pool: a cracked plug low in the cliff's face, a tunnel behind it, its door
+  fillG(Gr, 56, 17, 59, 18, '.'); put(Gr, 57, 18, 'D'); put(Gr, 61, 17, 'x'); put(Gr, 62, 18, '5');
+  ground(Gr, 61, 71, 19); put(Gr, 63, 18, 'X'); put(Gr, 64, 18, 'c'); put(Gr, 65, 18, 'i'); put(Gr, 64, 17, 'j'); put(Gr, 64, 16, 'J'); put(Gr, 64, 15, 'K');
+  ground(Gr, 72, 100, 7); put(Gr, 80, 6, 'w'); put(Gr, 86, 3, 'A'); put(Gr, 90, 3, 'M'); put(Gr, 95, 6, 'N'); put(Gr, 99, 6, '3');
+  pit(Gr, 101, 108); ground(Gr, 109, 118, 7); put(Gr, 112, 6, 'c'); put(Gr, 116, 6, 'r');
+  ground(Gr, 119, 135, 19); put(Gr, 122, 18, 'w'); put(Gr, 126, 18, 'k'); put(Gr, 128, 18, '4');
+  ground(Gr, 136, W - 1, 14); put(Gr, 142, 13, 'r'); pit(Gr, 150, 153); put(Gr, 151, 10, 'R'); put(Gr, 147, 8, 'M'); put(Gr, 143, 13, 'e'); put(Gr, 165, 13, 'G'); fillG(Gr, W - 1, 0, W - 1, 13, '#');
+  return rowsOf(Gr);
+})();
+const P_ = (x, y) => [x * TS, y * TS];
+const CHISEL = o => ['piece', 'bone.chisel', Object.assign({ speed: 2.0, tol: 0.8 * TS }, o)];
+stamps.boneCut = { floor: 19, rows: cutRows, gold: { '*': 'must', A: 'high', R: 'risky' }, items: ['power', 'power'], doors: [{ to: 'tar@in', look: 'boneCrack' }], legend: {
+  n: SIGN('A CRACKED REPLICA! STAND ON THE ORANGE MARK AND HOLD THROW: THE CHISEL RUNS ALONG THE SEAM. LET GO WHERE IT FORKS'),
+  N: SIGN('A REPLICA WALL ON A BONE BRIDGE: CUT ALONG ITS FOOT. SPLIT THE WRONG PLACE AND IT JUST CRUNCHES: TRY AGAIN'),
+  k: ['decor', 'boneBucket'], l: ['decor', 'boneLabel'], r: ['decor', 'boneRock'], e: ['enemy', 'boneMouse'], w: ['enemy', 'boneNewt'], u: ['enemy', 'boneBrush'], M: ['enemy', 'boneRook'],
+  '1': CHISEL({ mark: [11, 19], keep: [[12, 17, 14, 18]], drop: [[12, 14, 14, 16]], seam: [P_(12, 17), P_(15, 17)], stop: 1.5 * TS, fork: { d: 1.5 * TS, to: P_(14.2, 14.6) }, g: 0 }),
+  '2': CHISEL({ mark: [30, 19], keep: [[31, 17, 32, 18], [33, 15, 34, 18]], drop: [[31, 13, 32, 16], [33, 13, 34, 14]], seam: [P_(31, 17), P_(33, 17), P_(33, 15), P_(35, 15)], stop: 4 * TS, fork: { d: 4 * TS, to: P_(33.6, 13.3) }, g: 1 }),
+  '3': CHISEL({ mark: [103, 7], keep: [[101, 7, 108, 7]], drop: [[104, 2, 105, 6]], seam: [P_(104, 7), P_(106, 7)], stop: 1 * TS, fork: { d: 1 * TS, to: P_(105.4, 5) }, g: 2 }),
+  '4': CHISEL({ mark: [129, 19], keep: [[134, 17, 135, 18]], drop: [[130, 14, 135, 16], [130, 17, 133, 18]], seam: [P_(130, 17), P_(134, 17), P_(134, 14)], stop: 3.5 * TS, tol: 0.55 * TS, end: true, joint: [134 * TS + 6, 17 * TS - 4], fork: { d: 5.5 * TS, to: P_(132, 14.3) }, g: 3 }),
+  '5': CHISEL({ mark: [61, 19], keep: [], drop: [[60, 17, 60, 18]], seam: [P_(61, 18), P_(60, 18), P_(60, 17.2)], stop: 1 * TS, fork: { d: 1 * TS, to: P_(60.5, 17) }, hideMark: true, edge: [57, 19] }),
+  i: RIBS(66, 6, 71, 18, [[67, 12], [70, 9]]), j: CLIMBER(68, 7, 17, 0, 1.7, 0), J: CLIMBER(70, 7, 17, 1, 1.5, 0.5), K: CLIMBER(69, 10, 16, 0, 1.3, 0.3),
+  x: ['decor', 'boneTellWallR'], X: ['anchor', 'tarOut']
+} };
+stamps.boneTarOld = oldRoom('cut@tarOut', ['oneup']);
+const L4 = { n: 4, name: 'Clean Break', mapLabel: 'Clean Break', arch: 'chisel', theme: 'bone_cut',
+  gimmick: 'Cracked replicas: stand on the mark, hold THROW to draw the chisel along the seam and let go where it forks: the unwanted half falls away. In the last cut the useful ankle is the smaller half',
+  hint: 'Let go AT the fork, not after it. The last seam stops just before the joint. Mouse whiskers poke out of a cracked plug at the foot of a cliff...',
+  postcard: 'Brady! You chiselled a dinosaur in half and it said thank you. The other half went off to start a new life as a bench. ♥ C',
+  enemies: [['boneMouse', 2], ['boneNewt', 2], ['boneBrush', 1], ['boneRook', 2]],
+  mapCell: [3, 0], mapFrom: 2,
+  exits: { main: { to: '37-5' } },
+  areas: [
+    { id: 'cut', gen: 'room', theme: 'bone_cut', stamp: 'boneCut', bone: { chisel: true, ribs: true }, bottomKill: true },
+    { id: 'tar', gen: 'room', role: 'secret', room: 'boneFish', theme: 'bone_room_tar', stamp: 'boneTarOld', bone: { room: true } }
+  ] };
+
+/* ---------------- 37-5 Some Reassembly Required (the boss) ---------------- */
+// the dig at dusk: two replica skeletons lie across the trench, each missing one bone; loose limbs lie about: stand
+// over one and THROW, and only the one whose end fits the empty socket clicks home. A rib cage up the trench wall to
+// a ledge (whiskers: the specimen store, before the boss); the scree pit (P3); the hatch down into the dig itself.
+const digRows = (() => {
+  const W = 96, H = 22, Gr = grid(W, H, '.');
+  ground(Gr, 0, W - 1, 19); put(Gr, 3, 18, '@'); put(Gr, 6, 18, 'n'); put(Gr, 9, 15, '?'); put(Gr, 11, 18, '1');
+  put(Gr, 28, 14, '*'); put(Gr, 32, 18, 'c'); put(Gr, 36, 15, '?'); put(Gr, 35, 18, '2');
+  put(Gr, 53, 18, 'i'); fillG(Gr, 58, 4, 66, 5, '#'); put(Gr, 64, 3, 'D'); put(Gr, 60, 3, 'x'); put(Gr, 57, 2, 'A'); put(Gr, 62, 18, 'l');
+  put(Gr, 68, 18, 'X'); pit(Gr, 71, 74); put(Gr, 72, 14, 'R'); put(Gr, 78, 18, 'e'); put(Gr, 82, 18, 'r'); put(Gr, 88, 18, 'D');
+  fillG(Gr, W - 1, 0, W - 1, 18, '#');
+  return rowsOf(Gr);
+})();
+const LIMB = (gate, socket, limbs, g) => ['piece', 'bone.limbGate', { gate, socket, limbs, g }];
+stamps.boneDig = { floor: 19, rows: digRows, gold: { '*': 'must', A: 'high', R: 'risky' }, items: ['power', 'power'], doors: [{ to: 'store@in', look: 'boneHatch' }, { to: 'pit@in', look: 'boneHatch' }], legend: {
+  n: SIGN('LOOSE LIMBS! STAND ON ONE AND THROW: IT FLIES TO THE EMPTY SOCKET. ONLY THE ONE WHOSE END FITS THE SOCKET\'S SHAPE CLICKS IN'),
+  l: ['decor', 'boneLabel'], r: ['decor', 'boneRock'], e: ['enemy', 'boneMouse'],
+  '1': LIMB([22, 14, 23, 18], 'hip', [[13, 19, 'paddle'], [17, 19, 'heel']], 0),
+  '2': LIMB([46, 14, 47, 18], 'shoulder', [[38, 19, 'tail'], [41, 19, 'paddle'], [43, 19, 'heel']], 1),
+  i: RIBS(54, 3, 57, 18), x: ['decor', 'boneTell'], X: ['anchor', 'storeOut']
+} };
+stamps.boneStoreOld = oldRoom('dig@storeOut', ['oneup']);
+const L5 = { n: 5, name: 'Some Reassembly Required', mapLabel: 'Reassembly', arch: 'lair', theme: 'bone_dig', boss: 'bone_animal',
+  gimmick: 'The Approximately Correct Animal: a skeleton that put itself together from memory. Don\'t stomp it: help each wrong bone into the socket it really suits',
+  hint: 'Watch the tell, stay clear, then THROW at the loose bone while it lies there. Stomping a plaster back only bounces you. Whiskers on a ledge up the trench wall...',
+  postcard: 'BRADY! It sat down at last. It looks so comfortable. It says it will be a bench now, and it would like us to sit on it. ♥ C',
+  enemies: [['boneMouse', 1]],
+  mapCell: [4, 0], mapFrom: 3,
+  exits: { main: { to: null } },
+  areas: [
+    { id: 'dig', gen: 'room', theme: 'bone_dig', stamp: 'boneDig', bone: { ribs: true, limbs: true }, bottomKill: true },
+    { id: 'store', gen: 'room', role: 'secret', room: 'boneJar', theme: 'bone_room_store', stamp: 'boneStoreOld', bone: { room: true } },
+    { id: 'pit', gen: 'arena', role: 'arena', layout: 'dig', arenaW: 30, H: 18, roof: false, theme: 'bone_arena', bone: { boss: true } }
+  ] };
+
+Tour.amend('bone', { stamps, levels: [L1, L2, L3, L4, L5] });
+
+/* ---------------- the land's map: the quarry seen from the rim ---------------- */
+// the tipped crate where the arrival trail starts (left), the trackway terraces, the scree slope with the ribs, the
+// casting shed, the cutting floor, and the dig pit where the boss sits down at last (right)
+if (typeof TOUR_OW_MAPS !== 'undefined') TOUR_OW_MAPS.bone = {
+  labels: { '37-1': 'Walk Like This', '37-2': 'Assembly Optional', '37-3': 'Make an Impression', '37-4': 'Clean Break', '37-5': 'Reassembly' },
+  w: 1520, h: 760,
+  pal: { sea: '#6a4a8a', deep: '#3a2a5a', land: '#e0a060', light: '#f2c070', path: '#f4ead2', beach: '#f2b44e', cliff: '#8a4620', roof: '#f06a2a', wall: '#f4ead2' },
+  sea: 'stars', coast: 'boneRim', tufts: 'none', trail: 'dots', bridge: 'steps', meadow: false, woods: false, foam: false, birds: false,
+  land: [[[120, 640], [110, 420], [180, 200], [380, 140], [560, 160], [640, 300], [720, 420], [820, 430], [880, 290], [960, 150], [1180, 110], [1400, 180], [1450, 400], [1400, 640], [1180, 730], [760, 740], [400, 740]]],
+  nodes: { start: [240, 620], '37-1': [300, 380, 'n'], '37-2': [520, 560, 's'], '37-3': [800, 620, 's'], '37-4': [1080, 300, 'n'], '37-5': [1260, 560, 's'] },
+  paths: { 'start>37-1': [[250, 500]], '37-1>37-2': [[400, 480]], '37-2>37-3': [[660, 600]], '37-3>37-4': [[960, 480]], '37-4>37-5': [[1200, 420]] },
+  feat: [
+    ['sprite', 'boneCrateS', 200, 680, 26], ['sprite', 'boneBench', 420, 260, 40], ['sprite', 'boneRibs', 680, 680, 30],
+    ['sprite', 'boneBig', 1200, 220, 34], ['sprite', 'boneSit', 1340, 660, 30], ['sprite', 'boneBench', 960, 660, 34]
+  ],
+  flora: ['rock'], density: 0,
+  live: [['circle', 760, 120, 60, 0.6]]
+};
+})();
+
 /* ---- 29_tour_zz_boxes.js ---- */
 /* ============================================================
    Every land its own prize box (Brady, 27 Nov: "maybe every world gets its own kind of box").
@@ -89454,6 +91822,21 @@ const BoxArt = (() => {
       c.fillStyle = 'rgba(255,255,255,0.3)'; c.beginPath(); c.ellipse(16, yy, r * 0.85, ry * 0.85, 0, PI * 1.1, PI * 1.4); c.lineTo(16, yy); c.closePath(); c.fill();
     } },
     // ---- Lost & Found: worn ochre leather suitcase, mismatched corner caps, a big blank tag; catches pop, the tag whips over ----
+    // ---- The Spare Bone Quarry (hidden land A12): a petrol-green fossil specimen case, bone-white strap latch, a bone
+    // across the front pinned by a persimmon knob; hit: the knob pops, the bone swings down and the lid flips up;
+    // empty: the lid stands open over a dark case, the bone hangs from the front ----
+    bone: { name: 'The Spare Bone Quarry', draw(c, p) {
+      const G1 = '#2e6a5a', G2 = '#1e4a40', G3 = '#3e8a74', Bn = '#f4ead2', Pe = '#f06a2a';
+      const sw = io(seg(p, 0, 0.45)), q = ease(seg(p, 0.25, 1));
+      lidBack(c, q, 3, 11, 26, G2, 10);
+      R(c, 3, 11, 26, 19, 2.5, G1); shine(c, 6, 13, 20, 1.1);
+      R(c, 2, 27, 6, 4, 1, G2); R(c, 24, 27, 6, 4, 1, G2);
+      if (q > 0) R(c, 5, 11, 22, 3 + q * 4, 1.2, HOLE, 1.1);
+      if (q <= 0.5) { R(c, 2, 6, 28, 7, 2.5, G3); R(c, 14, 4.5, 4, 8, 1, Bn, 1.2); }
+      // the bone: across the front, pinned in the middle; swinging down from its right end when hit
+      rot(c, 24, 20, sw * 1.15, () => { R(c, 8, 18.6, 16, 3, 1.3, Bn, 1.1); for (const x of [8, 24]) { O(c, x, 18.6, 2.1, Bn, 1); O(c, x, 21.6, 2.1, Bn, 1); } });
+      if (sw < 0.3) O(c, 16, 20.1, 2.6, Pe, 1.1); else O(c, 16 + sw * 3, 20.1 - sw * 9, 2.4 * (1 - sw * 0.4), Pe, 1);
+    } },
     lost: { name: 'Lost & Found', draw(c, p) {
       const B1 = '#b07338', B2 = '#7a461d', B3 = '#d29a5c', Tl = '#2fb3a8', Or = '#f08a2e', Cr = '#f6ead0', Au = '#f2c23a';
       const c1 = seg(p, 0, 0.18), c2 = seg(p, 0.12, 0.3), wh = io(seg(p, 0.2, 0.8)), q = ease(seg(p, 0.35, 1));
@@ -89981,7 +92364,8 @@ const NOTES = {
   w22: 'Every card from World 22! Even the ones that did not exist yet.',
   eye: 'Every Red-Eye card! I wrote these at thirty thousand feet. Excuse the turbulence.',
   fest: 'All of Festival Fields! The llamas signed it. That smudge is a hoof.',
-  lost: 'Every Lost & Found card! I found this box in Lost & Found. It had your name on it.'
+  lost: 'Every Lost & Found card! I found this box in Lost & Found. It had your name on it.',
+  bone: 'Every card from the quarry! I sent you a spare bone with a label that says APPROX. Keep it for the next flat-pack wardrobe you build from memory, darling. The last one still has a door on its ceiling.'   // The Spare Bone Quarry (hidden land A12)
 };
 const noteOf = C => (NOTES[C.id] || ('Every postcard from ' + C.name + '! I keep them all in a shoebox.')) + ' ♥ C';
 
