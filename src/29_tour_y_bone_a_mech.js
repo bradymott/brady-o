@@ -586,8 +586,86 @@ Tour.pieces['bone.chisel'] = function (st, o) {
   return st.x;
 };
 
+/* ======================= 37-5's lead-in: send a loose limb to the socket it suits ======================= */
+// a replica skeleton lies across the path, one socket empty; loose limbs lie about. Stand over a limb and THROW: it
+// flies to the socket; only the one whose end fits the socket's shape clicks in, and the skeleton gets up out of the
+// way. { gate: rect (the skeleton's tiles), socket: 'hip' | 'shoulder' | 'tail', limbs: [[x, y, kind]], good, g }
+const FITS = { hip: 'heel', shoulder: 'paddle', tail: 'tail' };
+const limbEnd = (ctx, x, y, kind, s) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(s || 1, s || 1); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = BONE;
+  if (kind === 'heel' || kind === 'hip') { ctx.beginPath(); ctx.arc(0, 0, 7, 0, TAU); kind === 'hip' ? ctx.stroke() : (ctx.fill(), ctx.stroke()); }
+  else if (kind === 'paddle' || kind === 'shoulder') { ctx.beginPath(); ctx.rect(-8, -3.5, 16, 7); kind === 'shoulder' ? ctx.stroke() : (ctx.fill(), ctx.stroke()); }
+  else { ctx.beginPath(); for (let a = 0; a < 10; a += 0.3) { const r = 2 + a * 0.6; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); } ctx.stroke(); }
+  ctx.restore();
+};
+class BoneLimbGate extends Ent {
+  constructor(g, s) {
+    super(g, s, 4, 4); this.friendly = true; this.back = true; this.s = s; this.open = 0; this.done = false; this.fly = null; this.back2 = 0;
+    const pts = s.limbs.map(l => [l[0], l[1]]).concat([[s.gate[0], s.gate[1]], [s.gate[2], s.gate[3]]]), b = bbox(pts);
+    this.x = (b[0] - 1) * TS; this.y = (b[1] - 3) * TS; this.w = (b[2] - b[0] + 3) * TS; this.h = (b[3] - b[1] + 4) * TS; this.at = s.limbs.map(() => 1);
+  }
+  under(p) { return this.s.limbs.findIndex(([x, y], i) => this.at[i] && standsOn(p, x, y, 0.8)); }
+  boneClaim(p) { return !this.done && !this.fly && this.under(p) >= 0; }
+  sock() { const r = this.s.gate; return [(r[0] + r[2] + 1) * TS / 2, r[1] * TS + 20]; }
+  update(dt) {
+    this.t += dt; const g = this.g, I = g.boneIn;
+    if (this.done) { this.open = Math.min(1, this.open + dt * 1.5); return; }
+    if (this.fly) {
+      const F = this.fly; F.t += dt; const k = Math.min(1, F.t / 0.6);
+      if (k >= 1 && !F.hit) {
+        F.hit = true;
+        if (F.kind === FITS[this.s.socket]) { this.done = true; setRect(g, this.s.gate, T.EMPTY); g.parts.text(F.x1, F.y1 - 20, 'CLICK! IT FITS', '#ffd88a'); TourKit.sfx('click', 'select', { vol: 0.7, pitch: 0.8 }); g.burst(F.x1, F.y1, 12, BONE, 'dust'); g.shake(3); }
+        else { g.parts.text(F.x1, F.y1 - 20, 'DOESN\'T SUIT IT', '#ffb0a0'); TourKit.sfx('fizz', 'bump', { vol: 0.5, pitch: 0.6 }); F.back = true; F.t = 0; }
+      }
+      if (F.back && F.t > 0.5) { this.at[F.i] = 1; this.fly = null; }
+      return;
+    }
+    if (I && I.by === this && I.pressed) {
+      const p = g.player, i = this.under(p); if (i < 0) return;
+      const [x, y, kind] = this.s.limbs[i], [sx, sy] = this.sock();
+      this.at[i] = 0; this.fly = { i, kind, t: 0, x0: x * TS + TS / 2, y0: y * TS - 6, x1: sx, y1: sy };
+      TourKit.sfx('throw', 'jump', { vol: 0.5, pitch: 1.2 });
+    }
+  }
+  touchPlayer() {}
+  limbArt(ctx, x, y, kind, rot) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot || 0);
+    BA.bone(ctx, -14, 0, 12, 0, 8, false); limbEnd(ctx, 16, 0, kind, 1);
+    ctx.restore();
+  }
+  draw(ctx) {
+    const s = this.s, r = s.gate, gx = r[0] * TS, gy = r[1] * TS, gw = (r[2] - r[0] + 1) * TS, gh = (r[3] - r[1] + 1) * TS, k = this.open, t = this.t;
+    ctx.save();
+    // the reclining skeleton: a stack of bones across the path, a skull on top, its empty socket marked
+    if (k < 1) {
+      ctx.globalAlpha = 1 - k; ctx.translate(k * 60, -k * 30);
+      for (let q = 0; q < 4; q++) BA.bone(ctx, gx - 4, gy + 14 + q * (gh - 20) / 3, gx + gw + 4, gy + 10 + q * (gh - 20) / 3, 12, q % 2 === 0);
+      ctx.fillStyle = BONE; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(gx + gw / 2, gy + 2, 16, 11, 0.2, 0, TAU); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(gx + gw / 2 + 6, gy, 2.4, 0, TAU); ctx.fill();
+      const [sx, sy] = this.sock(); ctx.fillStyle = 'rgba(40,20,10,0.7)'; ctx.beginPath(); ctx.arc(sx, sy, 11, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 2; ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
+      ctx.strokeStyle = '#fbf4e0'; limbEnd(ctx, sx, sy, s.socket, 0.9);
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+    // the loose limbs, and the one in flight
+    s.limbs.forEach(([x, y, kind], i) => { if (this.at[i]) this.limbArt(ctx, x * TS + TS / 2, y * TS - 6, kind, 0); });
+    if (this.fly) { const F = this.fly, q = F.back ? 1 - Math.min(1, F.t / 0.5) : Math.min(1, F.t / 0.6); const fx = lerp(F.x0, F.x1, q), fy = lerp(F.y0, F.y1, q) - Math.sin(q * Math.PI) * 50; this.limbArt(ctx, fx, fy, F.kind, q * TAU); }
+    const p = this.g.player, i = p ? this.under(p) : -1;
+    if (i >= 0 && !this.fly && !this.done) throwHint(this, ctx, s.limbs[i][0] * TS + TS / 2, s.limbs[i][1] * TS - 96, 'THROW: SEND IT HOME');
+  }
+}
+ENTITY_TYPES.boneLimbGate = BoneLimbGate;
+Tour.pieces['bone.limbGate'] = function (st, o) {
+  const B = st.B; B.spawn('boneLimbGate', st.x, st.gy - 1, o);
+  const r = o.gate; for (let y = r[1]; y <= r[3]; y++) for (let x = r[0]; x <= r[2]; x++) { B.set(x, y, T.HARD); B.setHide(x, y, 1); }
+  B.toggle(o.g, [r.slice(0, 4)], [], { kind: 'boneLimb' });
+  const good = o.limbs.find(l => l[2] === FITS[o.socket]); B.switchAt(o.g, good[0], good[1] - 1);
+  return st.x;
+};
+
 Object.assign(TourLandscape.ARCH_LABEL, { trackway: 'TRACKWAY', vertebra: 'ASSEMBLY', mould: 'MOULD', chisel: 'CHISEL' });
-Object.assign(Tour.boneKit, { standsOn, setRect, throwHint, BoneTrack, BoneVert, BoneRibs, BonePress, BoneChisel, BoneClimber });
+Object.assign(Tour.boneKit, { standsOn, setRect, throwHint, BoneTrack, BoneVert, BoneRibs, BonePress, BoneChisel, BoneClimber, BoneLimbGate, FITS });
 // for the shots tool: the game's own physics on a copy of Brady's body
 try { if (typeof window !== 'undefined') { window.BRADY_TOUR = window.BRADY_TOUR || {}; window.BRADY_TOUR.TourMap = TourMap; } } catch (e) { /* not in a browser */ }
 try { if (typeof window !== 'undefined') window.BRADY_BONE = { phys: (b, inp, A, dt, pl, o) => playerPhysicsFlip(b, inp, A, dt, pl, o), spikeContact: (b, A) => spikeContact(b, A), lavaContact: (b, A) => lavaContact(b, A), kit: Tour.boneKit }; } catch (e) { /* not in a browser */ }

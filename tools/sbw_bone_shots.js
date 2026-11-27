@@ -521,12 +521,60 @@ LEVELS.cut = async (page, shot, run, pano) => {
   });
 };
 
+// ---------------- 37-5 Some Reassembly Required (the lead-in; the fight is tools/boss_tests/bone.js) ----------------
+LEVELS.dig = async (page, shot, run, pano) => {
+  await run('dig', async () => {
+    await page.evaluate(() => { fresh(); play('37-5'); place(5, 18); sim(0.6); freeze(); });
+    await shot('50-37-5-start.png');
+    let r = await page.evaluate(() => { thaw(); const a = AP.go([13, 19]); throwN(1, 1.2); const gate = ents('BoneLimbGate').find(e => e.s.gate[0] === 22); return { ok: a.ok, done: gate.done, wall: tileT(22, 16) }; });
+    check('37-5: THROW the paddle at the empty hip: it does not suit it and comes back', r.ok && !r.done && r.wall === 'HARD', r);
+    r = await page.evaluate(() => { const a = AP.go([17, 19]); throwN(1, 0.5); const gate = ents('BoneLimbGate').find(e => e.s.gate[0] === 22); return { ok: a.ok, done: gate.done }; });
+    await page.evaluate(() => freeze()); await shot('51-37-5-limb-clicks.png'); await page.evaluate(() => { thaw(); sim(1); });
+    r = Object.assign(r, await page.evaluate(() => ({ wall: tileT(22, 16), done: ents('BoneLimbGate').find(e => e.s.gate[0] === 22).done })));
+    check('37-5: THROW the heel at the empty hip: it clicks in, the skeleton gets up out of the way', r.done && r.wall === 'EMPTY', r);
+    r = await page.evaluate(() => { const a = AP.route([[26, 19], [41, 19]]); throwN(1, 1.2); const gate = ents('BoneLimbGate').find(e => e.s.gate[0] === 46); return { ok: a.ok, done: gate.done, wall: tileT(46, 16) }; });
+    check('37-5: the second skeleton: the paddle suits its empty shoulder (the tail and the heel do not)', r.ok && r.done && r.wall === 'EMPTY', r);
+    // the specimen store: up the rib cage on the trench wall to the ledge with the whiskers
+    await page.evaluate(() => { place(52, 18); sim(0.4); freeze(); }); await shot('52-37-5-tell-ledge.png');
+    r = await page.evaluate(() => { thaw(); const a = AP.go([54, 19]); const c = climbTo(57, 3); sim(0.4, { up: true, right: true }); sim(0.6, { right: true }); const b = AP.go([64, 4]); for (let k = 0; k < 20 && S().area.aid !== 'store'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.5); return { a: a.ok, c, b: b.ok, area: S().area.aid }; });
+    check('37-5: up the rib cage on the trench wall to the whiskers\' ledge: a hatch into the specimen store', r.area === 'store', r);
+    await page.evaluate(() => { sim(0.5); freeze(); }); await shot('53-37-5-room-empty-jar.png');
+    r = await page.evaluate(() => { thaw(); place(5, 6); sim(2.2); const R = S().area.roomState, odd = S().area.roomKit.data.odd, xs = [8, 11, 14]; AP.go([xs[(odd + 1) % 3], 7]); throwN(1, 1.6); return { won: R.won, odd }; });
+    check('37-5 store: tip a jar without the bump: clearly empty, a little dust (try again)', !r.won, r);
+    r = await page.evaluate(() => { const R = S().area.roomState, xs = [8, 11, 14], odd = S().area.roomKit.data.odd; AP.go([xs[odd] - 1, 7]); sim(1 / 120, { action: true, actionPressed: true }); const D0 = R.drop; let k = 0; for (; k < 240 && R.drop && !R.won; k++) { const D = R.drop, p = P(); sim(1 / 120, { left: D.x < p.cx - 8, right: D.x > p.cx + 8 }); } sim(0.3); return { fell: !!D0, won: R.won }; });
+    check('37-5 store: tip the jar with the bump under its label: something falls out; run under it and catch it: the cage opens', r.fell && r.won, r);
+    await page.evaluate(() => freeze()); await shot('54-37-5-room-empty-jar-won.png'); await page.evaluate(() => thaw());
+    r = await page.evaluate(() => { place(3, 6); sim(0.2); for (let k = 0; k < 20 && S().area.aid !== 'dig'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.6); return { area: S().area.aid, x: Math.floor(P().cx / 32), row: P().groundTy }; });
+    check('37-5 store: its hatch lets Brady down onto the trench floor further on (before the boss)', r.area === 'dig' && r.x >= 66 && r.row === 19, r);
+    r = await page.evaluate(() => { const a = AP.route([[76, 19], [88, 19]]); for (let k = 0; k < 20 && S().area.aid !== 'pit'; k++) sim(0.1, { up: true, upPressed: true }); sim(1); return { ok: a.ok, area: S().area.aid }; });
+    check('37-5: over the scree pit (P3) to the hatch down into the dig: the boss', r.ok && r.area === 'pit', r);
+    await page.evaluate(() => { sim(2.5); freeze(); }); await shot('55-37-5-boss-arena.png'); await page.evaluate(() => thaw());
+    await page.evaluate(() => { play('37-5'); }); await pano('59-37-5-panorama.png', 0.3);
+  });
+};
+// ---------------- the land's map and the route-map pin ----------------
+const openBone = `(() => { fresh(); const B = window.BRADY, T = window.BRADY_TOUR; B.Save.data.seenEncoreIntro = true; const Tp = T.TourProgress, D = Tp.data(); D.seen.ec = true; try { Tp.exit('2-1', 'bone'); Tp.exit('37-1', 'main'); Tp.exit('37-2', 'main'); } catch (e) {} for (const id of ['37-1', '37-2']) B.Save.data.done[id] = true; D.pending = []; D.seen.bone = true; })()`;
+LEVELS.map = async (page, shot, run) => {
+  await run('map', async () => {
+    const r = await page.evaluate(o => { eval(o); window.BRADY.goToMap('world', 37, '37-2'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } const s = S(); return { mode: s.mode, cc: s.ow && s.ow.cc }; }, openBone);
+    check('the quarry has its own walkable map', r.cc === 'bone', r);
+    await page.evaluate(() => freeze()); await shot('70-bone-overworld-map.png');
+    const r2 = await page.evaluate(() => { thaw(); const s = S(); if (s.openRoute) s.openRoute({ dest: 'bone' }); for (let k = 0; k < 30; k++) sim(0.25); s.dest = 'bone'; sim(0.8); return { mode: s.mode }; });
+    await page.evaluate(() => freeze()); await shot('71-route-map-bone-pin.png');
+    check('the route map opens on the quarry\'s pin', !!r2.mode, r2);
+  });
+};
+
 (async () => {
   await session({ width: 844, height: 390 }, async (page, shot, run, pano) => {
-    for (const k of Object.keys(LEVELS).filter(k => k !== 'entry').concat(['entry'])) await LEVELS[k](page, shot, run, pano);
+    for (const k of Object.keys(LEVELS).filter(k => k !== 'entry' && k !== 'map').concat(['entry', 'map'])) await LEVELS[k](page, shot, run, pano);
   });
   if (!want.length || want.includes('portrait')) await session({ width: 390, height: 844 }, async (page, shot, run) => {
-    await run('portrait', async () => { await page.evaluate(() => { fresh(); play('37-1'); place(20, 18); sim(0.4); freeze(); }); await shot('90-portrait-37-1.png'); });
+    await run('portrait', async () => {
+      await page.evaluate(() => { fresh(); play('37-1'); place(20, 18); sim(0.4); freeze(); }); await shot('90-portrait-37-1.png');
+      await page.evaluate(() => { thaw(); play('37-5'); toArea('pit', 6, 15); sim(3); freeze(); }); await shot('91-portrait-37-5-boss.png');
+      await page.evaluate(o => { thaw(); eval(o); window.BRADY.goToMap('world', 37, '37-2'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } freeze(); }, openBone); await shot('92-portrait-bone-map.png');
+    });
   });
   console.log(failures ? `${failures} BONE CHECK(S) FAILED` : 'ALL BONE CHECKS PASSED');
   process.exit(failures ? 1 : 0);

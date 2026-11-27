@@ -229,7 +229,42 @@ const L4 = { n: 4, name: 'Clean Break', mapLabel: 'Clean Break', arch: 'chisel',
     { id: 'tar', gen: 'room', role: 'secret', room: 'boneFish', theme: 'bone_room_tar', stamp: 'boneTarOld', bone: { room: true } }
   ] };
 
-Tour.amend('bone', { stamps, levels: [L1, L2, L3, L4] });
+/* ---------------- 37-5 Some Reassembly Required (the boss) ---------------- */
+// the dig at dusk: two replica skeletons lie across the trench, each missing one bone; loose limbs lie about: stand
+// over one and THROW, and only the one whose end fits the empty socket clicks home. A rib cage up the trench wall to
+// a ledge (whiskers: the specimen store, before the boss); the scree pit (P3); the hatch down into the dig itself.
+const digRows = (() => {
+  const W = 96, H = 22, Gr = grid(W, H, '.');
+  ground(Gr, 0, W - 1, 19); put(Gr, 3, 18, '@'); put(Gr, 6, 18, 'n'); put(Gr, 9, 15, '?'); put(Gr, 11, 18, '1');
+  put(Gr, 28, 14, '*'); put(Gr, 32, 18, 'c'); put(Gr, 36, 15, '?'); put(Gr, 35, 18, '2');
+  put(Gr, 53, 18, 'i'); fillG(Gr, 58, 4, 66, 5, '#'); put(Gr, 64, 3, 'D'); put(Gr, 60, 3, 'x'); put(Gr, 57, 2, 'A'); put(Gr, 62, 18, 'l');
+  put(Gr, 68, 18, 'X'); pit(Gr, 71, 74); put(Gr, 72, 14, 'R'); put(Gr, 78, 18, 'e'); put(Gr, 82, 18, 'r'); put(Gr, 88, 18, 'D');
+  fillG(Gr, W - 1, 0, W - 1, 18, '#');
+  return rowsOf(Gr);
+})();
+const LIMB = (gate, socket, limbs, g) => ['piece', 'bone.limbGate', { gate, socket, limbs, g }];
+stamps.boneDig = { floor: 19, rows: digRows, gold: { '*': 'must', A: 'high', R: 'risky' }, items: ['power', 'power'], doors: [{ to: 'store@in', look: 'boneHatch' }, { to: 'pit@in', look: 'boneHatch' }], legend: {
+  n: SIGN('LOOSE LIMBS! STAND ON ONE AND THROW: IT FLIES TO THE EMPTY SOCKET. ONLY THE ONE WHOSE END FITS THE SOCKET\'S SHAPE CLICKS IN'),
+  l: ['decor', 'boneLabel'], r: ['decor', 'boneRock'], e: ['enemy', 'boneMouse'],
+  '1': LIMB([22, 14, 23, 18], 'hip', [[13, 19, 'paddle'], [17, 19, 'heel']], 0),
+  '2': LIMB([46, 14, 47, 18], 'shoulder', [[38, 19, 'tail'], [41, 19, 'paddle'], [43, 19, 'heel']], 1),
+  i: RIBS(54, 3, 57, 18), x: ['decor', 'boneTell'], X: ['anchor', 'storeOut']
+} };
+stamps.boneStoreOld = oldRoom('dig@storeOut', ['oneup']);
+const L5 = { n: 5, name: 'Some Reassembly Required', mapLabel: 'Reassembly', arch: 'lair', theme: 'bone_dig', boss: 'bone_animal',
+  gimmick: 'The Approximately Correct Animal: a skeleton that put itself together from memory. Don\'t stomp it: help each wrong bone into the socket it really suits',
+  hint: 'Watch the tell, stay clear, then THROW at the loose bone while it lies there. Stomping a plaster back only bounces you. Whiskers on a ledge up the trench wall...',
+  postcard: 'BRADY! It sat down at last. It looks so comfortable. It says it will be a bench now, and it would like us to sit on it. ♥ C',
+  enemies: [['boneMouse', 1]],
+  mapCell: [4, 0], mapFrom: 3,
+  exits: { main: { to: null } },
+  areas: [
+    { id: 'dig', gen: 'room', theme: 'bone_dig', stamp: 'boneDig', bone: { ribs: true, limbs: true }, bottomKill: true },
+    { id: 'store', gen: 'room', role: 'secret', room: 'boneJar', theme: 'bone_room_store', stamp: 'boneStoreOld', bone: { room: true } },
+    { id: 'pit', gen: 'arena', role: 'arena', layout: 'dig', arenaW: 30, H: 18, roof: false, theme: 'bone_arena', bone: { boss: true } }
+  ] };
+
+Tour.amend('bone', { stamps, levels: [L1, L2, L3, L4, L5] });
 
 /* ---------------- the land's map: the quarry seen from the rim ---------------- */
 // the tipped crate where the arrival trail starts (left), the trackway terraces, the scree slope with the ribs, the

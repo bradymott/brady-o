@@ -282,9 +282,9 @@ TourRooms.def('boneJar', {
     for (const e of props(play, 'jar')) { if (e.tip > 0) { e.tip -= dt; if (e.tip <= 0 && !(R.won && e.s.odd)) e.flip = 0; } }
     if (R.drop) {
       // the key out of the lid: up in an arc and down 3 tiles along; catch it before it reaches the floor
-      const D = R.drop; D.t += dt; const k = D.t / 1.4;
-      D.x = lerp(D.x0, D.x1, Math.min(1, k)); D.y = D.y0 - Math.sin(Math.min(1, k) * Math.PI) * 2.2 * TS + k * k * 1.2 * TS;
-      if (Math.abs(p.cx - D.x) < 22 && Math.abs(p.cy - D.y) < 34) { R.drop = null; TourRooms.win(play, A, R, { text: 'CAUGHT IT! NOT SO EMPTY', coins: 4 }); return; }
+      const D = R.drop; D.t += dt; const k = D.t / 1.8;
+      D.x = lerp(D.x0, D.x1, Math.min(1, k)); D.y = D.y0 - Math.sin(Math.min(1, k) * Math.PI) * 1.7 * TS + k * k * 1.2 * TS;
+      if (Math.abs(p.cx - D.x) < 30 && Math.abs(p.cy - D.y) < 46) { R.drop = null; TourRooms.win(play, A, R, { text: 'CAUGHT IT! NOT SO EMPTY', coins: 4 }); return; }
       if (k >= 1 || D.y > F * TS - 8) { R.drop = null; fail(play, 'IT ROLLED BACK IN! TRY AGAIN'); for (const e of props(play, 'jar')) if (e.s.odd) { e.flip = 0; e.tip = 0; } }
       return;
     }
