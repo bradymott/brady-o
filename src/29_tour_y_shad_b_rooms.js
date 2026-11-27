@@ -127,7 +127,7 @@ DRAW.beat = (ctx, e, R) => {
   ctx.save();
   // the eight bulbs over the counter (the eighth big): lit one per beat
   for (let k = 0; k < BULBS; k++) {
-    const x = (6.5 + k * 1.55) * TS, y = 2.2 * TS, big = k === BULBS - 1, on = b === k, past = b > k && b < BULBS, r = big ? 14 : 9;
+    const x = (6.5 + k * 1.55) * TS, y = 3.4 * TS, big = k === BULBS - 1, on = b === k, past = b > k && b < BULBS, r = big ? 14 : 9;
     ctx.fillStyle = on ? (big ? '#ffffff' : '#fff6a0') : past ? '#c8b060' : '#5a5040'; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); ctx.stroke();
     if (on) { ctx.fillStyle = big ? 'rgba(255,255,230,0.5)' : 'rgba(255,246,160,0.35)'; ctx.beginPath(); ctx.arc(x, y, r * (big ? 3 : 2), 0, TAU); ctx.fill(); }
     ctx.fillStyle = on ? INK : '#e8dcc0'; ctx.font = '9px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(k + 1), x, y + 1);
@@ -183,7 +183,7 @@ TourRooms.def('shadWindow', {
   draw(play, ctx, A, R) { hud(play, ctx, R.won ? 'ALL SHUT' : 'SHUT ' + (R.round || 0) + ' / 2', 100); }
 });
 DRAW.window = (ctx, e, R) => {
-  const x = e.cx, fy = F * TS, t = e.t, top = 1.7 * TS, w = 50, h = 74, odd = !R.won && R.odd === e.k, shut = R.won || (R.shut && R.shut.indexOf(e.k) >= 0 && !odd);
+  const x = e.cx, fy = F * TS, t = e.t, top = 3.0 * TS, w = 50, h = 62, odd = !R.won && R.odd === e.k, shut = R.won || (R.shut && R.shut.indexOf(e.k) >= 0 && !odd);
   ctx.save();
   // the frame and the rainy night outside
   ctx.fillStyle = '#1a2440'; ctx.fillRect(x - w / 2, top, w, h);
@@ -224,14 +224,14 @@ TourRooms.def('shadFoot', {
   draw(play, ctx, A, R) { hud(play, ctx, R.won ? 'WELL TRACKED' : 'FOUND ' + (R.round || 0) + ' / 2', 100); }
 });
 // a trail from its start (top) to its cubby: a wiggly curve; pt(k, u) the point at u in 0..1
-const trailPt = (R, k, u) => { const x0 = CUB_X[k] * TS + TS / 2, x1 = CUB_X[R.map[k]] * TS + TS / 2, y0 = 1.6 * TS, y1 = F * TS - 34, e = u * u * (3 - 2 * u); return [lerp(x0, x1, e) + Math.sin(u * Math.PI * 3 + k) * 10, lerp(y0, y1, u)]; };
+const trailPt = (R, k, u) => { const x0 = CUB_X[k] * TS + TS / 2, x1 = CUB_X[R.map[k]] * TS + TS / 2, y0 = 3.2 * TS, y1 = F * TS - 34, e = u * u * (3 - 2 * u); return [lerp(x0, x1, e) + Math.sin(u * Math.PI * 3 + k) * 10, lerp(y0, y1, u)]; };
 DRAW.trails = (ctx, e, R) => {
   if (!R.map) return;
   ctx.save();
   // the bare patch: a pale board on the wall the trails cross
-  ctx.fillStyle = 'rgba(240,232,200,0.85)'; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(4.6 * TS, 1.2 * TS, 12 * TS, F * TS - 1.2 * TS - 26); ctx.strokeRect(4.6 * TS, 1.2 * TS, 12 * TS, F * TS - 1.2 * TS - 26);
+  ctx.fillStyle = 'rgba(240,232,200,0.85)'; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(4.6 * TS, 2.9 * TS, 12 * TS, F * TS - 2.9 * TS - 26); ctx.strokeRect(4.6 * TS, 2.9 * TS, 12 * TS, F * TS - 2.9 * TS - 26);
   for (let k = 0; k < 4; k++) {
-    const N = 15;
+    const N = 11;
     for (let i = 0; i < N; i++) {
       const u = (i + 0.5) / N, [x, y] = trailPt(R, k, u), sq = k === R.odd && Math.abs(u - R.sq) < 0.5 / N;
       ctx.fillStyle = TRACK_COL[k];
@@ -327,11 +327,11 @@ TourRooms.def('shadFish', {
 });
 DRAW.fish = (ctx, e, R) => {
   if (!R.face) return;
-  const x = e.cx, fy = F * TS, t = e.t, d = R.face[e.k], y = 3.6 * TS + Math.sin(t * 2 + e.k) * 2, odd = R.odd === e.k && !R.won;
+  const x = e.cx, fy = F * TS, t = e.t, d = R.face[e.k], y = 4.1 * TS + Math.sin(t * 2 + e.k) * 2, odd = R.odd === e.k && !R.won;
   ctx.save();
   // its peg on the line
-  ctx.strokeStyle = 'rgba(255,253,242,0.7)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x - 40, 2.3 * TS); ctx.lineTo(x + 40, 2.3 * TS); ctx.stroke();
-  ctx.fillStyle = '#d8b88a'; ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.fillRect(x - 3, 2.3 * TS - 6, 6, 14); ctx.strokeRect(x - 3, 2.3 * TS - 6, 6, 14);
+  ctx.strokeStyle = 'rgba(255,253,242,0.7)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x - 40, 3.1 * TS); ctx.lineTo(x + 40, 3.1 * TS); ctx.stroke();
+  ctx.fillStyle = '#d8b88a'; ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.fillRect(x - 3, 3.1 * TS - 6, 6, 14); ctx.strokeRect(x - 3, 3.1 * TS - 6, 6, 14);
   // the paper fish: a grape shadow cut-out with its notch, an eye hole, scales as butter chevrons
   ctx.translate(x, y); ctx.scale(d, 1);
   ctx.fillStyle = GRA; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(26, 0); ctx.quadraticCurveTo(12, -18, -14, -6); ctx.lineTo(-28, -16); ctx.lineTo(-24, 0); ctx.lineTo(-28, 16); ctx.lineTo(-14, 6); ctx.quadraticCurveTo(12, 18, 26, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
