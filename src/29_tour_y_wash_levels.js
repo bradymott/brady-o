@@ -125,7 +125,7 @@ const coldRows = (() => {
   ground(Gr, 77, 95, 19); put(Gr, 88, 18, 'r'); put(Gr, 84, 15, '?');
   // the safe drop: a gap with a hanky by it; down at the bottom, the launderette
   pit(Gr, 96, 98); fillG(Gr, 96, 25, 98, 25, 'z'); put(Gr, 95, 16, 'u');
-  ground(Gr, 99, 115, 19); put(Gr, 102, 18, 'c'); put(Gr, 108, 18, 'a'); put(Gr, 112, 18, 'l');
+  ground(Gr, 99, 115, 19); put(Gr, 102, 18, 'c'); put(Gr, 108, 18, 'a');
   pit(Gr, 116, 146); put(Gr, 117, 17, '3'); put(Gr, 132, 15, '4'); put(Gr, 140, 9, 'f'); put(Gr, 140, 12, 'R'); put(Gr, 124, 14, 'o.o.o');
   ground(Gr, 147, 160, 15); put(Gr, 150, 14, 'c'); put(Gr, 156, 14, 'l');
   // ③ up the steps onto the slab; the hole; the last sweater under it; the wall at the slab's end (no way round)
@@ -140,9 +140,9 @@ const COLD = {
   K: SIGN('THE LAST SWEATER\'S RIGHT SLEEVE IS SHORT: IT ONLY REACHES IF YOU RUN THE WHOLE BODY FROM THE OTHER SHOULDER'),
   x: ['decor', 'washChimney'], l: ['enemy', 'washLamb'], r: ['enemy', 'washHeron'], f: ['enemy', 'washMoth'],
   '1': ['piece', 'wash.sweater', { w: 5, maxR: 9, kR: 2, col: '#5ab08a' }],
-  '2': ['piece', 'wash.sweater', { w: 5, maxR: 10, kR: 2, col: '#e8744a' }],
-  '3': ['piece', 'wash.sweater', { w: 5, maxR: 8, kR: 2, col: '#6a8ad8' }],
-  '4': ['piece', 'wash.sweater', { w: 5, maxR: 9, kR: 2, col: '#d86a9a' }],
+  '2': ['piece', 'wash.sweater', { w: 5, maxR: 10, kR: 3, col: '#e8744a' }],
+  '3': ['piece', 'wash.sweater', { w: 5, maxR: 8, kR: 3, col: '#6a8ad8' }],
+  '4': ['piece', 'wash.sweater', { w: 5, maxR: 9, kR: 3, col: '#d86a9a' }],
   '5': ['piece', 'wash.sweater', { w: 5, maxL: 2, kL: 1, maxR: 7, kR: 1.6, col: '#e8442e' }],
   z: ['seam', 'bottom', 'launder@in'], u: ['piece', 'wash.peep', {}], a: ['anchor', 'launderOut']
 };
@@ -175,7 +175,7 @@ const looseRows = (() => {
   put(Gr, 95, 20, '3'); pit(Gr, 96, 107); put(Gr, 101, 13, 'o.o.o');
   ground(Gr, 108, 140, 18); put(Gr, 111, 17, 'c');
   // the chimney: a hollow with its left face only a painted cloth; the cupboard door inside; a crate to climb it
-  fillG(Gr, 119, 13, 123, 17, 'H'); fillG(Gr, 120, 14, 122, 17, '.'); fillG(Gr, 119, 14, 119, 17, 'F'); put(Gr, 121, 17, 'A'); fillG(Gr, 116, 16, 116, 17, 'B'); put(Gr, 119, 15, 'u');
+  fillG(Gr, 119, 13, 123, 17, 'H'); fillG(Gr, 120, 14, 122, 17, '.'); fillG(Gr, 119, 14, 119, 17, 'F'); put(Gr, 121, 17, 'A'); fillG(Gr, 116, 15, 116, 17, 'B'); put(Gr, 119, 15, 'u');
   put(Gr, 128, 17, 'a'); put(Gr, 133, 17, 'r');
   // ③ the long seam with a lamb on the far side and jaws over it
   put(Gr, 140, 17, '4'); pit(Gr, 141, 154); put(Gr, 145, 12, 'n'); put(Gr, 151, 12, 'N'); put(Gr, 147, 14, 'R');
@@ -285,8 +285,8 @@ const pocketRows = (() => {
   fillG(Gr, 91, 7, 98, 7, 'H'); put(Gr, 92, 5, '8'); put(Gr, 96, 6, 'i'); put(Gr, 95, 3, 'o.o');
   fillG(Gr, 99, 7, 100, 20, 'H');
   ground(Gr, 101, 150, 21); put(Gr, 104, 20, 'c'); put(Gr, 112, 20, 'r'); put(Gr, 110, 16, '?');
-  // the drying room's pocket: gold lining, by the hanky
-  put(Gr, 122, 19, '9'); put(Gr, 120, 17, 'u'); put(Gr, 130, 20, 'a');
+  // the drying room's pocket: gold lining, by the hanky, hung over the path: up off the crate and drop in
+  put(Gr, 122, 16, '9'); fillG(Gr, 118, 18, 118, 20, 'H'); put(Gr, 126, 14, 'u'); put(Gr, 130, 20, 'a');
   // ③ the shared stripe: two mint pockets; beyond the wall a basin, and the scalloped one's shelf by the third wall's top
   put(Gr, 136, 20, 'K'); put(Gr, 138, 20, 't'); put(Gr, 141, 22, 'M'); put(Gr, 144, 20, 'x'); put(Gr, 146, 22, 'X'); put(Gr, 149, 20, 'V'); fillG(Gr, 151, 3, 154, 20, 'H');
   ground(Gr, 155, 170, 21); fillG(Gr, 155, 10, 162, 10, 'H'); put(Gr, 156, 8, 'Y'); put(Gr, 160, 9, 'm'); put(Gr, 161, 6, 'R');
