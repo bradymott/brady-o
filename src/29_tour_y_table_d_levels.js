@@ -278,8 +278,72 @@ const L4 = { n: 4, name: 'Soup Without the Spoon', mapLabel: 'Soup', arch: 'crou
     { id: 'scope', gen: 'room', role: 'secret', theme: 'table_room_scope', stamp: 'tabScope', room: 'tabScope', tabScope: { exit: 'bowls@b54Out' } }
   ] };
 
+/* ---------------- 36-5 After You (Madame Manners) ----------------
+   The lead-in: four places along the dessert end of the table, a tall napkin ring between each. At each place the
+   hostess (Madame Manners at her own end, smaller) offers Brady the last bite: stand on the bread plate's mark and tap
+   THROW while she offers, and the plate slides to her; she accepts and the ring lifts. At dessert (the fourth place)
+   she offers twice, and only the second offer lets go. The door at the end is the booth. Past it the table runs on a
+   little way: steam rises from a gap in the cloth, down to the pantry under the table (PULL TO ENTER), whose door
+   brings Brady back up beside the booth's door: every finale room can be entered before the boss. */
+const course = (() => {
+  const G = mk(124, 22), F = 14;
+  G.ground(0, 123, F); G.put(2, 13, '@'); G.put(4, 13, 'n'); G.put(6, 10, '?');
+  G.put(10, 13, '1'); G.coins(20, 25, 11); G.put(24, 13, 'k'); G.put(27, 13, 'c');
+  G.put(31, 13, '2'); G.put(31, 9, '*'); G.put(42, 10, '?'); G.put(45, 13, 'f');
+  G.put(50, 13, '3'); G.put(61, 13, 'm'); G.put(64, 9, 'R'); G.put(66, 13, 'c');
+  G.put(70, 13, '4'); G.put(84, 13, 'w'); G.put(88, 13, 'j');
+  G.put(90, 13, 'A'); G.put(92, 13, 'D'); G.put(96, 13, 'u'); G.put(100, 13, 'x');
+  // past the booth's door: a gap in the cloth with steam rising out of it; the pantry corridor under the table
+  G.fill(96, 15, 112, 19, '.'); G.fill(104, 14, 105, 14, '.'); G.put(103, 13, 'e'); G.put(99, 19, 'E'); G.put(108, 18, 'P');
+  G.fill(123, 0, 123, 21, 'H');
+  return G.rows();
+})();
+const PLACE = (id, more) => ['piece', 'table.place', Object.assign({ id, hx: 8, gx: 4, gh: 5 }, more || {})];
+stamps.tabCourse = {
+  floor: 14, rows: course, items: ['power', 'power'], gold: { '*': 'must', P: 'hidden', R: 'risky' }, doors: [{ to: 'booth@in', look: 'tabDoor' }],
+  legend: Object.assign({}, COMMON, {
+    n: SIGN('AFTER YOU! WHEN THE HOSTESS OFFERS THE LAST BITE, STAND ON THE BREAD PLATE AND TAP THROW TO PASS IT TO HER'),
+    '1': PLACE('p1', { phase: 0 }), '2': PLACE('p2', { phase: 0.4 }), '3': PLACE('p3', { phase: 0.8 }), '4': PLACE('p4', { feint: true, phase: 0.2 }),
+    E: ['spawn', 'portal', { kind: 'door', look: 'tabHatch', targetRef: 'pantry@in' }],
+    e: ['piece', 'table.steam', {}], A: ['anchor', 'b55Back'],
+    f: ['enemy', 'tabPepper'], k: ['enemy', 'tabCrumb'], m: ['enemy', 'tabButter'], r: ['enemy', 'tabRest']
+  })
+};
+stamps.tabPantry = roomStamp('courses@b55Back', ['oneup']);
+const L5 = { n: 5, name: 'After You', mapLabel: 'After You', arch: 'lair', theme: 'table_dessert', boss: 'table_manners',
+  gimmick: 'The hostess offers Brady the last bite: pass the bread plate back to her (THROW on its mark) and she lets him on to the next place. Then the booth, and Madame Manners',
+  hint: 'Tap THROW on the bread plate\'s mark while she offers. At dessert only her second offer lets go. In the booth every courtesy is THROW from a saucer: the bread, from her open side, and the olive when her tines spread',
+  postcard: 'BRADY. The fork finally ate. We have the booth. You have the bill. Best dinner of my life. ♥ C',
+  enemies: [['tabCrumb', 1], ['tabPepper', 1], ['tabButter', 1]],
+  mapCell: [4, 1], mapFrom: 3,
+  exits: { main: {} },
+  areas: [
+    { id: 'courses', gen: 'room', theme: 'table_dessert', stamp: 'tabCourse', bottomKill: true },
+    { id: 'pantry', gen: 'room', role: 'secret', theme: 'table_room_pantry', stamp: 'tabPantry', room: 'tabPull' },
+    { id: 'booth', gen: 'arena', role: 'arena', layout: 'booth', arenaW: 26, H: 18, roof: false, theme: 'table_booth' }
+  ] };
 
-Tour.amend('table', { stamps, levels: [L1, L2, L3, L4] });
+
+Tour.amend('table', { stamps, levels: [L1, L2, L3, L4, L5] });
 Object.assign(TourLandscape.ARCH_LABEL, { china: 'CHINA', napkin: 'NAPKIN', cloth: 'CLOTH', crouton: 'CROUTON' });
 Tour.tableLevels = { mk, stamps, roomStamp, SIGN, COMMON };
+
+/* ---------------- the land's map: a candlelit table for two, its cloth, its places ---------------- */
+// the way in (the strip) at the left end of the table; the good china, the napkins, the long service, the soup
+// bowls; the booth at the far end (the port)
+if (typeof TOUR_OW_MAPS !== 'undefined') TOUR_OW_MAPS.table = {
+  labels: { '36-1': 'Good China', '36-2': 'Napkin Bird', '36-3': 'Tablecloth', '36-4': 'Soup', '36-5': 'After You' },
+  w: 1520, h: 760,
+  pal: { sea: '#2a1420', deep: '#14060c', land: '#fbf3e4', light: '#ffffff', path: '#f2c23a', beach: '#f2e2c4', cliff: '#b82a26', roof: '#e0403a', wall: '#ffffff' },
+  sea: 'stars', coast: 'tabCloth', tufts: 'none', trail: 'sparkle', bridge: 'steps', meadow: false, woods: false, foam: false, birds: false,
+  land: [[[160, 300], [240, 170], [520, 120], [900, 110], [1200, 140], [1380, 240], [1400, 420], [1320, 580], [1060, 640], [700, 650], [380, 620], [190, 500]]],
+  nodes: { start: [260, 420, 's'], '36-1': [420, 300, 'n'], '36-2': [700, 220, 'n'], '36-3': [980, 260, 'n'], '36-4': [1100, 470, 's'], '36-5': [780, 520, 's'], port: [560, 540] },
+  paths: { 'start>36-1': [[320, 380]], '36-1>36-2': [[560, 250]], '36-2>36-3': [[840, 220]], '36-3>36-4': [[1080, 360]], '36-4>36-5': [[940, 520]], '36-5>port': [[660, 540]] },
+  feat: [
+    ['sprite', 'tabCandleSprite', 1240, 300, 30], ['sprite', 'tabGlassSprite', 330, 220, 36], ['sprite', 'tabSugarSprite', 860, 580, 24],
+    ['sprite', 'tabBowlSprite', 1220, 560, 40], ['sprite', 'tabForkSprite', 600, 380, 26]
+  ],
+  flora: ['rock'], density: 0,
+  live: [['blink', 1240, 260, '#ffd890'], ['blink', 780, 480, '#ff8a9a']]
+};
 })();
