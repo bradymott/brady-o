@@ -438,7 +438,7 @@ class TabGate extends ENTITY_TYPES.lock {
   constructor(g, s) { super(g, s); this.rise = 0; }
   update(dt) {
     this.t += dt; if (this.msgT > 0) this.msgT -= dt;
-    if (!this.open && this.g.keys && this.g.keys.has(this.id)) { this.open = true; for (const [x, y] of this.tiles) this.g.setTile(x, y, T.EMPTY); Sound.play('door', { vol: 0.6 }); this.g.burst(this.cx, this.cy, 16, '#ffd84a', 'confetti'); }
+    if (!this.open && this.g.tabPlaces && this.g.tabPlaces[this.id]) { this.open = true; for (const [x, y] of this.tiles) this.g.setTile(x, y, T.EMPTY); Sound.play('door', { vol: 0.6 }); this.g.burst(this.cx, this.cy, 16, '#ffd84a', 'confetti'); }
     if (this.open) this.rise = Math.min(1, this.rise + dt * 1.5);
   }
   touchPlayer() { if (this.open) return; if (this.msgT <= 0) { this.msgT = 2.5; TK.say(this.g, this.cx, this.y - 10, 'AFTER YOU... NO, AFTER YOU', '#ffd84a'); Sound.play('bump', { vol: 0.4 }); } }
@@ -495,7 +495,7 @@ class TabHostess extends Ent {
       // the feint: her tines never opened; she keeps hold and the pair starts again
       this.go('snatch'); TourKit.sfx('clink', 'bump', { vol: 0.5, pitch: 1.6 }); if (p) TK.say(g, p.cx, p.y - 14, 'SHE DIDN\'T LET GO! WAIT FOR HER SECOND OFFER', '#ff9a9a'); return;
     }
-    this.done = true; this.happy = 2; plate.sliding = true; plate.done = true; g.keys.add(this.id);
+    this.done = true; this.happy = 2; plate.sliding = true; plate.done = true; (g.tabPlaces || (g.tabPlaces = {}))[this.id] = true;   // (not a key: the HUD would show it)
     TourKit.sfx('clink', 'pick', { vol: 0.6, pitch: 1.3 }); TK.say(g, this.cx, this.y - 16, 'HOW KIND!', '#ffd84a');
   }
   touchPlayer() {}

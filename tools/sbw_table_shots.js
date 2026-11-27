@@ -628,7 +628,7 @@ LEVELS.course = async (page, shot, run, pano) => {
           for (let k = 0; k < 900 && !(H[i].st === 'offer' && H[i].real); k++) sim(1 / 120);
         } else for (let k = 0; k < 900 && H[i].st !== 'offer'; k++) sim(1 / 120);
         sim(0.3); sim(1 / 120, { action: true, actionPressed: true }); sim(1.0);
-        out.push({ i, done: H[i].done, open: S().keys.has(H[i].id), feinted });
+        out.push({ i, done: H[i].done, open: !!(S().tabPlaces || {})[H[i].id], feinted });
         if (i < 3 && !AP.go([marks[i] + 6, 14]).ok) return { stuck: i, out, early };
       }
       return { early, out };
@@ -637,7 +637,7 @@ LEVELS.course = async (page, shot, run, pano) => {
     check('36-5: played: at each place the bread plate goes to the hostess on her offer, and the ring lifts', a.out && a.out.length === 4 && a.out.every(o => o.done && o.open), a);
     check('36-5: played: at dessert her first offer is for show (she keeps hold); the second lets go', a.out && a.out[3] && a.out[3].feinted === true, a.out && a.out[3]);
     await page.evaluate(() => { play('36-5'); place(66, 13); sim(0.2); const H = ents('tabHostess').sort((x, y) => x.x - y.x)[3]; for (let k = 0; k < 900 && H.st !== 'offer'; k++) sim(1 / 120); sim(0.3); freeze(); }); await shot('51-36-5-the-hostess-offers.png');
-    const b = await page.evaluate(() => { thaw(); play('36-5'); place(86, 13); sim(0.3); for (const id of ['p1', 'p2', 'p3', 'p4']) S().keys.add('tab:place:' + id); sim(0.5); const r = AP.go([92, 14]); const aid = TB.door(); return { r: r.ok, aid }; });
+    const b = await page.evaluate(() => { thaw(); play('36-5'); place(86, 13); sim(0.3); for (const id of ['p1', 'p2', 'p3', 'p4']) (S().tabPlaces || (S().tabPlaces = {}))['tab:place:' + id] = true; sim(0.5); const r = AP.go([92, 14]); const aid = TB.door(); return { r: r.ok, aid }; });
     check('36-5: the door at the end of the table is the booth (the arena)', b.aid === 'booth', b);
     await page.evaluate(() => { sim(2.5); freeze(); }); await shot('52-36-5-the-booth.png');
     await page.evaluate(() => { thaw(); play('36-5'); sim(0.3); }); await pano('59-36-5-panorama.png', 0.35);

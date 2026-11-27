@@ -614,8 +614,8 @@ TourOWLands.coast.tabCloth = function (c, ow, ring) {
 TourOWScenes.groundPaint.table = function (c, ow) {
   const R = TourOWPaint.rng('tableground'), ink = TourOWPaint.INK, A = TourOWPaint.art;
   c.lineJoin = 'round'; c.lineCap = 'round';
-  for (const [x, y, r] of [[420, 520, 46], [1020, 520, 50], [760, 300, 40]]) { c.save(); c.translate(x, y); c.strokeStyle = ink; c.lineWidth = 1.6; A.tabPlateSprite.call(TourOWPaint, c, r); c.restore(); }
-  c.fillStyle = 'rgba(255,255,255,0.25)'; for (let k = 0; k < 30; k++) { c.beginPath(); c.arc(240 + R() * 1000, 200 + R() * 460, 2 + R() * 3, 0, TAU); c.fill(); }
+  for (const [x, y, r] of [[900, 420, 46], [330, 270, 34], [1240, 250, 36]]) { c.save(); c.translate(x, y); c.strokeStyle = ink; c.lineWidth = 1.6; A.tabPlateSprite.call(TourOWPaint, c, r); c.restore(); }
+  c.fillStyle = 'rgba(255,255,255,0.25)'; for (let k = 0; k < 30; k++) { c.beginPath(); c.arc(640 + R() * 520, 380 + R() * 280, 2 + R() * 3, 0, TAU); c.fill(); }
 };
 TourLandscape.looks.table = ['#2a1420', '#14060c', RED, IVORY, '#ffffff', GOLD, 'tabTable'];
 {
