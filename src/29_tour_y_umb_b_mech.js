@@ -284,7 +284,7 @@ class UmbPanel extends Ent {
     this.dent = true; this.popT = 0; this.lastVy = 0; this.cool = 0; this.walled = !s.group;
   }
   update(dt) {
-    this.t += dt; if (this.popT > 0) this.popT -= dt; if (this.cool > 0) this.cool -= dt;
+    this.t += dt; if (this.popT > 0) this.popT -= dt; if (this.starT > 0) this.starT -= dt; if (this.cool > 0) this.cool -= dt;
     const g = this.g, p = g.player;
     if (this.walled && this.dent && UK.keys(g).has(this.id)) this.pop(true);
     if (p && !p.dead) {
@@ -295,13 +295,13 @@ class UmbPanel extends Ent {
     }
   }
   pop(quiet) {
-    const g = this.g; this.dent = false; this.popT = 0.4;
+    const g = this.g; this.dent = false; this.popT = 0.4; this.starT = 0.6;
     if (!quiet) { TourKit.sfx('pop', 'kick', { vol: 0.5, pitch: 1.5 }); g.burst(this.cx, this.y + TS, 10, UA.GOLD, 'confetti'); UK.say(g, this.cx, this.y - 20, 'POP!', '#ffffff'); }
     if (this.walled) { UK.keys(g).add(this.id); for (let y = this.py + 1; y < this.fy; y++) g.setTile(this.cur, y, T.EMPTY); }
     // in a row of three: this one pops its left neighbour back in
     if (this.group) {
       const L = g.entities.filter(e => e instanceof UmbPanel && e.group === this.group), nb = L.find(e => e.gi === this.gi - 1);
-      if (nb && !nb.dent) { nb.dent = true; nb.popT = 0.4; UK.say(g, nb.cx, nb.y - 20, 'BOINK! IT POPPED BACK IN', UA.CHALK); }
+      if (nb && !nb.dent) { nb.dent = true; nb.popT = 0.4; nb.starT = 0.6; UK.say(g, nb.cx, nb.y - 20, 'BOINK! IT POPPED BACK IN', UA.CHALK); }
       if (L.every(e => !e.dent)) { UK.keys(g).add('umb:' + this.group); UK.say(g, this.cx, this.y - 44, 'ALL THREE OUT! THE SHUTTER\'S UP', UA.GOLD_L); }
     }
   }
@@ -311,27 +311,27 @@ class UmbPanel extends Ent {
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
     // the panel: a marigold canopy wedge under the ceiling; a dent sags down in its middle (rain pours through it);
     // popped, it bulges up and the rain runs off its sides
-    const sag = this.dent ? 14 : -6, k = this.popT > 0 ? Math.sin(this.popT * 30) * 4 : 0;
-    ctx.fillStyle = UA.GOLD; ctx.beginPath(); ctx.moveTo(x, y + 4); ctx.quadraticCurveTo(x + w / 2, y + 4 + sag + k, x + w, y + 4); ctx.lineTo(x + w, y + TS); ctx.quadraticCurveTo(x + w / 2, y + TS + sag + k, x, y + TS); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // the panel: a marigold canopy wedge under the ceiling. DENTED: it sags deep below the row, dark and wet, the rain
+    // pouring through its low point. POPPED: domed up, bright, the rain running off its sides
+    const sag = this.dent ? 30 : -10, k = this.popT > 0 ? Math.sin(this.popT * 30) * 4 : 0;
+    ctx.fillStyle = this.dent ? '#b8801c' : UA.GOLD_L; ctx.beginPath(); ctx.moveTo(x, y + 4); ctx.quadraticCurveTo(x + w / 2, y + 4 + sag + k, x + w, y + 4); ctx.lineTo(x + w, y + TS); ctx.quadraticCurveTo(x + w / 2, y + TS + sag + k, x, y + TS); ctx.closePath(); ctx.fill(); ctx.lineWidth = 2.6; ctx.stroke();
+    if (this.dent) { ctx.fillStyle = 'rgba(31,42,86,0.4)'; ctx.beginPath(); ctx.moveTo(x + w * 0.2, y + TS + sag * 0.6); ctx.quadraticCurveTo(x + w / 2, y + TS + sag + k + 2, x + w * 0.8, y + TS + sag * 0.6); ctx.quadraticCurveTo(x + w / 2, y + TS + sag * 0.75, x + w * 0.2, y + TS + sag * 0.6); ctx.fill(); }
+    else { ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.ellipse(x + w / 2, y + TS - 12, w * 0.3, 4, 0, 0, TAU); ctx.fill(); }
     ctx.strokeStyle = UA.NAVY; ctx.lineWidth = 2; for (let q = 1; q < w / TS; q++) { ctx.beginPath(); ctx.moveTo(x + q * TS, y + 4); ctx.lineTo(x + q * TS, y + TS + sag * Math.sin(q / (w / TS) * Math.PI)); ctx.stroke(); }
     if (this.dent) {
-      ctx.fillStyle = 'rgba(31,42,86,0.35)'; ctx.beginPath(); ctx.ellipse(x + w / 2, y + TS + sag - 6, w * 0.28, 6, 0, 0, TAU); ctx.fill();
-      // pulse under it: bump me
       const near = p && Math.abs(p.cx - this.cx) < w / 2 + TS && p.y > y && p.y < this.fy * TS;
       if (near) UA.ring(ctx, this.cx, y + TS + sag + 4, t, true, w * 0.32);
     } else {
-      ctx.strokeStyle = 'rgba(140,200,250,0.8)'; ctx.lineWidth = 2; for (const s of [-1, 1]) { const ex = s < 0 ? x - 2 : x + w + 2; for (let q = 0; q < 3; q++) { const yy = y + TS + ((t * 200 + q * 30) % 90); UA.dash(ctx, ex, yy, 10); } }
+      ctx.strokeStyle = 'rgba(140,200,250,0.9)'; ctx.lineWidth = 2.4; for (const s2 of [-1, 1]) { const ex = s2 < 0 ? x - 2 : x + w + 2; for (let q = 0; q < 3; q++) { const yy = y + TS + ((t * 200 + q * 30) % 90); UA.dash(ctx, ex, yy, 12); } }
     }
-    // the rain sheet through the dent (a solid wall of water while it is dented)
-    if (this.dent && this.cur != null) {
-      const cx = this.cur * TS + TS / 2, top = y + TS + sag - 4, bot = this.fy * TS;
-      ctx.fillStyle = 'rgba(120,180,240,0.55)'; ctx.fillRect(cx - 14, top, 28, bot - top);
-      ctx.strokeStyle = 'rgba(240,248,255,0.9)'; ctx.lineWidth = 2; for (let q = 0; q < 5; q++) { const xx = cx - 11 + q * 5.5; for (let yy = top + ((t * 420 + q * 37) % 40) - 40; yy < bot; yy += 40) { ctx.beginPath(); ctx.moveTo(xx, Math.max(top, yy)); ctx.lineTo(xx, Math.min(bot, yy + 22)); ctx.stroke(); } }
-      ctx.fillStyle = 'rgba(240,248,255,0.8)'; for (let q = 0; q < 4; q++) { ctx.beginPath(); ctx.arc(cx - 15 + q * 10, bot - 3 - Math.abs(Math.sin(t * 9 + q)) * 5, 3, 0, TAU); ctx.fill(); }
-    } else if (this.dent && this.group) {
-      // a group panel's rain only splashes into the gutter below (no wall)
-      const cx = this.cx, top = y + TS + sag - 4, bot = top + 2.2 * TS;
-      ctx.strokeStyle = 'rgba(140,200,250,0.85)'; ctx.lineWidth = 2; for (let q = 0; q < 4; q++) { const xx = cx - 8 + q * 5; for (let yy = top + ((t * 380 + q * 31) % 30) - 30; yy < bot; yy += 30) { ctx.beginPath(); ctx.moveTo(xx, Math.max(top, yy)); ctx.lineTo(xx, Math.min(bot, yy + 16)); ctx.stroke(); } }
+    // the little star when it changes (popped out, or boinked back in)
+    if (this.starT > 0) { const q = 1 - this.starT / 0.6, r = 10 + q * 18; ctx.save(); ctx.globalAlpha = 1 - q; ctx.fillStyle = this.dent ? '#ffffff' : UA.GOLD_L; ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr2 = i % 2 ? r * 0.45 : r; ctx.lineTo(this.cx + Math.cos(a) * rr2, y + TS + 6 + Math.sin(a) * rr2); } ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); }
+    // the rain through the dent: a solid wall of water (a lone panel), or a heavy pour into the gutter (a row panel)
+    if (this.dent) {
+      const cx = this.cur != null ? this.cur * TS + TS / 2 : this.cx, top = y + TS + sag - 4, bot = this.cur != null ? this.fy * TS : this.fy * TS - 4, wd = this.cur != null ? 14 : 9;
+      ctx.fillStyle = this.cur != null ? 'rgba(120,180,240,0.6)' : 'rgba(120,180,240,0.45)'; ctx.fillRect(cx - wd, top, wd * 2, bot - top);
+      ctx.strokeStyle = 'rgba(240,248,255,0.95)'; ctx.lineWidth = 2; for (let q = 0; q < (this.cur != null ? 5 : 3); q++) { const xx = cx - wd + 3 + q * 5.5; for (let yy = top + ((t * 420 + q * 37) % 40) - 40; yy < bot; yy += 40) { ctx.beginPath(); ctx.moveTo(xx, Math.max(top, yy)); ctx.lineTo(xx, Math.min(bot, yy + 22)); ctx.stroke(); } }
+      ctx.fillStyle = 'rgba(240,248,255,0.85)'; for (let q = 0; q < 4; q++) { ctx.beginPath(); ctx.arc(cx - wd - 1 + q * wd * 0.7, bot - 3 - Math.abs(Math.sin(t * 9 + q)) * 5, 3, 0, TAU); ctx.fill(); }
     }
     ctx.restore();
   }

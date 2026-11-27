@@ -1,9 +1,13 @@
 // The Umbrella Repair District 31-6: THE INSPECTOR OF UNLIKELY WEATHER, a big marigold umbrella. He is cloth and wire:
 // stomping only bounces. Every hit is his runner walked home along his shaft while his tip is caught in a collar:
-// 1 THE POKE: his crook curls back (the tell, 1.0 s), then a full-width poke at standing height; Brady waits in the
-//   BIG collar's glow, just past it: the tip lodges in the collar. Two catches.
-// 2 THE SCOOP: the canopy flips to bare spokes (1.0 s), then a low wide scoop; behind the MEDIUM collar it wedges.
-// 3 THE JAB: the tip points, the panels fold (1.0 s), then a narrow jab; baited into the SMALL collar.
+// Brady is the bait: in this phase's collar's glow when the attack is launched, the collar catches it, but the attack
+// still lands past the collar, so he must get clear after the 1.0 s tell:
+// 1 THE POKE: his crook curls back, then a full-width poke at standing height; the tip lodges in the BIG collar and
+//   lunges on through it: JUMP it. Two catches.
+// 2 THE SCOOP: the canopy flips to bare spokes, then a low wide scoop; it wedges in the MEDIUM collar and its water
+//   slops over: stand CLOSE behind the collar.
+// 3 THE JAB: the tip points, the panels fold, then a narrow jab baited into the SMALL collar that lunges through it:
+//   hop back.
 // Caught: hold THROW at the runner's mark and walk back two steps: the runner passes the notch. At the end a single
 // drop of rain lands on him and he reopens, flawlessly.
 // The player here is a thumb on the stick and the two buttons, through the game loop, with damage on, no retries.
@@ -23,15 +27,23 @@ module.exports = async ({ page, check, shot }) => {
   const catchOne = () => ev(() => {
     const b = boss(), p = P(), hp0 = b.hp, ph = b.phase, hurt0 = P().power; let tell = 0, sawTell = false;
     for (let n = 0; n < 120 * 20 && b.act !== 'caught' && b.hp === hp0; n++) {
-      const C = b.collars[b.phase - 1], side = p.cx < (b.arenaX0 + b.arenaX1) / 2 ? -1 : 1;
-      // the spot just past the collar, on the far side from where he hovers
-      const away = b.act === 'back' ? (C.x < (b.arenaX0 + b.arenaX1) / 2 ? -1 : 1) : b.dir, spot = C.x + away * 1.4 * 32;
+      const C = b.collars[b.phase - 1], ph2 = b.phase, att = ['poke', 'scoop', 'jab'].includes(b.act);
       if (b.act === 'tell') { sawTell = true; tell += 1 / 120; }
-      const go = Math.abs(p.cx - spot) > 6 && b.act !== 'poke' && b.act !== 'scoop' && b.act !== 'jab';
-      sim(1 / 120, go ? { right: p.cx < spot, left: p.cx > spot } : {});
+      let inp = {};
+      if (att) {
+        // read it: jump the poke and the jab as the head nears the collar (hopping back from the jab); wait out the scoop close behind the collar
+        const nearC = (C.x - b.head) * b.dir > -8 && Math.abs(b.head - C.x) < 2.4 * 32;
+        if (ph2 !== 2 && nearC) inp = { jump: true, jumpPressed: p.onGround, right: ph2 === 3 && b.dir > 0, left: ph2 === 3 && b.dir < 0 };
+        else if (!p.onGround) inp = { jump: true };
+      } else {
+        const away = b.act === 'back' ? (C.x < (b.arenaX0 + b.arenaX1) / 2 ? -1 : 1) : b.dir, spot = C.x + away * (ph2 === 2 ? 1.0 : 1.4) * 32;
+        if (Math.abs(p.cx - spot) > 6) inp = { right: p.cx < spot, left: p.cx > spot };
+      }
+      sim(1 / 120, inp);
     }
     const caught = b.act === 'caught', at = b.act;
     if (caught) {
+      for (let n = 0; n < 240 && (b.thrust && b.thrust.t < 0.55 || !p.onGround); n++) sim(1 / 120, p.onGround ? {} : { jump: true });
       const side = b.dir; for (let n = 0; n < 240 && Math.abs(p.cx - b.markX) > 6; n++) sim(1 / 120, { right: p.cx < b.markX, left: p.cx > b.markX });
       sim(1 / 120, { action: true, actionPressed: true });
       for (let n = 0; n < 240 && b.hp === hp0; n++) sim(1 / 120, { action: true, right: side > 0, left: side < 0 });

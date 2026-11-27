@@ -160,8 +160,8 @@ const hookRows = (() => {
   ground(Gr, 104, 150, 21); put(Gr, 110, 20, 'l');
   // the side hook: up the steps onto the pillar, a chain across to the high ledge (B28's door); under it the street
   fillG(Gr, 116, 19, 117, 20, 'B'); fillG(Gr, 118, 16, 120, 20, 'H'); put(Gr, 120, 15, '4'); put(Gr, 119, 14, 'u');
-  // a beam over the chain's gap: no jumping across, only walking the chain
-  fillG(Gr, 121, 13, 126, 13, 'H'); fillG(Gr, 127, 16, 133, 16, 'H'); put(Gr, 130, 15, 'A'); put(Gr, 131, 14, 'o.o');
+  // a tall hoarding over the chain's gap (down to just above the chain): no jumping across or over, only walking the chain
+  fillG(Gr, 122, 3, 126, 13, 'H'); fillG(Gr, 127, 16, 133, 16, 'H'); put(Gr, 130, 15, 'A'); put(Gr, 131, 14, 'o.o');
   put(Gr, 136, 20, 'c'); put(Gr, 140, 17, '?'); put(Gr, 145, 20, 'a'); put(Gr, 142, 15, 'f');
   // a long gap, the risky postcard over it
   put(Gr, 150, 20, '5'); put(Gr, 152, 16, 'R');
@@ -305,7 +305,7 @@ stamps.umbWarranty = { floor: 16, rows: warRows, legend: WAR, gold: { '*': 'must
 stamps.umbShower = roomStamp('corridor@showerOut', 'umbHatch', ['star']);
 const L6 = { n: 6, name: 'Lifetime Warranty', mapLabel: 'Lifetime Warranty', arch: 'lair', theme: 'umb_hall', boss: 'umb_inspector',
   gimmick: 'The Inspector of Unlikely Weather will not be mended. Catch his tip in a repair collar, then hold THROW on his runner and walk it home: the poke, the scoop, the jab',
-  hint: 'You can\'t stomp an umbrella. Stand in the glowing collar\'s ring and jump his attack: the tip lodges. Then hold THROW at the runner\'s mark and walk back, away from him',
+  hint: 'You can\'t stomp an umbrella. Be in the glowing collar\'s ring when he strikes: the collar catches him, but jump the poke, stand close behind the collar for the scoop, hop back from the jab. Then hold THROW at the runner and walk back',
   postcard: 'Brady! You mended the inspector. He says it was most unlikely. It rained on him once and he looked marvellous. ♥ C',
   enemies: [['umbTick', 1], ['umbMule', 1]],
   mapCell: [5, 0], mapFrom: 4,

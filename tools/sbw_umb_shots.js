@@ -248,6 +248,20 @@ STAGES.hooks = async ({ ev, shot, run, pano }) => {
       sim(5.5, { action: true }); sim(0.2); return { n1, need: h.need, rigid: h.rigid };
     });
     check('31-3: on the corner hook the sister rides round the far pulley before nesting (a longer hold), then it\'s rigid', r.n1 === 1 && r.rigid, r);
+    r = await ev(() => {
+      const h = ents('UmbHook').find(e => e.tx === 120), p = P(); place(117, 18); sim(0.2);
+      // up the crate and onto the pillar with the stick and JUMP, to the hook's mark
+      for (let k = 0; k < 6 && Math.floor((p.y + p.h - 1) / 32) > 15; k++) { sim(0.08, { right: true }); sim(0.45, { right: true, jump: true, jumpPressed: true }); sim(0.3); }
+      for (let k = 0; k < 300 && Math.abs(p.cx - (120 * 32 + 16)) > 5; k++) sim(1 / 60, { right: p.cx < 120 * 32 + 16, left: p.cx > 120 * 32 + 16 });
+      const onPillar = Math.floor((p.y + p.h - 1) / 32) === 15;
+      sim(1 / 120, { action: true, actionPressed: true }); sim(3.0, { action: true }); sim(0.2); const rigid = h.rigid;
+      for (let k = 0; k < 600 && p.cx < 130 * 32 + 16; k++) sim(1 / 120, { right: true }); sim(0.3);
+      const ledge = Math.floor((p.y + p.h - 1) / 32) === 15 && p.cx > 127 * 32;
+      sim(0.1, { up: true, upPressed: true }); for (let k = 0; k < 600 && (S().fade.a > 0.05 || p.state !== 'play'); k++) sim(1 / 120); sim(0.5);
+      return { onPillar, rigid, ledge, area: S().area.aid };
+    });
+    check('31-3: the side hook on the pillar builds a chain under the hoarding to the high ledge, and its door leads to room B28', r.onPillar && r.rigid && r.ledge && r.area === 'tray', r);
+    await ev(() => { play('31-3'); });
     await ev(() => { const h = ents('UmbHook').find(e => e.corner); h.rigid = false; h.n = 0; h.hold = false; place(h.tx, 20); sim(0.1); sim(1 / 120, { action: true, actionPressed: true }); sim(2.0, { action: true }); freeze(); }); await shot('32-31-3-corner-sister.png');
     await ev(() => { thaw(); place(119, 14); sim(0.2); freeze(); }); await shot('33-31-3-side-hook-ticket.png');
     await ev(() => { thaw(); play('31-3'); }); await pano('pano-31-3.png', 0.3);
@@ -320,6 +334,10 @@ STAGES.boss = async ({ ev, shot, run }) => {
     const r = await ev(() => { thaw(); const b = S().entities.find(e => e.boss && !e.remove); for (let n = 0; n < 120 * 12 && !(b.act === 'tell' && b.at > 0.55); n++) sim(1 / 120); return { act: b.act }; });
     await ev(() => freeze()); await shot('81-31-6-boss-tell.png');
     check('31-6: the Inspector shows his tell before he pokes', r.act === 'tell', r);
+    const r2 = await ev(() => { thaw(); const b = S().entities.find(e => e.boss && !e.remove), p = P(); p.invuln = 0; p.setPower(1, true); const pw = p.power; let hurt = false; const h0 = p.hurt; p.hurt = function () { hurt = true; return h0.apply(this, arguments); };
+      const C = b.collars[0]; for (let n = 0; n < 120 * 4 && b.act !== 'caught'; n++) sim(1 / 120, Math.abs(p.cx - (C.x + b.dir * 1.4 * 32)) > 6 && b.act === 'tell' ? { right: p.cx < C.x + b.dir * 44, left: p.cx > C.x + b.dir * 44 } : {});
+      sim(0.5); p.hurt = h0; p.invuln = 999; return { caught: b.act === 'caught', hurt }; });
+    check('31-6: the bait carries a risk: standing still in the glow, the caught poke still lunges through the collar and hurts', r2.caught && r2.hurt, r2);
     await ev(() => thaw());
   });
 };
@@ -487,12 +505,21 @@ const BOT_UMB = () => {
     for (let guard = 0; guard < 120 * 180; guard++) {
       const b = boss(); if (!b || b.state === 'dying') return T.wait(3) && true;
       if (!b.collars) { if (!T.f()) return false; continue; }
-      const q = p(), C = b.collars[(b.phase || 1) - 1];
+      const q = p(), ph = b.phase || 1, C = b.collars[ph - 1], att = ['poke', 'scoop', 'jab'].includes(b.act);
       let inp = {};
-      if (b.act === 'caught') { const side = b.dir; inp = Math.abs(q.cx - b.markX) > 6 && !b.hold ? { right: q.cx < b.markX, left: q.cx > b.markX } : { action: true, actionPressed: !b.hold, right: side > 0, left: side < 0 }; }
-      else if (b.act !== 'drop') {
-        const away = b.act === 'back' ? (C.x < (b.arenaX0 + b.arenaX1) / 2 ? -1 : 1) : b.dir, spot = C.x + away * 1.4 * 32;
-        if (Math.abs(q.cx - spot) > 6 && !['poke', 'scoop', 'jab'].includes(b.act)) inp = { right: q.cx < spot, left: q.cx > spot };
+      if (b.act === 'caught') {
+        const busy = b.thrust && b.thrust.t < 0.55, side = b.dir;
+        if (busy) inp = q.onGround ? {} : { jump: true };
+        else inp = Math.abs(q.cx - b.markX) > 6 && !b.hold ? { right: q.cx < b.markX, left: q.cx > b.markX } : { action: true, actionPressed: !b.hold, right: side > 0, left: side < 0 };
+      } else if (att) {
+        // read the attack: jump the poke and the jab as the head nears the collar (and hop back from the jab); the
+        // scoop is waited out close behind the collar
+        const near = (C.x - b.head) * b.dir > -8 && Math.abs(b.head - C.x) < 2.4 * 32;
+        if (ph !== 2 && near) inp = { jump: true, jumpPressed: q.onGround, right: ph === 3 && b.dir > 0, left: ph === 3 && b.dir < 0 };
+        else if (!q.onGround) inp = { jump: true };
+      } else if (b.act !== 'drop') {
+        const away = b.act === 'back' ? (C.x < (b.arenaX0 + b.arenaX1) / 2 ? -1 : 1) : b.dir, spot = C.x + away * (ph === 2 ? 1.0 : 1.4) * 32;
+        if (Math.abs(q.cx - spot) > 6) inp = { right: q.cx < spot, left: q.cx > spot };
       }
       if (!T.f(inp)) return false;
     }

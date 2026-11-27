@@ -7,13 +7,14 @@
    inside out. Three repair collars stand on the hall floor: BIG (left), MEDIUM (middle), SMALL (right). He is cloth
    and wire: stomping only bounces. Every hit is his runner walked home along his shaft while his tip is caught in a
    collar, by the land's own trick:
-     1 THE POKE       his crook curls back (1.0 s tell), then he pokes tip-first the whole width of the hall at
-                      standing height. Jump it near the BIG collar (within its glow): the tip lodges in the collar.
-     2 THE SCOOP      his canopy flips inside out to show its bare spokes (1.0 s tell), then he scoops low along the
-                      floor. Be in the MEDIUM collar's glow when the scoop reaches it (jump it if it's coming at you):
-                      the bowl wedges in the collar.
-     3 THE JAB        his tip points at Brady and every panel folds shut (1.0 s tell), then a quick narrow jab at
-                      standing height. Bait it into the SMALL collar: be in its (smaller) glow and jump the jab.
+   Brady is the bait: if he is in this phase's collar's glow when the attack is LAUNCHED (the end of the 1.0 s tell),
+   the collar catches it. But the attack still lands past the collar, so he must get clear:
+     1 THE POKE       his crook curls back, then a full-width poke at standing height into the BIG collar; the tip lunges
+                      on through the ring: JUMP it.
+     2 THE SCOOP      his canopy flips to bare spokes, then a low wide scoop into the MEDIUM collar; the bowl can't pass
+                      it but its water slops over a step or two behind: stand CLOSE behind the collar.
+     3 THE JAB        the tip points and every panel folds, then a quick narrow jab into the SMALL collar that lunges
+                      through it: HOP BACK (or jump).
    Once he's caught: the runner's mark pulses by the collar on Brady's side: hold THROW there and walk back, away from
    him, two steps: the runner passes the notch (a hit). He pulls free after 8 s if left alone (no harm done). Two
    catches a phase. At the end a single drop of rain lands on him, and he reopens, flawlessly.
@@ -59,6 +60,13 @@ const brain = {
     if (b.act === 'jab') return { x: hx - 10, y: fy - 1.05 * TS, w: 20, h: 14 };
     return { x: hx - 14, y: fy - 1.1 * TS, w: 28, h: 20 };
   },
+  // the part of a caught attack that lands past the collar, at time th.t after the catch (null when there is none)
+  thrustBox(b, C, th) {
+    const fy = b.floorY, d = b.dir, seg = (a, z, y, h) => { const x0 = C.x + d * a * TS, x1 = C.x + d * z * TS; return { x: Math.min(x0, x1), y, w: Math.abs(x1 - x0), h }; };
+    if (th.kind === 'poke') return th.t < 0.4 ? seg(0, 2.2 * Math.min(1, th.t / 0.1), fy - 1.15 * TS, 0.55 * TS) : null;
+    if (th.kind === 'jab') return th.t < 0.3 ? seg(0, 2.0 * Math.min(1, th.t / 0.08), fy - 1.05 * TS, 14) : null;
+    return th.t > 0.15 && th.t < 0.5 ? seg(1.7, 3.2, fy - 0.7 * TS, 0.7 * TS) : null;
+  },
   update(b, dt) {
     const g = b.g, p = g.player, ph = b.phase || 1, fy = b.floorY;
     b.guard = 'bounce';
@@ -76,24 +84,31 @@ const brain = {
       if (b.first) { b.dir = p && p.cx < b.cx ? -1 : 1; say(g, b, ph === 1 ? pick(NAMES) : ph === 2 ? 'SPOKES OUT!' : 'POINT... AND...', '#ffffff'); TourKit.sfx('creak', 'select', { vol: 0.4, pitch: 0.5 + ph * 0.1 }); }
       const ty = fy - (ph === 2 ? 1.6 : 1.9) * TS - b.h / 2;
       b.y = approach(b.y, ty, 5 * TS * dt); b.rot = approach(b.rot || 0, b.dir * Math.PI / 2, dt * 3);
-      if (b.at >= 1.0) { b.go(ph === 1 ? 'poke' : ph === 2 ? 'scoop' : 'jab'); b.head = b.cx + b.dir * b.w * 0.55; TourKit.sfx('swish', 'kick', { vol: 0.5, pitch: 1.2 }); }
+      // the launch: the collar will catch him only if Brady is in its glow right now (the bait)
+      if (b.at >= 1.0) { const C0 = this.collar(b); b.launchIn = !!(p && !p.dead && Math.abs(p.cx - C0.x) < C0.glow * TS); b.go(ph === 1 ? 'poke' : ph === 2 ? 'scoop' : 'jab'); b.head = b.cx + b.dir * b.w * 0.55; TourKit.sfx('swish', 'kick', { vol: 0.5, pitch: 1.2 }); }
     } else if (b.act === 'poke' || b.act === 'scoop' || b.act === 'jab') {
       const sp = (b.act === 'jab' ? 13 : b.act === 'scoop' ? 8 : 11) * TS;
       b.x += b.dir * sp * dt; b.head = b.cx + b.dir * b.w * 0.55;
       const box = this.box(b), C = this.collar(b);
-      // into the collar: lodged when Brady is within its glow as the head reaches it
-      if ((b.head - C.x) * b.dir >= 0 && (b.head - b.dir * sp * dt - C.x) * b.dir < 0 && p && Math.abs(p.cx - C.x) < C.glow * TS) {
+      // into the collar: lodged when Brady was in its glow at the launch. The scoop can't pass a collar that will
+      // catch it (behind the collar is safe from the bowl itself)
+      if (b.act === 'scoop' && b.launchIn) { if (b.dir > 0) box.w = Math.max(0, Math.min(box.x + box.w, C.x) - box.x); else { const r = box.x + box.w; box.x = Math.max(box.x, C.x); box.w = Math.max(0, r - box.x); } }
+      if ((b.head - C.x) * b.dir >= 0 && (b.head - b.dir * sp * dt - C.x) * b.dir < 0 && b.launchIn) {
         b.go('caught'); b.x = C.x - b.dir * b.w * 0.55 - b.w / 2; b.head = C.x; b.runner = 0; b.hold = false;
+        // ...but the attack still lands past the collar: the poke's tip and the jab lunge on through the ring (jump them,
+        // or hop back), the scoop's water slops over it (stand close behind the collar)
+        b.thrust = { t: 0, kind: ph === 1 ? 'poke' : ph === 2 ? 'scoop' : 'jab', hit: false };
         g.shake(5); TourKit.sfx('clang', 'bump', { vol: 0.6, pitch: 0.8 }); g.burst(C.x, fy - 1.2 * TS, 14, UA.GOLD, 'confetti');
         say(g, b, pick(['STUCK! THIS IS MOST UNLIKELY!', 'A COLLAR? FOR ME?', 'I AM NOT IN NEED OF REPAIR!']), UA.GOLD_L);
         return;
       }
-      if (p && !p.dead && overlap(p, box)) p.hurt({ x: box.x, w: box.w });
+      if (p && !p.dead && box.w > 0 && overlap(p, box)) p.hurt({ x: box.x, w: box.w });
       if (b.dir > 0 ? b.head >= b.arenaX1 - 6 : b.head <= b.arenaX0 + 6) { b.x = clamp(b.x, b.arenaX0, b.arenaX1 - b.w); b.go('back'); }
     } else if (b.act === 'caught') {
       // the runner: hold THROW at the mark on Brady's side of the collar and walk back, away from him
       const C = this.collar(b), side = b.dir, mx = C.x + side * RUN.mark * TS, I = (p && p.inp) || {};
       b.markX = mx;
+      const th = b.thrust; if (th && th.t < 0.6) { th.t += dt; const tb = this.thrustBox(b, C, th); if (tb && p && !p.dead && !th.hit && overlap(p, tb)) { th.hit = true; p.hurt({ x: tb.x, w: tb.w }); } }
       if (p && !p.dead) {
         const at = p.onGround && Math.abs(p.cx - mx) < 0.9 * TS && Math.abs(p.y + p.h - fy) < 8;
         if (!b.hold && I.action && at) { b.hold = true; b.x0p = p.cx; TourKit.sfx('grip', 'select', { vol: 0.4, pitch: 1.0 }); }
@@ -165,6 +180,14 @@ TourHooks.on('afterEntities', (play, ctx) => {
     if (b.hold && p) { ctx.strokeStyle = UA.CORAL; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(rx, sy); ctx.lineTo(p.cx, p.y + 24); ctx.stroke(); }
     // the time left before he wriggles free: a little bar on the collar
     const left = clamp(1 - b.at / 8, 0, 1); ctx.fillStyle = 'rgba(20,16,36,0.8)'; rr(ctx, C.x - 24, sy + 22, 48, 7, 3); ctx.fill(); ctx.fillStyle = left < 0.3 ? UA.CORAL : UA.GOLD_L; rr(ctx, C.x - 23, sy + 23, 46 * left, 5, 2); ctx.fill();
+  }
+  // the part of the attack that lands past the collar: the tip through the ring, or the water slopped over it
+  if (b.act === 'caught' && b.thrust) {
+    const C = brain.collar(b), tb = brain.thrustBox(b, C, b.thrust);
+    if (tb) {
+      if (b.thrust.kind === 'scoop') { ctx.fillStyle = 'rgba(120,180,240,0.75)'; ctx.strokeStyle = INK; ctx.lineWidth = 1.6; for (let q = 0; q < 5; q++) { ctx.beginPath(); ctx.arc(tb.x + (q + 0.5) * tb.w / 5, tb.y + tb.h - 6 - Math.abs(Math.sin(t * 20 + q)) * 8, 7, 0, TAU); ctx.fill(); ctx.stroke(); } }
+      else { const tipX = b.dir > 0 ? tb.x + tb.w : tb.x, yy = tb.y + tb.h / 2; ctx.strokeStyle = INK; ctx.lineWidth = b.thrust.kind === 'jab' ? 5 : 8; ctx.beginPath(); ctx.moveTo(C.x, yy); ctx.lineTo(tipX, yy); ctx.stroke(); ctx.strokeStyle = '#a0a8c0'; ctx.lineWidth = b.thrust.kind === 'jab' ? 2.5 : 4; ctx.beginPath(); ctx.moveTo(C.x, yy); ctx.lineTo(tipX, yy); ctx.stroke(); ctx.fillStyle = UA.CORAL; ctx.beginPath(); ctx.moveTo(tipX + b.dir * 12, yy); ctx.lineTo(tipX, yy - 7); ctx.lineTo(tipX, yy + 7); ctx.closePath(); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.stroke(); }
+    }
   }
   // the end: one drop falls on him
   if (b.act === 'drop') { const u = clamp((b.dropT || 0) / 1.1, 0, 1); if (u < 1) UA.drop(ctx, b.cx, lerp(b.g.camY + 40, b.y, u * u), 6); }
