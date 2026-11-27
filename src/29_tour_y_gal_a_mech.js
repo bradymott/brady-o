@@ -236,10 +236,12 @@ class GalViewer extends Ent {
     for (const [a, b, d] of [[x0, mid, -dy], [mid, x1, dy]]) {
       ctx.save(); ctx.translate(0, d);
       if (solid) { ctx.fillStyle = MUS; ctx.strokeStyle = INK; ctx.lineWidth = 2; }
-      else { ctx.fillStyle = 'rgba(154,184,232,0.22)'; ctx.strokeStyle = BLUE; ctx.lineWidth = 2.5; ctx.setLineDash([6, 5]); ctx.lineDashOffset = -this.t * 10; }
+      else { ctx.fillStyle = 'rgba(52,84,190,0.62)'; ctx.strokeStyle = INK; ctx.lineWidth = 3.5; }
       if (stair) { ctx.beginPath(); for (const r of objRects(O, 'stair')) { const cx0 = r[0] * TS; if (cx0 < a - 1 || cx0 >= b - 1) continue; ctx.rect(cx0, r[1] * TS, TS, (r[3] - r[1] + 1) * TS); } }
-      else { ctx.beginPath(); ctx.rect(a, y0, b - a, 12); }
-      ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
+      else { ctx.beginPath(); ctx.rect(a, y0, b - a, 16); }
+      ctx.fill(); ctx.stroke();
+      // the scrap's own dashed edge, bright on the dark outline: what the frame is assembling
+      if (!solid) { ctx.strokeStyle = '#e8f0ff'; ctx.lineWidth = 2; ctx.setLineDash([7, 5]); ctx.lineDashOffset = -this.t * 10; ctx.stroke(); ctx.setLineDash([]); }
       ctx.restore();
     }
     ctx.restore();

@@ -41,6 +41,8 @@ function frame(keep, A, o, opts) {
   } else g.cage(A.id, opts.cageX || 17, Y, items, { w: 3, h: opts.cageH || 4 });
   return { g };
 }
+// a small word on its own dark pill (labels inside a room's picture)
+const tag = (ctx, x, y, str, col, size) => { ctx.save(); ctx.font = (size || 10) + 'px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; const w = ctx.measureText(str).width + 12, h = (size || 10) + 8; ctx.fillStyle = 'rgba(28,20,38,0.9)'; rr(ctx, x - w / 2, y - h / 2, w, h, h / 2); ctx.fill(); ctx.fillStyle = col; ctx.fillText(str, x, y + 1); ctx.restore(); };
 const fail = (play, txt) => { TourKit.sfx('fizz', 'bump', { vol: 0.5, pitch: 0.6 }); const p = play.player; if (p) K.pill(play, p.cx, p.y - 24, txt, '#ffb0a0'); };
 const good = (play, txt) => { TourKit.sfx('chime', 'pick', { vol: 0.5, pitch: 1.2 }); const p = play.player; if (p) K.pill(play, p.cx, p.y - 24, txt, '#ffe08a'); };
 // the room's counter / prompt: one pill in a fixed spot above the room's game (never over it), after the title and rule
@@ -221,12 +223,12 @@ DRAW.queuer = (ctx, e, R) => {
   if (want < 0) { ctx.fillStyle = AUB; ctx.fillRect(-10, -26, 20, 26); ctx.strokeRect(-10, -26, 20, 26); ctx.fillStyle = '#ffe8a0'; ctx.fillRect(-6, -22, 12, 22); }
   else critter(ctx, want, 0, 6, 0, -1);
   ctx.restore();
-  if (!ok && !R.won) { ctx.fillStyle = '#ffb0a0'; ctx.font = '9px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('TUT', x + 18, y - 72 + Math.sin(t * 8) * 2); }
+  if (!ok && !R.won) tag(ctx, x + 24, y - 76 + Math.sin(t * 8) * 2, 'TUT!', '#ffb0a0', 11);
   else { ctx.fillStyle = '#7aff9a'; ctx.font = '11px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('♥', x + 17, y - 70); }
   ctx.restore();
 };
 DRAW.swap = (ctx, e, R) => { const x = e.cx, y = e.y + e.h; ctx.save(); ctx.fillStyle = MUS; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y - 3, 14, 5, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = AUB; ctx.font = '12px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('⇄', x, y - 12); const I = e.g.galIn; if (I && I.by === e && !R.won) K.hint(e, ctx, x, e.y - 34, 'THROW: SWAP'); ctx.restore(); };
-DRAW.doorway = (ctx, e) => { const x = e.cx, y = e.y + e.h; ctx.save(); ctx.fillStyle = AUB; ctx.strokeStyle = INK; ctx.lineWidth = 2; rr(ctx, x - 18, y - 78, 36, 78, 4); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#ffe8a0'; ctx.fillRect(x - 12, y - 70, 24, 70); ctx.fillStyle = MUS; ctx.font = '7px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('OPENING', x, y - 82); ctx.restore(); };
+DRAW.doorway = (ctx, e) => { const x = e.cx, y = e.y + e.h; ctx.save(); ctx.fillStyle = AUB; ctx.strokeStyle = INK; ctx.lineWidth = 2; rr(ctx, x - 18, y - 78, 36, 78, 4); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#ffe8a0'; ctx.fillRect(x - 12, y - 70, 24, 70); tag(ctx, x, y - 90, 'OPENING', '#ffe08a', 10); ctx.restore(); };
 
 /* ================= galChange: SHORT CHANGE (the paint store) ================= */
 const POT_X = [7, 11, 15], POTS = [1, 2, 4], WELLS = [6, 5];

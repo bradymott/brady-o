@@ -19,19 +19,21 @@
    ============================================================ */
 (function () {
 const K = Tour.galKit, INK = K.INK, GA = K.GalArt, AUB = K.AUB, AUB_HI = K.AUB_HI, MUS = K.MUS, MUS_HI = K.MUS_HI, MUS_LO = K.MUS_LO, BLUE = K.BLUE, WHITE = K.WHITE, CHALK = K.CHALK;
-const say = (b, t, c) => { b.line = { text: t, col: c || '#fff0d0', t: 0 }; };
+// one line at a time on the pill under the boss bar: a line said while another is fresh waits for it
+const say = (b, t, c) => { const L = { text: t, col: c || '#fff0d0', t: 0 }; if (b.line && b.line.t < 1.1 && b.line.text !== t) b.lineNext = L; else b.line = L; };
 const PAINT = '#e8b84a';
 const brain = {
   phases: [4, 2],
-  guardText: 'TOO VAIN TO NOTICE',
+  guardText: ' ',
   // the studio's furniture (pixels): the easel, the posing mark's rail, the ear spot, the chin's tip
   geo(b) {
     if (b.geoC) return b.geoC;
     const x0 = b.arenaX0, x1 = b.arenaX1;
-    return (b.geoC = { x0, x1, easel: x0 + 5 * TS, r0: x0 + 7.5 * TS, r1: x1 - 6.5 * TS, ear: x0 + 7.5 * TS, chin: x0 + 11 * TS, frameX: x1 - 3 * TS });
+    // everything Brady plays with, and the Retoucher's frame, stays well left of the phone's two buttons
+    return (b.geoC = { x0, x1, easel: x0 + 5 * TS, r0: x0 + 7.5 * TS, r1: x0 + 12 * TS, ear: x0 + 7.5 * TS, chin: x0 + 10.5 * TS, frameX: x0 + 14.6 * TS });
   },
   wake(b) {
-    const G = this.geo(b); b.phase = 1; b.markX = G.r0 + 4 * TS; b.loaded = false; b.window = 0; b.lunge = 0;
+    const G = this.geo(b); b.phase = 1; b.markX = G.r0 + 2 * TS; b.loaded = false; b.window = 0; b.lunge = 0;
     b.x = G.frameX - b.w / 2; b.y = b.floorY - b.h - 1.5 * TS;
     b.galClaim = p => Math.abs(p.cx - G.easel) < 1.3 * TS && p.onGround;
     say(b, 'MY MOUTH WAS OPEN IN EVERY ONE. I SHALL FIX THEM ALL.'); b.go('raise');
@@ -43,13 +45,14 @@ const brain = {
     b.go(n === 2 ? 'flourish' : 'chin');
   },
   hurt(b) {},
-  hit(b, kind) { return 'bounce'; },
+  hit(b, kind) { if (!(b.vainT > b.t)) { b.vainT = b.t + 1.5; say(b, 'TOO VAIN TO NOTICE YOU.', '#c8d8ff'); } return 'bounce'; },
   touch(b, p) { return true; },
   lastHit(b) { b.go('sold'); b.state = 'fight'; return true; },
-  improve(b, text) { b.damage(1, { text, col: '#ffe08a' }); b.window = 0; b.loaded = false; Sound.play('secret', { vol: 0.5 }); b.g.burst(this.geo(b).easel, b.floorY - 3 * TS, 18, MUS_HI, 'confetti'); },
+  improve(b, text) { b.line = null; say(b, text, '#ffe08a'); b.damage(1, { col: '#ffe08a' }); b.window = 0; b.loaded = false; Sound.play('secret', { vol: 0.5 }); b.g.burst(this.geo(b).easel, b.floorY - 3 * TS, 18, MUS_HI, 'confetti'); },
   update(b, dt) {
     const g = b.g, p = g.player, ph = b.phase || 1, G = this.geo(b), A = b.act;
     if (b.line) b.line.t += dt;
+    if ((!b.line || b.line.t > 2.6) && b.lineNext) { b.line = b.lineNext; b.lineNext = null; }
     if (b.window > 0) b.window -= dt;
     // the posing mark rolls along with Brady while he stands on it
     if (p && !p.dead && p.onGround && p.y + p.h > b.floorY - 4 && Math.abs(p.cx - b.markX) < 26) b.markX = clamp(p.cx, G.r0, G.r1);
@@ -68,7 +71,7 @@ const brain = {
       return;
     }
     if (A === 'raise') {
-      if (b.first) { b.dripX = clamp((p ? p.cx : G.r0) + (Math.random() < 0.5 ? -3 : 3) * TS, G.r0 + TS, G.r1 - TS); say(b, 'A LITTLE DRIP OF GOLD...'); }
+      if (b.first) { b.dripX = clamp((p ? p.cx : G.r0) + (Math.random() < 0.5 ? -2.5 : 2.5) * TS, G.r0 + 0.5 * TS, G.r1); say(b, 'A LITTLE DRIP OF GOLD...'); }
       if (b.at > 1.1) b.go('drip');
     } else if (A === 'drip') {
       if (b.at > 0.45 && !b.dripDone) {
@@ -79,7 +82,7 @@ const brain = {
       if (b.at > 0.8) { b.dripDone = false; b.go('pullback'); }
     } else if (A === 'pullback') {
       if (b.first) say(b, 'AND A BROAD STROKE...');
-      if (b.at > 0.8) { b.go('sweep'); b.waveX = G.x1 - 2 * TS; }
+      if (b.at > 0.8) { b.go('sweep'); b.waveX = G.frameX; }
     } else if (A === 'sweep') {
       b.waveX -= 9 * TS * dt;
       if (p && !p.dead && Math.abs(p.cx - b.waveX) < 22 && p.y + p.h > b.floorY - 26) p.hurt(b);

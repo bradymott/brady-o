@@ -4,9 +4,9 @@
    has an extra nail."
    After the last olive-oil spill and its trench, the alley opens into a little piazza before the finish: an arcade of
    ochre plaster with a small gallery's framed still life hung on the wall under it, and a long stone fountain basin in
-   front of it, its still water reflecting the arcade and the frame. The real frame hangs on two nails; its reflection
-   shows three. Brake on the scooter over the reflected frame (stick down), then push UP against it (the scooter stays
-   braked while UP is held there) and press JUMP: Brady dives into the reflection, and the gallery is found.
+   front of it (a bronze spout trickling into it, ripples crossing it), its water reflecting the frame upside down,
+   dim and wavy. The real frame hangs on two nails; its reflection shows three. Hold UP over the reflected frame (UP
+   brakes the scooter there; stopping any other way counts too) and press JUMP: Brady dives into the reflection.
    No sign, no arrow, no coin trail, nothing on the level card; everything in the piazza is plain Italian street (the
    arcade, the basin, a geranium pot), painted the way 14-1's alleys are. The host level's exits, postcards and totals
    are as they were; its own files are not touched: this file adds the piazza piece before 14-1's gate.
@@ -54,22 +54,40 @@ Object.assign(Decor, {
     // the framed still life on the wall between the arches, on its two nails
     const fx = x - FW / 2, fy = y - 5.2 * TS;
     woodFrame(ctx, fx, fy, REAL_NAILS);
-    // the basin: still water with the reflection (upside down, a little dim and rippled), a stone rim in front
-    ctx.save(); ctx.beginPath(); ctx.rect(x0 + 10, waterTop, x1 - x0 - 20, y - waterTop - 8); ctx.clip();
-    ctx.fillStyle = '#7aa8b0'; ctx.fillRect(x0, waterTop, x1 - x0, y - waterTop);
-    ctx.save(); ctx.globalAlpha = 0.55; ctx.translate(0, 2 * waterTop); ctx.scale(1, -1);
-    ctx.fillStyle = PLASTER; ctx.fillRect(x0, waterTop - 2.2 * TS, x1 - x0, 2.2 * TS);
+    // a little bronze spout in the wall over the basin, its trickle falling into the water
+    const sx = x + 3.6 * TS, sy = waterTop - 1.1 * TS;
+    ctx.fillStyle = '#8a6a3a'; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(sx, sy, 7, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.fillRect(sx - 12, sy - 2, 12, 5); ctx.strokeRect(sx - 12, sy - 2, 12, 5);
+    ctx.strokeStyle = 'rgba(200,235,255,0.9)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(sx - 12, sy + 1); ctx.quadraticCurveTo(sx - 22, sy + 8, sx - 24, waterTop + 6); ctx.stroke();
+    ctx.fillStyle = 'rgba(220,245,255,0.9)'; for (let k = 0; k < 3; k++) { const q = (t * 1.6 + k / 3) % 1; ctx.beginPath(); ctx.arc(sx - 14 - q * 10, sy + 4 + q * (waterTop - sy), 1.8, 0, TAU); ctx.fill(); }
+    // the basin's water: a darker blue than the wall, a back rim of stone, the reflection upside down, dim, wavy
+    // and broken by the ripples (no outline of its own)
+    const wx0 = x0 + 10, wx1 = x1 - 10, wb = y - 14;
+    ctx.save(); ctx.beginPath(); ctx.rect(wx0, waterTop, wx1 - wx0, wb - waterTop); ctx.clip();
+    const wg = ctx.createLinearGradient(0, waterTop, 0, wb); wg.addColorStop(0, '#5a9ac0'); wg.addColorStop(1, '#2e6a96'); ctx.fillStyle = wg; ctx.fillRect(wx0, waterTop, wx1 - wx0, wb - waterTop);
+    // the arcade's reflection: ochre bands, faint
+    ctx.fillStyle = 'rgba(240,200,120,0.18)'; ctx.fillRect(wx0, waterTop, wx1 - wx0, 10);
+    // the frame's reflection, slice by slice: each slice drawn upside down and nudged sideways by the ripple
+    const ry = waterTop + 5, rs = 4;
+    for (let yy = 0; yy < FH; yy += rs) {
+      const dx = Math.sin(t * 2.2 + yy * 0.35) * 2.2;
+      ctx.save(); ctx.beginPath(); ctx.rect(fx - 6, ry + yy, FW + 12, rs); ctx.clip(); ctx.globalAlpha = 0.5;
+      ctx.translate(fx + dx, ry + FH); ctx.scale(1, -1);
+      ctx.fillStyle = WOOD; ctx.fillRect(0, 0, FW, FH); stillLife(ctx, 8, 8, FW - 16, FH - 16);
+      ctx.restore();
+    }
+    for (const [nx, ny] of REFL_NAILS) { const dx = Math.sin(t * 2.2 + (ny) * 0.35) * 2.2; ctx.save(); ctx.globalAlpha = 0.8; K.GalArt.nail(ctx, fx + nx + dx, ry + ny, 3.4); ctx.restore(); }
+    // ripples moving across the water, breaking the reflection
+    ctx.strokeStyle = 'rgba(235,250,255,0.75)'; ctx.lineWidth = 2;
+    for (let k = 0; k < 9; k++) { const row = k % 3, xx = wx0 + ((k * 131 + t * (18 + row * 6)) % (wx1 - wx0 + 40)) - 20, yy = waterTop + 12 + row * 16; ctx.beginPath(); ctx.moveTo(xx, yy); ctx.quadraticCurveTo(xx + 12, yy - 3, xx + 24, yy); ctx.stroke(); }
+    // rings where the trickle lands
+    for (let k = 0; k < 2; k++) { const q = (t * 0.8 + k * 0.5) % 1; ctx.strokeStyle = `rgba(235,250,255,${0.8 * (1 - q)})`; ctx.beginPath(); ctx.ellipse(sx - 24, waterTop + 8, 6 + q * 22, 2 + q * 5, 0, 0, TAU); ctx.stroke(); }
     ctx.restore();
-    // the reflected frame (drawn the right way round so its nails read: three of them along its lower edge)
-    ctx.save(); ctx.globalAlpha = 0.82; const ry = waterTop + 3; ctx.translate(0, Math.sin(t * 1.3) * 0.6);
-    ctx.save(); ctx.translate(fx, ry + FH); ctx.scale(1, -1); ctx.fillStyle = WOOD; ctx.fillRect(0, 0, FW, FH); stillLife(ctx, 8, 8, FW - 16, FH - 16); ctx.restore();
-    ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.strokeRect(fx, ry, FW, FH); ctx.strokeRect(fx + 8, ry + 8, FW - 16, FH - 16);
-    for (const [nx, ny] of REFL_NAILS) K.GalArt.nail(ctx, fx + nx, ry + ny, 3.4);
-    ctx.restore();
-    ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1.5; for (let k = 0; k < 6; k++) { const xx = x0 + 30 + ((k * 97 + t * 14) % (x1 - x0 - 60)); ctx.beginPath(); ctx.moveTo(xx, waterTop + 6 + (k % 3) * 9); ctx.lineTo(xx + 18, waterTop + 6 + (k % 3) * 9); ctx.stroke(); }
-    ctx.restore();
-    ctx.fillStyle = STONE; ctx.strokeStyle = INK; ctx.lineWidth = 1.8; ctx.fillRect(x0 + 4, waterTop - 6, x1 - x0 - 8, 8); ctx.strokeRect(x0 + 4, waterTop - 6, x1 - x0 - 8, 8);
-    ctx.fillStyle = STONE_LO; ctx.fillRect(x0 + 4, y - 10, x1 - x0 - 8, 10); ctx.strokeRect(x0 + 4, y - 10, x1 - x0 - 8, 10);
+    // the back rim (a thin stone edge along the wall) and the front rim: a stone wall with a lip
+    ctx.fillStyle = STONE; ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.fillRect(x0 + 6, waterTop - 5, x1 - x0 - 12, 6); ctx.strokeRect(x0 + 6, waterTop - 5, x1 - x0 - 12, 6);
+    ctx.fillStyle = STONE_LO; ctx.fillRect(x0 + 4, wb, x1 - x0 - 8, 14); ctx.strokeRect(x0 + 4, wb, x1 - x0 - 8, 14);
+    ctx.fillStyle = STONE; ctx.fillRect(x0, wb - 5, x1 - x0, 7); ctx.strokeRect(x0, wb - 5, x1 - x0, 7);
+    ctx.strokeStyle = 'rgba(90,70,50,0.5)'; ctx.lineWidth = 1; for (let xx = x0 + 40; xx < x1 - 10; xx += 56) { ctx.beginPath(); ctx.moveTo(xx, wb + 2); ctx.lineTo(xx, y); ctx.stroke(); }
     ctx.restore();
   }
 });
@@ -80,7 +98,9 @@ class GalFountainGate extends ENTITY_TYPES.gate {
     super(g, s); this.exitKey = s.exit || 'gal'; this.secret = true;
     this.w = TS; this.h = TS; this.x = s.x - TS / 2; this.y = s.y - TS; this.dive = null; this.friendly = false; this.upT = 0; this.row = Math.round(s.y / TS);
   }
-  at(p) { return p && !p.dead && p.state === 'play' && p.onGround && p.groundTy === this.row && Math.abs(p.cx - this.cx) < 26; }
+  at(p) { return p && !p.dead && p.state === 'play' && p.onGround && p.groundTy === this.row && Math.abs(p.cx - this.cx) < 34; }
+  // close enough that holding UP brakes the scooter to a stop over the reflection
+  near(p) { return p && !p.dead && p.state === 'play' && p.onGround && p.groundTy === this.row && Math.abs(p.cx - this.cx) < 46; }
   update(dt) {
     this.t += dt; const g = this.g, p = g.player;
     if (this.dive == null) {
@@ -116,7 +136,7 @@ VALIDATOR_EXITS.galFountainGate = { w: TS, h: TS };
     const g = this.g, A = g && g.area;
     if (inp && inp.up && A && A.scoot && g.entities) {
       const e = g.galFount || (g.galFount = g.entities.find(q => q instanceof GalFountainGate) || null);
-      if (e && e.g === g && e.at(this)) inp = Object.assign({}, inp, { down: true });
+      if (e && e.g === g && e.near(this)) inp = Object.assign({}, inp, { down: true });
     }
     return up0.call(this, dt, inp);
   };

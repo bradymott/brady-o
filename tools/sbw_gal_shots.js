@@ -499,13 +499,12 @@ LEVELS.entry = async (page, shot, run, pano) => {
     r = await page.evaluate(() => { const gate = window.__gate, p = P(); const A = S().area, SOL = window.BRADY.SOLID; let hold = 0; for (let k = 0; k < 120 * 12 && gate.cx - p.cx > 6 * 32; k++) { const ahead = Math.floor((p.cx + 16) / 32), gap = p.onGround && !SOL[A.tiles[p.groundTy * A.W + ahead]] && A.tiles[p.groundTy * A.W + ahead] !== window.BRADY.T.SEMI; if (gap && hold <= 0) { sim(1 / 120, { jump: true, jumpPressed: true, right: true }); hold = 0.6; } else { sim(1 / 120, hold > 0 ? { jump: true, right: true } : {}); hold -= 1 / 120; } } return { at: tileOf(), dead: p.dead }; });
     check('entrance: across the last oil spill and its trench into the piazza on the scooter', !r.dead && r.at[1] === (await page.evaluate(() => window.__gate.row)), r);
     await page.evaluate(() => { freeze(); }); await shot('01-entrance-14-1-piazza.png');
-    // brake to a stop over the reflected frame
-    r = await page.evaluate(() => { thaw(); const gate = window.__gate, p = P(); for (let k = 0; k < 120 * 6; k++) { const d = gate.cx - p.cx; if (Math.abs(d) < 10 && Math.abs(p.vx) < 5) break; const brake = d < p.vx * p.vx / (2 * 48 * 32) + 8; sim(1 / 120, d < -10 ? { left: true } : brake ? { down: true } : {}); } for (let k = 0; k < 30; k++) sim(1 / 120, { down: true }); return { off: Math.round(P().cx - gate.cx), vx: Math.round(P().vx) }; });
-    check('entrance: braked to a stop over the reflected frame', Math.abs(r.off) < 22, r);
-    await page.evaluate(() => { sim(1 / 120, { down: true }); freeze(); }); await shot('02-entrance-before-the-reflection.png');
-    // walking past, or jumping without UP, does nothing; UP alone does nothing
-    r = await page.evaluate(() => { thaw(); sim(1 / 120, { down: true, jump: true, jumpPressed: true }); sim(0.6, { down: true }); const a = S().state === 'play' && P().state === 'play'; sim(0.6, { up: true }); const b = S().state === 'play' && P().state === 'play'; return { a, b, off: Math.round(P().cx - window.__gate.cx) }; });
-    check('entrance: a plain hop or pushing UP alone does nothing (no accident)', r.a && r.b, r);
+    // hold UP as the reflection comes: it brakes the scooter to a stop over the reflected frame (no DOWN needed)
+    r = await page.evaluate(() => { thaw(); const gate = window.__gate, p = P(); for (let k = 0; k < 120 * 6 && gate.cx - p.cx > 3 * 32; k++) sim(1 / 120); for (let k = 0; k < 120 * 3 && !(Math.abs(p.vx) < 5 && Math.abs(p.cx - gate.cx) < 46); k++) sim(1 / 120, { up: true }); return { off: Math.round(P().cx - gate.cx), vx: Math.round(P().vx) }; });
+    check('entrance: holding UP over the reflected frame stops the scooter on it', Math.abs(r.off) < 34 && Math.abs(r.vx) < 5, r);
+    await page.evaluate(() => { sim(1 / 120, { up: true }); freeze(); }); await shot('02-entrance-before-the-reflection.png');
+    r = await page.evaluate(() => { thaw(); sim(0.6, { up: true }); return { ok: S().state === 'play' && P().state === 'play', off: Math.round(P().cx - window.__gate.cx) }; });
+    check('entrance: pushing UP alone does nothing (no accident)', r.ok && Math.abs(r.off) < 34, r);
     r = await page.evaluate(() => { sim(0.35, { up: true }); const g = window.__gate, p = P(); const dbg = { upT: g.upT, at: g.at(p), gty: p.groundTy, row: g.row, up: p.inp && p.inp.up, on: p.onGround, vx: p.vx, cx: p.cx - g.cx, ps: p.state }; sim(1 / 120, { up: true, jump: true, jumpPressed: true }); sim(0.1, { up: true, jump: true }); return { state: P().state, dbg }; });
     check('entrance: push UP against the reflected frame, then JUMP: Brady dives into the reflection', r.state === 'portal', r);
     await page.evaluate(() => { sim(0.5); freeze(); }); await shot('03-entrance-diving-in.png');

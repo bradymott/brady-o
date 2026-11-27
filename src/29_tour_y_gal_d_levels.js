@@ -92,8 +92,8 @@ const longRows = (() => {
   ground(Gr, 0, 20, 19); put(Gr, 3, 18, '@'); put(Gr, 5, 18, 'n'); put(Gr, 7, 15, '?'); put(Gr, 9, 18, '1');
   varnish(Gr, 21, 32, 21); put(Gr, 26, 13, 'o.o.o');
   ground(Gr, 33, 49, 19); put(Gr, 34, 18, 'c'); put(Gr, 38, 18, 'N'); put(Gr, 40, 18, '2'); put(Gr, 46, 18, 'u');
-  varnish(Gr, 50, 61, 21); put(Gr, 55, 14, '*'); put(Gr, 53, 14, 'M'); put(Gr, 59, 15, 'M');
-  ground(Gr, 62, 118, 19); put(Gr, 66, 15, '?'); put(Gr, 68, 18, 'l'); put(Gr, 70, 18, 'j');
+  varnish(Gr, 50, 61, 21); put(Gr, 55, 14, '*'); put(Gr, 54, 13, 'M');
+  ground(Gr, 62, 118, 19); put(Gr, 66, 15, '?'); put(Gr, 68, 18, 'l'); put(Gr, 84, 18, 'j');
   // the canvas panel: a pillar of panelling whose foot is only painted canvas (the pale patch beside it)
   fillG(Gr, 74, 12, 77, 18, 'H'); fillG(Gr, 74, 17, 74, 18, 'F'); fillG(Gr, 75, 17, 77, 18, '.'); put(Gr, 73, 18, 'x'); put(Gr, 75, 17, 'A'); put(Gr, 77, 18, 'D');
   put(Gr, 82, 18, 'k'); put(Gr, 86, 15, 'h'); put(Gr, 90, 18, 'a'); put(Gr, 94, 18, 'c'); put(Gr, 96, 18, 'O'); put(Gr, 98, 18, '3'); put(Gr, 104, 14, 'M');
@@ -118,7 +118,7 @@ const L2 = { n: 2, name: 'A Question of Perspective', mapLabel: 'A Question of P
   gimmick: 'Roll a wheeled viewing frame along its rail until two painted scraps meet in its window: hold it still for a full breath and they become one real bridge or stair. In the last frame the handrail lines up early; the stair needs one more nudge',
   hint: 'Stand at the frame and walk to roll it. Watch the dashed halves: where they meet, the edge glows. Wait for the ring. A pale patch where a picture used to hang...',
   postcard: 'Brady! A man in this gallery stood in one spot for an hour so two paintings lined up. Then he walked across them. I clapped. ♥ C',
-  enemies: [['galPigeon', 2], ['galVarnish', 2], ['galGnat', 4], ['galVelvet', 1]],
+  enemies: [['galPigeon', 2], ['galVarnish', 2], ['galGnat', 3], ['galVelvet', 1]],
   mapCell: [1, 0], mapFrom: 0,
   exits: { main: { to: '30-3' } },
   areas: [
@@ -143,7 +143,7 @@ const studioRows = (() => {
   put(Gr, 104, 18, 'a'); put(Gr, 106, 18, 'k');
   // the twist: the ledge's ridge (run it: the balcony), then the ridge over the varnish (walk it: it holds you up)
   put(Gr, 109, 18, '3'); varnish(Gr, 111, 132, 21); put(Gr, 111, 18, 'O'); put(Gr, 113, 18, '4'); put(Gr, 116, 15, 'E'); put(Gr, 124, 15, 'M');
-  ground(Gr, 133, W - 1, 19); put(Gr, 136, 18, 'u'); put(Gr, 142, 15, 'o.o.o'); put(Gr, 148, 18, 'j'); put(Gr, 154, 18, 'l'); put(Gr, 168, 18, 'G'); fillG(Gr, W - 1, 0, W - 1, 18, '#');
+  ground(Gr, 133, W - 1, 19); put(Gr, 136, 18, 'u'); put(Gr, 142, 15, 'o.o.o'); put(Gr, 154, 18, 'l'); put(Gr, 168, 18, 'G'); fillG(Gr, W - 1, 0, W - 1, 18, '#');
   return rowsOf(Gr);
 })();
 const RIDGE = o => ['piece', 'gal.ridge', o];
@@ -162,7 +162,7 @@ const L3 = { n: 3, name: 'Underpainting', mapLabel: 'Underpainting', arch: 'scra
   gimmick: 'Thick brush ridges of top coat: cross one holding RUN and Brady\'s shoes scrape it off, showing the older painting beneath: its painted balcony becomes solid, but the ridge is gone. At the last channel one ridge gives the balcony and the other is what you stand on',
   hint: 'Hold RUN over a ridge to scrape it; let go of RUN to keep it. The faint shape beside a ridge is what it will show. A pale patch where a picture used to hang...',
   postcard: 'Brady, under the portrait of Piwi there was an older portrait of Piwi. Under that, a balcony. Under the balcony, more Piwi. ♥ C',
-  enemies: [['galPigeon', 2], ['galVarnish', 2], ['galGnat', 3], ['galVelvet', 1]],
+  enemies: [['galPigeon', 2], ['galVarnish', 1], ['galGnat', 3], ['galVelvet', 1]],
   mapCell: [2, 0], mapFrom: 1,
   exits: { main: { to: '30-4' } },
   areas: [
@@ -232,8 +232,8 @@ const aucRows = (() => {
   ground(Gr, 54, 80, 10); put(Gr, 58, 9, 'c'); put(Gr, 62, 9, 'j'); put(Gr, 66, 6, '?');
   // the gap in the top floor by a pale patch: a short drop into a passage in the wall, the press's door
   fillG(Gr, 70, 10, 71, 11, '.'); fillG(Gr, 66, 12, 77, 13, '.'); put(Gr, 69, 9, 'x'); put(Gr, 68, 13, 'A'); put(Gr, 76, 13, 'D');
-  ground(Gr, 81, 108, 19); put(Gr, 84, 18, 'c'); put(Gr, 85, 18, 'a'); put(Gr, 86, 18, 'O'); put(Gr, 88, 18, 'Z'); put(Gr, 92, 18, '4'); put(Gr, 98, 18, '5'); put(Gr, 101, 18, 'w'); put(Gr, 95, 14, 'M');
-  ground(Gr, 109, W - 1, 10); put(Gr, 114, 9, 'u'); put(Gr, 120, 6, 'o.o.o');
+  ground(Gr, 81, 108, 19); put(Gr, 84, 18, 'c'); put(Gr, 85, 18, 'a'); put(Gr, 86, 18, 'O'); put(Gr, 88, 18, 'Z'); put(Gr, 92, 18, '4'); put(Gr, 98, 18, '5'); put(Gr, 95, 14, 'M');
+  ground(Gr, 109, W - 1, 10); put(Gr, 114, 9, 'u'); put(Gr, 120, 6, 'o.o.o'); put(Gr, 122, 9, 'w');
   varnish(Gr, 128, 131, 14); put(Gr, 129, 6, 'E'); put(Gr, 130, 6, 'M');
   put(Gr, 138, 9, 'j'); put(Gr, 146, 9, 'k'); put(Gr, 160, 9, 'G'); fillG(Gr, W - 1, 0, W - 1, 9, '#');
   return rowsOf(Gr);
