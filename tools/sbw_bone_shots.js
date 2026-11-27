@@ -53,6 +53,22 @@ async function session(viewport, fn) {
     window.ents = name => S().entities.filter(e => e.constructor.name === name || (e.s && e.s.type === name));
     window.tileOf = () => { const p = P(); return [Math.floor(p.cx / 32), Math.floor((p.y + p.h + 1) / 32)]; };
 
+    // the land's own moves with real inputs: THROW at a prop n times; climb the ribs to a tile (steering with the stick)
+    window.throwN = (n, gap) => { for (let k = 0; k < n; k++) { sim(1 / 120, { action: true, actionPressed: true }); sim(gap || 0.45); } };
+    window.climbTo = (tx, ty, maxT) => {
+      const p = P(); let t = 0;
+      if (!p.boneGrip) { for (let k = 0; k < 30 && !p.boneGrip; k++) sim(1 / 120, { up: true }); }
+      if (!p.boneGrip) return { ok: false, why: 'no grip' };
+      while (t < (maxT || 8) && p.boneGrip) {
+        const dx = tx * 32 + 16 - p.cx, dy = ty * 32 + 16 - p.cy;
+        if (Math.abs(dx) < 6 && Math.abs(dy) < 6) break;
+        sim(1 / 60, { left: dx < -5, right: dx > 5, up: dy < -5, down: dy > 5 }); t += 1 / 60;
+      }
+      return { ok: !!p.boneGrip, at: [Math.floor(p.cx / 32), Math.floor(p.cy / 32)], face: p.boneFace };
+    };
+    window.cross = () => { const p = P(), f = p.boneFace; sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.4); return { from: f, to: p.boneFace, grip: !!p.boneGrip }; };
+    window.tileT = (x, y) => { const A = S().area, T = window.BRADY.T; const t = A.tiles[y * A.W + x]; return Object.keys(T).find(k => T[k] === t); };
+
     /* ---------------- the autopilot ----------------
        A program is a little input plan: hold `dir` for `run` s on the ground, press jump and hold it `hold` s, then
        steer in the air (air: 'dir' | 'none' | 'rev' at revAt | 'late' (none, then dir from lateAt)), or walk off
@@ -334,6 +350,77 @@ LEVELS.walk = async (page, shot, run, pano) => {
     r = await page.evaluate(() => { place(3, 6); sim(0.2); for (let k = 0; k < 20 && S().area.aid !== 'quarry'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.6); return { area: S().area.aid, x: Math.floor(P().cx / 32) }; });
     check('37-1 hall: its door lets Brady out further along the tunnel floor (not where he came in)', r.area === 'quarry' && r.x > 170, r);
     await page.evaluate(() => { play('37-1'); }); await pano('19-37-1-panorama.png', 0.25);
+  });
+};
+
+// ---------------- 37-2 Assembly Optional ----------------
+LEVELS.ascent = async (page, shot, run, pano) => {
+  await run('ascent', async () => {
+    await page.evaluate(() => { fresh(); play('37-2'); place(5, 18); sim(0.6); freeze(); });
+    await shot('20-37-2-start.png');
+    let r = await page.evaluate(() => { thaw(); const a = AP.go([11, 19]); sim(0.2); const pre = tileT(16, 17); throwN(1, 0.6); return { ok: a.ok, pre, post: tileT(16, 17), notch: ents('BoneVert').find(e => e.s.pivot[0] === 14).notch }; });
+    check('37-2: at the crank, one THROW turns the vertebra a notch: the rib lies flat over the scree', r.ok && r.pre === 'EMPTY' && r.post === 'SEMI' && r.notch === 1, r);
+    await page.evaluate(() => freeze()); await shot('21-37-2-first-bridge.png'); await page.evaluate(() => thaw());
+    r = await page.evaluate(() => AP.route([[14, 17], [20, 17], [27, 17], [38, 17]]));
+    check('37-2: played: onto the vertebra, along the rib bridge (P1 over it), to the foot of the replica ribs', r.ok, r);
+    r = await page.evaluate(() => { const a = climbTo(38, 9); const p = P(); sim(0.5, { up: true, right: true }); sim(0.8, { right: true }); return { a, row: p.groundTy, x: Math.floor(p.cx / 32), grip: !!p.boneGrip }; });
+    check('37-2: climbed: push up into the ribs to grip, climb to the top and step off onto the cliff', r.row === 9 && r.x >= 41 && !r.grip, r);
+    r = await page.evaluate(() => { const a = AP.go([55, 9]); throwN(3, 0.6); const v = ents('BoneVert').find(e => e.s.pivot[0] === 58); return { ok: a.ok, notch: v.notch, bridge: tileT(62, 7) }; });
+    check('37-2: the second vertebra starts upside down: three notches round to bridge', r.ok && r.notch === 1 && r.bridge === 'SEMI', r);
+    await page.evaluate(() => freeze()); await shot('22-37-2-three-notches.png'); await page.evaluate(() => thaw());
+    r = await page.evaluate(() => AP.route([[58, 7], [64, 7], [70, 7], [88, 7], [96, 19]]));
+    check('37-2: played: across under the rook, along the high cliff, down to the floor at the tall rib cage', r.ok, r);
+    // the tall cage: a critter on each face; cross at the collars to get round them
+    r = await page.evaluate(() => {
+      const p = P(); place(98, 18); sim(0.3); const out = {};
+      out.a = climbTo(99, 12); out.c1 = cross();
+      // on the far face, a near-face critter passing Brady does not touch him
+      const near = ents('BoneClimber').find(e => e.face === 0 && Math.abs(e.cx - p.cx) < 80); out.nearIgnored = near ? near.collidePlayer(p) === null : 'none';
+      out.b = climbTo(102, 9); out.c2 = cross(); out.c = climbTo(103, 5);
+      sim(0.5, { up: true, right: true }); sim(0.8, { right: true });
+      out.row = p.groundTy; out.x = Math.floor(p.cx / 32); return out;
+    });
+    check('37-2: climbed the tall cage: across to the far face at one collar, back at the other, up onto the shelf', r.c1.to === 1 && r.c2.to === 0 && r.row === 7 && r.x >= 104, r);
+    check('37-2: on the far face Brady and a near-face critter pass each other', r.nearIgnored === true, r.nearIgnored);
+    await page.evaluate(() => { place(99, 12); sim(0.1, { up: true }); sim(0.2); sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.35); freeze(); }); await shot('23-37-2-far-face.png'); await page.evaluate(() => { thaw(); const p = P(); p.boneGrip = null; p.boneFace = 0; });
+    r = await page.evaluate(() => { play('37-2'); place(106, 6); sim(0.3); const v = ents('BoneVert').find(e => e.s.pivot[0] === 113), stub = tileT(114, 6); const a = AP.go([110, 7]); throwN(3, 0.6); return { ok: a.ok, stub0: stub, notch: v.notch, bridge: tileT(120, 6) }; });
+    check('37-2: the right-angled pair: the short rib lies flat first (a stub over the drop); three turns lay the long one', r.ok && r.stub0 === 'SEMI' && r.notch === 1 && r.bridge === 'SEMI', r);
+    r = await page.evaluate(() => AP.route([[113, 6], [119, 6], [126, 6], [148, 6], [154, 19]]));
+    check('37-2: played: over the long rib, along the shelf, down to the floor', r.ok, r);
+    // the gift shop: the crack at the foot of the shelf (whiskers), walk into the wall
+    await page.evaluate(() => { place(153, 18); sim(0.4); freeze(); }); await shot('24-37-2-tell-crack.png');
+    r = await page.evaluate(() => { thaw(); const a = AP.go([147, 19]); sim(0.2); for (let k = 0; k < 20 && S().area.aid !== 'shop'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.4); return { ok: a.ok, area: S().area.aid }; });
+    check('37-2: walk into the shelf\'s face at the crack: a hidden pocket, a door into the gift shop', r.area === 'shop', r);
+    await page.evaluate(() => { sim(0.6); freeze(); }); await shot('25-37-2-room-queue.png');
+    r = await page.evaluate(() => { thaw(); place(5, 6); sim(2); const R = S().area.roomState; AP.go([6, 7]); throwN(1); const a = R.won; AP.go([13, 7]); throwN(1); return { counter: a, front: R.won }; });
+    check('37-2 shop: THROW at the closed counter or in front of a cut-out: nothing (try again)', !r.counter && !r.front, r);
+    r = await page.evaluate(() => { const R = S().area.roomState; AP.go([15, 7]); throwN(1); sim(0.6); return { won: R.won }; });
+    check('37-2 shop: walk behind the last cardboard skeleton and lift its coat: the open hatch, the cage opens', r.won, r);
+    await page.evaluate(() => freeze()); await shot('26-37-2-room-queue-won.png'); await page.evaluate(() => thaw());
+    r = await page.evaluate(() => { place(3, 6); sim(0.2); for (let k = 0; k < 20 && S().area.aid !== 'ascent'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.6); return { area: S().area.aid, x: Math.floor(P().cx / 32), row: P().groundTy }; });
+    check('37-2 shop: its door lets Brady out on a bonus ledge over the floor (not the crack)', r.area === 'ascent' && r.x >= 156 && r.row === 12, r);
+    // the twist: one vertebra, two unequal ribs
+    r = await page.evaluate(() => {
+      play('37-2'); place(160, 18); sim(0.3); const v = ents('BoneVert').find(e => e.s.pivot[0] === 173);
+      const a = AP.go([164, 19]); throwN(1, 0.6); const n1 = v.notch, left = tileT(170, 17), right = tileT(182, 17);
+      const b = AP.route([[169, 17], [173, 17]]); const stuck = tileT(182, 17) === 'EMPTY' && tileT(176, 17) === 'SEMI';
+      const c = AP.route([[168, 17], [164, 19]]); throwN(2, 0.6);
+      return { a: a.ok, n1, left, right, b: b.ok, stuck, c: c.ok, n2: v.notch, L: tileT(170, 17), R: tileT(180, 17) };
+    });
+    check('37-2: the twist: the first turn lays the long rib over the first pit, but the short one stops short of the far side', r.n1 === 3 && r.left === 'SEMI' && r.right !== 'SEMI' && r.stuck, r);
+    check('37-2: back at the crank, two more turns: both tips on solid ground', r.n2 === 1 && r.L === 'SEMI' && r.R === 'SEMI', r);
+    await page.evaluate(() => freeze()); await shot('27-37-2-two-ribs.png'); await page.evaluate(() => thaw());
+    r = await page.evaluate(() => AP.route([[169, 17], [173, 17], [180, 17], [190, 17], [200, 17]]));
+    await page.evaluate(() => { place(175, 16); sim(0.3); freeze(); }); await shot('27b-37-2-under-the-overhang.png'); await page.evaluate(() => { thaw(); place(200, 16); sim(0.3); });
+    check('37-2: played: across both ribs to the last cage', r.ok, r);
+    r = await page.evaluate(() => {
+      const p = P(); const out = {};
+      out.a = climbTo(200, 11); out.c1 = cross(); out.b = climbTo(204, 7); out.c2 = cross(); out.c = climbTo(205, 5);
+      sim(0.5, { up: true, right: true }); sim(0.8, { right: true }); out.row = p.groundTy;
+      const g = AP.route([[215, 5]]); sim(3, { right: true }); return Object.assign(out, { g: g.ok, state: S().state });
+    });
+    check('37-2: climbed the last cage (critters on both faces, two collars) and reached the gate', r.row === 5 && r.state !== 'play', r);
+    await page.evaluate(() => { play('37-2'); }); await pano('29-37-2-panorama.png', 0.25);
   });
 };
 

@@ -179,12 +179,18 @@ const painters = {
   // 37-2's scree slopes: long diagonal fans of grey-ochre stones under the quarry rim
   boneScree(ctx, L, rng, H) {
     const b = L.base;
-    for (let k = 0; k < 6; k++) {
-      const x = rng() * BG_W, w = 180 + rng() * 160;
+    // the quarry wall behind: tall slabs with vertical cut marks, its top edge ragged
+    ctx.fillStyle = shade(L.color, 0.06); ctx.beginPath(); ctx.moveTo(0, H); ctx.lineTo(0, b - 190);
+    for (let x = 0; x <= BG_W; x += 48) ctx.lineTo(x, b - 190 - Math.abs(Math.sin(x * 0.02)) * 26 - (x % 96 ? 6 : 0));
+    ctx.lineTo(BG_W, H); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = shade(L.color, -0.12); ctx.lineWidth = 3; for (let x = 20; x < BG_W; x += 37) { ctx.beginPath(); ctx.moveTo(x, b - 170); ctx.lineTo(x + 6, b - 40); ctx.stroke(); }
+    // fans of loose scree spilling down from notches in the wall (curved, never a tidy triangle), stones on them
+    for (let k = 0; k < 5; k++) {
+      const x = 80 + k * 200 + rng() * 60, w = 150 + rng() * 80;
       wrapDraw(x - w / 2, w, X => {
-        const cx = X + w / 2; ctx.fillStyle = shade(L.color, (rng() - 0.5) * 0.12);
-        ctx.beginPath(); ctx.moveTo(cx, b - 170 - rng() * 40); ctx.lineTo(cx + w / 2, b + 10); ctx.lineTo(cx - w / 2, b + 10); ctx.closePath(); ctx.fill();
-        ctx.fillStyle = shade(L.color, 0.18); for (let q = 0; q < 14; q++) { const yy = b - rng() * 150, half = (yy - (b - 170)) / 170 * w / 2; ctx.fillRect(cx - half + rng() * half * 2, yy, 6, 3); }
+        const cx = X + w / 2, top = b - 150 - rng() * 30;
+        ctx.fillStyle = shade(L.color, -0.08); ctx.beginPath(); ctx.moveTo(cx - 14, top); ctx.quadraticCurveTo(cx - w * 0.2, b - 60, cx - w / 2, b + 10); ctx.lineTo(cx + w / 2, b + 10); ctx.quadraticCurveTo(cx + w * 0.15, b - 70, cx + 14, top); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = shade(L.color, 0.2); for (let q = 0; q < 16; q++) { const t = rng(), yy = top + t * (b - top), half = 14 + t * w * 0.45; ctx.beginPath(); ctx.ellipse(cx - half + rng() * half * 2, yy, 4 + rng() * 3, 2.5, 0, 0, TAU); ctx.fill(); }
       });
     }
     ctx.fillStyle = shade(L.color, -0.15); ctx.fillRect(0, b, BG_W, H - b);

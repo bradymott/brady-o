@@ -81,7 +81,8 @@ Object.assign(Decor, {
   // is the cell left of the wall)
   boneTell(ctx, x, y, t) { tell(ctx, x, y + 2, t, 0); },
   boneTellCeil(ctx, x, y, t) { tell(ctx, x, y - TS - 2, t, Math.PI); },
-  boneTellWall(ctx, x, y, t) { tell(ctx, x + TS / 2 + 2, y - TS / 2, t, -Math.PI / 2); }
+  boneTellWall(ctx, x, y, t) { tell(ctx, x + TS / 2 + 2, y - TS / 2, t, -Math.PI / 2); },
+  boneTellWallR(ctx, x, y, t) { tell(ctx, x - TS / 2 - 2, y - TS / 2, t, Math.PI / 2); }
 });
 
 /* ======================= 37-1 TRACKWAY ======================= */
@@ -221,7 +222,8 @@ class BoneVert extends Ent {
     const s = this.s, [sx, sy] = s.socket, [px, py] = s.pivot, cx = px * TS + TS / 2, cy = py * TS + TS / 2;
     ctx.save();
     // the crank on its post (the mark): a bone lever with a persimmon knob, turned with the vertebra
-    const kx = sx * TS + TS / 2, ky = sy * TS;
+    const kx = sx * TS + 4, ky = sy * TS;
+    ctx.fillStyle = 'rgba(240,106,42,0.5)'; ctx.beginPath(); ctx.ellipse(sx * TS + TS / 2, ky + 2, 15, 4, 0, 0, TAU); ctx.fill();
     ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#8a5a2a'; ctx.fillRect(kx - 3, ky - 30, 6, 30); ctx.strokeRect(kx - 3, ky - 30, 6, 30);
     const a = this.ang * Math.PI / 2;
     BA.bone(ctx, kx, ky - 30, kx + Math.cos(a - Math.PI / 2) * 16, ky - 30 + Math.sin(a - Math.PI / 2) * 16, 6, false);
@@ -240,7 +242,7 @@ class BoneVert extends Ent {
     ctx.fillStyle = BONE; ctx.strokeStyle = INK; ctx.lineWidth = 2.2;
     ctx.beginPath(); for (let k = 0; k < 6; k++) { const aa = this.ang * Math.PI / 2 + k * TAU / 6; ctx.lineTo(cx + Math.cos(aa) * 20, cy + Math.sin(aa) * 20); ctx.lineTo(cx + Math.cos(aa + 0.5) * 13, cy + Math.sin(aa + 0.5) * 13); } ctx.closePath(); ctx.fill(); ctx.stroke();
     BA.joint(ctx, cx, cy, 8);
-    throwHint(this, ctx, kx, ky - 52, 'THROW: TURN');
+    throwHint(this, ctx, kx, ky - 86, 'THROW: TURN');
     ctx.restore();
   }
 }
@@ -313,7 +315,7 @@ const climbZone = (A, p) => (A.zones || []).find(z => z.kind === 'boneClimb' && 
     if (this.faceT > 0) { this.faceT -= dt; if (this.faceT <= 0) this.boneFace = 1 - this.boneFace; }
     const Z = this.boneGrip;
     if (inp.jumpPressed && !(this.faceT > 0)) {
-      const col = (Z.collars || []).find(([x, y]) => Math.abs(this.cx - (x * TS + TS / 2)) < TS * 0.8 && Math.abs(this.cy - (y * TS + TS / 2)) < TS * 1.1);
+      const col = (Z.collars || []).find(([x, y]) => Math.abs(this.cx - (x * TS + TS / 2)) < TS * 1.0 && Math.abs(this.cy - (y * TS + TS / 2)) < TS * 1.5);
       if (col) { this.faceT = 0.3; this.x = col[0] * TS + TS / 2 - this.w / 2; TourKit.sfx('swish', 'jump', { vol: 0.4, pitch: 0.7 }); g.burst(this.cx, this.cy, 6, '#ffd88a', 'spark'); }
       else { this.boneGrip = null; this.boneFace = 0; this.boneLetGo = 0.25; this.vy = -PHYS.jumpV; this.jumping = true; this.onGround = false; Sound.play('jump', { vol: 0.5 }); return pu.call(this, dt, Object.assign({}, inp, { jumpPressed: false })); }
     }
@@ -342,7 +344,7 @@ const climbZone = (A, p) => (A.zones || []).find(z => z.kind === 'boneClimb' && 
   });
   // a hit while climbing: he lets go
   const hu0 = Player.prototype.hurt;
-  Player.prototype.hurt = function (src) { const r = hu0.apply(this, arguments); if (this.boneGrip && (this.invuln > 0 || this.dead)) { this.boneGrip = null; this.boneFace = 0; this.boneLetGo = 0.6; } return r; };
+  Player.prototype.hurt = function (src) { const inv0 = this.invuln || 0, r = hu0.apply(this, arguments); if (this.boneGrip && inv0 <= 0 && (this.invuln > 0 || this.dead)) { this.boneGrip = null; this.boneFace = 0; this.boneLetGo = 0.6; } return r; };
 }
 // a critter that climbs the rungs, up and down one column, on one face (it only meets Brady on its own face)
 const climberArt = (ctx, e, x, y, far, t) => {

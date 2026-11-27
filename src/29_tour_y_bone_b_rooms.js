@@ -340,5 +340,11 @@ TourRooms.kinds.boneJar.testWin = function (g, A, R, kit, frame) {
   for (let q = 0; q < 200 && R.drop && !R.won; q++) { const D = R.drop, p = g.player; p.x = D.x - p.w / 2; frame(g, {}); }
   steps(g, frame, 20);
 };
+// title first, then the rule: the kit toasts the rule as the banner shows; ours waits for the banner to go
+for (const k of ['boneGiant', 'boneQueue', 'boneOrder', 'boneFish', 'boneJar']) {
+  const Kd = TourRooms.kinds[k], e0 = Kd.enter, u0 = Kd.update;
+  Kd.enter = function (play, A, R, kit) { play.toastT = 0; R.ruleAt = true; if (e0) return e0.apply(this, arguments); };
+  Kd.update = function (play, dt, A, R, kit) { if (R.ruleAt && !(play.bannerT > 0)) { R.ruleAt = false; if (!R.won) { play.toast(kit.rule); play.toastT = 4; } } if (u0) return u0.apply(this, arguments); };
+}
 Tour.boneKit.roomRows = frame;
 })();

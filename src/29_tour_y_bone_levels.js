@@ -77,7 +77,66 @@ const L1 = { n: 1, name: 'Walk Like This', mapLabel: 'Walk Like This', arch: 'tr
     { id: 'hall', gen: 'room', role: 'secret', room: 'boneGiant', theme: 'bone_room_hall', stamp: 'boneHallOld', bone: { room: true } }
   ] };
 
-Tour.amend('bone', { stamps, levels: [L1] });
+/* ---------------- 37-2 Assembly Optional ---------------- */
+// ① the teach: one crank, one vertebra, one rib: a turn lays it flat over the scree (P1 over the bridge); the first
+// replica ribs to climb (push UP to grip) onto the cliff; ② the test: a vertebra three notches round, a rook over the
+// bridge; down to the floor and up a tall rib cage with a critter on each face (cross at a persimmon collar); a
+// vertebra with a long rib and a short one at right angles (the short one is a bridge too short); ③ the twist: one
+// vertebra turns two unequal ribs; one angle lays the long rib over the first pit and the short one useless; only one
+// puts both tips on solid ground. Then the last cage, critters on both faces, up to the gate.
+const ascentRows = (() => {
+  const W = 236, H = 26, Gr = grid(W, H, '.');
+  // ① the teach
+  ground(Gr, 0, 13, 19); put(Gr, 3, 18, '@'); put(Gr, 6, 18, 'n'); put(Gr, 9, 15, '?'); put(Gr, 11, 18, '1');
+  ground(Gr, 14, 14, 17); put(Gr, 18, 14, 'o.o.o'); put(Gr, 19, 12, '*');
+  ground(Gr, 24, 40, 17); put(Gr, 27, 16, 'r'); put(Gr, 33, 16, 'N'); put(Gr, 36, 16, 'i');
+  ground(Gr, 41, 58, 9); ground(Gr, 58, 58, 7); put(Gr, 44, 8, 'c'); put(Gr, 50, 8, 'e'); put(Gr, 55, 8, '2'); put(Gr, 64, 3, 'M');
+  // ② the test
+  ground(Gr, 68, 90, 7); put(Gr, 72, 3, '?'); put(Gr, 78, 6, 'w'); put(Gr, 86, 6, 'l');
+  ground(Gr, 91, 103, 19); put(Gr, 93, 18, 'c'); put(Gr, 96, 18, 'j'); put(Gr, 97, 18, 'K'); put(Gr, 95, 18, 'Z'); put(Gr, 92, 18, 'O');
+  ground(Gr, 104, 113, 7); ground(Gr, 113, 113, 6); put(Gr, 106, 6, 'e'); put(Gr, 110, 6, '3');
+  ground(Gr, 123, 150, 6); put(Gr, 128, 5, 'w'); put(Gr, 134, 5, 'o.o.o'); put(Gr, 142, 5, 'l');
+  // the gift shop: a crack in the shelf's face at floor level, whiskers twitching out of it
+  fillG(Gr, 146, 17, 149, 18, '.'); fillG(Gr, 150, 17, 150, 18, 'F'); put(Gr, 147, 18, 'D'); put(Gr, 151, 17, 'x');
+  // ③ the twist
+  ground(Gr, 151, 166, 19); put(Gr, 155, 18, 'c'); put(Gr, 157, 15, '?'); put(Gr, 158, 12, '----'); put(Gr, 158, 11, 'X'); put(Gr, 158, 10, 'o.o'); put(Gr, 161, 18, 'N'); put(Gr, 164, 18, '4');
+  fillG(Gr, 166, 13, 185, 14, 'H'); ground(Gr, 173, 173, 17);
+  ground(Gr, 185, W - 1, 17); put(Gr, 188, 16, 'e'); put(Gr, 192, 16, 'r'); put(Gr, 196, 6, 'M'); put(Gr, 198, 7, 'A');
+  put(Gr, 199, 16, 'P'); put(Gr, 202, 16, 'E'); put(Gr, 203, 16, 'U'); put(Gr, 204, 16, 'V'); put(Gr, 203, 9, 'R');
+  ground(Gr, 206, W - 1, 5); put(Gr, 210, 4, 'c'); put(Gr, 216, 4, 'l'); put(Gr, 225, 4, 'G'); put(Gr, 221, 4, 'r');
+  fillG(Gr, W - 1, 0, W - 1, 4, '#');
+  return rowsOf(Gr);
+})();
+const VERT = (socket, pivot, ribs, notch, good, g) => ['piece', 'bone.vert', { socket, pivot, ribs, notch, good, g }];
+const RIBS = (x0, y0, x1, y1, collars) => ['piece', 'bone.ribs', { x0, y0, x1, y1, collars: collars || [] }];
+const CLIMBER = (x, y0, y1, face, speed, phase) => ['piece', 'bone.climber', { x, y0, y1, face, speed, phase }];
+stamps.boneAscent = { floor: 19, rows: ascentRows, gold: { '*': 'must', A: 'high', R: 'risky' }, items: ['power', 'power', 'power'], doors: [{ to: 'shop@in', look: 'boneCrack' }], legend: {
+  n: SIGN('A VERTEBRA! STAND AT ITS CRANK AND THROW: IT TURNS ONE NOTCH. TURN THE RIB FLAT TO BRIDGE THE SCREE'),
+  N: SIGN('REPLICA RIBS: PUSH UP INTO THEM TO GRIP, CLIMB ANY WAY, JUMP TO LET GO. JUMP AT A COLLAR TO CROSS TO THE FAR SIDE'),
+  l: ['decor', 'boneLabel'], r: ['decor', 'boneRock'], e: ['enemy', 'boneMouse'], w: ['enemy', 'boneNewt'], M: ['enemy', 'boneRook'],
+  '1': VERT([11, 19], [14, 17], [[9, 0]], 0, 1, 0),
+  '2': VERT([55, 9], [58, 7], [[9, 0]], 2, 1, 1),
+  '3': VERT([110, 7], [113, 6], [[9, 0], [3, 3]], 2, 1, 2),
+  '4': VERT([164, 19], [173, 17], [[11, 0], [6, 2]], 2, 1, 3),
+  i: RIBS(37, 8, 40, 16),
+  j: RIBS(98, 4, 103, 18, [[99, 12], [102, 9]]), K: CLIMBER(100, 6, 16, 0, 1.6, 0), Z: CLIMBER(102, 6, 16, 1, 1.4, 0.5), O: ['decor', 'boneRock'],
+  P: RIBS(199, 4, 205, 16, [[200, 11], [204, 7]]), E: CLIMBER(202, 6, 13, 0, 1.8, 0), U: CLIMBER(203, 6, 13, 1, 1.5, 0.6), V: CLIMBER(200, 8, 14, 0, 1.4, 0.3),
+  x: ['decor', 'boneTellWallR'], X: ['anchor', 'shopOut']
+} };
+stamps.boneShopOld = oldRoom('ascent@shopOut', ['oneup']);
+const L2 = { n: 2, name: 'Assembly Optional', mapLabel: 'Assembly Optional', arch: 'vertebra', theme: 'bone_scree',
+  gimmick: 'Vertebrae on sockets: THROW at a crank to turn one a notch until its rib lies flat over the scree. Replica-rib rungs to climb, critters on both faces. Late on, one vertebra turns two unequal ribs',
+  hint: 'Count the notches before you cross. On the ribs, cross to the far face at a persimmon collar to get round a critter. Whiskers twitch in a crack at the foot of the last high shelf...',
+  postcard: 'Brady! Every skeleton here was put together by someone in a hurry. One has its ribs on as a ladder. You climbed it. It was flattered. ♥ C',
+  enemies: [['boneMouse', 2], ['boneNewt', 2], ['boneRook', 2]],
+  mapCell: [1, 0], mapFrom: 0,
+  exits: { main: { to: '37-3' } },
+  areas: [
+    { id: 'ascent', gen: 'room', theme: 'bone_scree', stamp: 'boneAscent', bone: { ribs: true, vert: true }, bottomKill: true },
+    { id: 'shop', gen: 'room', role: 'secret', room: 'boneQueue', theme: 'bone_room_shop', stamp: 'boneShopOld', bone: { room: true } }
+  ] };
+
+Tour.amend('bone', { stamps, levels: [L1, L2] });
 
 /* ---------------- the land's map: the quarry seen from the rim ---------------- */
 // the tipped crate where the arrival trail starts (left), the trackway terraces, the scree slope with the ribs, the
