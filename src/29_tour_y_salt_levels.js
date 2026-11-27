@@ -87,7 +87,7 @@ const seaRows = (() => {
   ground(Gr, 54, 93, 18); put(Gr, 54, 17, 'K'); put(Gr, 73, 14, '?'); put(Gr, 76, 17, 'j');
   // the cellar block with its painted-glass left face (B42 inside)
   put(Gr, 58, 15, '--'); fillG(Gr, 61, 14, 69, 14, 'H'); fillG(Gr, 64, 11, 69, 13, 'H'); fillG(Gr, 65, 12, 68, 13, '.'); fillG(Gr, 64, 12, 64, 13, 'F'); put(Gr, 67, 13, 'A'); put(Gr, 66, 10, 'u');
-  put(Gr, 80, 17, 'x'); put(Gr, 84, 17, 'c'); put(Gr, 88, 17, 'a'); put(Gr, 68, 12, 'f');
+  put(Gr, 80, 17, 'x'); put(Gr, 84, 17, 'c'); put(Gr, 88, 17, 'a'); put(Gr, 124, 11, 'f');
   put(Gr, 91, 17, '3'); put(Gr, 78, 17, 'r'); pit(Gr, 94, 105); put(Gr, 94, 18, 'e');
   ground(Gr, 106, 150, 18); put(Gr, 116, 17, 'r'); put(Gr, 114, 16, '-'); put(Gr, 117, 13, '--'); put(Gr, 120, 10, '--'); put(Gr, 121, 8, 'P'); put(Gr, 125, 14, '?'); put(Gr, 128, 17, 'j');
   put(Gr, 136, 17, 'c'); put(Gr, 140, 17, 'Z'); put(Gr, 130, 13, 'f');
