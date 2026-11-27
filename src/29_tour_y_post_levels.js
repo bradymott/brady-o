@@ -3,6 +3,7 @@
    each stage teaches its one new idea where a slip costs nothing, tests it among the critters, then twists it
    ("late on / the last one"); the last ordinary stage and the boss are the hardest.
    27-1 PERFORATION WALK (perforate)  tear paper islands free so they fall and plug the ink; the last two share a tooth
+   27-2 STAMP DUTY (stampduty)        roll a loose stamp, THROW prints a mirrored foothold; the last is an L
    ============================================================ */
 (function () {
 const C = Tour.countries.post;
@@ -89,7 +90,51 @@ const L1 = { n: 1, name: 'Perforation Walk', mapLabel: 'Perforation Walk', arch:
     { id: 'press', gen: 'room', role: 'secret', theme: 'post_room_press', stamp: 'postPressOld', post: { room: true } }
   ] };
 
-Tour.amend('post', { stamps, levels: [L1] });
+/* ---------------- 27-2 Stamp Duty ---------------- */
+// ① the teach: a loose stamp on the left page; roll it along and THROW: its raised slab prints on the facing page,
+// mirrored across the gutter: two jumps over the ink need it just there (the silhouette shows where); ② the test: a
+// stamp that prints a step half-way up a cliff (a corner curls out of the cliff's foot: a fake wall to the inspector's
+// bureau); ③ the twist: an L-shaped stamp prints the other way round: its tall side has to land against the last
+// cliff, so it goes where the silhouette says, not where the stamp face looks.
+const stampRows = (() => {
+  const W = 182, H = 24, Gr = grid(W, H, '.');
+  ground(Gr, 0, 16, 19); put(Gr, 3, 18, '@'); put(Gr, 5, 18, 'n'); put(Gr, 7, 15, '?'); put(Gr, 12, 18, '1');
+  ink(Gr, 17, 26, 20); put(Gr, 21, 14, 'R');
+  ground(Gr, 27, 49, 19); put(Gr, 31, 18, 'c'); put(Gr, 36, 18, '2'); put(Gr, 30, 18, 'N'); put(Gr, 45, 10, 'M'); put(Gr, 40, 15, '?');
+  ground(Gr, 50, 75, 14); put(Gr, 54, 13, 'q'); put(Gr, 60, 13, 'e'); put(Gr, 67, 13, 'q'); put(Gr, 64, 10, '*'); put(Gr, 58, 13, 'a'); put(Gr, 71, 13, 'c');
+  // the inspector's bureau: a fake wall at the cliff's foot (a corner curls out of it), a short passage, the door
+  fillG(Gr, 50, 17, 50, 18, 'F'); fillG(Gr, 51, 17, 54, 18, '.'); put(Gr, 49, 17, 'x'); put(Gr, 52, 17, 'A'); put(Gr, 54, 18, 'D');
+  ground(Gr, 76, 103, 19); put(Gr, 78, 18, 'O'); put(Gr, 84, 18, '3'); put(Gr, 81, 18, 'u'); put(Gr, 90, 13, 'o.o.o'); put(Gr, 99, 9, 'M');
+  ground(Gr, 104, 135, 14); put(Gr, 110, 13, 'k'); put(Gr, 116, 13, 'e'); put(Gr, 112, 13, 'q'); put(Gr, 124, 13, 'q'); put(Gr, 120, 13, 'c'); put(Gr, 118, 10, 'o.o.o');
+  ground(Gr, 136, 137, 16); ground(Gr, 138, 150, 19); put(Gr, 143, 18, 'u');
+  ink(Gr, 151, 154, 20); put(Gr, 152, 13, 'M'); put(Gr, 151, 15, 'o.o.o');
+  ground(Gr, 155, W - 1, 19); put(Gr, 160, 18, 'l'); put(Gr, 166, 18, 'k'); put(Gr, 172, 18, 'G'); fillG(Gr, W - 1, 0, W - 1, 18, '#');
+  return rowsOf(Gr);
+})();
+const STAMP = (rail, at, crease, shape, ty, good, g) => ['piece', 'post.stamp', { rail, w: 2, at, crease, shape, ty, good, g }];
+stamps.postStampDuty = { floor: 19, rows: stampRows, gold: { '*': 'must', A: 'hidden', R: 'risky' }, items: ['power', 'power'], doors: [{ to: 'bureau@in', look: 'postSlit' }], legend: Object.assign({}, COMMON, {
+  n: SIGN('A LOOSE STAMP! STAND AT IT AND WALK TO ROLL IT. THROW PRINTS ITS RAISED SHAPE ON THE FACING PAGE, MIRRORED ACROSS THE GUTTER'),
+  N: SIGN('THE INK SILHOUETTE SHOWS WHERE IT WILL PRINT. A NEW PRINT WIPES THE LAST ONE'),
+  O: SIGN('THIS STAMP IS AN L. IT PRINTS THE OTHER WAY ROUND: WATCH THE SILHOUETTE, NOT THE STAMP'),
+  '1': STAMP([9, 14, 19], 14, 17, [[0, 0], [1, 0]], 19, 11, 0),
+  '2': STAMP([30, 38, 19], 31, 42, [[0, 0], [1, 0]], 16, 34, 1),
+  '3': STAMP([84, 92, 19], 86, 97, [[0, 0], [0, 1], [1, 1]], 17, 90, 2),
+  x: ['decor', 'postTellWall'], a: ['anchor', 'bureauOut']
+}) };
+stamps.postBureauOld = oldRoom('stamp@bureauOut', ['oneup'], 'postSlit');
+const L2 = { n: 2, name: 'Stamp Duty', mapLabel: 'Stamp Duty', arch: 'stampduty', theme: 'post_album',
+  gimmick: 'A loose stamp on the left page: roll it along by walking with it, THROW prints its raised shape as a foothold on the facing page, mirrored. The last one is an L that prints the other way round',
+  hint: 'Follow the ink silhouette, not the stamp. The L\'s tall side must end up against the cliff. A corner curls out of a cliff\'s foot...',
+  postcard: 'Brady! I stamped my foot and it printed a step. Backwards. I climbed it anyway, darling, in heels. ♥ C',
+  enemies: [['postCrab', 2], ['postPup', 2], ['postGull', 3]],
+  mapCell: [1, 0], mapFrom: 0,
+  exits: { main: { to: '27-3' } },
+  areas: [
+    { id: 'stamp', gen: 'room', theme: 'post_album', stamp: 'postStampDuty', post: { stamp: true }, bottomKill: true },
+    { id: 'bureau', gen: 'room', role: 'secret', theme: 'post_room_bureau', stamp: 'postBureauOld', post: { room: true } }
+  ] };
+
+Tour.amend('post', { stamps, levels: [L1, L2] });
 
 /* ---------------- the land's map: the postcard's printed harbour ---------------- */
 if (typeof TOUR_OW_MAPS !== 'undefined') TOUR_OW_MAPS.post = {

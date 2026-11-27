@@ -269,6 +269,8 @@ const LEVELS = {};
 // the land's own moves with real inputs (added once per page)
 const helpers = () => {
   window.playP = id => { play(id); for (let k = 0; k < 60 && S().state !== 'play'; k++) sim(0.1); P().invuln = 999; return S(); };
+  // roll the nearest loose stamp (or pad) to left tile sx: walk onto it, then walk with it
+  window.rollTo = (cls, sx) => { const e = ents(cls).sort((a, b) => Math.abs(a.cxF - P().cx) - Math.abs(b.cxF - P().cx))[0]; AP.exec({ walkTo: e.cxF, dir: 0 }, 4); AP.exec({ walkTo: (sx + e.cw / 2) * 32, dir: 0 }, 5); sim(0.2); return window.BRADY_POST.kit.carriage.sx(e); };
   window.throwN = (n, gap) => { for (let k = 0; k < n; k++) { sim(1 / 120, { action: true, actionPressed: true }); sim(gap || 0.45); } };
   window.isl = x => ents('PostIsland').find(e => e.r[0] <= x && e.r[2] >= x);
   window.tileName = (x, y) => { const A = S().area, T = window.BRADY.T; const t = A.tiles[y * A.W + x]; return Object.keys(T).find(k => T[k] === t); };
@@ -348,6 +350,35 @@ LEVELS.perf = async (page, shot, run, pano) => {
     r = await page.evaluate(() => { playP('27-1'); place(160, 16); const a = AP.route([[180, 17], [195, 17]]); sim(2, { right: true }); return { a: a.ok, state: S().state }; });
     check('27-1: on to the gate', r.a && r.state !== 'play', r);
     await page.evaluate(() => { playP('27-1'); }); await pano('19-27-1-panorama.png', 0.35);
+  });
+};
+
+// ---------------- 27-2 Stamp Duty ----------------
+LEVELS.stamp = async (page, shot, run, pano) => {
+  await run('stamp', async () => {
+    await page.evaluate(helpers);
+    await page.evaluate(() => { fresh(); playP('27-2'); place(4, 18); sim(0.6); freeze(); }); await shot('20-27-2-start.png');
+    let r = await page.evaluate(() => { thaw(); const a = rollTo('PostStamp', 14); throwN(1); return { a, t: [tileName(19, 19), tileName(18, 19)] }; });
+    check('27-2: THROW at the stamp prints its slab on the facing page, mirrored', r.t[0] === 'HARD' && r.t[1] === 'HARD', r);
+    r = await page.evaluate(() => { const a = rollTo('PostStamp', 11); sim(0.1); freeze(); return { a }; });
+    await shot('21-27-2-stamp-silhouette.png');
+    r = await page.evaluate(() => { thaw(); throwN(1); return { old: tileName(19, 19), t: [tileName(22, 19), tileName(21, 19)] }; });
+    check('27-2: rolled to the mark the silhouette shows, a new print wipes the old one', r.old === 'EMPTY' && r.t[0] === 'HARD' && r.t[1] === 'HARD', r);
+    await shotAt(page, shot, '22-27-2-printed.png', () => { sim(0.3); });
+    r = await page.evaluate(() => AP.route([[16, 19], [21, 19], [29, 19]]));
+    check('27-2: two hops over the ink on the printed slab', r.ok, r);
+    r = await page.evaluate(() => { const a = rollTo('PostStamp', 34); throwN(1); return { a, t: [tileName(49, 16), tileName(48, 16)], b: AP.route([[44, 19], [48, 16], [53, 14]]) }; });
+    check('27-2: the second stamp prints a step half-way up the cliff, and up it goes', r.t[0] === 'HARD' && r.t[1] === 'HARD' && r.b.ok, r);
+    await shotAt(page, shot, '23-27-2-secret-tell.png', () => { place(46, 18); sim(0.3); });
+    r = await page.evaluate(() => { const a = AP.go([53, 19]); return { ok: a.ok, at: tileOf() }; });
+    check('27-2: the cliff\'s foot where the corner curls is paper: walk into it to the bureau\'s door', r.ok, r);
+    r = await page.evaluate(() => { place(72, 13); const a = AP.route([[78, 19]]); const b = rollTo('PostStamp', 90); sim(0.1); freeze(); return { a: a.ok, b }; });
+    await shot('24-27-2-L-silhouette.png');
+    r = await page.evaluate(() => { thaw(); throwN(1); return { t: [tileName(103, 17), tileName(103, 18), tileName(102, 18), tileName(102, 17)], b: AP.route([[100, 19], [102, 18], [103, 17], [107, 14]]) }; });
+    check('27-2: twist: the L prints the other way round (its tall side against the cliff) and climbs it', r.t[0] === 'HARD' && r.t[1] === 'HARD' && r.t[2] === 'HARD' && r.t[3] === 'EMPTY' && r.b.ok, r);
+    r = await page.evaluate(() => { const a = AP.route([[125, 14], [137, 16], [146, 19], [158, 19]]); sim(3, { right: true }); return { a: a.ok, state: S().state }; });
+    check('27-2: on over the last ink to the gate', r.a && r.state !== 'play', r);
+    await page.evaluate(() => { playP('27-2'); }); await pano('29-27-2-panorama.png', 0.35);
   });
 };
 

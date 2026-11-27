@@ -185,8 +185,8 @@ const painters = {
       for (let r = 0; r < 4; r++) for (let q = 0; q < 6; q++) {
         const sx = x + 14 + q * 66 + (q >= 3 ? 20 : 0), sy = 40 + r * 70;
         if (sy > b - 40) continue;
-        ctx.fillStyle = shade(L.color, -0.08); ctx.fillRect(sx - 3, sy - 3, 46, 54);
-        PostArt.stamp(ctx, sx, sy, 40, 48, (r * 6 + q) % 5, [COBALT_HI, CORAL, '#5aa87a', '#c890d8'][(r + q) % 4]);
+        ctx.save(); ctx.globalAlpha = 0.38; ctx.fillStyle = shade(L.color, -0.08); ctx.fillRect(sx - 3, sy - 3, 46, 54);
+        PostArt.stamp(ctx, sx, sy, 40, 48, (r * 6 + q) % 5, [COBALT_HI, CORAL, '#5aa87a', '#c890d8'][(r + q) % 4]); ctx.restore();
       }
     }
     ctx.globalAlpha = 0.5; ctx.fillStyle = shade(L.color, -0.3); ctx.fillRect(0, b, BG_W, H - b); ctx.globalAlpha = 1;

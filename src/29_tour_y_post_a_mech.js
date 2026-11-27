@@ -190,6 +190,21 @@ const carriage = {
   }
 };
 
+/* ---------------- the camera looks where a prop's effect lands (the print, the bead) while Brady has the prop ---------------- */
+{
+  const uc0 = Play.prototype.updateCamera;
+  Play.prototype.updateCamera = function (dt) {
+    const r = uc0.apply(this, arguments), L = this.postLook, p = this.player;
+    if (L != null && p && inPost(this)) {
+      const want = clamp((p.cx + L) / 2 - Game.viewW / 2, 0, Math.max(0, this.area.W * TS - Game.viewW));
+      this.postCamX = this.postCamX == null ? this.camX : lerp(this.postCamX, want, Math.min(1, (dt || 1 / 60) * 3));
+      this.camX = this.postCamX;
+    } else this.postCamX = null;
+    this.postLook = null;
+    return r;
+  };
+}
+
 /* ======================= 27-2 STAMP DUTY: print a mirrored foothold ======================= */
 // { rail, w, at (carriage), crease: X (the gutter is the line x = X tiles: column c prints at 2X - 1 - c), shape:
 // [[dx, dy]...] (raised cells: dx from the stamp's left tile, dy rows down from ty), ty (the top row it prints at),
@@ -206,6 +221,7 @@ class PostStamp extends Ent {
   postClaim() { return this.holding; }
   update(dt) {
     this.t += dt; carriage.update(this, dt); if (this.flash > 0) this.flash -= dt;
+    if (this.holding) { const c = this.cells(carriage.sx(this)); this.g.postLook = c.reduce((a, q) => a + q[0] * TS + TS / 2, 0) / c.length; }
     const I = this.g.postIn;
     if (I && I.by === this && I.pressed) this.print();
   }
@@ -250,7 +266,12 @@ class PostStamp extends Ent {
     // the rubber face, seen on the block's front: the raised shape as it is on the stamp (it prints the other way round)
     const c = 7, fx = cx - (this.shapeW * c) / 2, fy = y0 - 10 - h * 0.55 + 4;
     for (const [dx, dy] of s.shape) { ctx.fillStyle = '#2a2a48'; ctx.fillRect(fx + dx * c, fy + dy * c, c - 1, c - 1); }
-    throwHint(this, ctx, cx, y0 - 90, 'WALK TO ROLL IT · THROW TO PRINT');
+    // and the same face on a little tag on a stalk behind it, so Brady never hides it: "the stamp's face"
+    const tx = cx - w / 2 - 6, tyy = y0 - 96, cs = 9, sw2 = this.shapeW * cs + 12, sh2 = (Math.max(...s.shape.map(q => q[1])) + 1) * cs + 20;
+    ctx.fillStyle = '#8a5a2a'; ctx.fillRect(tx - 1.5, tyy + sh2, 3, y0 - 30 - tyy - sh2); ctx.fillStyle = WHITE; ctx.strokeStyle = INK; ctx.lineWidth = 1.6; rr(ctx, tx - sw2 / 2, tyy, sw2, sh2, 3); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = INK; ctx.font = '6px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('FACE', tx, tyy + 8);
+    for (const [dx, dy] of s.shape) { ctx.fillStyle = COBALT; ctx.fillRect(tx - sw2 / 2 + 6 + dx * cs, tyy + 13 + dy * cs, cs - 1, cs - 1); }
+    throwHint(this, ctx, cx, y0 - 128, 'WALK TO ROLL IT · THROW TO PRINT');
     ctx.restore();
   }
 }
