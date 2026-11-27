@@ -342,15 +342,170 @@ STAGES.rooms = async ({ ev, shot, run }) => {
     check(tag + ': its door lets Brady out elsewhere in the level', r.area !== aid, r);
   });
 };
-
-const BOT_PAGE = () => {};
+const BOT_PAGE = () => {
+  const B = window.BRADY;
+  const T = window.BOT = { deaths: [], scene: null, cp: 0 };
+  const p = () => S().player;
+  if (!B.Player.prototype.__botDie) { const d0 = B.Player.prototype.die; B.Player.prototype.die = function (reason) { window.__lastDie = { reason: String(reason), x: Math.floor(this.cx / 32), y: Math.floor((this.y + this.h) / 32), near: S().entities.filter(e => !e.remove && e !== this && Math.abs(e.cx - this.cx) < 80 && Math.abs(e.cy - this.cy) < 80).map(e => e.type || e.constructor.name).slice(0, 4) }; return d0.call(this, reason); }; B.Player.prototype.__botDie = true; }
+  T.died = () => S() !== T.scene || p().dead || p().state === 'dying' || S().state === 'gameover';
+  // one frame of input; returns false when Brady has died (then waits for the respawn)
+  T.f = inp => {
+    sim(1 / 120, inp || {}); T.n = (T.n || 0) + 1;
+    if (T.n % 360 === 0 && T.trace) { const q = p(); T.trace.push([T.step, Math.floor(q.cx / 32), Math.floor((q.y + q.h) / 32), S().area.aid, S().state, q.state, Math.round(S().timeLeft || 0)]); }
+    if (!T.died()) return true;
+    const q = p(), why = window.__lastDie || {}; window.__lastDie = null; T.deaths.push({ id: T.id, step: T.step, x: why.x != null ? why.x : Math.floor(q.cx / 32), y: why.y != null ? why.y : Math.floor((q.y + q.h) / 32), reason: why.reason || S().state, near: why.near || [] });
+    for (let k = 0; k < 120 * 8 && !(S() !== T.scene && S().state === 'play' && S().player && !S().player.dead); k++) sim(1 / 120);
+    T.scene = S(); B.Save.data.lives = 9; S().player.invuln = 0; return false;
+  };
+  T.wait = sec => { for (let k = 0; k < sec * 120; k++) if (!T.f()) return false; return true; };
+  const tileAt = (x, y) => { const A = S().area; return x < 0 || x >= A.W ? 99 : y < 0 || y >= A.H ? 0 : A.tiles[y * A.W + x]; };
+  const solid = (x, y) => { const t = tileAt(x, y); return t === 99 || (window.BRADY_TOUR.umbKit.SOLID[t]); };
+  T.solid = solid;
+  // walk to pixel x (careful: hop gaps and walls, jump a critter that comes at him)
+  T.walk = (x, o) => {
+    o = o || {};
+    for (let k = 0; k < 120 * 25; k++) {
+      const q = p(); if (T.finished() || (Math.abs(q.cx - x) < (o.tol || 8) && q.onGround)) return true;
+      const dir = q.cx < x ? 1 : -1, tx = Math.floor((q.cx + dir * 20) / 32), fy = Math.floor((q.y + q.h + 4) / 32);
+      let jump = false;
+      if (q.onGround) {
+        const gapAhead = !solid(tx, fy) && !solid(tx, fy + 1) && tileAt(tx, fy) !== 2;
+        const wall = solid(Math.floor((q.cx + dir * 18) / 32), fy - 1);
+        const crit = S().entities.some(e => e.enemy && !e.dead && !e.remove && !e.boss && !e.isUmbCrawler && (e.cx - q.cx) * dir > 0 && Math.abs(e.cx - q.cx) < 90 && Math.abs((e.y + e.h) - (q.y + q.h)) < 40);
+        if ((gapAhead || wall || crit || q.hitWall) && (o.noHop !== true)) jump = true;
+      }
+      const ok = jump ? T.hop(dir, o.action) : T.f({ right: dir > 0, left: dir < 0, action: !!o.action });
+      if (!ok) return false;
+    }
+    return 'stuck';
+  };
+  T.hop = (dir, action, hold) => { if (!T.f({ jump: true, jumpPressed: true, right: dir > 0, left: dir < 0, action: !!action })) return false; for (let k = 0; k < (hold || 0.45) * 120; k++) if (!T.f({ jump: true, right: dir > 0, left: dir < 0, action: !!action })) return false; for (let k = 0; k < 120 * 2 && !p().onGround; k++) if (!T.f({ right: dir > 0, left: dir < 0, action: !!action })) return false; return true; };
+  // a jump that steers: (wait `delay` s, then) right/left only until Brady's centre is over tile column x
+  T.hopTo = (x, hold, delay) => { const X = x * 32 + 16, d = () => p().cx < X - 6 ? 1 : p().cx > X + 6 ? -1 : 0; if (!T.f({ jump: true, jumpPressed: true })) return false; for (let k = 0; k < 120 * 2.5 && !(k > 10 && p().onGround); k++) { const go = k >= (delay || 0) * 120 ? d() : 0; if (!T.f({ jump: k < (hold || 0.45) * 120, right: go > 0, left: go < 0 })) return false; } return true; };
+  T.grip = (dir) => { if (!T.f({ jump: true, jumpPressed: true, up: true, right: dir > 0, left: dir < 0 })) return false; for (let k = 0; k < 60 && !(p().umb && p().umb.grip); k++) if (!T.f({ up: true, jump: true, right: dir > 0, left: dir < 0 })) return false; return !!(p().umb && p().umb.grip); };
+  // climb to a cell (grip row y): wait while a critter on his face is close in the way
+  T.climb = (x, y) => {
+    for (let k = 0; k < 120 * 30; k++) {
+      const q = p(), W = q.umb; if (!W || !W.grip) return 'lost grip';
+      const gx = x * 32 + 16, gy = y * 32 + 16, dx = gx - q.cx, dy = gy - (q.y + 8);
+      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return true;
+      const mine = S().entities.filter(e => e.isUmbCrawler && !e.dead && e.face === W.face);
+      const close = mine.find(e => Math.hypot(e.cx - q.cx, e.cy - q.cy) < 62);
+      const near = mine.some(e => Math.hypot(e.cx - (q.cx + Math.sign(dx) * 30), e.cy - (q.cy + Math.sign(dy) * 30)) < 50);
+      // a critter on his face coming at him: back off along the net, the way a careful player would
+      let inp = near ? {} : { right: dx > 4, left: dx < -4, down: dy > 4 && Math.abs(dx) < 20, up: dy < -4 && Math.abs(dx) < 20 };
+      if (close) { const ex = q.cx - close.cx, ey = q.cy - close.cy; inp = Math.abs(ex) > Math.abs(ey) ? { right: ex > 0, left: ex < 0 } : { down: ey > 0, up: ey < 0 }; }
+      if (!T.f(inp)) return false;
+    }
+    return 'stuck';
+  };
+  T.cross = () => { const f0 = p().umb.face; if (!T.f({ jump: true, jumpPressed: true })) return false; T.wait(0.45); return p().umb && p().umb.face !== f0; };
+  T.letGo = dir => T.hop(dir, false, 0.5);
+  T.press = k => T.f({ [k]: true, [k + 'Pressed']: true });
+  T.door = () => { if (!T.f({ up: true, upPressed: true })) return false; for (let k = 0; k < 600 && (S().fade.a > 0.05 || p().state !== 'play'); k++) sim(1 / 120); T.scene = S(); return true; };
+  T.gate = () => { for (let k = 0; k < 120 * 20 && !T.finished(); k++) { const gt = S().entities.find(e => e.constructor.name === 'Gate' && !e.secret && !e.remove); const tx = gt ? gt.cx : p().cx + 64; if (!T.f({ right: p().cx < tx - 4, left: p().cx > tx + 4, jump: !!(p().onGround && p().hitWall), jumpPressed: !!(p().onGround && p().hitWall) })) return false; } return T.finished() || 'stuck'; };
+  T.finished = () => ['clear', 'tally', 'results'].includes(S().state);
+  // a route: a list of steps [fn, ...args] and 'cp' markers; on a death the route goes back to the last 'cp'
+  T.run = (id, route) => {
+    fresh(); T.id = id; T.trace = []; const [w, i] = id.split('-').map(Number); B.Save.data.lives = 9;
+    const g = new B.Play(B.getLevel(w, i), {}); B.Game.setScene(g); sim(1.6); T.scene = S(); p().invuln = 0;
+    let k = 0, tries = 0, fails = []; const cps = [[0, -1e9]];
+    // after a death: back to the last route marker Brady passed at or before where he now stands (his respawn)
+    const rewind = () => { const x = p().cx + 96; let best = 0; for (const [i, cx] of cps) if (cx <= x && i > best) best = i; return best; };
+    while (k < route.length && tries < 40) {
+      if (T.finished()) break;
+      const st = route[k]; T.step = k;
+      if (st === 'cp') { if (!cps.some(c => c[0] === k + 1)) cps.push([k + 1, p().cx]); k++; continue; }
+      const r = T[st[0]](...st.slice(1));
+      if (r === false || T.died()) { tries++; if (!T.deaths.length || T.deaths[T.deaths.length - 1].step !== k || T.deaths[T.deaths.length - 1].id !== id) fails.push(k + ':' + st[0]); for (let n = 0; n < 120 * 8 && T.died(); n++) { sim(1 / 120); if (S() !== T.scene && S().state === 'play' && p() && !p().dead) T.scene = S(); } T.scene = S(); p().invuln = 0; k = rewind(); continue; }
+      if (r === 'stuck' || r === 'lost grip') { fails.push(k + ':' + st[0] + ' ' + r); tries++; k++; continue; }
+      k++;
+    }
+    for (let n = 0; n < 120 * 6 && !T.finished(); n++) sim(1 / 120);
+    return { id, finished: T.finished(), deaths: T.deaths.filter(d => d.id === id), fails, trace: T.trace.slice(0, 60) };
+  };
+};
+// the land's own moves for the bot (stick and buttons only)
+const BOT_UMB = () => {
+  const T = window.BOT, p = () => S().player, B = window.BRADY;
+  const ent = (name, f) => S().entities.filter(e => e.constructor.name === name && !e.remove && (!f || f(e)));
+  // to column x precisely: walk (hopping as needed) close, then short taps
+  T.to = x => { const X = x * 32 + 16, d0 = Math.sign(X - p().cx) || 1; if (Math.abs(X - p().cx) > 110 && T.walk(X - d0 * 100, { tol: 30 }) === false) return false; for (let k = 0; k < 600 && !p().onGround; k++) if (!T.f({})) return false; for (let k = 0; k < 400 && Math.abs(p().cx - X) > 5; k++) { const d = p().cx < X ? 1 : -1, far = Math.abs(p().cx - X) > 60; if (p().hitWall && p().onGround) { if (!T.hop(d, false, 0.4)) return false; continue; } for (let q = 0; q < (far ? 4 : 1); q++) if (!T.f({ right: d > 0, left: d < 0 })) return false; for (let q = 0; q < (far ? 2 : 4); q++) if (!T.f({})) return false; } return T.wait(0.15); };
+  // stand under the drip at column x until Brady carries n units of water
+  T.fill = (x, n) => { if (!T.to(x)) return false; for (let k = 0; k < 120 * 12 && (p().umbWater || 0) < n; k++) { const dx = x * 32 + 16 - p().cx; if (!T.f(Math.abs(dx) > 6 ? { right: dx > 0, left: dx < 0 } : {})) return false; } return (p().umbWater || 0) >= n; };
+  // a stamp: a jump that lands on column x; then wait for the water to run along
+  T.stamp = x => { if (!T.hopTo(x, 0.4)) return false; return T.wait(1.6); };
+  // hold THROW on the hook's mark at column x until its chain is rigid, then let go
+  T.hook = x => {
+    const h = ent('UmbHook', e => e.tx === x)[0]; if (!h) return true;
+    if (!T.to(x)) return false;
+    for (let tries = 0; tries < 3 && !h.rigid; tries++) {
+      if (!T.f({ action: true, actionPressed: true })) return false;
+      for (let k = 0; k < 120 * 9 && h.n < h.need; k++) if (!T.f({ action: true })) return false;
+      if (!T.f({})) return false; if (!T.wait(0.3)) return false;
+    }
+    return h.rigid || 'stuck';
+  };
+  // bump the dent over column x from underneath (jump straight up)
+  T.bump = x => { const pn = ent('UmbPanel', e => x * 32 >= e.x && x * 32 < e.x + e.w)[0]; if (!T.to(x)) return false; for (let k = 0; k < 3 && pn && pn.dent; k++) { if (!T.hop(0, false, 0.5)) return false; if (!T.wait(0.2)) return false; } return !pn || !pn.dent || 'stuck'; };
+  // herd the canopy at column x0 and stamp its dry end (twice over if the fling fell short)
+  T.herd = x0 => {
+    const sh = ent('UmbShake', e => e.tx0 === x0)[0]; if (!sh) return true;
+    for (let tries = 0; tries < 3 && !sh.done; tries++) {
+      if (!T.walk(sh.tx0 * 32 + 16, { noHop: true, tol: 8 })) return false;
+      for (let k = 0; k < 120 * 6 && p().cx < (sh.tx1 + 0.3) * 32; k++) if (!T.f({ right: true })) return false;
+      if (!T.wait(0.3)) return false;
+      for (let k = 0; k < 120 * 6 && p().cx > sh.dryX() + 10; k++) if (!T.f({ left: true })) return false;
+      if (!T.wait(0.3)) return false; if (!T.hop(0, false, 0.45)) return false; if (!T.wait(1.6)) return false;
+    }
+    return sh.done || 'stuck';
+  };
+  // the jammed umbrella: to its runner's mark, hold THROW and walk back
+  T.jam = () => {
+    const j = ent('UmbJam', e => !e.open).sort((a, b) => Math.abs(a.cx - p().cx) - Math.abs(b.cx - p().cx))[0]; if (!j) return true;
+    if (!T.to(j.markX())) return false;
+    if (!T.f({ action: true, actionPressed: true })) return false;
+    for (let k = 0; k < 120 * 3 && !j.open; k++) if (!T.f({ action: true, left: j.side < 0, right: j.side > 0 })) return false;
+    return j.open || 'stuck';
+  };
+  // the Inspector: stand just past this phase's collar, away from him; caught: the runner home
+  T.bossFight = () => {
+    const boss = () => S().entities.find(e => e.boss && !e.remove);
+    for (let k = 0; k < 120 * 6 && !(boss() && boss().collars); k++) if (!T.f({ right: p().cx < 8 * 32 })) return false;
+    for (let guard = 0; guard < 120 * 180; guard++) {
+      const b = boss(); if (!b || b.state === 'dying') return T.wait(3) && true;
+      if (!b.collars) { if (!T.f()) return false; continue; }
+      const q = p(), C = b.collars[(b.phase || 1) - 1];
+      let inp = {};
+      if (b.act === 'caught') { const side = b.dir; inp = Math.abs(q.cx - b.markX) > 6 && !b.hold ? { right: q.cx < b.markX, left: q.cx > b.markX } : { action: true, actionPressed: !b.hold, right: side > 0, left: side < 0 }; }
+      else if (b.act !== 'drop') {
+        const away = b.act === 'back' ? (C.x < (b.arenaX0 + b.arenaX1) / 2 ? -1 : 1) : b.dir, spot = C.x + away * 1.6 * 32;
+        if (Math.abs(q.cx - spot) > 6 && !['poke', 'scoop', 'jab'].includes(b.act)) inp = { right: q.cx < spot, left: q.cx > spot };
+      }
+      if (!T.f(inp)) return false;
+    }
+    return 'stuck';
+  };
+};
+// each stage's route: [move, ...args] steps and 'cp' markers (after a death the route resumes at the last marker
+// Brady had passed)
+const BOT_ROUTES = {
+  '31-1': [['walk', 19 * 32], ['grip', 1], ['climb', 31, 17], ['letGo', 1], 'cp', ['walk', 53 * 32 + 8], ['grip', 1], ['climb', 55, 15], ['climb', 57, 15], ['cross'], ['climb', 57, 12], ['climb', 66, 12], ['climb', 66, 15], ['cross'], ['climb', 68, 15], ['letGo', 1], 'cp',
+    ['walk', 84 * 32 + 16], ['grip', 1], ['climb', 86, 12], ['climb', 100, 12], ['letGo', 1], 'cp', ['walk', 139 * 32 + 8], ['grip', 1], ['climb', 143, 14], ['climb', 147, 14], ['cross'], ['climb', 152, 9], ['press', 'action'], ['wait', 0.6],
+    ['climb', 167, 12], ['letGo', 1], 'cp', ['walk', 185 * 32 + 8], ['grip', 1], ['climb', 189, 12], ['climb', 192, 12], ['cross'], ['climb', 197, 14], ['press', 'action'], ['wait', 0.6], ['climb', 214, 13], ['letGo', 1], 'cp', ['walk', 231 * 32], ['gate']],
+  '31-2': [['fill', 14, 2], ['stamp', 15], ['walk', 27 * 32], 'cp', ['fill', 48, 3], ['stamp', 50], ['to', 63], ['hopTo', 69, 0.55], ['walk', 72 * 32], ['walk', 77 * 32], 'cp',
+    ['walk', 110 * 32], ['fill', 112, 2], ['stamp', 113], ['walk', 126 * 32], 'cp', ['walk', 138 * 32], ['fill', 140, 2], ['stamp', 141], ['fill', 140, 2], ['stamp', 141], ['walk', 171 * 32], 'cp', ['walk', 190 * 32], ['gate']],
+  '31-3': [['hook', 25], ['walk', 40 * 32], 'cp', ['hook', 62], ['walk', 80 * 32], 'cp', ['hook', 96], ['walk', 114 * 32], ['walk', 137 * 32], 'cp', ['hook', 150], ['walk', 170 * 32], 'cp', ['hook', 182], ['walk', 200 * 32], 'cp', ['walk', 210 * 32], ['gate']],
+  '31-4': [['bump', 14], ['walk', 30 * 32], 'cp', ['bump', 41], ['walk', 62 * 32], ['bump', 67], ['walk', 84 * 32], 'cp', ['bump', 115], ['walk', 132 * 32], 'cp', ['bump', 159], ['bump', 155], ['bump', 151], ['walk', 172 * 32], 'cp', ['walk', 198 * 32], ['gate']],
+  '31-5': [['herd', 14], ['walk', 30 * 32], 'cp', ['herd', 44], ['walk', 66 * 32], 'cp', ['walk', 108 * 32], ['herd', 112], ['walk', 144 * 32], 'cp', ['herd', 150], ['walk', 178 * 32], 'cp', ['walk', 208 * 32], ['gate']],
+  '31-6': [['jam'], ['walk', 40 * 32], ['jam'], ['walk', 56 * 32], 'cp', ['walk', 72 * 32 + 16, { noHop: true }], ['door'], ['bossFight'], ['gate']]
+};
 const BOT_BOSS = () => {};
-const BOT_ROUTES = {};
 
 (async () => {
   if (args.includes('--bot')) {
     await session({ width: 874, height: 402 }, async ({ ev }) => {
-      await ev(BOT_PAGE); await ev(BOT_BOSS);
+      await ev(BOT_PAGE); await ev(BOT_UMB);
       for (const id of Object.keys(BOT_ROUTES)) {
         if (want.length && !want.includes(id)) continue;
         const r = await ev(([i, route]) => window.BOT.run(i, route), [id, BOT_ROUTES[id]]);

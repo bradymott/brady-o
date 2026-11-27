@@ -96,7 +96,7 @@ class UmbGutter extends Ent {
     if (!this.full && UK.keys(g).has(this.id)) { this.full = true; this.lvl = this.need; }
     // a stamp: landing on the plate from a jump
     if (p && !p.dead) {
-      const landed = p.onGround && !this.wasG && this.lastVy > 3 * TS && p.groundTy === this.fy && Math.abs(p.cx - (this.padX * TS + TS / 2)) < TS * 0.9;
+      const landed = p.onGround && !this.wasG && this.lastVy > 3 * TS && p.groundTy === this.fy && Math.abs(p.cx - (this.padX * TS + TS / 2)) < TS * 1.3;
       this.wasG = p.onGround; this.lastVy = p.vy;
       if (landed && !this.full) {
         const w = water(p);

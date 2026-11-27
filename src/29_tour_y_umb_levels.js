@@ -51,15 +51,15 @@ const ribRows = (() => {
   fillG(Gr, 77, 5, 83, 5, 'H'); put(Gr, 78, 4, 'A'); put(Gr, 81, 4, 'u'); put(Gr, 80, 2, 'o.o');
   ground(Gr, 101, 118, 13); put(Gr, 104, 12, 'c'); put(Gr, 108, 12, 'j'); put(Gr, 113, 9, '?'); put(Gr, 112, 12, 'x');
   ground(Gr, 119, 122, 16); ground(Gr, 123, 126, 19); ground(Gr, 127, 140, 23);
-  put(Gr, 128, 22, 'c'); put(Gr, 131, 22, 'a'); put(Gr, 134, 22, 'Z'); put(Gr, 137, 22, 'l'); put(Gr, 120, 12, 'f');
+  put(Gr, 128, 22, 'c'); put(Gr, 131, 22, 'a'); put(Gr, 134, 22, 'Z'); put(Gr, 115, 12, 'l'); put(Gr, 120, 12, 'f');
   // ③ the covered passage: the seated tick across the long canopy
   fillG(Gr, 139, 4, 172, 6, 'H');
-  put(Gr, 141, 7, '5'); put(Gr, 156, 7, 'Y'); put(Gr, 145, 11, 'w'); put(Gr, 151, 10, 'z'); put(Gr, 160, 18, 'R');
+  put(Gr, 139, 7, '5'); put(Gr, 156, 7, 'Y'); put(Gr, 149, 8, 'w'); put(Gr, 163, 10, 'z'); put(Gr, 160, 18, 'R');
   put(Gr, 144, 15, 'o.o.o'); put(Gr, 160, 10, 'o.o.o'); put(Gr, 163, 16, 'o.o.o');
-  ground(Gr, 169, 186, 23); put(Gr, 172, 22, 'c'); put(Gr, 176, 19, '?'); put(Gr, 180, 22, 'r');
+  ground(Gr, 169, 186, 23); put(Gr, 172, 22, 'c'); put(Gr, 176, 19, '?');
   // the last canopy: a second seated tick, critters on both faces
   fillG(Gr, 185, 4, 218, 7, 'H');
-  put(Gr, 187, 8, '6'); put(Gr, 202, 8, 'J'); put(Gr, 195, 10, 'U'); put(Gr, 199, 13, 'V'); put(Gr, 208, 9, 'E'); put(Gr, 211, 17, 'N');
+  put(Gr, 185, 8, '6'); put(Gr, 202, 8, 'J'); put(Gr, 195, 10, 'U'); put(Gr, 199, 13, 'V'); put(Gr, 208, 9, 'E'); put(Gr, 211, 17, 'N');
   put(Gr, 190, 15, 'o.o.o'); put(Gr, 204, 12, 'o.o.o');
   ground(Gr, 215, W - 1, 23); put(Gr, 218, 22, 'c'); put(Gr, 222, 22, 'j'); fillG(Gr, 226, 20, 227, 22, 'H'); put(Gr, 226, 16, 'P'); put(Gr, 233, 22, 'G');
   fillG(Gr, W - 1, 0, W - 1, 22, 'H');
@@ -76,10 +76,10 @@ const RIB = Object.assign({}, ENEMY, {
   '4': CANP(18, 14, [[4, 10], [9, 4], [14, 8]]),
   e: CRAWL({ kind: 'ferret', face: 0, ax: 6, speed: 1.1 }), q: CRAWL({ kind: 'tick', face: 1, ay: -6, speed: 1.2 }),
   A: ['spawn', 'portal', { kind: 'door', look: 'umbCase', targetRef: 'lunch@in' }], u: TICKET({ dy: 1 }), a: ['anchor', 'lunchOut'],
-  '5': CANP(30, 13, [[6, 7], [11, 3], [20, 5], [25, 9]]),
+  '5': CANP(32, 13, [[8, 7], [13, 3], [22, 5], [27, 9]]),
   Y: ['piece', 'umb.seat', { h: 13, side: -1, reach: 4, mark: 2, id: 'seat1' }],
-  w: CRAWL({ kind: 'tick', face: 0, ay: 6, speed: 1.1 }), z: CRAWL({ kind: 'ferret', face: 1, ay: 6, speed: 1.0, phase: 1.5 }),
-  '6': CANP(30, 12, [[5, 4], [10, 8], [19, 3], [24, 7]]),
+  w: CRAWL({ kind: 'tick', face: 0, ax: 4, speed: 1.1 }), z: CRAWL({ kind: 'ferret', face: 1, ay: 6, speed: 1.0, phase: 1.5 }),
+  '6': CANP(32, 12, [[7, 4], [12, 8], [21, 3], [26, 7]]),
   J: ['piece', 'umb.seat', { h: 12, side: -1, reach: 5, mark: 6, id: 'seat2' }],
   U: CRAWL({ kind: 'tick', face: 1, ax: 4, speed: 1.3 }), V: CRAWL({ kind: 'ferret', face: 0, ay: 5, speed: 1.2 }),
   E: CRAWL({ kind: 'tick', face: 0, ay: 8, speed: 1.2 }), N: CRAWL({ kind: 'tick', face: 1, ax: -3, speed: 1.0 })
@@ -106,18 +106,18 @@ const L1 = { n: 1, name: 'Rib Inspector', mapLabel: 'Rib Inspector', arch: 'ribc
 const dropRows = (() => {
   const W = 200, H = 26, Gr = grid(W, H, '.');
   ground(Gr, 0, 40, 21); put(Gr, 3, 20, '@'); put(Gr, 6, 20, 'k'); put(Gr, 10, 17, '?'); put(Gr, 14, 20, 'd'); put(Gr, 15, 20, '1');
-  put(Gr, 26, 20, 'c'); put(Gr, 30, 16, '*'); put(Gr, 33, 14, 'f'); put(Gr, 36, 20, 'r'); put(Gr, 28, 18, 'o.o.o');
+  put(Gr, 26, 20, 'c'); put(Gr, 30, 16, '*'); put(Gr, 33, 14, 'f'); put(Gr, 62, 20, 'r'); put(Gr, 28, 18, 'o.o.o');
   ground(Gr, 44, 100, 21); put(Gr, 48, 20, 'd'); put(Gr, 50, 20, '2'); put(Gr, 45, 17, 'o.o');
-  put(Gr, 62, 20, 'l');
+  put(Gr, 84, 20, 'l');
   // the downpipe housing: its left face is a painted board (walk into it); the cupboard door inside
-  fillG(Gr, 66, 17, 70, 20, 'H'); fillG(Gr, 67, 18, 69, 20, '.'); fillG(Gr, 66, 18, 66, 20, 'F'); put(Gr, 68, 20, 'A'); fillG(Gr, 63, 19, 63, 20, 'B'); put(Gr, 65, 19, 'u');
-  put(Gr, 76, 20, 'c'); put(Gr, 80, 17, '?'); put(Gr, 86, 20, 'j'); put(Gr, 92, 14, 'f'); put(Gr, 97, 20, 'a'); put(Gr, 72, 14, 'o.o.o');
+  fillG(Gr, 66, 18, 70, 20, 'H'); fillG(Gr, 67, 19, 69, 20, '.'); fillG(Gr, 66, 19, 66, 20, 'F'); put(Gr, 68, 20, 'A'); put(Gr, 65, 20, 'u');
+  put(Gr, 76, 20, 'c'); put(Gr, 80, 17, '?'); put(Gr, 90, 20, 'j'); put(Gr, 92, 14, 'f'); put(Gr, 97, 20, 'a'); put(Gr, 72, 14, 'o.o.o');
   put(Gr, 102, 17, 'R');
   ground(Gr, 104, 160, 21); put(Gr, 106, 20, 'K'); put(Gr, 112, 20, 'd'); put(Gr, 113, 20, '3');
-  put(Gr, 125, 20, 'c'); put(Gr, 132, 20, 'r'); put(Gr, 128, 16, '?');
-  put(Gr, 140, 20, 'e'); put(Gr, 141, 20, '4'); put(Gr, 137, 14, 'f');
+  put(Gr, 125, 20, 'c'); put(Gr, 130, 20, 'r'); put(Gr, 128, 16, '?');
+  put(Gr, 140, 20, 'e'); put(Gr, 141, 20, '4'); put(Gr, 156, 14, 'f');
   ground(Gr, 161, W - 1, 21); fillG(Gr, 161, 22, 163, 25, '#');
-  put(Gr, 170, 20, 'c'); put(Gr, 176, 20, 'l'); fillG(Gr, 180, 17, 181, 20, 'H'); put(Gr, 180, 12, 'P'); put(Gr, 184, 18, 'o.o.o'); put(Gr, 192, 20, 'G');
+  put(Gr, 170, 20, 'c'); put(Gr, 176, 20, 'l'); fillG(Gr, 180, 18, 181, 20, 'H'); put(Gr, 180, 14, 'P'); put(Gr, 184, 18, 'o.o.o'); put(Gr, 192, 20, 'G');
   fillG(Gr, W - 1, 0, W - 1, 20, 'H');
   return rowsOf(Gr);
 })();
@@ -156,11 +156,12 @@ const hookRows = (() => {
   // the teach trench: a floor three rows down, a step back up on the left
   ground(Gr, 26, 31, 24); ground(Gr, 26, 26, 23); put(Gr, 28, 18, 'o.o.o');
   ground(Gr, 32, 62, 21); put(Gr, 35, 20, 'c'); put(Gr, 42, 17, '?'); put(Gr, 47, 20, 'j'); put(Gr, 54, 15, 'f'); put(Gr, 62, 20, '2'); put(Gr, 64, 16, '*');
-  ground(Gr, 71, 96, 21); put(Gr, 76, 20, 'r'); put(Gr, 82, 20, 'c'); put(Gr, 96, 20, '3'); put(Gr, 88, 17, 'o.o.o');
+  ground(Gr, 71, 96, 21); put(Gr, 87, 20, 'r'); put(Gr, 82, 20, 'c'); put(Gr, 96, 20, '3'); put(Gr, 88, 17, 'o.o.o');
   ground(Gr, 104, 150, 21); put(Gr, 110, 20, 'l');
   // the side hook: up the steps onto the pillar, a chain across to the high ledge (B28's door); under it the street
   fillG(Gr, 116, 19, 117, 20, 'B'); fillG(Gr, 118, 16, 120, 20, 'H'); put(Gr, 120, 15, '4'); put(Gr, 119, 14, 'u');
-  fillG(Gr, 126, 16, 132, 16, 'H'); put(Gr, 129, 15, 'A'); put(Gr, 131, 13, 'o.o');
+  // a beam over the chain's gap: no jumping across, only walking the chain
+  fillG(Gr, 121, 13, 126, 13, 'H'); fillG(Gr, 127, 16, 133, 16, 'H'); put(Gr, 130, 15, 'A'); put(Gr, 131, 14, 'o.o');
   put(Gr, 136, 20, 'c'); put(Gr, 140, 17, '?'); put(Gr, 145, 20, 'a'); put(Gr, 142, 15, 'f');
   // a long gap, the risky postcard over it
   put(Gr, 150, 20, '5'); put(Gr, 152, 16, 'R');
@@ -173,7 +174,7 @@ const HOOKL = Object.assign({}, ENEMY, {
   k: SIGN('A HOOK EXCHANGE! STAND ON THE MARK BY THE HOOK AND HOLD THROW: HANDLES NEST ONE IN ANOTHER ACROSS THE GAP. LET GO WHEN THE FAR RING LIGHTS'),
   K: SIGN('THIS LAST PAIR OPEN THE SAME WAY ROUND. THE SISTER HAS TO TURN THE CORNER FIRST: KEEP HOLDING'),
   '1': ['piece', 'umb.hook', { span: 6 }], '2': ['piece', 'umb.hook', { span: 8 }], '3': ['piece', 'umb.hook', { span: 7 }],
-  '4': ['piece', 'umb.hook', { span: 5, wire: 4 }], '5': ['piece', 'umb.hook', { span: 8 }], '6': ['piece', 'umb.hook', { span: 10, corner: true }],
+  '4': ['piece', 'umb.hook', { span: 6, wire: 2 }], '5': ['piece', 'umb.hook', { span: 8 }], '6': ['piece', 'umb.hook', { span: 10, corner: true }],
   A: ['spawn', 'portal', { kind: 'door', look: 'umbCase', targetRef: 'tray@in' }], u: TICKET({}), a: ['anchor', 'trayOut']
 });
 stamps.umbHooks = { floor: 21, rows: hookRows, legend: HOOKL, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power'] };
