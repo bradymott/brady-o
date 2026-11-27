@@ -4,7 +4,7 @@
 //   BIG collar's glow, just past it: the tip lodges in the collar. Two catches.
 // 2 THE SCOOP: the canopy flips to bare spokes (1.0 s), then a low wide scoop; behind the MEDIUM collar it wedges.
 // 3 THE JAB: the tip points, the panels fold (1.0 s), then a narrow jab; baited into the SMALL collar.
-// Caught: hold THROW at the runner's mark and walk back three steps: the runner passes the notch. At the end a single
+// Caught: hold THROW at the runner's mark and walk back two steps: the runner passes the notch. At the end a single
 // drop of rain lands on him and he reopens, flawlessly.
 // The player here is a thumb on the stick and the two buttons, through the game loop, with damage on, no retries.
 module.exports = async ({ page, check, shot }) => {
@@ -25,7 +25,7 @@ module.exports = async ({ page, check, shot }) => {
     for (let n = 0; n < 120 * 20 && b.act !== 'caught' && b.hp === hp0; n++) {
       const C = b.collars[b.phase - 1], side = p.cx < (b.arenaX0 + b.arenaX1) / 2 ? -1 : 1;
       // the spot just past the collar, on the far side from where he hovers
-      const away = b.act === 'back' ? (C.x < (b.arenaX0 + b.arenaX1) / 2 ? -1 : 1) : b.dir, spot = C.x + away * 1.6 * 32;
+      const away = b.act === 'back' ? (C.x < (b.arenaX0 + b.arenaX1) / 2 ? -1 : 1) : b.dir, spot = C.x + away * 1.4 * 32;
       if (b.act === 'tell') { sawTell = true; tell += 1 / 120; }
       const go = Math.abs(p.cx - spot) > 6 && b.act !== 'poke' && b.act !== 'scoop' && b.act !== 'jab';
       sim(1 / 120, go ? { right: p.cx < spot, left: p.cx > spot } : {});

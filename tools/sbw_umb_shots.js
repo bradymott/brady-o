@@ -312,10 +312,22 @@ STAGES.corridor = async ({ ev, shot, run, pano }) => {
   });
 };
 
+/* ---------------- 31-6 the boss in the hall (landscape) ---------------- */
+STAGES.boss = async ({ ev, shot, run }) => {
+  await run('boss', async () => {
+    await ev(() => { fresh(); play('31-6'); const g = S(), k = areaOf(g, 'hall'), A = g.level.areas[k]; g.loadArea(k, A.anchors.in.x, A.anchors.in.y); P().invuln = 999; sim(0.2); for (let n = 0; n < 200; n++) sim(1 / 120, { right: true }); sim(3.0); freeze(); });
+    await shot('80-31-6-boss-hall.png');
+    const r = await ev(() => { thaw(); const b = S().entities.find(e => e.boss && !e.remove); for (let n = 0; n < 120 * 12 && !(b.act === 'tell' && b.at > 0.55); n++) sim(1 / 120); return { act: b.act }; });
+    await ev(() => freeze()); await shot('81-31-6-boss-tell.png');
+    check('31-6: the Inspector shows his tell before he pokes', r.act === 'tell', r);
+    await ev(() => thaw());
+  });
+};
+
 /* ---------------- the six secret rooms: found, entered (title, then rule), failed once, won, left ---------------- */
 const ROOMS = [
   ['31-1', 'lunch', '70-room-B26-long-lunch', "const R = room(); R.ang = R.ang; press('action'); sim(1.4);"],
-  ['31-2', 'sew', '71-room-B27-threadbare', "sim(2.4, { right: true }); sim(0.3);"],
+  ['31-2', 'sew', '71-room-B27-threadbare', "sim(2.4, { left: true }); sim(0.3);"],
   ['31-3', 'tray', '72-room-B28-finders-keepers', "const R = room(), f = R.items.find(i => !i.key); for (let k = 0; k < 900 && Math.abs(R.mx - f.x) > 0.04; k++) sim(1 / 120, { right: R.mx < f.x, left: R.mx > f.x }); for (let k = 0; k < 600 && !(R.fails > 0); k++) sim(1 / 120, { down: true }); sim(0.3);"],
   ['31-4', 'booth', '73-room-B29-viewfinder', "press('action'); sim(0.4);"],
   ['31-5', 'slice', '74-room-B30-seed-the-slice', "const R = room(); const ok = [[1,0],[1,1],[0,1],[-1,1],[-1,0],[-1,-1],[0,-1],[1,-1]].find(d => R.bare.indexOf(S().area.roomKit && window.BRADY_TOUR.TourRooms.kinds.umbSlice.wedgeAt({ rot: R.rot + Math.PI * 2 / 11 * 0.36 }, Math.atan2(d[1], d[0]))) < 0); sim(0.05, { right: ok[0] > 0, left: ok[0] < 0, down: ok[1] > 0, up: ok[1] < 0 }); sim(1 / 120, { right: ok[0] > 0, left: ok[0] < 0, down: ok[1] > 0, up: ok[1] < 0, action: true, actionPressed: true }); sim(0.6);"],
@@ -479,7 +491,7 @@ const BOT_UMB = () => {
       let inp = {};
       if (b.act === 'caught') { const side = b.dir; inp = Math.abs(q.cx - b.markX) > 6 && !b.hold ? { right: q.cx < b.markX, left: q.cx > b.markX } : { action: true, actionPressed: !b.hold, right: side > 0, left: side < 0 }; }
       else if (b.act !== 'drop') {
-        const away = b.act === 'back' ? (C.x < (b.arenaX0 + b.arenaX1) / 2 ? -1 : 1) : b.dir, spot = C.x + away * 1.6 * 32;
+        const away = b.act === 'back' ? (C.x < (b.arenaX0 + b.arenaX1) / 2 ? -1 : 1) : b.dir, spot = C.x + away * 1.4 * 32;
         if (Math.abs(q.cx - spot) > 6 && !['poke', 'scoop', 'jab'].includes(b.act)) inp = { right: q.cx < spot, left: q.cx > spot };
       }
       if (!T.f(inp)) return false;
@@ -523,7 +535,8 @@ const BOT_BOSS = () => {};
   });
   await session({ width: 402, height: 874 }, async ({ ev, shot, run }) => {
     await run('p-rib', async () => { await ev(() => { fresh(); play('31-1'); place(13, 22); sim(0.2); sim(0.35, { jump: true, jumpPressed: true, up: true }); sim(0.4, { up: true }); freeze(); }); await shot('90-portrait-31-1-canopy.png'); });
-    if (typeof PORTRAIT_MORE !== 'undefined') await PORTRAIT_MORE({ ev, shot, run });
+    await run('p-boss', async () => { await ev(() => { thaw(); fresh(); play('31-6'); const g = S(), k = areaOf(g, 'hall'), A = g.level.areas[k]; g.loadArea(k, A.anchors.in.x, A.anchors.in.y); P().invuln = 999; sim(0.2); for (let n = 0; n < 300; n++) sim(1 / 120, { right: true }); sim(3.2); freeze(); }); await shot('91-portrait-31-6-boss.png'); });
+    await run('p-map', async () => { await ev(() => { thaw(); fresh(); const d = window.BRADY.Save.data; d.tour.lands.umb = true; d.unlocked['31-1'] = true; window.BRADY.goToMap('world', 1, '31-1'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } freeze(); }); await shot('92-portrait-umb-map.png'); });
   });
   console.log(failures ? `${failures} UMB CHECK(S) FAILED` : 'ALL UMB CHECKS PASSED');
   process.exit(failures ? 1 : 0);

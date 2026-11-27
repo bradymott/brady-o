@@ -313,7 +313,7 @@ const L6 = { n: 6, name: 'Lifetime Warranty', mapLabel: 'Lifetime Warranty', arc
   areas: [
     { id: 'corridor', gen: 'room', theme: 'umb_hall', stamp: 'umbWarranty' },
     { id: 'shower', gen: 'room', role: 'secret', theme: 'umb_room_rib', stamp: 'umbShower', room: RK('umbRib') },
-    { id: 'hall', gen: 'arena', role: 'arena', layout: 'hall', arenaW: 30, H: 18, roof: false, theme: 'umb_hall' }
+    { id: 'hall', gen: 'arena', role: 'arena', layout: 'hall', arenaW: 26, H: 18, roof: false, theme: 'umb_hall' }
   ] };
 
 Tour.amend('umb', { stamps, levels: [L1, L2, L3, L4, L5, L6] });

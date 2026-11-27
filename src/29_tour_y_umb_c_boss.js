@@ -15,27 +15,28 @@
      3 THE JAB        his tip points at Brady and every panel folds shut (1.0 s tell), then a quick narrow jab at
                       standing height. Bait it into the SMALL collar: be in its (smaller) glow and jump the jab.
    Once he's caught: the runner's mark pulses by the collar on Brady's side: hold THROW there and walk back, away from
-   him, three steps: the runner passes the notch (a hit). He pulls free after 8 s if left alone (no harm done). Two
+   him, two steps: the runner passes the notch (a hit). He pulls free after 8 s if left alone (no harm done). Two
    catches a phase. At the end a single drop of rain lands on him, and he reopens, flawlessly.
    ============================================================ */
 (function () {
 const UK = Tour.umbKit, INK = UK.INK, UA = UK.UmbArt;
-// his words come up under the boss bar, one at a time, on a pill (UmbSay with who 'boss' replaces the last)
-const say = (g, b, text, col) => UK.say(g, b.cx, b.y + b.h + 34, text, col || '#ffffff', 'boss');
+// his words come up in one spot under the boss bar, one at a time, on a pill (UmbSay with who 'boss' replaces the last)
+const say = (g, b, text, col) => UK.say(g, g.camX + Game.viewW / 2, -1e4, text, col || '#ffffff', 'boss');   // (clamped to the spot under the boss bar)
 
 /* ---------------- the arena: the hall floor, the three collars (drawn by the boss's hook), a bench at each end ---------------- */
 Tour.pieces['umb.arena_hall'] = function (st, o) {
   const B = st.B, { x0, w, GY } = o;
   B.decorAt('umbBench', x0 + 2, GY, 1); B.decorAt('umbBench', x0 + w - 3, GY, 2);
 };
-const COLLARS = w => [{ k: 0, at: 6, r: 34, glow: 3.6 }, { k: 1, at: Math.floor(w / 2), r: 26, glow: 3.2 }, { k: 2, at: w - 7, r: 18, glow: 2.6 }];
+const COLLARS = w => [{ k: 0, at: 9, r: 34, glow: 3.0 }, { k: 1, at: Math.floor(w / 2), r: 26, glow: 2.6 }, { k: 2, at: w - 9, r: 18, glow: 2.2 }];
+const RUN = { mark: 1.4, pull: 2 };   // the runner's mark (tiles past the collar) and the walk back to the notch
 const NAMES = ['UNLIKELY! MOST UNLIKELY!', 'I HAVE INSPECTED WORSE WEATHER.', 'A FORECAST OF POKING!', 'NOT A RIB OUT OF PLACE!'];
 
 const brain = {
   phases: [4, 2],
   guardText: 'MIND THE CANOPY!',
   wake(b) {
-    b.phase = 1; b.homeY = b.floorY - 5.2 * TS; b.y = b.homeY; b.dir = 1; b.flat = false;
+    b.phase = 1; b.homeY = b.floorY - 4.6 * TS; b.y = b.homeY; b.dir = 1; b.flat = false;
     const x0 = b.arenaX0 / TS, w = (b.arenaX1 - b.arenaX0) / TS;
     b.collars = COLLARS(w).map(c => Object.assign({}, c, { x: (x0 + c.at) * TS + TS / 2 }));
     say(b.g, b, 'AN INSPECTION! STAND STILL, PLEASE.', '#ffffff');
@@ -54,7 +55,7 @@ const brain = {
   // the attack's hitbox at its head (world): poke / jab at standing height, the scoop low and wide
   box(b) {
     const fy = b.floorY, hx = b.head;
-    if (b.act === 'scoop') return { x: hx - 34, y: fy - 0.9 * TS, w: 68, h: 0.9 * TS };
+    if (b.act === 'scoop') return { x: hx - 26, y: fy - 0.9 * TS, w: 52, h: 0.9 * TS };
     if (b.act === 'jab') return { x: hx - 10, y: fy - 1.05 * TS, w: 20, h: 14 };
     return { x: hx - 14, y: fy - 1.1 * TS, w: 28, h: 20 };
   },
@@ -91,13 +92,13 @@ const brain = {
       if (b.dir > 0 ? b.head >= b.arenaX1 - 6 : b.head <= b.arenaX0 + 6) { b.x = clamp(b.x, b.arenaX0, b.arenaX1 - b.w); b.go('back'); }
     } else if (b.act === 'caught') {
       // the runner: hold THROW at the mark on Brady's side of the collar and walk back, away from him
-      const C = this.collar(b), side = b.dir, mx = C.x + side * 1.6 * TS, I = (p && p.inp) || {};
+      const C = this.collar(b), side = b.dir, mx = C.x + side * RUN.mark * TS, I = (p && p.inp) || {};
       b.markX = mx;
       if (p && !p.dead) {
         const at = p.onGround && Math.abs(p.cx - mx) < 0.9 * TS && Math.abs(p.y + p.h - fy) < 8;
         if (!b.hold && I.action && at) { b.hold = true; b.x0p = p.cx; TourKit.sfx('grip', 'select', { vol: 0.4, pitch: 1.0 }); }
         if (b.hold && (!I.action || !p.onGround)) b.hold = false;
-        if (b.hold) b.runner = clamp((p.cx - b.x0p) * side / (3 * TS), 0, 1); else b.runner = Math.max(0, b.runner - dt * 2);
+        if (b.hold) b.runner = clamp((p.cx - b.x0p) * side / (RUN.pull * TS), 0, 1); else b.runner = Math.max(0, b.runner - dt * 2);
         if (b.runner >= 1) { b.hold = false; b.runner = 0; g.burst(C.x, fy - 1.2 * TS, 18, UA.CORAL, 'confetti'); UK.say(g, C.x, fy - 3 * TS, 'NOTCH!', UA.GOLD_L); b.damage(1); if (b.act === 'caught') b.go('back'); return; }
       }
       if (b.at > 8) { say(g, b, 'HA! FREE AS A BREEZE.', '#ffffff'); b.go('back'); }
@@ -151,7 +152,7 @@ TourHooks.on('afterEntities', (play, ctx) => {
   });
   // caught: his shaft through the collar, the coral runner and its notch, the mark on Brady's side
   if (b.act === 'caught' && b.markX != null) {
-    const C = brain.collar(b), side = b.dir, sy = fy - 1.2 * TS, end = C.x + side * 3.4 * TS, nx = C.x + side * 2.6 * TS;
+    const C = brain.collar(b), side = b.dir, sy = fy - 1.2 * TS, end = C.x + side * (RUN.mark + RUN.pull + 0.4) * TS, nx = C.x + side * (RUN.mark + RUN.pull - 0.2) * TS;
     ctx.strokeStyle = INK; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(C.x - side * 20, sy); ctx.lineTo(end, sy); ctx.stroke();
     ctx.strokeStyle = '#a0a8c0'; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.moveTo(C.x - side * 20, sy); ctx.lineTo(end, sy); ctx.stroke();
     ctx.strokeStyle = UA.GOLD_L; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(nx, sy - 12); ctx.lineTo(nx, sy + 12); ctx.stroke();
@@ -168,6 +169,14 @@ TourHooks.on('afterEntities', (play, ctx) => {
   // the end: one drop falls on him
   if (b.act === 'drop') { const u = clamp((b.dropT || 0) / 1.1, 0, 1); if (u < 1) UA.drop(ctx, b.cx, lerp(b.g.camY + 40, b.y, u * u), 6); }
   ctx.restore();
+});
+// the hall's camera: as low as the area allows, so the floor sits up out of the stick and buttons' corners and he
+// hovers clear of the boss bar
+TourHooks.on('camera', (play) => {
+  const b = play.boss, A = play.area; if (!b || b.style !== 'umb_inspector' || b.remove || !A) return;
+  play.camY = Math.max(0, A.H * TS - Game.viewH);
+  // the whole hall in view (it is no wider than the screen): both of them, every collar, every tell
+  const aw = b.arenaX1 - b.arenaX0; if (aw <= Game.viewW) play.camX = clamp(b.arenaX0 - (Game.viewW - aw) / 2, 0, Math.max(0, A.W * TS - Game.viewW));
 });
 const boss = { id: 'umb_inspector', name: 'The Inspector of Unlikely Weather', hp: 6, dims: [96, 84], floats: true, music: 'tour_umb_boss', country: 'umb', brain };
 Tour.boss(boss);
