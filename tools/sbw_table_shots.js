@@ -279,6 +279,12 @@ const tableInit = () => {
     },
     // walk on a raft until Brady's centre is at fraction k of it (then stand still)
     onRaftAt(rf, k) { const p = P(); for (let i = 0; i < 160; i++) { const kk = (p.cx - rf.x) / rf.w; if (Math.abs(kk - k) < 0.08 && Math.abs(p.vx) < 20) break; if (Math.abs(kk - k) >= 0.08) sim(1 / 60, { left: kk > k, right: kk < k }); sim(1 / 30); } sim(0.2); return +((P().cx - rf.x) / rf.w).toFixed(2); },
+    // press UP at a door; wait for the fade
+    door() { const g = S(), a0 = g.area.aid; sim(1 / 120, { up: true, upPressed: true }); for (let k = 0; k < 40 && (g.area.aid === a0 || g.fade.a > 0.05); k++) sim(0.1); sim(0.4); return g.area.aid; },
+    // in a table room: walk to a stage mark (tile x) and press THROW there
+    markThrow(x) { const r = AP.go([x, 8]); sim(0.2); sim(1 / 120, { action: true, actionPressed: true }); sim(0.3); return r.ok; },
+    room() { const A = S().area; return { aid: A.aid, kind: A.roomKit && A.roomKit.kind, R: A.roomState || {} }; },
+    cageOpen() { return ents('TourRoomCage').every(c => c.open); },
     // a hop on the spot (to land on a crease)
     hop() { sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.12, { jump: true }); for (let k = 0; k < 120 && !P().onGround; k++) sim(1 / 60); sim(0.15); },
     // walk to tile x on this floor and hop onto it
@@ -491,6 +497,100 @@ LEVELS.soup = async (page, shot, run, pano) => {
   });
 };
 
+// ---------------- the five secret rooms: found with real inputs, won once, failed once, every way out used ----------------
+LEVELS.rooms = async (page, shot, run) => {
+  // B51 BAD REFLECTION (36-1): the steaming plate's chip drops Brady into a cubby; its hatch; the spoons
+  await run('room51', async () => {
+    await page.evaluate(() => { fresh(); play('36-1'); place(101, 13); sim(0.6); freeze(); }); await shot('15-36-1-tell-steam-on-the-plate.png');
+    const a = await page.evaluate(() => { thaw(); play('36-1'); place(100, 13); sim(0.3); const r0 = AP.go([105, 14]); const d = TB.chipDrop(105, 108); const r1 = AP.go([107, 20]); const aid = TB.door(); return { r0: r0.ok, d, r1: r1.ok, aid, kind: TB.room().kind }; });
+    check('B51: played: the steaming plate\'s chip drops Brady into the cubby; the hatch leads into BAD REFLECTION', a.d.row === 20 && a.aid === 'reflect' && a.kind === 'tabSpoons', a);
+    await page.evaluate(() => { sim(0.8); freeze(); }); await shot('60-B51-bad-reflection-entry.png');
+    const b = await page.evaluate(() => {
+      thaw(); const A = S().area, R = A.roomState, K = window.BRADY.TourRooms || null;
+      const xs = A.roomKit.data.spoons; const wait = ph => { for (let k = 0; k < 600 && ((R.cyc % 3.4) < 1.6 ? 'talk' : 'shut') !== ph; k++) sim(1 / 60); };
+      wait('shut'); const wrong = xs[(R.odd + 1) % 3]; TB.markThrow(wrong); const failed = !R.won && (R.round || 0) === 0;
+      for (let q = 0; q < 2 && !R.won; q++) { wait('shut'); TB.markThrow(xs[R.odd]); }
+      sim(0.6); return { failed, won: R.won, cage: TB.cageOpen() };
+    });
+    check('B51: a normal spoon is a raspberry; the spoon still grinning after Piwi shuts his mouth, twice: won, the cage opens', b.failed && b.won && b.cage, b);
+    await page.evaluate(() => freeze()); await shot('61-B51-won.png');
+    const c = await page.evaluate(() => { thaw(); const d = ents('Portal').find(e => e.s.look === 'tabHatch' && e.target && e.target.area !== S().area.idx && e.s.targetRef === 'dining@b51Out') || ents('Portal').filter(e => e.s.look === 'tabHatch').sort((x, y) => y.x - x.x)[0]; AP.go([Math.floor(d.cx / 32), 8]); const aid = TB.door(); return { aid, x: Math.floor(P().cx / 32) }; });
+    check('B51: its hatch lets Brady out further along the table (before the meshed plates)', c.aid === 'dining' && c.x > 110, c);
+  });
+  // B52 MATCH THE TEAR (36-2): only N4's sail reaches the high ledge (steam, the hatch)
+  await run('room52', async () => {
+    await page.evaluate(() => { fresh(); play('36-2'); place(83, 13); sim(0.4); freeze(); }); await shot('25-36-2-tell-steam-on-the-ledge.png');
+    const a = await page.evaluate(() => { thaw(); play('36-2'); place(76, 13); sim(0.3); TB.crease(80); const r = AP.route([[86, 11], [79, 8], [78, 8]]); const aid = TB.door(); return { r: r.ok, aid, kind: TB.room().kind }; });
+    check('B52: played: the sail up to the high ledge; its hatch leads into MATCH THE TEAR', a.r && a.aid === 'cloak' && a.kind === 'tabTear', a);
+    await page.evaluate(() => { sim(0.8); freeze(); }); await shot('62-B52-match-the-tear-entry.png');
+    const b = await page.evaluate(() => {
+      thaw(); const A = S().area, R = A.roomState, D = A.roomKit.data; const xs = D.xs;
+      TB.markThrow(xs[(D.rounds[0].at + 1) % 3]); sim(1.2); const failed = !R.won && R.round === 0;
+      for (let q = 0; q < 2 && !R.won; q++) { TB.markThrow(xs[D.rounds[R.round].at]); sim(1.2); }
+      return { failed, won: R.won, cage: TB.cageOpen() };
+    });
+    check('B52: a scrap with the wrong bite falls off; the right scrap twice (the card, then the menu): won, the cage opens', b.failed && b.won && b.cage, b);
+    await page.evaluate(() => freeze()); await shot('63-B52-won.png');
+    const c = await page.evaluate(() => { thaw(); AP.go([3, 11]); const aid = TB.door(); return { aid, x: Math.floor(P().cx / 32) }; });
+    check('B52: its door takes Brady back to the ledge', c.aid === 'fold', c);
+  });
+  // B53 THE SPARE STAR (36-3): a fake panel in the first tier's far wall, steam at its foot
+  await run('room53', async () => {
+    await page.evaluate(() => { fresh(); play('36-3'); place(44, 14); sim(0.4); freeze(); }); await shot('35-36-3-tell-steam-at-the-wall.png');
+    const a = await page.evaluate(() => { thaw(); play('36-3'); place(43, 14); sim(0.3); const r = AP.go([40, 15], { tol: 0 }); const aid = TB.door(); return { r: r.ok, aid, kind: TB.room().kind }; });
+    check('B53: played: into the fake panel at the foot of the first tier; it leads into THE SPARE STAR', a.aid === 'stars' && a.kind === 'tabStar', a);
+    await page.evaluate(() => { sim(0.8); freeze(); }); await shot('64-B53-spare-star-entry.png');
+    const b = await page.evaluate(() => {
+      thaw(); const A = S().area, R = A.roomState, D = A.roomKit.data; const xs = D.xs;
+      TB.markThrow(xs[(D.rounds[0].spare + 2) % 5]); const failed = !R.won && R.round === 0;
+      for (let q = 0; q < 2 && !R.won; q++) TB.markThrow(xs[D.rounds[R.round].spare]);
+      sim(0.6); return { failed, won: R.won, cage: TB.cageOpen() };
+    });
+    check('B53: a star that is in the sky is a raspberry; the spare star twice: won, the cage opens', b.failed && b.won && b.cage, b);
+    await page.evaluate(() => freeze()); await shot('65-B53-won.png');
+    const c = await page.evaluate(() => { thaw(); const d = ents('Portal').filter(e => e.s.look === 'tabHatch').sort((x, y) => y.x - x.x)[0]; AP.go([Math.floor(d.cx / 32), 8]); const aid = TB.door(); return { aid, x: Math.floor(P().cx / 32), row: P().groundTy }; });
+    check('B53: its hatch lets Brady out on the second tier (past the second table)', c.aid === 'service' && c.x >= 50 && c.row === 9, c);
+  });
+  // B54 WRONG END (36-4): a sugar ledge over the long bowl that only the raft passes under (steam, the hatch)
+  await run('room54', async () => {
+    const a = await page.evaluate(() => {
+      fresh(); play('36-4'); place(34, 11); sim(0.3); const R = ents('tabRaft').sort((a, b) => a.x0 - b.x0)[1];
+      AP.go([37, 12]); TB.paddle(R, 43); sim(0.4); const r = AP.route([[46, 9]]); return { r: r.ok, x: Math.floor(P().cx / 32) };
+    });
+    await page.evaluate(() => freeze()); await shot('45-36-4-the-ledge-over-the-soup.png'); await page.evaluate(() => thaw());
+    const a2 = await page.evaluate(() => { const aid = TB.door(); return { aid, kind: TB.room().kind }; });
+    check('B54: played: paddled under the sugar ledge, up onto it; its hatch leads into WRONG END', a.r && a2.aid === 'scope' && a2.kind === 'tabScope', [a, a2]);
+    await page.evaluate(() => { sim(0.8); freeze(); }); await shot('66-B54-wrong-end-entry.png');
+    const b = await page.evaluate(() => {
+      thaw(); const A = S().area, R = A.roomState, D = A.roomKit.data;
+      const r1 = AP.go([D.lens[0], 8]); sim(0.4); const fooled = !R.won && R.poke > 0;
+      const r2 = AP.route([[12, 5], [14, 4], [17, 5], [D.prize[0], 8]]); sim(0.6);
+      return { fooled, r1: r1.ok, r2: r2.ok, won: R.won, cage: TB.cageOpen() };
+    });
+    check('B54: the giant prize in the lens is only the lens; round the tripod to the tiny real prize: won, the cage opens', b.fooled && b.won && b.cage, b);
+    await page.evaluate(() => freeze()); await shot('67-B54-won.png');
+    const c = await page.evaluate(() => { thaw(); const d = ents('Portal').filter(e => e.s.look === 'tabHatch').sort((x, y) => y.x - x.x)[0]; AP.go([Math.floor(d.cx / 32), 8]); const aid = TB.door(); return { aid, x: Math.floor(P().cx / 32), row: P().groundTy }; });
+    check('B54: its hatch lets Brady out on the high bank past the third bowl', c.aid === 'bowls' && c.x >= 96 && c.row === 9, c);
+  });
+  // B55 PULL TO ENTER (36-5): past the booth's door, a gap in the cloth with steam rising; the pantry under the table
+  await run('room55', async () => {
+    await page.evaluate(() => { fresh(); play('36-5'); place(100, 13); sim(0.4); freeze(); }); await shot('55-36-5-tell-steam-past-the-booth.png');
+    const a = await page.evaluate(() => { thaw(); play('36-5'); place(100, 13); sim(0.3); const r = AP.route([[104, 20], [99, 20]]); const aid = TB.door(); return { r: r.ok, aid, kind: TB.room().kind }; });
+    check('B55: played: down the gap past the booth\'s door into the pantry corridor; its hatch leads into PULL TO ENTER', a.r && a.aid === 'pantry' && a.kind === 'tabPull', a);
+    await page.evaluate(() => { sim(0.8); freeze(); }); await shot('68-B55-pull-to-enter-entry.png');
+    const b = await page.evaluate(() => {
+      thaw(); const A = S().area, R = A.roomState, D = A.roomKit.data;
+      AP.go([D.ring[0], 8]); sim(0.6, { right: true }); const pushed = !R.won && R.push > 0;
+      AP.go([D.ring[0], 8]); sim(1 / 120, { action: true, actionPressed: true }); for (let k = 0; k < 180 && !R.won; k++) sim(1 / 60, { action: true, left: true }); sim(0.6);
+      return { pushed, won: R.won, cage: TB.cageOpen() };
+    });
+    check('B55: pushing the door does nothing; hold THROW on the pull ring and walk backwards: it opens, the cage with it', b.pushed && b.won && b.cage, b);
+    await page.evaluate(() => freeze()); await shot('69-B55-won.png');
+    const c = await page.evaluate(() => { thaw(); AP.go([3, 11]); const aid = TB.door(); return { aid, x: Math.floor(P().cx / 32) }; });
+    check('B55: its door takes Brady back up beside the booth\'s door (before the boss)', c.aid === 'courses' && c.x < 92, c);
+  });
+};
+
 // ---------------- the hidden entrance: Spain 6-1, the café after the third plaza ----------------
 LEVELS.entry = async (page, shot, run) => {
   await run('entry', async () => {
@@ -521,6 +621,7 @@ LEVELS.entry = async (page, shot, run) => {
     await page.evaluate(() => { sim(1.2); freeze(); }); await shot('02-entrance-cleared.png');
   });
 };
+
 
 
 

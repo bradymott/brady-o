@@ -243,7 +243,7 @@ const soup = (() => {
   G.fill(10, S, 25, 15, 'W'); G.ground(10, 25, 16); G.put(10, 12, '1');       // R1 in the broth (a shallow bowl)
   bank(26, 35); G.fill(29, 9, 31, 9, 'B'); G.put(30, 6, '*'); G.put(33, 11, 'x');
   bowl(36, 57); G.put(36, 12, '2'); G.put(44, 13, '5'); G.put(52, 13, '6');  // R2, two bubbles
-  G.fill(45, 9, 49, 9, 'B'); G.put(46, 8, 'D'); G.put(47, 8, 'e'); G.put(48, 8, 'A'); G.coins(45, 49, 7);   // the ledge over the soup (the secret)
+  G.fill(45, 9, 49, 9, '#'); G.put(46, 8, 'D'); G.put(47, 8, 'e'); G.put(48, 8, 'A'); G.coins(45, 49, 7);   // the ledge over the soup (the secret)
   bank(58, 66); G.put(62, 11, 'c'); G.put(64, 11, 'f');
   bowl(67, 95); G.put(67, 12, '3'); G.fill(80, 12, 82, 17, '#'); G.put(81, 11, 'r'); G.put(83, 12, '4'); G.put(76, 13, '7'); G.put(90, 13, '8'); G.put(81, 7, 'R');
   bank(96, 110, 9); G.put(100, 8, 'c'); G.put(98, 8, 'Z'); G.put(104, 5, '?'); G.put(106, 8, 'k'); G.put(108, 8, 'O');

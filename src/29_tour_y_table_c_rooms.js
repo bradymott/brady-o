@@ -24,13 +24,15 @@ const { RED, IVORY, IVORY2, NAVY, GOLD, OLIVE } = TK;
 const chime = (k, ok) => Sound.play('select', { vol: 0.5, pitch: ok === false ? 0.45 : Math.pow(2, [0, 4, 7, 12][k % 4] / 12) });
 // the room's shape: 28 x 14, the way in at the bottom left, a raised stage (top row ST) for the game, the cage on
 // the stage at the right wall, an optional hatch out beside it
-const ST = 7, W = 28;
+// (the room is 28 wide for the room kit, but its last two columns are rock: 26 columns fit a landscape phone's view)
+const ST = 8, W = 28, R1 = 24;
 function stageRoom(keep, A, o, items) {
   const g = RK.room(W), Y = RK.Y;
   g.west(keep);
-  // the stage and the steps up to it
-  g.fill(6, ST, W - 2, 10, '#'); g.fill(4, 9, 5, 10, '#');
-  const cw = Math.max(3, items.length + 2), cx = W - 2 - cw;
+  g.fill(R1 + 1, 1, W - 2, 10, '#');
+  // the stage and the step up to it
+  g.fill(6, ST, R1, 10, '#'); g.fill(4, 9, 5, 10, '#');
+  const cw = Math.max(3, items.length + 2), cx = R1 - cw;
   g.cage(A.id, cx, ST - 1, items, { w: cw, h: 4 });
   if (o.exit) { g.door(cx - 2, ST - 1, { to: o.exit, look: 'tabHatch' }); }
   return { g, Y, x0: 7, x1: cx - (o.exit ? 4 : 2), cx };
@@ -44,7 +46,7 @@ class TabRoomMark extends Ent {
   constructor(g, s) { super(g, s, TS, TS); this.x = s.x - TS / 2; this.y = s.y - TS; this.friendly = true; this.back = true; this.tabProp = true; this.k = s.k; this.tx = Math.round(this.x / TS); this.fy = Math.round(s.y / TS); this.cue = s.cue || 'THROW'; }
   room() { const A = this.g.area; return A && A.roomKit ? { A, R: TourRooms.state(this.g, A), K: TourRooms.kinds[A.roomKit.kind] } : null; }
   tabTouch(p) { const r = this.room(); return !!r && !r.R.won && TK.onMark(p, this.tx, this.fy, 0.8); }
-  tabInput(p, inp, dt) { const r = this.room(); if (r && r.K.mark) r.K.mark(this.g, r.A, r.R, r.A.roomKit, this, p, inp, dt); }
+  tabInput(p, inp, dt) { if (!inp.actionPressed) return; const r = this.room(); if (r && r.K.mark) r.K.mark(this.g, r.A, r.R, r.A.roomKit, this, p, inp, dt); }
   update(dt) { this.t += dt; }
   touchPlayer() {}
   draw(ctx) { const p = this.g.player; if (p && this.tabTouch(p)) TK.handCue(ctx, this.cx, this.y - TS - 4, this.t, this.cue); }
@@ -57,11 +59,11 @@ TourRooms.def('tabSpoons', {
   title: 'BAD REFLECTION', rule: 'WATCH PIWI SHUT HIS MOUTH: ONE SPOON KEEPS GRINNING. THROW AT THAT SPOON', need: 'FIND THE BAD REFLECTION FIRST!',
   make(o, keep, ctx, A, rng) {
     const S = stageRoom(keep, A, o, prizeOf(o, keep)), g = S.g;
-    const xs = [9, 13, 17];
+    const xs = [9, 12, 15];
     xs.forEach((x, k) => { g.spawn(x, ST - 1, 'tabRoomMark', { k }); g.need('spoon ' + k, x, ST - 1); });
-    g.winSpot(A.id, 13, ST - 1);
+    g.winSpot(A.id, 12, ST - 1);
     g.data.spoons = xs;
-    g.coins(20, 21, ST - 2);
+    g.coins(7, 8, ST - 2);
     return g;
   },
   enter(play, A, R, kit) { if (!R.won) { R.round = R.round || 0; R.odd = R.odd != null ? R.odd : 1; R.cyc = 0; } },
@@ -78,8 +80,9 @@ TourRooms.def('tabSpoons', {
   draw(play, ctx, A, R, kit) {
     const t = play.t, ph = this.phase(R), jawP = ph === 'talk' ? 2.5 + Math.sin(t * 14) * 2.5 : 0, p = play.player;
     // Piwi himself, up on the drawer's edge, talking: his jaw flaps, then he shuts it and grins at you
-    if (typeof Piwi !== 'undefined') Ink.around(ctx, 13 * TS - 60, TS * 0.2, 150, 110, c => Piwi.head(c, 13.5 * TS, 2.2 * TS, 2.6, t, { jaw: jawP, look: 0 }), { pad: 4 });
-    if (!R.won && ph === 'shut') { ctx.save(); ctx.fillStyle = '#ffd84a'; ctx.font = '10px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('MMM-HMM.', 13.5 * TS + 70, 1.4 * TS); ctx.restore(); }
+    // (his head on the drawer's back wall, left of the spoons, clear of the HUD)
+    if (typeof Piwi !== 'undefined') Ink.around(ctx, 2 * TS, 2.6 * TS, 4 * TS, 3.4 * TS, c => Piwi.head(c, 4 * TS, 4.4 * TS, 2.4, t, { jaw: jawP, look: 1 }), { pad: 4 });
+    if (!R.won && ph === 'shut') { ctx.save(); ctx.fillStyle = '#ffd84a'; ctx.font = '10px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('MMM-HMM.', 4 * TS, 2.9 * TS); ctx.restore(); }
     // the three spoons on stands; a spoon tilts up toward Brady when he stands at it (a closer look)
     kit.data.spoons.forEach((x, k) => {
       const near = p && Math.abs(p.cx - (x * TS + TS / 2)) < TS && p.groundTy === ST, sc = near ? 1.35 : 1, cx = x * TS + TS / 2, cy = (ST - 1) * TS - 34;
@@ -96,7 +99,7 @@ TourRooms.def('tabSpoons', {
       ctx.restore();
       ctx.restore();
     });
-    if (!R.won) { const n = R.round || 0; hud(play, ctx, 'SPOON ' + (n + 1) + ' OF 2'); }
+    if (!R.won && !(play.bannerT > 0)) { const n = R.round || 0; hud(play, ctx, 'SPOON ' + (n + 1) + ' OF 2'); }
   },
   testWin(g, A, R, kit, frame) { for (let k = 0; k < 2 && !R.won; k++) { const m = marks(g).find(e => e.k === R.odd); this.mark(g, A, R, kit, m); frame(g); } }
 });
@@ -109,13 +112,13 @@ TourRooms.def('tabTear', {
   title: 'MATCH THE TEAR', rule: 'WHICH SCRAP WAS TORN OFF THIS CARD? STAND AT IT AND THROW TO SLIDE IT INTO THE EDGE', need: 'MEND THE CARD FIRST!',
   make(o, keep, ctx, A, rng) {
     const S = stageRoom(keep, A, o, prizeOf(o, keep)), g = S.g;
-    const xs = [8, 12, 16];
+    const xs = [10, 13, 16];
     xs.forEach((x, k) => { g.spawn(x, ST - 1, 'tabRoomMark', { k }); g.need('scrap ' + k, x, ST - 1); });
-    g.winSpot(A.id, 12, ST - 1);
+    g.winSpot(A.id, 13, ST - 1);
     // two cards, each a torn edge; the scraps: the match and two that are nearly right (one bite different)
     const rounds = [0, 1].map(() => { const e = tearOf(rng), wrong = [1, 2].map(j => { const w = e.slice(); const i = Math.floor(rng() * 5); w[i] = (w[i] + j) % 3; return w; }), at = Math.floor(rng() * 3), sc = []; let wi = 0; for (let k = 0; k < 3; k++) sc.push(k === at ? e : wrong[wi++]); return { edge: e, scraps: sc, at }; });
     g.data.rounds = rounds; g.data.xs = xs;
-    g.coins(19, 20, ST - 2);
+    g.coins(7, 8, ST - 2);
     return g;
   },
   enter(play, A, R, kit) { if (!R.won) { R.round = R.round || 0; R.slide = -1; R.slideT = 0; } },
@@ -127,7 +130,7 @@ TourRooms.def('tabTear', {
     else { RK.raspberry(play, 'NOT THAT BITE'); }
   },
   draw(play, ctx, A, R, kit) {
-    const t = play.t, rd = kit.data.rounds[Math.min(1, R.round || 0)], cxL = 9.2 * TS, cy = 1.4 * TS, h = 2.6 * TS;
+    const t = play.t, rd = kit.data.rounds[Math.min(1, R.round || 0)], cxL = 3.2 * TS, cy = 3 * TS, h = 2.6 * TS;
     // the coat rack's card, torn down its right edge
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
     ctx.fillStyle = '#3a2a1a'; ctx.fillRect(cxL + 30, cy - 12, 4, 14);
@@ -147,7 +150,7 @@ TourRooms.def('tabTear', {
       if (R.slide !== k) { ctx.fillStyle = '#5e341c'; ctx.fillRect(x * TS + 10, (ST - 1) * TS - 6, 12, 6); }
     });
     ctx.restore();
-    if (!R.won) hud(play, ctx, (R.round ? 'THE MENU' : 'THE CARD') + '  ' + ((R.round || 0) + 1) + ' / 2');
+    if (!R.won && !(play.bannerT > 0)) hud(play, ctx, (R.round ? 'THE MENU' : 'THE CARD') + '  ' + ((R.round || 0) + 1) + ' / 2');
     function edgeIn(c, x, y, hh, edge) { const seg = hh / edge.length; edge.forEach((v, k) => { c.lineTo(x + v * 5 + 3, y + seg * (k + 0.5)); c.lineTo(x, y + seg * (k + 1)); }); }
   },
   testWin(g, A, R, kit, frame) { for (let k = 0; k < 2 && !R.won; k++) { const m = marks(g).find(e => e.k === kit.data.rounds[R.round].at); this.mark(g, A, R, kit, m); for (let q = 0; q < 140; q++) frame(g); } }
@@ -158,9 +161,9 @@ TourRooms.def('tabStar', {
   title: 'THE SPARE STAR', rule: 'THE COASTER HAS ONE STAR THE SKY HASN\'T. STAND ON ITS NUMBER AND THROW TO COVER IT', need: 'COVER THE SPARE STAR FIRST!',
   make(o, keep, ctx, A, rng) {
     const S = stageRoom(keep, A, o, prizeOf(o, keep)), g = S.g;
-    const xs = [8, 10, 12, 14, 16];
+    const xs = [9, 11, 13, 15, 17];
     xs.forEach((x, k) => { g.spawn(x, ST - 1, 'tabRoomMark', { k, cue: 'COVER' }); g.need('star pad ' + k, x, ST - 1); });
-    g.winSpot(A.id, 12, ST - 1);
+    g.winSpot(A.id, 13, ST - 1);
     // two skies: 4 stars each (positions in a unit box); the coaster prints 5, the extra one at a random number
     g.data.rounds = [0, 1].map(() => { const pts = []; for (let k = 0; k < 5; k++) pts.push([0.12 + rng() * 0.76, 0.15 + rng() * 0.7]); return { pts, spare: Math.floor(rng() * 5) }; });
     g.data.xs = xs;
@@ -187,12 +190,12 @@ TourRooms.def('tabStar', {
       });
       ctx.restore();
     };
-    box(5.5 * TS, 0.5 * TS, 3.6 * TS, 3.6 * TS, true);
-    box(15.5 * TS, 0.5 * TS, 3.6 * TS, 3.6 * TS, false);
-    ctx.save(); ctx.fillStyle = '#ffe8c8'; ctx.font = '9px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('THE SKY', 7.3 * TS, 4.6 * TS); ctx.fillText('THE COASTER', 17.3 * TS, 4.6 * TS); ctx.restore();
+    box(4.2 * TS, 2.4 * TS, 3.4 * TS, 3.4 * TS, true);
+    box(17.2 * TS, 2.4 * TS, 3.4 * TS, 3.4 * TS, false);
+    ctx.save(); ctx.fillStyle = '#ffe8c8'; ctx.font = '9px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('THE SKY', 5.9 * TS, 6.5 * TS); ctx.fillText('THE COASTER', 18.9 * TS, 6.5 * TS); ctx.restore();
     // the numbered star pads on the stage
     kit.data.xs.forEach((x, k) => { const cx = x * TS + TS / 2, cy = ST * TS - 3; ctx.save(); ctx.fillStyle = '#1e2a5a'; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(cx, cy, 14, 4, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#ffe28a'; ctx.font = '10px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText(String(k + 1), cx, cy - 6); ctx.restore(); });
-    if (!R.won) hud(play, ctx, 'SKY ' + ((R.round || 0) + 1) + ' / 2');
+    if (!R.won && !(play.bannerT > 0)) hud(play, ctx, 'SKY ' + ((R.round || 0) + 1) + ' / 2');
   },
   testWin(g, A, R, kit, frame) { for (let k = 0; k < 2 && !R.won; k++) { const m = marks(g).find(e => e.k === kit.data.rounds[R.round].spare); this.mark(g, A, R, kit, m); frame(g); } }
 });
@@ -204,10 +207,10 @@ TourRooms.def('tabScope', {
     const S = stageRoom(keep, A, o, prizeOf(o, keep)), g = S.g;
     // the tripod: a tall stack (books under its feet) to climb over, the lens end facing the way in, the eyepiece
     // end (and the tiny prize) on the far side
-    g.fill(14, 3, 15, ST - 1, '#'); g.hline(11, 13, 4, '-'); g.hline(16, 18, 4, '-');
+    g.fill(14, 4, 15, ST - 1, '#'); g.hline(11, 13, 5, '-'); g.hline(16, 18, 5, '-');
     g.fill(11, ST - 1, 11, ST - 1, '#');
     g.winSpot(A.id, 18, ST - 1);
-    g.need('the lens', 9, ST - 1); g.coins(14, 15, 2);
+    g.need('the lens', 9, ST - 1); g.coins(14, 15, 3);
     g.data.lens = [9, ST - 1]; g.data.prize = [18, ST - 1];
     return g;
   },
@@ -219,10 +222,10 @@ TourRooms.def('tabScope', {
     if (Math.abs(p.cx - (kit.data.prize[0] + 0.5) * TS) < 0.7 * TS && p.groundTy === ST) TourRooms.win(play, A, R, { text: 'THE REAL PRIZE! (TINY)', coins: 4 });
   },
   draw(play, ctx, A, R, kit) {
-    const t = play.t, lx = 8.2 * TS, ly = 3.6 * TS;
+    const t = play.t, lx = 8.2 * TS, ly = 4.6 * TS;
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2.5;
     // the tube from the lens (left, big) to the eyepiece (right, small), over the tripod
-    ctx.fillStyle = '#c89a4a'; ctx.beginPath(); ctx.moveTo(lx, ly - 40); ctx.lineTo(17.6 * TS, 2.1 * TS - 10); ctx.lineTo(17.6 * TS, 2.1 * TS + 10); ctx.lineTo(lx, ly + 40); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#c89a4a'; ctx.beginPath(); ctx.moveTo(lx, ly - 40); ctx.lineTo(17.6 * TS, 3.1 * TS - 10); ctx.lineTo(17.6 * TS, 3.1 * TS + 10); ctx.lineTo(lx, ly + 40); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.fillStyle = '#a87a2a'; for (const fx of [0.3, 0.6]) { const x = lx + (17.6 * TS - lx) * fx; ctx.fillRect(x - 5, ly - 40 + fx * 26 - 4, 10, 88 - fx * 56); }
     // the lens: a huge magnified prize box filling it
     const wob = R.poke > 0 ? Math.sin(t * 30) * 4 : 0;
@@ -232,7 +235,7 @@ TourRooms.def('tabScope', {
     ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.beginPath(); ctx.ellipse(lx - 8, ly - 20, 6, 14, 0.3, 0, TAU); ctx.fill();
     ctx.restore();
     // the eyepiece and the tiny real prize under it
-    ctx.fillStyle = '#3a2a1a'; ctx.fillRect(17.6 * TS, 2.1 * TS - 6, 10, 12);
+    ctx.fillStyle = '#3a2a1a'; ctx.fillRect(17.6 * TS, 3.1 * TS - 6, 10, 12);
     if (!R.won) { const px = 18.5 * TS, py = (ST - 1) * TS + 18 + Math.sin(t * 4) * 2; ctx.fillStyle = '#ff6a5a'; rr(ctx, px - 6, py - 12, 12, 10, 3); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#ffffff'; ctx.font = '5px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('1UP', px, py - 5); }
     ctx.restore();
   },
