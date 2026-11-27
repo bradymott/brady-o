@@ -262,13 +262,13 @@ const L4 = { n: 4, time: 380, name: 'Please Mind the Scenery', mapLabel: 'Please
 const houseRows = (() => {
   const W = 200, H = 22, Gr = grid(W, H, '.');
   ground(Gr, 0, 22, 17); put(Gr, 3, 16, '@'); put(Gr, 7, 16, 'k'); put(Gr, 10, 13, '?'); put(Gr, 3, 12, 'o.o.o');
-  put(Gr, 20, 16, '1'); ground(Gr, 31, 61, 17);
+  put(Gr, 20, 16, '1'); ground(Gr, 29, 61, 17);
   put(Gr, 49, 16, 'c'); fillG(Gr, 50, 13, 53, 13, '-'); put(Gr, 51, 10, '*'); put(Gr, 55, 16, 'r'); put(Gr, 45, 12, 'o.o');
-  put(Gr, 59, 16, '2'); ground(Gr, 71, 105, 17);
+  put(Gr, 59, 16, '2'); ground(Gr, 69, 105, 17);
   put(Gr, 90, 16, 'c'); put(Gr, 94, 13, '?'); put(Gr, 97, 16, 'j');
   // the gantry: steps up from the wings to a walkway at row 7 with the band-pit door
   fillG(Gr, 79, 14, 81, 14, '-'); fillG(Gr, 83, 11, 85, 11, '-'); fillG(Gr, 79, 8, 88, 8, '-'); put(Gr, 80, 7, 'u'); put(Gr, 86, 7, 'A'); put(Gr, 82, 5, 'o.o');
-  put(Gr, 100, 16, 'O'); put(Gr, 103, 16, '3'); ground(Gr, 116, W - 1, 17);
+  put(Gr, 100, 16, 'O'); put(Gr, 103, 16, '3'); ground(Gr, 114, W - 1, 17);
   put(Gr, 137, 16, 'a'); put(Gr, 140, 16, 'c'); put(Gr, 146, 16, 'l'); fillG(Gr, 152, 13, 155, 13, '-'); fillG(Gr, 157, 10, 160, 10, '-'); put(Gr, 158, 7, 'P'); put(Gr, 150, 12, 'o.o');
   put(Gr, 163, 13, 'R'); fillG(Gr, 162, 14, 164, 14, '-'); put(Gr, 170, 16, 'd'); put(Gr, 176, 13, '?'); put(Gr, 182, 16, 'r'); put(Gr, 192, 16, 'G');
   fillG(Gr, W - 1, 0, W - 1, 16, 'H');
@@ -278,9 +278,9 @@ const HL = {
   k: SIGN('A FOLLOW-SPOT! ON ITS MARK THE STICK SWINGS IT AND THROW FOCUSES IT. LIGHT THE STAGEHAND THE BOARD CALLS'),
   O: SIGN('LAST SCENE: SCENERY MOUSTACHES. THE SPOT CANNOT FIND ANYONE BEHIND THEM'),
   l: ['enemy', 'seatsCrab'], r: ['enemy', 'seatsStoat'], j: ['enemy', 'seatsHen'], d: ['enemy', 'seatsShrew'],
-  '1': ['piece', 'seats.spot', { gap: 2, pit: 8, stage: [12, 26], hands: [[14, 17, 0.7, 0], [20, 25, 0.8, 1]], right: 1 }],
-  '2': ['piece', 'seats.spot', { gap: 2, pit: 9, stage: [13, 32], hands: [[13, 20, 1.0, 2], [18, 26, 0.9, 0], [24, 31, 1.1, 1]], right: 0 }],
-  '3': ['piece', 'seats.spot', { gap: 2, pit: 10, stage: [14, 33], hands: [[14, 20, 0.9, 1], [16, 31, 1.1, 2], [26, 33, 0.8, 0]], right: 1, mous: [20, 27] }],
+  '1': ['piece', 'seats.spot', { gap: 2, pit: 6, stage: [10, 21], hands: [[11, 14, 0.7, 0], [16, 20, 0.8, 1]], right: 1 }],
+  '2': ['piece', 'seats.spot', { gap: 2, pit: 7, stage: [10, 22], hands: [[10, 15, 1.0, 2], [13, 19, 0.9, 0], [17, 22, 1.1, 1]], right: 0 }],
+  '3': ['piece', 'seats.spot', { gap: 2, pit: 8, stage: [11, 22], hands: [[11, 14, 0.9, 1], [12, 22, 1.1, 2], [19, 22, 0.8, 0]], right: 1, mous: [15, 19] }],
   A: ['spawn', 'portal', { kind: 'door', look: 'seatsDoor', targetRef: 'pit@in' }], u: TELL(), a: ['anchor', 'pitOut']
 };
 stamps.seatsHouse = { floor: 17, rows: houseRows, legend: HL, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power'] };

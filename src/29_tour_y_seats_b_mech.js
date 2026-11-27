@@ -351,14 +351,14 @@ class SeatsSpot extends Ent {
     }
     // the false moustaches on their sticks, in front of anyone behind them
     for (const mx of this.mous) {
-      ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2.4; ctx.fillStyle = '#8a6a4a'; ctx.fillRect(mx - 3, sy - 64, 6, 64); ctx.strokeRect(mx - 3, sy - 64, 6, 64);
-      ctx.fillStyle = '#2a1a14'; ctx.beginPath(); ctx.moveTo(mx, sy - 74); ctx.bezierCurveTo(mx - 20, sy - 104, mx - 56, sy - 92, mx - 62, sy - 62); ctx.bezierCurveTo(mx - 50, sy - 76, mx - 26, sy - 70, mx, sy - 52); ctx.bezierCurveTo(mx + 26, sy - 70, mx + 50, sy - 76, mx + 62, sy - 62); ctx.bezierCurveTo(mx + 56, sy - 92, mx + 20, sy - 104, mx, sy - 74); ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.beginPath(); ctx.ellipse(mx - 30, sy - 80, 14, 4, -0.3, 0, TAU); ctx.fill();
+      ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2.4; ctx.fillStyle = '#8a6a4a'; ctx.fillRect(mx - 3, sy - 30, 6, 30); ctx.strokeRect(mx - 3, sy - 30, 6, 30);
+      ctx.save(); ctx.translate(0, 42); ctx.fillStyle = '#2a1a14'; ctx.beginPath(); ctx.moveTo(mx, sy - 74); ctx.bezierCurveTo(mx - 20, sy - 104, mx - 56, sy - 92, mx - 62, sy - 62); ctx.bezierCurveTo(mx - 50, sy - 76, mx - 26, sy - 70, mx, sy - 52); ctx.bezierCurveTo(mx + 26, sy - 70, mx + 50, sy - 76, mx + 62, sy - 62); ctx.bezierCurveTo(mx + 56, sy - 92, mx + 20, sy - 104, mx, sy - 74); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.beginPath(); ctx.ellipse(mx - 30, sy - 80, 14, 4, -0.3, 0, TAU); ctx.fill(); ctx.restore();
       ctx.restore();
     }
     // the call board over the stage: whose bow it is (its colour and number)
     if (!this.done) {
-      const bx = (this.sx0 + this.sx1) / 2, by = sy - 5.2 * TS, B = BADGE[this.hands[this.right].b];
+      const bx = (this.plank[0][0] + this.plank.length / 2) * TS, by = sy - 2.4 * TS, B = BADGE[this.hands[this.right].b];
       ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#2a1a24'; rr(ctx, bx - 62, by - 18, 124, 36, 6); ctx.fill(); ctx.stroke();
       ctx.font = TourBackstage.F9; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ffffff'; ctx.fillText('BOW: No', bx - 50, by);
       ctx.fillStyle = B[0]; ctx.beginPath(); ctx.arc(bx + 34, by, 13, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.fillText(B[1], bx + 34, by + 1);
@@ -371,9 +371,11 @@ class SeatsSpot extends Ent {
 ENTITY_TYPES.seatsSpot = SeatsSpot;
 // while Brady works a follow-spot, the camera frames the stand and the whole stage across the pit
 TourHooks.on('camera', (play, dt) => {
-  const p = play.player, sp = p && p.seatsProp; if (!(sp instanceof SeatsSpot) || !play.area) return;
-  const mid = ((sp.tx - 1) * TS + sp.sx1 + TS) / 2, want = clamp(mid - Game.viewW / 2, 0, Math.max(0, play.area.W * TS - Game.viewW));
-  play.camX = approach(play.camX, want, Math.max(6, Math.abs(want - play.camX) * 6 * dt));
+  const p = play.player, sp = p && p.seatsProp; if (!(sp instanceof SeatsSpot) || !play.area) { play.__spotCam = null; return; }
+  const mid = ((sp.tx - 1.5) * TS + sp.sx1 + 1.5 * TS) / 2, want = clamp(Math.min(mid - Game.viewW / 2, (sp.tx - 1.5) * TS), 0, Math.max(0, play.area.W * TS - Game.viewW));
+  const c0 = play.__spotCam == null ? play.camX : play.__spotCam;
+  play.__spotCam = approach(c0, want, Math.max(4, Math.abs(want - c0) * 5 * (dt || 1 / 60)));
+  play.camX = play.__spotCam;
 });
 
 /* ---------------- the pieces (the letter's cell: st.x, st.gy - 1) ---------------- */

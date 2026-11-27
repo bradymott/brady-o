@@ -370,7 +370,7 @@ STAGES.house = async ({ ev, shot, run, pano }) => {
     check('33-5: focusing on the wrong stagehand: he shrugs (NOT MY CUE) and nothing happens', r.shrug && !r.done, r);
     await ev(() => freeze()); await shot('51-33-5-not-my-cue.png');
     r = await ev(() => { thaw(); sim(1); const sp = ents('SeatsSpot').sort((a, b) => a.tx - b.tx)[0], h = sp.hands[sp.right]; for (let k = 0; k < 120 * 8 && !sp.done; k++) sim(1 / 120, { action: Math.abs(sp.spot - h.x) < 14, right: sp.spot < h.x - 3, left: sp.spot > h.x + 3 }); sim(1.2); const t = tile(sp.plank[1][0], sp.plank[1][1]); walkTo((sp.plank[sp.plank.length - 1][0] + 3) * 32, 6); return { done: sp.done, t, at: at() }; });
-    check('33-5: the focused spot held on the stagehand the board calls: he bows and puts his plank across the pit; Brady crosses', r.done && r.t !== 0 && !r.at.dead && r.at.x >= 31, r);
+    check('33-5: the focused spot held on the stagehand the board calls: he bows and puts his plank across the pit; Brady crosses', r.done && r.t !== 0 && !r.at.dead && r.at.x >= 29, r);
     await ev(() => freeze()); await shot('52-33-5-plank-down.png');
     r = await ev(() => {
       thaw(); place(101, 16); sim(0.5); const sp = ents('SeatsSpot').sort((a, b) => b.tx - a.tx)[0]; walkTo((sp.tx + 0.5) * 32, 3); const h = sp.hands[sp.right]; let hid = false;
@@ -550,7 +550,7 @@ const BOT_ROUTES = {
   '33-2': [['slack'], ['walk', 32 * 32], 'cp', ['walk', 50 * 32], ['slack'], ['walk', 72 * 32], 'cp', ['slack'], ['walk', 116 * 32], 'cp', ['slack'], ['walk', 166 * 32], 'cp', ['gate']],
   '33-3': [['seat'], ['seat'], ['walk', 33 * 32], 'cp', ['seat'], ['seat'], ['seat'], ['seat'], ['walk', 71 * 32], 'cp', ['seat'], ['seat'], ['walk', 108 * 32], 'cp', ['seat'], ['seat'], ['walk', 139 * 32], 'cp', ['seat'], ['seat'], ['walk', 167 * 32], 'cp', ['gate']],
   '33-4': [['flat'], ['walk', 39 * 32], 'cp', ['flat'], ['walk', 77 * 32], 'cp', ['flat'], ['flat'], ['walk', 125 * 32], 'cp', ['twin'], ['walk', 171 * 32], 'cp', ['gate']],
-  '33-5': [['spot'], ['walk', 33 * 32], 'cp', ['walk', 52 * 32], ['spot'], ['walk', 73 * 32], 'cp', ['walk', 91 * 32], ['spot'], ['walk', 118 * 32], 'cp', ['walk', 141 * 32], 'cp', ['gate']],
+  '33-5': [['spot'], ['walk', 31 * 32], 'cp', ['walk', 52 * 32], ['spot'], ['walk', 71 * 32], 'cp', ['walk', 91 * 32], ['spot'], ['walk', 116 * 32], 'cp', ['walk', 141 * 32], 'cp', ['gate']],
   '33-6': [['encore'], ['walk', 27 * 32], 'cp', ['encore'], ['walk', 50 * 32], 'cp', ['walk', 52 * 32 + 16, { noHop: true }], ['encore'], ['walk', 69.5 * 32, { noHop: true }], ['hop', 1, false, 0.45], ['walk', 79 * 32], 'cp', ['walk', 93 * 32 + 16], ['door'], ['bossFight'], ['gate']],
 //ROUTES
 };
