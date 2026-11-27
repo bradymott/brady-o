@@ -59,6 +59,7 @@ const bbox = pts => { let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const [
 // the THROW hint over a prop Brady stands at (once per prop until used)
 const throwHint = (e, ctx, x, y, word) => {
   const g = e.g; if (!g.boneIn || g.boneIn.by !== e) return;
+  const p = g.player; if (p) { y = Math.min(y, p.y - 30); x = clamp(x, p.cx - 60, p.cx + 60); }
   ctx.save(); ctx.font = '9px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   const w = ctx.measureText(word).width + 14; ctx.fillStyle = 'rgba(36,22,14,0.8)'; rr(ctx, x - w / 2, y - 9 + Math.sin(e.t * 5) * 1.5, w, 18, 9); ctx.fill();
   ctx.fillStyle = '#ffd88a'; ctx.fillText(word, x, y + Math.sin(e.t * 5) * 1.5); ctx.restore();
@@ -115,7 +116,7 @@ class BoneTrack extends Ent {
       for (const [n, R] of this.raise) if (this.next === n) {
         for (const r of R) setRect(g, r, T.HARD, true);
         this.base = n; g.shake(3); Sound.play('stomp', { pitch: 0.5, vol: 0.6 });
-        g.parts.text(p.cx, p.y - 26, n >= this.order.length ? (this.mode === 'toes' ? 'IT WALKED BACKWARDS!' : 'THE STEPS RISE!') : 'A PAIR!', '#ffd88a');
+        Tour.boneKit.pill(g, p.cx, p.y - 26, n >= this.order.length ? (this.mode === 'toes' ? 'IT WALKED BACKWARDS!' : 'THE STEPS RISE!') : 'A PAIR!', '#ffd88a');
       }
       if (this.next >= this.order.length) this.done = true;
     } else {
@@ -123,7 +124,7 @@ class BoneTrack extends Ent {
       this.lit = this.lit.filter(k => this.order.indexOf(k) < this.base); this.next = this.base; this.failT = 1.2;
       TourKit.sfx('fizz', 'bump', { vol: 0.5, pitch: 0.6 });
       g.burst(p.cx, p.y + p.h, 10, '#e8c898', 'dust');
-      g.parts.text(p.cx, p.y - 22, this.mode === 'toes' ? 'NOT THAT WAY! FOLLOW THE TOES' : 'THAT FOOT DOESN\'T FIT!', '#ffb0a0');
+      Tour.boneKit.pill(g, p.cx, p.y - 22, this.mode === 'toes' ? 'NOT THAT WAY! FOLLOW THE TOES' : 'THAT FOOT DOESN\'T FIT!', '#ffb0a0');
     }
   }
   touchPlayer() {}
@@ -209,7 +210,7 @@ class BoneVert extends Ent {
   update(dt) {
     this.t += dt; const g = this.g;
     if (!this.placed) { this.placed = true; this.settle(); }
-    if (this.turnT > 0) { this.turnT = Math.max(0, this.turnT - dt); const k = 1 - this.turnT / 0.3; this.ang = this.from + k; if (this.turnT === 0) { this.ang = this.notch; this.settle(); if (this.notch === this.s.good) { g.parts.text(this.s.pivot[0] * TS + 16, this.s.pivot[1] * TS - 20, 'CLICK! A BRIDGE', '#ffd88a'); TourKit.sfx('click', 'select', { vol: 0.6, pitch: 0.8 }); } } }
+    if (this.turnT > 0) { this.turnT = Math.max(0, this.turnT - dt); const k = 1 - this.turnT / 0.3; this.ang = this.from + k; if (this.turnT === 0) { this.ang = this.notch; this.settle(); if (this.notch === this.s.good) { Tour.boneKit.pill(g, this.s.pivot[0] * TS + 16, this.s.pivot[1] * TS - 20, 'CLICK! A BRIDGE', '#ffd88a'); TourKit.sfx('click', 'select', { vol: 0.6, pitch: 0.8 }); } } }
     const I = g.boneIn;
     if (I && I.by === this && I.pressed && this.turnT === 0) {
       this.from = this.notch; this.notch = (this.notch + 1) % 4; this.turnT = 0.3;
@@ -233,12 +234,17 @@ class BoneVert extends Ent {
     // a dotted line from crank to vertebra (they turn together)
     ctx.strokeStyle = 'rgba(255,240,200,0.45)'; ctx.setLineDash([3, 6]); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(kx, ky - 30); ctx.lineTo(cx, cy); ctx.stroke(); ctx.setLineDash([]);
     // the ribs (long bones with persimmon caps), then the vertebra itself
+    // (clipped out of any solid rock it swings past: an overhang stays in front of it)
+    ctx.save(); ctx.beginPath(); ctx.rect(this.x - TS, this.y - TS, this.w + 2 * TS, this.h + 2 * TS);
+    { const A = this.g.area; for (let ty = Math.floor(this.y / TS) - 1; ty <= Math.floor((this.y + this.h) / TS) + 1; ty++) for (let tx = Math.floor(this.x / TS) - 1; tx <= Math.floor((this.x + this.w) / TS) + 1; tx++) { if (tx === px && ty === py) continue; const tt = tileAt(A, tx, ty); if (SOLID[tt] && !(A.hide && A.hide[ty * A.W + tx])) ctx.rect(tx * TS, ty * TS, TS, TS); } }
+    ctx.clip('evenodd');
     for (const [len, off] of s.ribs) {
       const aa = (this.ang + off) * Math.PI / 2 - Math.PI / 2, ex = cx + Math.cos(aa) * (len * TS + 12), ey = cy + Math.sin(aa) * (len * TS + 12);
       // lying flat: its top is the walkable edge of the bridge row
       const lift = Math.abs(Math.sin(aa)) < 0.05 ? -8 : 0;
       BA.bone(ctx, cx, cy + lift, ex, ey + lift, 14, true);
     }
+    ctx.restore();
     ctx.fillStyle = BONE; ctx.strokeStyle = INK; ctx.lineWidth = 2.2;
     ctx.beginPath(); for (let k = 0; k < 6; k++) { const aa = this.ang * Math.PI / 2 + k * TAU / 6; ctx.lineTo(cx + Math.cos(aa) * 20, cy + Math.sin(aa) * 20); ctx.lineTo(cx + Math.cos(aa + 0.5) * 13, cy + Math.sin(aa + 0.5) * 13); } ctx.closePath(); ctx.fill(); ctx.stroke();
     BA.joint(ctx, cx, cy, 8);
@@ -406,8 +412,8 @@ class BonePress extends Ent {
       if (inTray && !this.done) {
         const mould = p.crouch ? 'low' : 'tall';
         p.stunT = Math.max(p.stunT || 0, 0.35);
-        if (mould === this.s.need) { this.done = true; this.cast = mould; this.castK = 0; setRect(g, this.s.casts[mould], T.HARD, true); g.parts.text(p.cx, p.y - 30, mould === 'low' ? 'LOW AND BROAD: A PERFECT FIT!' : 'TALL: A PERFECT FIT!', '#ffd88a'); TourKit.sfx('chime', 'pick', { vol: 0.6 }); }
-        else { this.bad = mould; this.badT = 1.4; g.parts.text(p.cx, p.y - 30, mould === 'low' ? 'TOO FLAT! IT CRUMBLES' : 'TOO TALL! IT JAMS', '#ffb0a0'); TourKit.sfx('fizz', 'bump', { vol: 0.5, pitch: 0.6 }); }
+        if (mould === this.s.need) { this.done = true; this.cast = mould; this.castK = 0; setRect(g, this.s.casts[mould], T.HARD, true); Tour.boneKit.pill(g, p.cx, p.y - 30, mould === 'low' ? 'LOW AND BROAD: A PERFECT FIT!' : 'TALL: A PERFECT FIT!', '#ffd88a'); TourKit.sfx('chime', 'pick', { vol: 0.6 }); }
+        else { this.bad = mould; this.badT = 1.4; Tour.boneKit.pill(g, p.cx, p.y - 30, mould === 'low' ? 'TOO FLAT! IT CRUMBLES' : 'TOO TALL! IT JAMS', '#ffb0a0'); TourKit.sfx('fizz', 'bump', { vol: 0.5, pitch: 0.6 }); }
       }
     }
     else if (this.st === 'hold' && this.at > 0.5) { this.st = 'up'; this.at = 0; }
@@ -479,7 +485,7 @@ class BoneSoft extends Ent {
     this.press = on && p.inp && p.inp.down ? this.press + dt : Math.max(0, this.press - dt * 2);
     if (this.press > 0.35) {
       this.gone = true; for (let k = 0; k < this.s.w; k++) g.setTile(this.s.tx + k, this.s.ty, T.EMPTY);
-      g.burst(this.cx, this.y + 8, 14, '#efe6d2', 'dust'); Sound.play('stomp', { pitch: 0.7, vol: 0.6 }); g.parts.text(p.cx, p.y - 20, 'IT GIVES WAY!', '#ffd88a');
+      g.burst(this.cx, this.y + 8, 14, '#efe6d2', 'dust'); Sound.play('stomp', { pitch: 0.7, vol: 0.6 }); Tour.boneKit.pill(g, p.cx, p.y - 20, 'IT GIVES WAY!', '#ffd88a');
     }
   }
   touchPlayer() {}
@@ -530,12 +536,12 @@ class BoneChisel extends Ent {
     }
     this.wasHeld = held;
   }
-  fail(text) { const g = this.g, p = g.player; this.failT = 0.7; TourKit.sfx('fizz', 'bump', { vol: 0.5, pitch: 0.5 }); g.shake(2); if (p) g.parts.text(p.cx, p.y - 24, text, '#ffb0a0'); }
+  fail(text) { const g = this.g, p = g.player; this.failT = 0.7; TourKit.sfx('fizz', 'bump', { vol: 0.5, pitch: 0.5 }); g.shake(2); if (p) Tour.boneKit.pill(g, p.cx, p.y - 24, text, '#ffb0a0'); }
   split() {
     const g = this.g, p = g.player; this.done = true;
     for (const r of this.s.drop) setRect(g, r, T.EMPTY);
     g.shake(5); Sound.play('stomp', { pitch: 0.6 }); TourKit.sfx('crack', 'bump', { vol: 0.7, pitch: 0.8 });
-    if (p) g.parts.text(p.cx, p.y - 26, 'A CLEAN BREAK!', '#ffd88a');
+    if (p) Tour.boneKit.pill(g, p.cx, p.y - 26, 'A CLEAN BREAK!', '#ffd88a');
     for (const r of this.s.drop) g.burst((r[0] + r[2] + 1) * TS / 2, (r[1] + r[3] + 1) * TS / 2, 12, '#f4ead2', 'dust');
   }
   touchPlayer() {}
@@ -544,16 +550,24 @@ class BoneChisel extends Ent {
     const s = this.s, t = this.t;
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2.2;
     // the replica: its kept part, and the dropped half (shaking loose, then tumbling away)
-    const paint = (r, off, rot) => {
+    // a moulded replica: plaster with a bone in relief, dowel holes, a crate stencil; the half that stays is tinted
+    // warm, the scrap half is hatched grey (so the player sees which half goes)
+    const paint = (r, off, rot, scrap) => {
       const x = r[0] * TS, y = r[1] * TS, w = (r[2] - r[0] + 1) * TS, h = (r[3] - r[1] + 1) * TS;
       ctx.save(); ctx.translate(x + w / 2 + off[0], y + h / 2 + off[1]); ctx.rotate(rot);
-      ctx.fillStyle = BONE; rr(ctx, -w / 2, -h / 2, w, h, 9); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#e8dcc0'; ctx.fillRect(-w / 2 + 4, h / 2 - 9, w - 8, 5);
-      ctx.fillStyle = '#d8c8a4'; for (let q = -w / 2 + 10; q < w / 2 - 6; q += 22) { ctx.beginPath(); ctx.arc(q, -h / 2 + 10 + (q % 3), 2.4, 0, TAU); ctx.fill(); }
+      ctx.fillStyle = scrap ? '#d4cec2' : '#f6e2b8'; rr(ctx, -w / 2, -h / 2, w, h, 9); ctx.fill(); ctx.stroke();
+      ctx.save(); rr(ctx, -w / 2, -h / 2, w, h, 9); ctx.clip();
+      if (scrap) { ctx.strokeStyle = 'rgba(90,80,70,0.45)'; ctx.lineWidth = 2; for (let q = -w - h; q < w + h; q += 9) { ctx.beginPath(); ctx.moveTo(q, -h / 2); ctx.lineTo(q + h, h / 2); ctx.stroke(); } }
+      else { ctx.fillStyle = 'rgba(240,106,42,0.18)'; ctx.fillRect(-w / 2, -h / 2, w, h); }
+      ctx.restore();
+      ctx.strokeStyle = INK; ctx.lineWidth = 2.2; rr(ctx, -w / 2, -h / 2, w, h, 9); ctx.stroke();
+      if (w >= TS * 2 || h >= TS * 2) { const L = Math.max(w, h) * 0.32; ctx.save(); ctx.globalAlpha = 0.55; if (w >= h) BA.bone(ctx, -L, 0, L, 0, Math.min(14, h * 0.35), false, '#e8d8b0'); else BA.bone(ctx, 0, -L, 0, L, Math.min(14, w * 0.35), false, '#e8d8b0'); ctx.restore(); }
+      ctx.fillStyle = '#9a8a6a'; for (const [dx, dy] of [[-w / 2 + 7, -h / 2 + 7], [w / 2 - 7, -h / 2 + 7], [-w / 2 + 7, h / 2 - 7], [w / 2 - 7, h / 2 - 7]]) { ctx.beginPath(); ctx.arc(dx, dy, 2.4, 0, TAU); ctx.fill(); }
+      if (h >= TS * 2 && w >= TS * 2) { ctx.fillStyle = 'rgba(80,50,20,0.55)'; ctx.font = '6px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText(scrap ? 'SPARE' : 'REPLICA', 0, h / 2 - 12); }
       ctx.restore();
     };
     for (const r of s.keep || []) paint(r, [0, 0], 0);
-    if (this.fallK < 1) for (const r of s.drop) { const k = this.fallK; paint(r, [k * 40, k * k * 260], k * 1.2); }
+    if (this.fallK < 1) for (const r of s.drop) { const k = this.fallK; paint(r, [k * 40, k * k * 260], k * 1.2, true); }
     // the seam: a dark dashed crack along the replica, its fork, and the persimmon joint (37-4's twist)
     if (!this.done) {
       ctx.strokeStyle = '#5a3a1a'; ctx.lineWidth = 2.5; ctx.setLineDash([5, 4]); ctx.beginPath(); this.seam.forEach(([x, y], k) => k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke();
@@ -614,8 +628,8 @@ class BoneLimbGate extends Ent {
       const F = this.fly; F.t += dt; const k = Math.min(1, F.t / 0.6);
       if (k >= 1 && !F.hit) {
         F.hit = true;
-        if (F.kind === FITS[this.s.socket]) { this.done = true; setRect(g, this.s.gate, T.EMPTY); g.parts.text(F.x1, F.y1 - 20, 'CLICK! IT FITS', '#ffd88a'); TourKit.sfx('click', 'select', { vol: 0.7, pitch: 0.8 }); g.burst(F.x1, F.y1, 12, BONE, 'dust'); g.shake(3); }
-        else { g.parts.text(F.x1, F.y1 - 20, 'DOESN\'T SUIT IT', '#ffb0a0'); TourKit.sfx('fizz', 'bump', { vol: 0.5, pitch: 0.6 }); F.back = true; F.t = 0; }
+        if (F.kind === FITS[this.s.socket]) { this.done = true; setRect(g, this.s.gate, T.EMPTY); Tour.boneKit.pill(g, F.x1, F.y1 - 20, 'CLICK! IT FITS', '#ffd88a'); TourKit.sfx('click', 'select', { vol: 0.7, pitch: 0.8 }); g.burst(F.x1, F.y1, 12, BONE, 'dust'); g.shake(3); }
+        else { Tour.boneKit.pill(g, F.x1, F.y1 - 20, 'DOESN\'T SUIT IT', '#ffb0a0'); TourKit.sfx('fizz', 'bump', { vol: 0.5, pitch: 0.6 }); F.back = true; F.t = 0; }
       }
       if (F.back && F.t > 0.5) { this.at[F.i] = 1; this.fly = null; }
       return;

@@ -236,6 +236,23 @@ const painters = {
     for (let y = b - 10; y < b + 60; y += 24) { ctx.beginPath(); ctx.moveTo(180, y); ctx.lineTo(BG_W - 180, y); ctx.stroke(); }
     for (const x of [140, BG_W - 140]) { ctx.fillStyle = '#3a2a1a'; ctx.fillRect(x - 2, b - 210, 4, 64); ctx.fillStyle = '#ffd88a'; ctx.beginPath(); ctx.arc(x, b - 212, 8, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(255,216,138,0.25)'; ctx.beginPath(); ctx.arc(x, b - 212, 28, 0, TAU); ctx.fill(); }
   },
+  // the dig's clutter at the pit's edge: scaffold towers, stacked crates of replicas, bones sticking out of the spoil
+  // heaps (kept dark and dull so the boss and Brady pop)
+  boneDigClutter(ctx, L, rng, H) {
+    const b = L.base, c = L.color;
+    ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(0, H); ctx.lineTo(0, b - 20);
+    for (let x = 0; x <= BG_W; x += 64) ctx.lineTo(x, b - 20 - Math.abs(Math.sin(x * 0.009 + 1)) * 40);
+    ctx.lineTo(BG_W, H); ctx.closePath(); ctx.fill();
+    for (let x = 40 + rng() * 40; x < BG_W - 60; x += 150 + rng() * 90) {
+      const k = Math.floor(rng() * 3);
+      wrapDraw(x - 60, 120, X => {
+        const cx = X + 60;
+        if (k === 0) { ctx.strokeStyle = shade(c, 0.18); ctx.lineWidth = 4; for (const dx of [-26, 26]) { ctx.beginPath(); ctx.moveTo(cx + dx, b); ctx.lineTo(cx + dx, b - 130); ctx.stroke(); } for (let y = b - 20; y > b - 130; y -= 36) { ctx.beginPath(); ctx.moveTo(cx - 26, y); ctx.lineTo(cx + 26, y); ctx.moveTo(cx - 26, y); ctx.lineTo(cx + 26, y - 36); ctx.stroke(); } ctx.fillStyle = shade(c, 0.25); ctx.fillRect(cx - 32, b - 134, 64, 8); }
+        else if (k === 1) { for (let q = 0; q < 3; q++) { ctx.fillStyle = shade(c, 0.12 + q * 0.04); ctx.fillRect(cx - 40 + (q % 2) * 26, b - 30 - q * 28, 46, 28); ctx.fillStyle = shade(c, -0.1); ctx.fillRect(cx - 40 + (q % 2) * 26, b - 20 - q * 28, 46, 3); } }
+        else { ctx.strokeStyle = shade(c, 0.3); ctx.lineWidth = 9; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(cx - 20, b - 10); ctx.lineTo(cx + 10, b - 70); ctx.stroke(); ctx.fillStyle = shade(c, 0.3); ctx.beginPath(); ctx.arc(cx + 12, b - 74, 9, 0, TAU); ctx.arc(cx + 2, b - 78, 9, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.moveTo(cx + 30, b - 8); ctx.quadraticCurveTo(cx + 50, b - 60, cx + 70, b - 70); ctx.stroke(); }
+      });
+    }
+  },
   /* ---------- the secret rooms' own backdrops (all different) ---------- */
   // 37-1 RESERVED FOR A GIANT: the museum's great hall: green walls, a cornice, a huge skeleton's legs, a height chart
   roomHall(ctx, L, rng, H) {
@@ -288,6 +305,22 @@ const painters = {
   }
 };
 const SKY_DAY = ['#4a9ad8', '#9ad0f0', '#fbe8c8'];
+// each secret room its own floor and walls: the museum hall's green marble, the gift shop's checked lino, the cast
+// room's white tiles, the tar cave's black basalt, the specimen store's dark planks
+const MATS = {
+  marble: { base: '#2a5a4c', line: '#cfe8dc', cap: '#e8e2cc', capLo: '#a8a088', pat(ctx, rng) { ctx.strokeStyle = 'rgba(210,240,225,0.45)'; ctx.lineWidth = 1.2; ctx.beginPath(); let x = rng() * TS, y = 0; ctx.moveTo(x, y); while (y < TS) { x += (rng() - 0.5) * 12; y += 6; ctx.lineTo(x, y); } ctx.stroke(); } },
+  checker: { base: '#c84a3a', line: '#f2e2c4', cap: '#f2e2c4', capLo: '#a83a2a', pat(ctx) { ctx.fillStyle = '#f2e2c4'; ctx.fillRect(0, 0, TS / 2, TS / 2); ctx.fillRect(TS / 2, TS / 2, TS / 2, TS / 2); } },
+  tile: { base: '#e8eef0', line: '#b8c4c8', cap: '#8a969c', capLo: '#5a666c', pat(ctx) { ctx.strokeStyle = '#b8c4c8'; ctx.lineWidth = 2; ctx.strokeRect(1, 1, TS / 2 - 1, TS / 2 - 1); ctx.strokeRect(TS / 2, 1, TS / 2 - 1, TS / 2 - 1); ctx.strokeRect(1, TS / 2, TS / 2 - 1, TS / 2 - 1); ctx.strokeRect(TS / 2, TS / 2, TS / 2 - 1, TS / 2 - 1); } },
+  basalt: { base: '#2a2228', line: '#4a3e44', cap: '#1a1012', capLo: '#0a0606', pat(ctx, rng) { ctx.fillStyle = '#3a3036'; ctx.beginPath(); ctx.moveTo(4, 2); ctx.lineTo(TS - 6, 4); ctx.lineTo(TS - 3, TS / 2); ctx.lineTo(TS - 8, TS - 3); ctx.lineTo(5, TS - 5); ctx.lineTo(2, TS / 2); ctx.closePath(); ctx.fill(); ctx.fillStyle = 'rgba(120,180,200,0.2)'; ctx.fillRect(6 + rng() * 14, 8, 6, 2); } },
+  planks: { base: '#4a3424', line: '#2a1a10', cap: '#6a4a30', capLo: '#3a2414', pat(ctx, rng) { ctx.fillStyle = '#5a4030'; ctx.fillRect(0, 0, TS, 10); ctx.fillRect(0, 21, TS, 11); ctx.fillStyle = '#2a1a10'; ctx.fillRect(0, 10, TS, 1.5); ctx.fillRect(0, 21, TS, 1.5); ctx.fillRect(8 + rng() * 14, 0, 1.5, 10); ctx.fillStyle = '#7a5a3a'; ctx.beginPath(); ctx.arc(20, 26, 1.5, 0, TAU); ctx.fill(); } }
+};
+const mat = k => {
+  const M = MATS[k];
+  const ground = { style: 'room_' + k, cap: M.cap, capHi: M.cap, dirt: M.base, dirt2: M.capLo, rock: M.base,
+    paint(ctx, rng) { ctx.fillStyle = M.base; ctx.fillRect(0, 0, TS, TS); M.pat(ctx, rng); },
+    paintCap(ctx, x0, x1) { ctx.fillStyle = M.capLo; ctx.fillRect(x0, 0, x1 - x0, 10); ctx.fillStyle = M.cap; ctx.fillRect(x0, 0, x1 - x0, 7); ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(x0, 0, x1 - x0, 1.5); ctx.fillStyle = INK; ctx.fillRect(x0, 9.5, x1 - x0, 1.5); } };
+  return { ground, hard: { c1: M.base, c2: M.capLo, paint(ctx, rng) { ctx.fillStyle = M.base; ctx.fillRect(0, 0, TS, TS); M.pat(ctx, rng); } } };
+};
 const room = (name, painter, extra) => Object.assign({}, quarry, { name, music: 'tour_bone_room', particles: 'none', rays: null, sky: ['#2a2024', '#3a2a2a', '#4a3a30'], horizonGlow: '#ffd88a', celestial: { type: 'none' }, stars: 0, layers: [{ kind: painter, base: 400, f: 0.05 }], fog: '#4a3a30', decor: [] }, extra || {});
 const themes = {
   bone_quarry: Object.assign({}, quarry, {
@@ -323,14 +356,14 @@ const themes = {
   bone_arena: Object.assign({}, quarry, {
     name: 'The Dig', music: 'tour_bone_boss', particles: 'dust', rays: null,
     sky: ['#24183a', '#6a3a5a', '#c8705a'], horizonGlow: '#ff9a6a', celestial: { type: 'none' }, stars: 0.6,
-    layers: [{ kind: 'boneDigPit', color: '#7a4422', base: 400, f: 0.1 }],
-    fog: '#8a4a3a', decor: []
+    layers: [{ kind: 'mountains', color: '#4a3050', base: 250, amp: 90, f: 0.03, blur: true, snow: true }, { kind: 'boneTerraces', color: '#6a3a2a', base: 300, f: 0.06 }, { kind: 'boneArcs', color: '#4a2a1e', bone: '#8a7a64', base: 350, f: 0.12 }, { kind: 'boneDigClutter', color: '#3a2218', base: 400, f: 0.22 }],
+    fog: '#5a3a3a', decor: []
   }),
-  bone_room_hall: room('The Great Hall', 'roomHall'),
-  bone_room_shop: room('The Gift Shop', 'roomShop'),
-  bone_room_cast: room('The Cast Room', 'roomCast'),
-  bone_room_tar: room('The Tar Pool', 'roomTar', { liquid: 'canal' }),
-  bone_room_store: room('The Specimen Store', 'roomStore')
+  bone_room_hall: room('The Great Hall', 'roomHall', mat('marble')),
+  bone_room_shop: room('The Gift Shop', 'roomShop', mat('checker')),
+  bone_room_cast: room('The Cast Room', 'roomCast', mat('tile')),
+  bone_room_tar: room('The Tar Pool', 'roomTar', Object.assign({ liquid: 'canal' }, mat('basalt'))),
+  bone_room_store: room('The Specimen Store', 'roomStore', mat('planks'))
 };
 
 /* ---------------- props (Decor: drawn each frame, plain shapes only) ---------------- */
@@ -490,17 +523,17 @@ const mouseThink = (e, dt) => {
   if (e.phase === 'home') { e.vx = 0; e.mode = 'idle'; if (e.cool <= 0 && p && !p.dead && Math.abs(p.cx - e.cx) < 5 * TS && Math.abs(p.cy - e.cy) < 3 * TS) { e.phase = 'notice'; e.st = 0; e.dir = sign(p.cx - e.cx) || e.dir; TourKit.sfx('squeak', 'select', { vol: 0.35, pitch: 2.2 }); } }
   else if (e.phase === 'notice') { e.vx = 0; e.mode = 'notice'; if (e.st > 0.6) { e.phase = 'spring'; e.st = 0; e.vy = -11 * TS; e.vx = e.dir * 3.2 * TS; e.onGround = false; e.g.burst(e.cx, e.y + e.h, 4, BONE, 'dust'); } }
   else if (e.phase === 'spring') { e.mode = 'hop'; if (e.onGround && e.st > 0.15) { e.phase = 'scurry'; e.st = 0; e.vx = e.dir * e.speed; } }
-  else { e.mode = 'walk'; if (!e.vx) e.vx = e.dir * e.speed; if (e.st > 2.6 && e.onGround) { e.phase = 'home'; e.st = 0; e.cool = 1.6; e.g.parts.text(e.cx, e.y - 8, 'NEW HOUSE!', '#ffd88a'); } }
+  else { e.mode = 'walk'; if (!e.vx) e.vx = e.dir * e.speed; if (e.st > 2.6 && e.onGround) { e.phase = 'home'; e.st = 0; e.cool = 1.6; Tour.boneKit.pill(e.g, e.cx, e.y - 8, 'NEW HOUSE!', '#ffd88a'); } }
 };
 const enemies = {
   boneMouse: { cls: TourEnemy.make({ w: 22, h: 22, speed: 1.6, edgeTurn: true, art: mouseArt, burst: '#f2a03a', think: mouseThink }), place: 'walk' },
   boneNewt: { cls: TourEnemy.make({ w: 28, h: 16, speed: 0.9, hp: 2, edgeTurn: true, art: newtArt, burst: '#3e8a6a',
-    think: (e, dt) => { if (e.tailless > 0) { e.tailless -= dt; e.vx = 0; e.mode = 'idle'; if (e.tailless <= 0) { e.speed = 1.5 * TS; e.vx = e.dir * e.speed; e.g.parts.text(e.cx, e.y - 10, 'THAT ONE.', '#c8f0d8'); } return; } e.mode = 'walk'; if (!e.vx) e.vx = e.dir * e.speed; },
-    onHurt: e => { e.tailless = 0.9; e.g.spawn(new BoneTail(e.g, { x: e.cx - e.dir * 14, y: e.y + e.h, dir: -e.dir })); e.g.parts.text(e.cx, e.y - 12, 'MY TAIL!', '#c8f0d8'); } }), place: 'walk' },
+    think: (e, dt) => { if (e.tailless > 0) { e.tailless -= dt; e.vx = 0; e.mode = 'idle'; if (e.tailless <= 0) { e.speed = 1.5 * TS; e.vx = e.dir * e.speed; Tour.boneKit.pill(e.g, e.cx, e.y - 10, 'THAT ONE.', '#c8f0d8'); } return; } e.mode = 'walk'; if (!e.vx) e.vx = e.dir * e.speed; },
+    onHurt: e => { e.tailless = 0.9; e.g.spawn(new BoneTail(e.g, { x: e.cx - e.dir * 14, y: e.y + e.h, dir: -e.dir })); Tour.boneKit.pill(e.g, e.cx, e.y - 12, 'MY TAIL!', '#c8f0d8'); } }), place: 'walk' },
   boneBrush: { cls: TourEnemy.make({ w: 24, h: 40, speed: 0.8, behavior: 'charge', range: 7, chargeSpeed: 5.2, windup: 0.6, edgeTurn: true, art: brushArt, burst: '#f06a2a',
-    onNotice: e => { e.g.parts.text(e.cx, e.y - 12, 'SWEEP SWEEP!', '#ffd88a'); e.g.burst(e.cx, e.y + e.h, 6, '#e8c898', 'dust'); TourKit.sfx('brush', 'select', { vol: 0.35, pitch: 0.7 }); } }), place: 'walk' },
+    onNotice: e => { Tour.boneKit.pill(e.g, e.cx, e.y - 12, 'SWEEP SWEEP!', '#ffd88a'); e.g.burst(e.cx, e.y + e.h, 6, '#e8c898', 'dust'); TourKit.sfx('brush', 'select', { vol: 0.35, pitch: 0.7 }); } }), place: 'walk' },
   boneRook: { cls: TourFlyer.make({ w: 30, h: 20, range: 3, speed: 0.7, swoop: true, art: rookArt, burst: '#2e6a5a',
-    onSwoop: e => { if (e.g.onScreen(e)) e.g.parts.text(e.cx, e.y - 10, 'CAW!', '#c8f0d8'); } }), place: 'fly' }
+    onSwoop: e => { if (e.g.onScreen(e)) Tour.boneKit.pill(e.g, e.cx, e.y - 10, 'CAW!', '#c8f0d8'); } }), place: 'fly' }
 };
 
 /* ---------------- the route map: a little bone in the pin ---------------- */
@@ -613,6 +646,25 @@ Tour.country({
   } },
   levels: []
 });
+// a floating line on a dark rounded pill (every word the land floats: readable on any sky), kept clear of Brady's
+// head and the top bar, inside the view
+class BonePill extends Ent {
+  constructor(g, x, y, text, col) { super(g, null, 4, 4); this.x = x; this.y = y; this.text = String(text); this.col = col || '#ffd88a'; this.life = 1.7; this.friendly = true; }
+  update(dt) { this.t += dt; this.y -= 10 * dt; if (this.t > this.life) this.remove = true; }
+  touchPlayer() {}
+  draw(ctx) {
+    const g = this.g, p = g.player, a = Math.min(1, (this.life - this.t) * 3, this.t * 8);
+    ctx.save(); ctx.globalAlpha = a; ctx.font = '10px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const w = ctx.measureText(this.text).width + 18;
+    let x = clamp(this.x, g.camX + w / 2 + 6, g.camX + Game.viewW - w / 2 - 6), y = this.y;
+    if (p && Math.abs(x - p.cx) < w / 2 + 16 && y > p.y - 30 && y < p.y + p.h) y = p.y - 30;
+    y = Math.max(y, g.camY + 64);
+    ctx.fillStyle = 'rgba(36,22,14,0.86)'; rr(ctx, x - w / 2, y - 10, w, 20, 10); ctx.fill();
+    ctx.fillStyle = this.col; ctx.fillText(this.text, x, y + 1); ctx.restore();
+  }
+}
+ENTITY_TYPES.bonePill = BonePill;
+const pill = (g, x, y, text, col) => { if (g && g.spawn) g.spawn(new BonePill(g, x, y, text, col)); };
 // for the other bone files and the tests
-Tour.boneKit = { COL, INK, BoneArt, OCHRE, OCHRE_HI, OCHRE_LO, RUST, BONE, BONE_LO, BONE_SH, PERS, PETROL, PETROL_LO };
+Tour.boneKit = { pill, COL, INK, BoneArt, OCHRE, OCHRE_HI, OCHRE_LO, RUST, BONE, BONE_LO, BONE_SH, PERS, PETROL, PETROL_LO };
 })();

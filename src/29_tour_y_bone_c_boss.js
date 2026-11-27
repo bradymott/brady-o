@@ -16,7 +16,8 @@
    ============================================================ */
 (function () {
 const K = Tour.boneKit, INK = K.INK, BA = K.BoneArt, BONE = K.BONE, PERS = K.PERS;
-const say = (b, t, c) => TourKit.say(b.g, b, t, c || '#fbf4e0');
+// its lines show in one fixed spot under the boss bar, on a dark pill (never across its own head)
+const say = (b, t, c) => { b.line = { text: t, col: c || '#fbf4e0', t: 0 }; };
 const WIN = 1.8;
 const waveArt = (c, s) => { c.save(); c.fillStyle = 'rgba(240,220,180,0.95)'; c.strokeStyle = INK; c.lineWidth = 1.6; c.beginPath(); c.moveTo(s.x, s.y + s.h); c.quadraticCurveTo(s.x + s.w / 2, s.y - 6, s.x + s.w, s.y + s.h); c.closePath(); c.fill(); c.stroke(); c.restore(); };
 const nothing = () => {};
@@ -49,7 +50,7 @@ const brain = {
   seat(b, text) { const g = b.g; b.loose = null; b.damage(1, { text, col: '#ffd88a' }); TourKit.sfx('click', 'select', { vol: 0.8, pitch: 0.7 }); g.burst(b.cx, b.cy, 16, BONE, 'dust'); },
   update(b, dt) {
     const g = b.g, p = g.player, ph = b.phase || 1, I = g.boneIn, pressed = I && I.by === b && I.pressed;
-    b.guard = 'bounce';
+    b.guard = 'bounce'; if (b.line) b.line.t += dt;
     if (b.act === 'sit') {
       // the end: it sits down at last, very pleased, and will not get up
       b.vx = 0; this.ground(b, dt);
@@ -138,11 +139,11 @@ const brain = {
     for (let k = 0; k < 5; k++) { const rx = -22 + k * 11, ry = lerp(hipY - 2, shY - 4, (k + 1) / 6); ctx.strokeStyle = INK; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(rx, ry + 12, 14, Math.PI * 1.15, Math.PI * 1.85, false); ctx.stroke(); ctx.strokeStyle = BONE; ctx.lineWidth = 3.4; ctx.stroke(); }
     for (const [jx, jy] of [[-40, hipY - 4], [34, shY - 6]]) BA.joint(ctx, jx, jy, 7);
     // the sockets it is missing: dashed rings (shoulder phase 1, hip phase 2, tail phase 3)
-    const ring = (rx, ry, on) => { ctx.save(); ctx.lineWidth = 3; ctx.setLineDash([4, 4]); ctx.strokeStyle = on ? '#ffd84a' : 'rgba(40,20,10,0.8)'; ctx.fillStyle = 'rgba(40,20,10,0.6)'; ctx.beginPath(); ctx.arc(rx, ry, 9, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore(); };
+    const ring = (rx, ry, on) => { ctx.save(); const k = on ? 0.5 + 0.5 * Math.sin(t * 9) : 0; ctx.fillStyle = 'rgba(30,14,6,0.85)'; ctx.beginPath(); ctx.arc(rx, ry, 13, 0, TAU); ctx.fill(); ctx.lineWidth = 4; ctx.setLineDash([5, 4]); ctx.strokeStyle = on ? '#ffe27a' : '#f2a060'; ctx.stroke(); ctx.setLineDash([]); if (on) { ctx.strokeStyle = `rgba(255,226,122,${0.35 + 0.5 * k})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(rx, ry, 18 + k * 6, 0, TAU); ctx.stroke(); } ctx.restore(); };
     const open = A === 'paddleDown' || A === 'heelDown' || A === 'curlDown';
-    if (ph === 1) ring(22, shY + 6, open && Math.sin(t * 10) > 0);
-    if (ph === 2) ring(-30, hipY + 4, open && Math.sin(t * 10) > 0);
-    if (ph === 3) ring(-52, hipY + 2, open && Math.sin(t * 10) > 0);
+    if (ph === 1) ring(22, shY + 6, open);
+    if (ph === 2) ring(-30, hipY + 4, open);
+    if (ph === 3) ring(-52, hipY + 2, open);
     // the tail (phase 1-2: a short stub; phase 3: it is missing, its socket shows)
     if (ph < 3) BA.bone(ctx, -44, hipY - 2, -66, hipY - 16, 7, true);
     // the neck and the head: phase 3's neck is a curly tail (it curls under for the sweep)
@@ -171,7 +172,7 @@ const brain = {
     ctx.restore();
     ctx.restore();
     // the loose bone on the floor (glowing: it can be seated now)
-    if (b.loose) { const L = b.loose, k = 0.5 + 0.5 * Math.sin(t * 8); ctx.save(); ctx.strokeStyle = `rgba(255,216,138,${0.5 + 0.4 * k})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(L.x, b.floorY - 8, 26, 10, 0, 0, TAU); ctx.stroke(); if (L.kind === 'heel') { ctx.fillStyle = BONE; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(L.x, b.floorY - 10, 18, 10, 0, 0, TAU); ctx.fill(); ctx.stroke(); BA.joint(ctx, L.x - 12, b.floorY - 14, 5); } else { ctx.strokeStyle = INK; ctx.lineWidth = 10; ctx.beginPath(); ctx.arc(L.x, b.floorY - 14, 12, 0.5, TAU - 0.3); ctx.stroke(); ctx.strokeStyle = BONE; ctx.lineWidth = 6; ctx.stroke(); } ctx.restore(); }
+    if (b.loose) { const L = b.loose, k = 0.5 + 0.5 * Math.sin(t * 8); ctx.save(); ctx.fillStyle = `rgba(255,226,122,${0.18 + 0.2 * k})`; ctx.beginPath(); ctx.ellipse(L.x, b.floorY - 12, 34 + k * 8, 18 + k * 4, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = `rgba(255,226,122,${0.6 + 0.4 * k})`; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.ellipse(L.x, b.floorY - 8, 28 + k * 6, 11, 0, 0, TAU); ctx.stroke(); ctx.translate(L.x, b.floorY - 10); ctx.scale(1 + k * 0.12, 1 + k * 0.12); ctx.translate(-L.x, -(b.floorY - 10)); if (L.kind === 'heel') { ctx.fillStyle = BONE; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(L.x, b.floorY - 10, 18, 10, 0, 0, TAU); ctx.fill(); ctx.stroke(); BA.joint(ctx, L.x - 12, b.floorY - 14, 5); } else { ctx.strokeStyle = INK; ctx.lineWidth = 10; ctx.beginPath(); ctx.arc(L.x, b.floorY - 14, 12, 0.5, TAU - 0.3); ctx.stroke(); ctx.strokeStyle = BONE; ctx.lineWidth = 6; ctx.stroke(); } ctx.restore(); }
   }
 };
 // the tells on the floor: the paddle's shadow, the footprint, the sweep ring; and the paddle lying where it slapped
@@ -186,6 +187,10 @@ TourHooks.on('afterEntities', (play, ctx) => {
     if (A === 'paddleDown') { const s = brain.shoulder(b), k2 = 0.5 + 0.5 * Math.sin(t * 8); ctx.strokeStyle = `rgba(255,216,138,${0.5 + 0.4 * k2})`; ctx.lineWidth = 3; ctx.setLineDash([5, 5]); ctx.beginPath(); ctx.ellipse(s.x, b.floorY - 3, 1.5 * TS, 7, 0, 0, TAU); ctx.stroke(); ctx.setLineDash([]); }
   }
   if (A === 'kick') { const k = Math.min(1, b.at / 0.9); ctx.fillStyle = `rgba(30,15,5,${0.2 + 0.4 * k})`; ctx.save(); ctx.translate(b.tx, b.floorY - 3); ctx.scale(1, 0.4); BA.print(ctx, 0, 0, 2, 0, 2.4, 'rgba(60,30,10,0.7)'); ctx.restore(); ctx.strokeStyle = `rgba(255,90,60,${0.4 + 0.5 * k})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(b.tx, b.floorY - 3, 28, 7, 0, 0, TAU); ctx.stroke(); }
+  if (b.line) {
+    const L = b.line, a = Math.min(1, (2.6 - L.t) * 3); if (a <= 0) b.line = null;
+    else { ctx.save(); ctx.globalAlpha = a; ctx.font = '11px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; const x = play.camX + Game.viewW / 2, y = play.camY + 74, w = ctx.measureText(L.text).width + 22; ctx.fillStyle = 'rgba(36,22,14,0.88)'; rr(ctx, x - w / 2, y - 11, w, 22, 11); ctx.fill(); ctx.fillStyle = L.col; ctx.fillText(L.text, x, y + 1); ctx.restore(); }
+  }
   if (A === 'curl') { const k = Math.min(1, b.at); ctx.strokeStyle = `rgba(255,90,60,${0.4 + 0.5 * k})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(b.cx, b.floorY - 3, b.w / 2 + 68, 9, 0, 0, TAU); ctx.stroke(); }
   ctx.restore();
 });

@@ -25,11 +25,23 @@ function frame(keep, A, o, opts) {
   const g = RK.room(28, 14, F);
   g.fill(22, 1, 26, Y, '#');
   if (opts.roof) g.fill(1, 1, 21, opts.roof, '#');
-  const x0 = g.west(keep, Y);
-  g.cage(A.id, opts.cageX || 17, Y, RK.prize(o, keep), { w: 3, h: opts.cageH || 4 });
-  return { g, x0 };
+  // the way in and out: on the left (the kit's) or on the right
+  if (opts.doorRight) { g.put(19, Y, '@'); if (keep.door) g.door(20, Y, keep.door); }
+  else g.west(keep, Y);
+  // the prize cage: on the right at the floor (the kit's, lock facing left), or on the left (lock facing right),
+  // optionally up on a plinth
+  const items = RK.prize(o, keep);
+  if (opts.cageLeft) {
+    const y = opts.plinth ? Y - 1 : Y, h = opts.cageH || 4, w = 3, x = 2, top = y - h + 1;
+    if (opts.plinth) g.fill(1, Y, 6, Y, '#');
+    g.fill(1, top - 1, x + w, top - 1, '#'); g.fill(x, top, x + w - 1, y, '.');
+    g.vline(x + w, top, y, g.L(['lock', 'room:' + A.id]));
+    items.forEach((it, k) => g.box(x + 1 + k, top, it));
+    g.data.cage = { x: x + w, top, y, w };
+  } else g.cage(A.id, opts.cageX || 17, Y, items, { w: 3, h: opts.cageH || 4 });
+  return { g };
 }
-const fail = (play, txt) => { TourKit.sfx('fizz', 'bump', { vol: 0.5, pitch: 0.6 }); const p = play.player; if (p) play.parts.text(p.cx, p.y - 24, txt, '#ffb0a0'); };
+const fail = (play, txt) => { TourKit.sfx('fizz', 'bump', { vol: 0.5, pitch: 0.6 }); const p = play.player; if (p) Tour.boneKit.pill(play, p.cx, p.y - 24, txt, '#ffb0a0'); };
 // the room's counter / hint line in its one fixed spot (after the title banner)
 const hud = (play, ctx, str) => { if (play.bannerT > 0) return; TourRooms.hudText(play, ctx, str, '#ffd88a', 13, 0); };
 // the camera holds still on the room (the play band in the middle of a landscape phone view)
@@ -56,14 +68,14 @@ const props = (play, role) => play.entities.filter(e => e instanceof BoneRoomPro
 const DRAW = {};
 
 /* ================= boneGiant: RESERVED FOR A GIANT ================= */
-const GIANT_X = 10, BAR_ROW = 3;   // the measuring bar: Brady's head must reach the top of row 3 (a full jump does)
+const GIANT_X = 12, BAR_ROW = 3;   // the measuring bar: Brady's head must reach the top of row 3 (a full jump does)
 TourRooms.def('boneGiant', {
   title: 'RESERVED FOR A GIANT', rule: 'TOO SHORT? STAND UNDER THE BAR AND JUMP: IT MEASURES THE TOP OF YOUR JUMP', need: 'MEASURE UP FIRST!',
   make(o, keep, ctx, A, rng) {
-    const { g } = frame(keep, A, o);
+    const { g } = frame(keep, A, o, { doorRight: true, cageLeft: true, plinth: true, cageH: 3 });
     g.spawn(GIANT_X, Y, 'boneRoomProp', { role: 'chart', w: 3, h: 6 });
     g.winSpot(A.id, GIANT_X, Y);
-    g.coins(12, 14, 2);
+    g.coins(14, 16, 4);
     return g;
   },
   enter(play, A, R) { R.demo = 2.2; R.air = false; R.top = null; },
@@ -87,8 +99,8 @@ DRAW.chart = (ctx, e, R) => {
   // the post with its height marks: GIANT up top, VERY TALL, then a little "you?" far below
   ctx.fillStyle = '#e8dcc0'; rr(ctx, x - 40, e.y + 4, 14, e.h - 4, 3); ctx.fill(); ctx.stroke();
   for (let yy = e.y + 14; yy < y0 - 4; yy += 16) { ctx.fillStyle = INK; ctx.fillRect(x - 40, yy, 7, 2); }
-  ctx.fillStyle = '#fbf4e0'; rr(ctx, x - 24, y0 - 70, 74, 18, 3); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = INK; ctx.font = '7px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('YOU MUST BE THIS TALL', x + 13, y0 - 61);
+  ctx.fillStyle = '#fbf4e0'; rr(ctx, x - 132, y0 - 60, 86, 26, 3); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#6a4a2a'; ctx.fillRect(x - 92, y0 - 34, 4, 34);
+  ctx.fillStyle = INK; ctx.font = '7px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('YOU MUST BE', x - 89, y0 - 52); ctx.fillText('THIS TALL →', x - 89, y0 - 42);
   // the bar: a bone on a slider; it drops to the top of Brady's last jump for a moment, then back up
   let by = barY; if (R.markT > 0 && R.mark != null) by = R.won ? barY : lerp(barY, R.mark, Math.min(1, R.markT));
   if (R.demo > 0) by = barY + Math.abs(Math.sin(t * 3)) * 0;
@@ -164,7 +176,7 @@ const SLOT_X = 13, PLAC_X = 16;   // the fake coin slot; the placard hangs in fr
 TourRooms.def('boneOrder', {
   title: 'OUT OF ORDER', rule: 'THE CAST DISPENSER IS OUT OF ORDER... OR IS THAT PLACARD JUST LOOSE?', need: 'THE PLACARD IS IN THE WAY!',
   make(o, keep, ctx, A, rng) {
-    const { g } = frame(keep, A, o, { cageX: 17 });
+    const { g } = frame(keep, A, o, { cageX: 17, roof: 1 });
     g.spawn(SLOT_X, Y, 'boneRoomProp', { role: 'machine', w: 4, h: 5 });
     g.spawn(PLAC_X, 3, 'boneRoomProp', { role: 'placard', w: 2, h: 1 });
     g.winSpot(A.id, PLAC_X, Y);
@@ -191,8 +203,8 @@ DRAW.machine = (ctx, e, R) => {
   ctx.fillStyle = '#c8e0e0'; rr(ctx, x + 10 + sh, y + 10, w - 20, h * 0.45, 4); ctx.fill(); ctx.stroke();
   // little plaster casts on display inside the glass
   for (let k = 0; k < 3; k++) BA.print(ctx, x + 26 + k * 26 + sh, y + 40 + (k % 2) * 12, k, 0, 1, '#8a7a6a');
-  ctx.fillStyle = '#ffd84a'; rr(ctx, x + w / 2 - 30 + sh, y + h * 0.6, 60, 14, 3); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = INK; ctx.font = '7px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('OUT OF ORDER', x + w / 2 + sh, y + h * 0.6 + 7);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  if (!(e.g.bannerT > 0)) { ctx.fillStyle = '#ffd84a'; rr(ctx, x + w / 2 - 30 + sh, y + h * 0.6, 60, 14, 3); ctx.fill(); ctx.stroke(); ctx.fillStyle = INK; ctx.font = '7px ' + FONT_DISPLAY; ctx.fillText('OUT OF ORDER', x + w / 2 + sh, y + h * 0.6 + 7); }
   ctx.fillStyle = '#3a4a4a'; rr(ctx, x + w / 2 - 4 + sh, y + h * 0.78, 8, 14, 2); ctx.fill(); ctx.stroke();
   ctx.fillStyle = '#ffffff'; ctx.font = '6px ' + FONT_DISPLAY; ctx.fillText('INSERT BONE', x + w / 2 + sh, y + h - 6);
   ctx.restore();
@@ -233,7 +245,7 @@ TourRooms.def('boneFish', {
     }
     if (!p.onGround || p.groundTy !== F) { R.wasAir = !p.onGround; return; }
     const tx = Math.floor(p.cx / TS);
-    if (tx === POOL0 || tx === POOL0 + 1) { R.reel = 0; TourKit.sfx('reel', 'select', { vol: 0.5, pitch: 1.6 }); play.parts.text(p.cx, p.y - 20, 'A BITE!', '#ffd88a'); }
+    if (tx === POOL0 || tx === POOL0 + 1) { R.reel = 0; TourKit.sfx('reel', 'select', { vol: 0.5, pitch: 1.6 }); Tour.boneKit.pill(play, p.cx, p.y - 20, 'A BITE!', '#ffd88a'); }
     else if (tx > POOL0 + 1 && tx <= POOL1) { play.burst(p.cx, p.y + p.h, 10, '#2a1a10', 'dust'); fail(play, 'SPLOSH! THE FISH SPITS YOU BACK'); RK.raspberry(play, 'SPLOSH!'); p.x = 4 * TS + TS / 2 - p.w / 2; p.y = F * TS - p.h; p.vx = p.vy = 0; }
     R.wasAir = false;
   }
@@ -264,11 +276,11 @@ DRAW.fish = (ctx, e, R) => {
 };
 
 /* ================= boneJar: THE CLEARLY EMPTY JAR ================= */
-const JAR_X = [8, 11, 14];
+const JAR_X = [9, 12, 15];
 TourRooms.def('boneJar', {
   title: 'THE CLEARLY EMPTY JAR', rule: 'THREE EMPTY JARS. ONE HAS A BUMP UNDER ITS LABEL: THROW TO TIP IT, CATCH WHAT FALLS OUT', need: 'CATCH IT FIRST!',
   make(o, keep, ctx, A, rng) {
-    const { g } = frame(keep, A, o);
+    const { g } = frame(keep, A, o, { doorRight: true, cageLeft: true });
     const odd = o.odd != null ? o.odd : 1;
     JAR_X.forEach((x, k) => g.spawn(x, Y, 'boneRoomProp', { role: 'jar', k, w: 1, h: 2, odd: k === odd }));
     g.data.odd = odd;
@@ -291,7 +303,7 @@ TourRooms.def('boneJar', {
     if (!I || !I.pressed || R.won || !(I.by && I.by.role === 'jar')) return;
     const e = I.by; if (e.flip) return;
     e.flip = 1; e.tip = 1.2; TourKit.sfx('clink', 'select', { vol: 0.5, pitch: 1.3 });
-    if (e.s.odd) { const dir = p.cx < e.cx ? -1 : 1; R.drop = { t: 0, x0: e.cx, y0: e.y + e.h - 6, x1: e.cx + dir * 3 * TS, x: e.cx, y: e.y }; e.tip = 9; play.parts.text(e.cx, e.y - 20, 'SOMETHING FELL OUT!', '#ffd88a'); }
+    if (e.s.odd) { const dir = p.cx < e.cx ? -1 : 1; R.drop = { t: 0, x0: e.cx, y0: e.y + e.h - 6, x1: e.cx + dir * 3 * TS, x: e.cx, y: e.y }; e.tip = 9; Tour.boneKit.pill(play, e.cx, e.y - 20, 'SOMETHING FELL OUT!', '#ffd88a'); }
     else { play.burst(e.cx, e.y + e.h, 8, '#e8dcc0', 'dust'); fail(play, 'CLEARLY EMPTY. (A LITTLE DUST.)'); }
   },
   draw(play, ctx, A, R) {

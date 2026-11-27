@@ -82,6 +82,8 @@ async function session(viewport, fn) {
       for (let k = 0; k < 120 * 8 && c.prog < d && !c.done && !(c.failT > 0); k++) sim(1 / 120, { action: true });
       sim(0.1); const out = { done: c.done, prog: Math.round(c.prog), fail: c.failT > 0 }; sim(0.9); return out;
     };
+    // stand at the room's way out (its door, wherever the room puts it)
+    window.toDoor = () => { const g = S(); const d = g.entities.find(e => e.constructor.name === 'Portal' && e.target && e.target.area !== g.area.idx); const p = P(); p.x = d.cx - p.w / 2; p.y = d.y + d.h - p.h; p.vx = p.vy = 0; sim(0.3); };
     /* ---------------- the autopilot ----------------
        A program is a little input plan: hold `dir` for `run` s on the ground, press jump and hold it `hold` s, then
        steer in the air (air: 'dir' | 'none' | 'rev' at revAt | 'late' (none, then dir from lateAt)), or walk off
@@ -355,12 +357,12 @@ LEVELS.walk = async (page, shot, run, pano) => {
     r = await page.evaluate(() => { for (let k = 0; k < 20 && S().area.aid !== 'hall'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.4); return { area: S().area.aid }; });
     check('37-1: the hatch leads into the great hall', r.area === 'hall', r);
     await page.evaluate(() => { sim(0.5); freeze(); }); await shot('17-37-1-room-giant.png');
-    r = await page.evaluate(() => { thaw(); place(10, 6); sim(2.5); const R = S().area.roomState; sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.9); return { won: R.won }; });
+    r = await page.evaluate(() => { thaw(); place(12, 6); sim(2.5); const R = S().area.roomState; sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.9); return { won: R.won }; });
     check('37-1 hall: a tap hop under the bar is too short (a miss, nothing lost)', !r.won, r);
     r = await page.evaluate(() => { const R = S().area.roomState; sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.5, { jump: true }); sim(1.2); return { won: R.won }; });
     check('37-1 hall: a full jump under the bar: it measures the top of the jump: won, the cage opens', r.won, r);
     await page.evaluate(() => freeze()); await shot('18-37-1-room-giant-won.png'); await page.evaluate(() => thaw());
-    r = await page.evaluate(() => { place(3, 6); sim(0.2); for (let k = 0; k < 20 && S().area.aid !== 'quarry'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.6); return { area: S().area.aid, x: Math.floor(P().cx / 32) }; });
+    r = await page.evaluate(() => { toDoor(); for (let k = 0; k < 20 && S().area.aid !== 'quarry'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.6); return { area: S().area.aid, x: Math.floor(P().cx / 32) }; });
     check('37-1 hall: its door lets Brady out further along the tunnel floor (not where he came in)', r.area === 'quarry' && r.x > 170, r);
     await page.evaluate(() => { play('37-1'); }); await pano('19-37-1-panorama.png', 0.25);
   });
@@ -410,7 +412,7 @@ LEVELS.ascent = async (page, shot, run, pano) => {
     r = await page.evaluate(() => { const R = S().area.roomState; AP.go([15, 7]); throwN(1); sim(0.6); return { won: R.won }; });
     check('37-2 shop: walk behind the last cardboard skeleton and lift its coat: the open hatch, the cage opens', r.won, r);
     await page.evaluate(() => freeze()); await shot('26-37-2-room-queue-won.png'); await page.evaluate(() => thaw());
-    r = await page.evaluate(() => { place(3, 6); sim(0.2); for (let k = 0; k < 20 && S().area.aid !== 'ascent'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.6); return { area: S().area.aid, x: Math.floor(P().cx / 32), row: P().groundTy }; });
+    r = await page.evaluate(() => { toDoor(); for (let k = 0; k < 20 && S().area.aid !== 'ascent'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.6); return { area: S().area.aid, x: Math.floor(P().cx / 32), row: P().groundTy }; });
     check('37-2 shop: its door lets Brady out on a bonus ledge over the floor (not the crack)', r.area === 'ascent' && r.x >= 156 && r.row === 12, r);
     // the twist: one vertebra, two unequal ribs
     r = await page.evaluate(() => {
@@ -465,7 +467,7 @@ LEVELS.clay = async (page, shot, run, pano) => {
     r = await page.evaluate(() => { const R = S().area.roomState; AP.go([16, 7]); sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.3, { jump: true }); sim(1); return { won: R.won }; });
     check('37-3 cast room: a bump from below swings the blank placard up: the real slot, the prize', r.won, r);
     await page.evaluate(() => freeze()); await shot('36-37-3-room-out-of-order-won.png'); await page.evaluate(() => thaw());
-    r = await page.evaluate(() => { place(3, 6); sim(0.2); for (let k = 0; k < 20 && S().area.aid !== 'clay'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.6); return { area: S().area.aid, x: Math.floor(P().cx / 32), row: P().groundTy }; });
+    r = await page.evaluate(() => { toDoor(); for (let k = 0; k < 20 && S().area.aid !== 'clay'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.6); return { area: S().area.aid, x: Math.floor(P().cx / 32), row: P().groundTy }; });
     check('37-3 cast room: its door lets Brady out down on the floor past the bench (a chute)', r.area === 'clay' && r.x >= 122 && r.row === 19, r);
     // the twist: a low slab under a long low shelf, then a tall one straight after
     r = await page.evaluate(() => { const a = AP.go([131, 19]); const w = pressCast(true); const b = AP.route([[142, 19], [152, 19], [160, 19], [168, 19]]); return { a: a.ok, w, b: b.ok, tile: tileT(145, 19) }; });
@@ -500,8 +502,7 @@ LEVELS.cut = async (page, shot, run, pano) => {
     r = await page.evaluate(() => { const R = S().area.roomState; AP.go([7, 7]); sim(1 / 120, { jump: true, jumpPressed: true, right: true }); sim(0.28, { right: true }); sim(0.4); sim(2.5); return { won: R.won, x: Math.floor(P().cx / 32) }; });
     check('37-4 tar pool: jump on the float from the dry end: the fish reels Brady in to the island: the prize', r.won && r.x >= 14, r);
     await page.evaluate(() => freeze()); await shot('45-37-4-room-no-fishing-won.png'); await page.evaluate(() => thaw());
-    r = await page.evaluate(() => { place(3, 6); sim(0.2); return { reel: false }; });
-    r = await page.evaluate(() => { const R = S().area.roomState; const p = P(); p.x = 3 * 32 + 16 - p.w / 2; sim(0.3); for (let k = 0; k < 20 && S().area.aid !== 'cut'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.6); return { area: S().area.aid, x: Math.floor(P().cx / 32) }; });
+        r = await page.evaluate(() => { const R = S().area.roomState; toDoor(); for (let k = 0; k < 20 && S().area.aid !== 'cut'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.6); return { area: S().area.aid, x: Math.floor(P().cx / 32) }; });
     check('37-4 tar pool: its door takes Brady back out by the plug', r.area === 'cut', r);
     r = await page.evaluate(() => {
       play('37-4'); place(66, 18); sim(0.3); const p = P(), out = {};
@@ -539,12 +540,12 @@ LEVELS.dig = async (page, shot, run, pano) => {
     r = await page.evaluate(() => { thaw(); const a = AP.go([54, 19]); const c = climbTo(57, 3); sim(0.4, { up: true, right: true }); sim(0.6, { right: true }); const b = AP.go([64, 4]); for (let k = 0; k < 20 && S().area.aid !== 'store'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.5); return { a: a.ok, c, b: b.ok, area: S().area.aid }; });
     check('37-5: up the rib cage on the trench wall to the whiskers\' ledge: a hatch into the specimen store', r.area === 'store', r);
     await page.evaluate(() => { sim(0.5); freeze(); }); await shot('53-37-5-room-empty-jar.png');
-    r = await page.evaluate(() => { thaw(); place(5, 6); sim(2.2); const R = S().area.roomState, odd = S().area.roomKit.data.odd, xs = [8, 11, 14]; AP.go([xs[(odd + 1) % 3], 7]); throwN(1, 1.6); return { won: R.won, odd }; });
+    r = await page.evaluate(() => { thaw(); place(17, 6); sim(2.2); const R = S().area.roomState, odd = S().area.roomKit.data.odd, xs = [9, 12, 15]; AP.go([xs[(odd + 1) % 3], 7]); throwN(1, 1.6); return { won: R.won, odd }; });
     check('37-5 store: tip a jar without the bump: clearly empty, a little dust (try again)', !r.won, r);
-    r = await page.evaluate(() => { const R = S().area.roomState, xs = [8, 11, 14], odd = S().area.roomKit.data.odd; AP.go([xs[odd] - 1, 7]); sim(1 / 120, { action: true, actionPressed: true }); const D0 = R.drop; let k = 0; for (; k < 240 && R.drop && !R.won; k++) { const D = R.drop, p = P(); sim(1 / 120, { left: D.x < p.cx - 8, right: D.x > p.cx + 8 }); } sim(0.3); return { fell: !!D0, won: R.won }; });
+    r = await page.evaluate(() => { const R = S().area.roomState, xs = [9, 12, 15], odd = S().area.roomKit.data.odd; AP.go([xs[odd] - 1, 7]); sim(1 / 120, { action: true, actionPressed: true }); const D0 = R.drop; let k = 0; for (; k < 240 && R.drop && !R.won; k++) { const D = R.drop, p = P(); sim(1 / 120, { left: D.x < p.cx - 8, right: D.x > p.cx + 8 }); } sim(0.3); return { fell: !!D0, won: R.won }; });
     check('37-5 store: tip the jar with the bump under its label: something falls out; run under it and catch it: the cage opens', r.fell && r.won, r);
     await page.evaluate(() => freeze()); await shot('54-37-5-room-empty-jar-won.png'); await page.evaluate(() => thaw());
-    r = await page.evaluate(() => { place(3, 6); sim(0.2); for (let k = 0; k < 20 && S().area.aid !== 'dig'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.6); return { area: S().area.aid, x: Math.floor(P().cx / 32), row: P().groundTy }; });
+    r = await page.evaluate(() => { toDoor(); for (let k = 0; k < 20 && S().area.aid !== 'dig'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.6); return { area: S().area.aid, x: Math.floor(P().cx / 32), row: P().groundTy }; });
     check('37-5 store: its hatch lets Brady down onto the trench floor further on (before the boss)', r.area === 'dig' && r.x >= 66 && r.row === 19, r);
     r = await page.evaluate(() => { const a = AP.route([[76, 19], [88, 19]]); for (let k = 0; k < 20 && S().area.aid !== 'pit'; k++) sim(0.1, { up: true, upPressed: true }); sim(1); return { ok: a.ok, area: S().area.aid }; });
     check('37-5: over the scree pit (P3) to the hatch down into the dig: the boss', r.ok && r.area === 'pit', r);
