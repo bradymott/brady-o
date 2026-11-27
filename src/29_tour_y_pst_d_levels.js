@@ -388,11 +388,12 @@ if (typeof TOUR_OW_MAPS !== 'undefined') TOUR_OW_MAPS.pst = {
   pal: { sea: '#3a1a4a', deep: '#24102e', land: '#f2b632', light: '#ffd673', path: '#fbefd2', beach: '#e8c070', cliff: '#7a2f5a', roof: '#8a3462', wall: '#fbefd2' },
   sea: 'stars', coast: 'pstQuilt', tufts: 'none', trail: 'sparkle', bridge: 'steps', meadow: false, woods: false, foam: false, birds: false,
   land: [[[160, 380], [220, 220], [400, 150], [640, 120], [880, 150], [1100, 130], [1300, 200], [1390, 340], [1360, 520], [1240, 640], [980, 690], [700, 660], [440, 680], [250, 600]]],
-  nodes: { start: [250, 450], '32-1': [430, 330, 'n'], '32-2': [700, 230, 'n'], '32-3': [990, 250, 'n'], '32-4': [1180, 400, 'e'], '32-5': [960, 560, 's'], '32-6': [640, 540, 's'], port: [470, 560] },
-  paths: { 'start>32-1': [[330, 400]], '32-1>32-2': [[560, 260]], '32-2>32-3': [[850, 220]], '32-3>32-4': [[1110, 310]], '32-4>32-5': [[1100, 500]], '32-5>32-6': [[800, 580]], '32-6>port': [[540, 570]] },
+  // the route nods up and down across the quilt like a slow snore (a loop was too close in shape to other lands' maps)
+  nodes: { start: [240, 540], '32-1': [410, 260, 'n'], '32-2': [590, 550, 's'], '32-3': [770, 250, 'n'], '32-4': [950, 560, 's'], '32-5': [1130, 250, 'n'], '32-6': [1280, 470, 'e'], port: [1160, 610] },
+  paths: { 'start>32-1': [[300, 380]], '32-1>32-2': [[500, 400]], '32-2>32-3': [[680, 400]], '32-3>32-4': [[860, 400]], '32-4>32-5': [[1040, 400]], '32-5>32-6': [[1240, 340]], '32-6>port': [[1250, 560]] },
   feat: [
-    ['sprite', 'pstCushion', 240, 470, 30], ['sprite', 'pstEye', 700, 180, 34], ['sprite', 'pstBubble', 1000, 200, 26],
-    ['sprite', 'pstGlass', 1240, 430, 22], ['sprite', 'pstBubble', 900, 620, 22], ['sprite', 'pstDesk', 650, 600, 30]
+    ['sprite', 'pstCushion', 400, 520, 30], ['sprite', 'pstEye', 590, 250, 34], ['sprite', 'pstBubble', 950, 230, 26],
+    ['sprite', 'pstGlass', 770, 560, 22], ['sprite', 'pstBubble', 1300, 240, 22], ['sprite', 'pstDesk', 1100, 480, 30]
   ],
   flora: ['rock'], density: 0,
   live: [['blink', 700, 160, '#fbefd2'], ['circle', 1000, 170, 40, 0.5]]
