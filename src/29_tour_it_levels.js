@@ -231,15 +231,16 @@ const operaRows = (() => {
   fillG(G, 44, 22, 77, H - 1, '.');                   // the pit (bottomless)
   put(G, 50, 25, 'U');
   fillG(G, 54, 10, 59, 10, '-'); put(G, 56, 9, 'o.o');
-  put(G, 63, 25, 'V'); fillG(G, 66, 3, 71, 3, '#'); put(G, 67, 2, 'O'); put(G, 69, 2, 'f');
-  fillG(G, 68, 9, 77, 9, '-'); put(G, 70, 8, 'o.o.o'); put(G, 60, 15, 'q');
+  put(G, 63, 25, 'V'); fillG(G, 69, 3, 74, 3, '#'); put(G, 70, 2, 'O'); put(G, 72, 2, 'f');   // her box sits clear of the column's top: Brady drifts off the song onto the balcony with nothing beside his head
+  fillG(G, 66, 9, 77, 9, '-'); put(G, 70, 8, 'o.o.o');   // the balcony starts right beside the column (it began two tiles off: Brady drifted off the top of the song and dropped just short)
+  put(G, 60, 15, 'q');
   fillG(G, 76, 12, 78, 21, '#');                      // the far side of the pit: a box tier down to the stalls
   // ③ the duet: two divas take turns; column X then column Y
   put(G, 82, 21, 'c'); put(G, 83, 17, 'o.o.o');
   fillG(G, 86, 22, 113, H - 1, '.');
   put(G, 88, 25, 'J'); put(G, 99, 25, 'K');
   fillG(G, 82, 4, 86, 4, '#'); put(G, 84, 3, 'm');
-  fillG(G, 102, 3, 106, 3, '#'); put(G, 104, 2, 'i');
+  fillG(G, 105, 3, 109, 3, '#'); put(G, 107, 2, 'i');                     // (was at 102: it walled Brady in at the top of column K)
   fillG(G, 91, 12, 95, 12, '-'); put(G, 92, 11, 'o.o');
   fillG(G, 103, 8, 113, 8, '-'); put(G, 108, 7, '!'); put(G, 110, 7, 'o.o');
   fillG(G, 114, 9, 117, 21, '#'); fillG(G, 118, 12, 123, 21, '#');
@@ -247,8 +248,8 @@ const operaRows = (() => {
   put(G, 120, 11, 'c'); put(G, 121, 7, '?');
   fillG(G, 124, 22, 146, H - 1, '.');
   put(G, 128, 2, 'w'); put(G, 136, 2, 'w');
-  put(G, 140, 25, 'Z'); fillG(G, 143, 5, 147, 5, '#'); put(G, 145, 4, 'k');
-  fillG(G, 144, 9, 151, 9, '-'); put(G, 132, 14, 'q');
+  put(G, 140, 25, 'Z'); fillG(G, 146, 5, 150, 5, '#'); put(G, 148, 4, 'k');   // her box was at 143, hard against the column: it stopped Brady stepping off the top
+  fillG(G, 143, 9, 151, 9, '-'); put(G, 132, 14, 'q');
   put(G, 150, 21, 'G'); put(G, 147, 21, 'r'); put(G, 153, 21, 'r');
   return rowsOf(G);
 })();
