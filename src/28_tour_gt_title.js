@@ -300,7 +300,7 @@ class SBWTitleScene {
     this.calm = SBWT.reduce();
     Input.setMode('ui');
     Sound.setRetro && Sound.setRetro(false);
-    Sound.music('title');
+    Sound.music((Sound.trackNames || []).indexOf('sbw_title') >= 0 ? 'sbw_title' : 'title');   // starts on the first touch / key (29_tour_zz_carry.js)
     // pools (no allocations per frame)
     this.conf = []; for (let i = 0; i < 64; i++) this.conf.push({ on: false, x: 0, y: 0, vx: 0, vy: 0, a: 0, va: 0, w: 0, h: 0, ph: 0, c: '#fff', life: 0 });
     this.puffs = []; for (let i = 0; i < 18; i++) this.puffs.push({ on: false, x: 0, y: 0, age: 0, r: 0 });

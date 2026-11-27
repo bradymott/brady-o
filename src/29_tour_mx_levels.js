@@ -746,6 +746,7 @@ const L2 = { n: 2, name: 'Xochimilco Forks', arch: 'rail', theme: 'mx_canal',
           upper: [['chinampa', {}], ['highPost', { gold: 'must' }], ['boatBlock', { item: 'lsd', dy: 6 }], ['bridge', { enemy: false }], 'herons'],
           lower: [['bridge', { enemy: false }], 'posts', ['chinampa', {}], 'posts'] }],
         'cp',
+        ['boatBlock', { item: 'star' }],   // a star for the axolotl forks (Brady: stars where they make things easier)
         // ③ the double fork with axolotls on both channels; a willow hides the third channel
         ['fork', { len: 32, skin: 'mxLockLever', gold: false, upper: [['axolotls', { n: 2 }], ['arch', { gold: true }]], lower: [['axolotls', { n: 2 }], ['willowDoor', { to: 'embarcadero@in' }]] }],
         ['fork', { len: 30, skin: 'mxLockLever', gold: false, upper: [['axolotls', { n: 1 }], 'herons'], lower: [['axolotls', { n: 2 }], ['chinampa', { gold: 'risky' }]] }],
