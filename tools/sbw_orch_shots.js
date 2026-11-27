@@ -246,7 +246,7 @@ STAGES.sleeve = async ({ ev, shot, run, pano }) => {
       sim(3.0, { right: true }); const down = sl.y; const stopX = P().cx; sim(0.6, { right: true }); const walkedOff = P().cx > stopX + 8; walkTo(26 * 32, 6);
       return { y0: y0 / 32, down: down / 32, walkedOff, at: at() };
     });
-    check('28-4: on the sleeve, walking against the seam unscrews it down (Brady stays put on it); at its stop he walks off onto the lower ledge', r.down >= r.y0 + 5.9 && r.walkedOff && r.at.y === 17, r);
+    check('28-4: on the sleeve, walking against the seam unscrews it down (Brady stays put on it); at its stop he walks off onto the lower ledge', r.down >= 17.95 && r.walkedOff && r.at.y === 17, r);
     await ev(() => { const sl = ents('OrchSleeve').sort((a, b) => a.x - b.x)[0]; place(22, 11); sim(0.2); sim(1.0, { right: true }); freeze(); }); await shot('41-28-4-unscrewing.png');
     // the late sleeve: past its tie the seam turns; the old way winds back up
     r = await ev(() => {
