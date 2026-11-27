@@ -131,20 +131,21 @@ STAGES.s1 = async ({ ev, shot, run, pano }) => {
 /* ---------------- the hidden entrance: Morocco 5-3, the salt saucer at the last citrus stall ---------------- */
 STAGES.door = async ({ ev, shot, run }) => {
   await run('door', async () => {
+    await ev(KITS);
     let r = await ev(() => {
       fresh(); const T = window.BRADY_TOUR, st = T.Tour.stops.salt;
       return { hidden: T.TourMap.stopState(st) === 'hidden', unlocked: T.TourProgress.isUnlocked('34-1'), land: T.TourProgress.countryUnlocked(T.Tour.countries.salt), pips: T.TourProgress.exitsFound('5-3') };
     });
-    check('before the entrance: the land is hidden on the route map, 34-1 is locked', r.hidden && !r.unlocked && !r.land, r);
+    check('before the entrance: the land is hidden on the route map, 34-1 is locked, 5-3\'s card shows its three old exits', r.hidden && !r.unlocked && !r.land && r.pips.total === 3, r);
     const pips0 = r.pips;
-    r = await ev(() => { play('5-3'); const d = S().area.spawns.find(q => q.type === 'saltMaSaucer'); window.__sau = { tx: d.tx, cy: d.cy, gy: d.gy, x0: d.x0[0] }; place(d.x0[0] - 6, d.gy - 1); sim(0.4); return window.__sau; });
+    r = await ev(() => { play('5-3'); const q = S().area.spawns.find(q => q.type === 'saltMaSaucer'), tx = Math.round((q.x - 16) / 32), cy = Math.round(q.y / 32); window.__sau = { tx, cy, gy: cy + 2, x0: tx + q.dx0[0] }; place(window.__sau.x0 - 6, window.__sau.gy - 1); sim(0.4); return window.__sau; });
     await ev(() => { const s = window.__sau; place(s.x0 - 2, s.gy - 1); sim(0.4); freeze(); });
     await shot('00-entrance-5-3-the-stalls.png');
     // walking the lane past the stalls (under the counters) does nothing
     r = await ev(() => { thaw(); const s = window.__sau, p = P(); place(s.x0 - 2, s.gy - 1); sim(0.2); sim(2.4, { right: true }); return { state: p.state, at: at(), tx: s.tx }; });
     check('5-3: walking the lane under the stalls passes them by', r.state === 'play' && r.at.x > r.tx, r);
     // up onto the last counter, onto the saucer: standing there is not enough; crouching is
-    r = await ev(() => { const s = window.__sau, p = P(); place(s.tx - 3, s.gy - 1); sim(0.3); sim(0.42, { jump: true, jumpPressed: true, right: true }); for (let k = 0; k < 300 && Math.abs(p.cx - (s.tx * 32 + 16)) > 5; k++) sim(1 / 120, { right: p.cx < s.tx * 32 + 16, left: p.cx > s.tx * 32 + 16 }); sim(0.4); const standing = ents('SaltMaSaucer')[0].arr < 0; return { onCounter: p.onGround && p.groundTy === s.cy, standing }; });
+    r = await ev(() => { const s = window.__sau, p = P(); place(s.tx - 3, s.gy - 1); sim(0.3); sim(0.42, { jump: true, jumpPressed: true, right: true }); sim(0.6); walkPx(s.tx * 32 + 16); const standing = ents('SaltMaSaucer')[0].arr < 0; return { onCounter: p.onGround && p.groundTy === s.cy, standing, at: at(), s }; });
     check('5-3: Brady hops onto the last counter and stands on the saucer (nothing happens yet)', r.onCounter && r.standing, r);
     await ev(() => { sim(0.1); freeze(); }); await shot('01-entrance-on-the-saucer.png');
     r = await ev(() => { thaw(); sim(1.3, { down: true }); const e = ents('SaltMaSaucer')[0]; sim(0.4); return { slipping: e.arr >= 0, banner: S().bannerText }; });

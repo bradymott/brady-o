@@ -53,7 +53,7 @@ function saucer(ctx, x, y, t, sink) {
 /* ---------------- the last stall's saucer and the way in ---------------- */
 class SaltMaSaucer extends Ent {
   constructor(g, s) {
-    super(g, s, TS, TS); this.tx = s.tx; this.crow = s.cy; this.x0 = s.x0; this.x1 = s.x1; this.gy = s.gy; this.x = this.x0[0] * TS - 16; this.w = (this.x1[2] - this.x0[0] + 2) * TS; this.y = (this.crow - 4) * TS; this.h = (this.gy - this.crow + 4) * TS; this.back = true; this.friendly = true;
+    super(g, s, TS, TS); this.tx = Math.round((s.x - TS / 2) / TS); this.crow = Math.round(s.y / TS); this.x0 = s.dx0.map(d => this.tx + d); this.x1 = s.dx1.map(d => this.tx + d); this.gy = this.crow + 2; this.x = this.x0[0] * TS - 16; this.w = (this.x1[2] - this.x0[0] + 2) * TS; this.y = (this.crow - 4) * TS; this.h = (this.gy - this.crow + 4) * TS; this.back = true; this.friendly = true;
     this.exitKey = 'salt'; this.secret = true; this.arr = -1; this.crouchT = 0; this.sx = (this.tx + 0.5) * TS;
   }
   update(dt) {
@@ -99,8 +99,8 @@ Tour.pieces['salt.maStalls'] = function (st, o) {
   st.floor(x, x + 23);
   const x0 = [x + 2, x + 9, x + 16], x1 = [x + 5, x + 12, x + 20];
   for (let k = 0; k < 3; k++) for (let q = x0[k]; q <= x1[k]; q++) B.set(q, cy, T.SEMI);
-  const tx = x1[2] - 1;
-  B.spawn('saltMaSaucer', tx, cy - 1, { tx, cy, gy, x0, x1, exit: 'salt' });
+  const tx = x0[2] + 2;
+  B.spawn('saltMaSaucer', tx, cy - 1, { dx0: x0.map(v => v - tx), dx1: x1.map(v => v - tx), exit: 'salt' });
   return x + 24;
 };
 
@@ -115,5 +115,15 @@ Tour.pieces['salt.maStalls'] = function (st, o) {
     A.script.splice(k + 1, 0, ['salt.maStalls', {}]);
     Tour.amend('ma', { levels: [spec] });
   }
+}
+// the level card's exit pips: the way through the saucer is not counted until it has been found
+{
+  const ef0 = TourProgress.exitsFound;
+  TourProgress.exitsFound = function (id) {
+    const r = ef0.call(this, id), L = Tour.specOf(id);
+    if (!L || !L.exits || !L.exits.salt || L.exits.salt.to !== 'land:salt') return r;
+    const E = (Save.data.exits || {})[id] || {};
+    return E.salt ? r : { found: r.found, total: Math.max(0, r.total - 1) };
+  };
 }
 })();

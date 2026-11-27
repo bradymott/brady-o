@@ -53,7 +53,7 @@ function mirror(g, keys) {
   g.data.mirror = true; return g;
 }
 // the room's counter: one spot just under the top bar, never over the game band; not while the rule is up
-const hud = (play, ctx, str, col) => { if (play.toastT > 0) return; TourRooms.hudText(play, ctx, str, col, 13, 6); };
+const hud = (play, ctx, str, col) => { if (play.toastT > 0) return; TourRooms.hudText(play, ctx, str, col, 13, 20); };
 const quiet = (play, R) => !(play.bannerT > 0) && !R.ruleWait;
 // the mark on the stage: while Brady stands on it the room kind gets the buttons (input: pressed and held)
 class SaltRoomMark extends Ent {
