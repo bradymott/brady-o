@@ -171,7 +171,7 @@ stamps.keNests = {
     '##############################',
     '##############################'],
   gold: { '*': 'hidden' }, hidden: ['oneup'],
-  doors: [{ to: 'lake@nestsOut', look: 'keReedCurtain' }],
+  doors: [{ to: 'lake@nestsOut', look: 'keReedGap' }],
   legend: { n: ['decor', 'keMudNest'] }
 };
 const L3 = { n: 3, name: 'Flamingo Lake', mapLabel: 'Flamingos', arch: 'flock', theme: 'ke_lake',
