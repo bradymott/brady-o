@@ -313,6 +313,176 @@ LEVELS.hall = async (page, shot, run, pano) => {
   });
 };
 
+// ---------------- 30-2 A Question of Perspective ----------------
+LEVELS.long = async (page, shot, run, pano) => {
+  await run('long', async () => {
+    await page.evaluate(helpers);
+    await page.evaluate(() => { fresh(); playP('30-2'); place(4, 18); sim(0.6); freeze(); }); await shot('20-30-2-start.png');
+    let r = await page.evaluate(() => { thaw(); const a = rollTo('GalViewer', 12, 0.2); return { a, bridge: tileName(25, 19) }; });
+    check('30-2: rolled to the wrong spot the halves don\'t meet: no bridge', r.bridge === 'EMPTY', r);
+    await shotAt(page, shot, '21-30-2-halves-apart.png', () => { sim(0.1); });
+    r = await page.evaluate(() => { const a = rollTo('GalViewer', 15, 1.6); return { a, bridge: tileName(25, 19) }; });
+    check('30-2: rolled till the halves meet and held a breath: the painted bridge is real', r.a.done && r.bridge === 'SEMI', r);
+    await shotAt(page, shot, '22-30-2-bridge-real.png', () => { sim(0.1); });
+    r = await page.evaluate(() => AP.route([[24, 19], [30, 19], [36, 19]]));
+    check('30-2: across the varnish on the bridge', r.ok, r);
+    r = await page.evaluate(() => { const a = rollTo('GalViewer', 44, 1.6); const b = AP.route([[52, 19], [60, 19], [66, 19]]); return { a, b: b.ok }; });
+    check('30-2: the second frame (a pigeon on its rail, gnats over the channel)', r.a.done && r.b, r);
+    await shotAt(page, shot, '23-30-2-secret-tell.png', () => { AP.go([71, 19]); sim(0.3); });
+    r = await page.evaluate(() => { const a = AP.go([76, 19]); return { ok: a.ok, at: tileOf() }; });
+    check('30-2: the panel by the pale patch is only canvas: through it to the workshop\'s hatch', r.ok, r);
+    r = await page.evaluate(() => { playP('30-2'); place(96, 18); sim(0.3); const a = rollTo('GalViewer', 108, 1.6); return { a, stair: tileName(113, 17) }; });
+    check('30-2: twist: at the false spot the handrail meets but the stair stays paint', !r.a.done && r.stair === 'EMPTY', r);
+    await shotAt(page, shot, '24-30-2-twist-false-rail.png', () => { sim(0.1); });
+    r = await page.evaluate(() => { const a = rollTo('GalViewer', 111, 1.6); const b = AP.route([[112, 18], [115, 15], [118, 12], [130, 12]]); return { a, b }; });
+    check('30-2: twist: one more nudge: the stair is real; up it to the gallery above', r.a.done && r.b.ok, r);
+    await shotAt(page, shot, '25-30-2-stair-real.png', () => { place(122, 11); sim(0.2); });
+    r = await page.evaluate(() => { const a = AP.route([[134, 12], [141, 12], [150, 12], [160, 12]]); sim(2, { right: true }); return { a: a.ok, state: S().state }; });
+    check('30-2: over the last varnish to the gate', r.a && r.state !== 'play', r);
+    await page.evaluate(() => { playP('30-2'); }); await pano('29-30-2-panorama.png', 0.35);
+  });
+};
+
+// ---------------- 30-3 Underpainting ----------------
+LEVELS.studio = async (page, shot, run, pano) => {
+  await run('studio', async () => {
+    await page.evaluate(helpers);
+    await page.evaluate(() => { fresh(); playP('30-3'); place(4, 18); sim(0.6); freeze(); }); await shot('30-30-3-start.png');
+    let r = await page.evaluate(() => { thaw(); AP.go([10, 19]); AP.exec({ walkTo: 21 * 32, dir: 0 }, 4); sim(0.3); const e = ents('GalRidge')[0]; return { done: e.done, ridge: tileName(15, 18) }; });
+    check('30-3: walking across the ridge only polishes it', !r.done && r.ridge === 'HARD', r);
+    r = await page.evaluate(() => { AP.go([10, 19]); runTo(21); const e = ents('GalRidge')[0]; return { done: e.done, ridge: tileName(15, 18), bal: tileName(23, 16) }; });
+    check('30-3: RUN across it: the top coat scrapes off and the old balcony steps are solid', r.done && r.ridge === 'EMPTY' && r.bal === 'HARD', r);
+    await shotAt(page, shot, '31-30-3-balcony-revealed.png', () => { sim(0.4); });
+    r = await page.evaluate(() => AP.route([[23, 16], [27, 13], [32, 12], [50, 12], [60, 12]]));
+    check('30-3: up the old balcony steps to the top of the wall', r.ok, r);
+    r = await page.evaluate(() => { playP('30-3'); place(64, 18); sim(0.3); AP.go([65, 19]); runTo(73); sim(0.3); const e = ents('GalRidge')[1]; const a = AP.route([[78, 18], [86, 19], [90, 19]]); return { done: e.done, a: a.ok }; });
+    check('30-3: the test ridge gives a balcony over the varnish channel', r.done && r.a, r);
+    await shotAt(page, shot, '32-30-3-secret-tell.png', () => { AP.go([89, 19]); sim(0.3); });
+    r = await page.evaluate(() => { const a = AP.route([[92, 23], [98, 23]]); return { ok: a.ok, at: tileOf() }; });
+    check('30-3: down the hole by the pale patch to the cloakroom\'s hatch', r.ok, r);
+    r = await page.evaluate(() => { playP('30-3'); place(100, 18); sim(0.3); AP.go([103, 19]); runTo(110); sim(0.4); const e3 = ents('GalRidge')[2]; return { done: e3.done, bal: tileName(125, 17) }; });
+    check('30-3: twist: run the ledge\'s ridge: the balcony past the channel appears', r.done && r.bal === 'HARD', r);
+    await shotAt(page, shot, '33-30-3-twist.png', () => { sim(0.1); });
+    r = await page.evaluate(() => { const a = AP.route([[112, 17], [119, 17], [124, 17], [131, 17], [136, 19]]); const e4 = ents('GalRidge')[3]; return { a: a.ok, held: !e4.done }; });
+    check('30-3: twist: WALK the ridge over the varnish (it holds), on to the balcony and the far floor', r.a && r.held, r);
+    r = await page.evaluate(() => { const p = P(); p.invuln = 0; playP('30-3'); const q = P(); q.invuln = 0; place(109, 16); sim(0.2); runTo(119); sim(1.5); return { dead: q.dead || S().state !== 'play' }; });
+    check('30-3: running the ridge over the varnish scrapes away what holds Brady up', r.dead, r);
+    r = await page.evaluate(() => { playP('30-3'); place(140, 18); const a = AP.route([[150, 19], [160, 19]]); sim(2, { right: true }); return { a: a.ok, state: S().state }; });
+    check('30-3: on to the gate', r.a && r.state !== 'play', r);
+    await page.evaluate(() => { playP('30-3'); }); await pano('39-30-3-panorama.png', 0.35);
+  });
+};
+
+// ---------------- 30-4 Hang It Crooked ----------------
+LEVELS.hang = async (page, shot, run, pano) => {
+  await run('hang', async () => {
+    await page.evaluate(helpers);
+    await page.evaluate(() => { fresh(); playP('30-4'); place(4, 18); sim(0.6); freeze(); }); await shot('40-30-4-start.png');
+    let r = await page.evaluate(() => { thaw(); return AP.route([[9, 17], [12, 14], [16, 14]]); });
+    check('30-4: up onto the ledge under the low picture rail', r.ok, r);
+    await shotAt(page, shot, '41-30-4-frame-teach.png', () => { AP.exec({ walkTo: 18 * 32 + 16, dir: 0 }, 2); sim(0.2); });
+    r = await page.evaluate(() => { AP.exec({ walkTo: 24 * 32, dir: 0 }, 4); sim(0.6); return { at: tileOf(), edge: tileName(21, 14), old: tileName(17, 14) }; });
+    check('30-4: walking on past the hook turns the frame over: its edge is under Brady and he walks on to the ledge', r.at[1] === 14 && r.at[0] >= 23 && r.edge === 'SEMI' && r.old === 'EMPTY', r);
+    await shotAt(page, shot, '42-30-4-frame-turned.png', () => { AP.exec({ walkTo: 22 * 32, dir: 0 }, 2); sim(0.1); });
+    r = await page.evaluate(() => { AP.exec({ walkTo: 16 * 32, dir: 0 }, 4); sim(0.6); return { at: tileOf(), back: tileName(17, 14) }; });
+    check('30-4: walking back past it turns it back', r.back === 'SEMI', r);
+    r = await page.evaluate(() => { AP.exec({ walkTo: 25 * 32, dir: 0 }, 5); sim(0.4); AP.exec({ walkTo: 44 * 32, dir: 0 }, 6); sim(0.6); return { at: tileOf() }; });
+    check('30-4: two frames over the varnish, walked over one after the other', r.at[1] === 14 && r.at[0] >= 43, r);
+    await shotAt(page, shot, '43-30-4-secret-tell.png', () => { AP.exec({ walkTo: 41 * 32, dir: 0 }, 2); sim(0.2); });
+    r = await page.evaluate(() => { const a = AP.route([[44, 11], [54, 11]]); return a; });
+    check('30-4: from the turned frame up through the gap in the rail to the run on top, to the paint store\'s hatch', r.ok, r);
+    r = await page.evaluate(() => { playP('30-4'); place(60, 18); sim(0.3); AP.go([67, 19]); for (let k = 0; k < 120 && !(P().wash && P().wash.grip); k++) sim(1 / 60, { up: true }); const gripped = !!(P().wash && P().wash.grip); return { gripped }; });
+    check('30-4: push UP into the picture-cord rack: Brady grips it', r.gripped, r);
+    await shotAt(page, shot, '44-30-4-cord-rack.png', () => { sim(0.4, { up: true }); });
+    r = await page.evaluate(() => { const p = P(); for (let k = 0; k < 120 * 6 && p.y > 7 * 32; k++) sim(1 / 120, { up: true, right: p.cx < 72 * 32 }); sim(1 / 120, { jump: true, jumpPressed: true, right: true }); sim(0.6, { jump: true, right: true }); sim(0.5); return { at: tileOf() }; });
+    check('30-4: up the cords and off onto the high ledge', r.at[1] === 9, r);
+    r = await page.evaluate(() => { playP('30-4'); place(90, 8); sim(0.3); AP.exec({ walkTo: 110 * 32, dir: 0 }, 8); sim(0.5); const a = AP.route([[120, 9], [140, 9]]); sim(3, { right: true }); return { a: a.ok, state: S().state }; });
+    check('30-4: twist: two more frames up top, on to the gate', r.a && r.state !== 'play', r);
+    await page.evaluate(() => { playP('30-4'); }); await pano('49-30-4-panorama.png', 0.35);
+  });
+};
+
+// ---------------- 30-5 Going Once ----------------
+LEVELS.auction = async (page, shot, run, pano) => {
+  await run('auction', async () => {
+    await page.evaluate(helpers);
+    await page.evaluate(() => { fresh(); playP('30-5'); place(4, 18); sim(0.6); freeze(); }); await shot('50-30-5-start.png');
+    let r = await page.evaluate(() => { thaw(); AP.go([9, 19]); sim(0.3); const w = S().galWallet; AP.go([13, 19]); sim(0.2); return { w }; });
+    check('30-5: the paddle gives three buttons', r.w === 3, r);
+    await shotAt(page, shot, '51-30-5-podium.png', () => { sim(0.2); });
+    r = await page.evaluate(() => { throwN(1); return { w: S().galWallet, step: tileName(18, 16) }; });
+    check('30-5: THROW at the podium: sold for two, the frame becomes the missing step', r.w === 1 && r.step === 'HARD', r);
+    r = await page.evaluate(() => { throwN(1); const a = { w: S().galWallet, step: tileName(18, 16) }; throwN(1); return { a, w: S().galWallet }; });
+    check('30-5: THROW again at a sold podium: returned for a refund (and bought back)', r.a.w === 3 && r.a.step === 'EMPTY' && r.w === 1, r);
+    r = await page.evaluate(() => AP.route([[18, 16], [21, 13], [30, 13], [36, 13], [40, 19]]));
+    check('30-5: up the step to the wall top and down to the next lot', r.ok, r);
+    r = await page.evaluate(() => { AP.go([41, 19]); AP.go([44, 19]); throwN(1); AP.go([47, 19]); throwN(1); const w = S().galWallet; const a = AP.route([[50, 16], [52, 13], [56, 10], [64, 10]]); return { w, a: a.ok }; });
+    check('30-5: four buttons: one and three, the two-step stair up the tall wall', r.w === 0 && r.a, r);
+    await shotAt(page, shot, '52-30-5-secret-tell.png', () => { AP.go([67, 10]); sim(0.3); });
+    r = await page.evaluate(() => { const a = AP.route([[70, 14], [75, 14]]); return { ok: a.ok, at: tileOf() }; });
+    check('30-5: down the gap in the top floor by the pale patch to the press\'s door', r.ok, r);
+    r = await page.evaluate(() => { playP('30-5'); place(84, 18); sim(0.3); AP.go([88, 19]); AP.go([92, 19]); throwN(1); const decoy = S().galWallet; AP.go([98, 19]); throwN(1); const broke = { w: S().galWallet, step: tileName(105, 16) }; return { decoy, broke }; });
+    check('30-5: twist: buying the handsome decoy leaves too few buttons for the wide lot', r.decoy === 2 && r.broke.w === 2 && r.broke.step === 'EMPTY', r);
+    await shotAt(page, shot, '53-30-5-decoy-sold.png', () => { sim(0.1); });
+    r = await page.evaluate(() => { AP.go([92, 19]); throwN(1); AP.go([98, 19]); throwN(1); const w = S().galWallet; const a = AP.route([[105, 16], [107, 13], [112, 10], [125, 10], [140, 10], [150, 10]]); sim(3, { right: true }); return { w, a: a.ok, state: S().state }; });
+    check('30-5: twist: the decoy returned, the wide frame bought: hung sideways it fills both steps; on to the gate', r.w === 1 && r.a && r.state !== 'play', r);
+    await page.evaluate(() => { playP('30-5'); }); await pano('59-30-5-panorama.png', 0.35);
+  });
+};
+
+// ---------------- 30-6 The Good Side: the sittings, the corridor's canvas, the studio's door ----------------
+LEVELS.salon = async (page, shot, run, pano) => {
+  await run('salon', async () => {
+    await page.evaluate(helpers);
+    await page.evaluate(() => { fresh(); playP('30-6'); place(4, 18); sim(0.6); freeze(); }); await shot('80-30-6-start.png');
+    let r = await page.evaluate(() => { thaw(); const a = rollTo('GalSitting', 14, 1.6); return { a, rope: tileName(24, 17) }; });
+    check('30-6: the sight line misses the card: the rope stays', !r.a.done && r.rope === 'HARD', r);
+    r = await page.evaluate(() => { const a = rollTo('GalSitting', 18, 1.8); return { a, rope: tileName(24, 17) }; });
+    check('30-6: the posing mark rolled into his sight line: it catches the card; a breath later the rope lifts', r.a.done && r.rope === 'EMPTY', r);
+    await shotAt(page, shot, '81-30-6-sitting.png', () => { sim(0.1); });
+    r = await page.evaluate(() => { AP.go([30, 19]); const a = rollTo('GalSitting', 36, 1.8); return { a, rope: tileName(50, 17) }; });
+    check('30-6: the second sitting: the mark rolled back the other way', r.a.done && r.rope === 'EMPTY', r);
+    await shotAt(page, shot, '82-30-6-secret-tell.png', () => { AP.go([61, 19]); sim(0.3); });
+    r = await page.evaluate(() => { const a = AP.go([66, 19]); return { ok: a.ok }; });
+    check('30-6: the pillar\'s foot by the pale patch is canvas: through to the private collection (before the boss)', r.ok, r);
+    r = await page.evaluate(() => { place(88, 18); sim(0.2); sim(0.1, { up: true, upPressed: true }); for (let k = 0; k < 300 && S().area.aid !== 'studio'; k++) sim(1 / 60); sim(1, { right: true }); for (let k = 0; k < 120 * 8 && !(S().boss && S().boss.state === 'fight' && S().boss.act === 'raise'); k++) sim(1 / 120); sim(0.6); freeze(); return { area: S().area.aid }; });
+    await shot('83-30-6-boss-studio.png'); await page.evaluate(() => thaw());
+    check('30-6: the studio door leads into the Retoucher\'s arena', r.area === 'studio', r);
+    await page.evaluate(() => { playP('30-6'); }); await pano('89-30-6-panorama.png', 0.35);
+  });
+};
+
+// ---------------- the six secret rooms: each entered, played (a miss, then the win) with the buttons, and left ----------------
+const ROOMS = [['30-1', 'loft', 'hall', 'loftOut'], ['30-2', 'framer', 'long', 'framerOut'], ['30-3', 'cloak', 'studio', 'cloakOut'], ['30-4', 'paint', 'hang', 'paintOut'], ['30-5', 'print', 'auction', 'printOut'], ['30-6', 'corridor', 'salon', 'corridorOut']];
+LEVELS.rooms = async (page, shot, run) => {
+  let n = 0;
+  for (const [id, aid, main, out] of ROOMS) {
+    n++;
+    await run('rooms', async () => {
+      await page.evaluate(helpers);
+      await page.evaluate(([id, aid]) => { fresh(); playP(id); toArea(aid); sim(0.7); freeze(); }, [id, aid]); await shot(`6${n}-room-${id}-${aid}-entry.png`);
+      await page.evaluate(() => { thaw(); sim(2.6); freeze(); }); await shot(`6${n}-room-${id}-${aid}-rule.png`);
+      const r = await page.evaluate(() => { thaw(); return { kind: S().area.roomKit.kind }; });
+      const w = await page.evaluate(() => { const g = S(), A = g.area, R = A.roomState, kit = A.roomKit, K = window.__roomKinds[kit.kind]; let pills = 0; const frame = (g2, keys) => { const before = ents('GalPill').length; sim(1 / 120, keys); if (ents('GalPill').length > before) pills++; }; K.testWin(g, A, R, kit, frame); sim(0.6); const cage = g.entities.find(e => e.constructor.name === 'TourRoomCage'); return { won: R.won, pills, cage: cage ? cage.tiles.every(([x, y]) => tileName(x, y) === 'EMPTY') : null }; });
+      check(`room ${id} ${aid} (${r.kind}): a miss (a pill says so, the turn resets), then won with the buttons; the cage opens`, w.won && w.pills >= 1 && w.cage !== false, w);
+      await page.evaluate(() => freeze()); await shot(`6${n}-room-${id}-${aid}-won.png`);
+      const o = await page.evaluate(([main, out]) => { thaw(); toDoor(); sim(0.1, { up: true, upPressed: true }); for (let k = 0; k < 300 && S().area.aid !== main; k++) sim(1 / 60); sim(0.5); const g = S(), an = g.area.anchors[out]; return { area: g.area.aid, x: Math.floor(P().cx / 32), ax: an ? Math.floor(an.x / 32) : null }; }, [main, out]);
+      check(`room ${id} ${aid}: the way out leads on, further along the stage (not back to the entrance)`, o.area === main && o.ax != null && Math.abs(o.x - o.ax) <= 2, o);
+    });
+  }
+};
+const openGal = `(() => { fresh(); const B = window.BRADY, T = window.BRADY_TOUR; B.Save.data.seenEncoreIntro = true; const Tp = T.TourProgress, D = Tp.data(); D.seen.it = true; try { Tp.exit('14-1', 'gal'); Tp.exit('30-1', 'main'); Tp.exit('30-2', 'main'); } catch (e) {} for (const id of ['30-1', '30-2']) B.Save.data.done[id] = true; D.pending = []; D.seen.gal = true; })()`;
+LEVELS.map = async (page, shot, run) => {
+  await run('map', async () => {
+    const r = await page.evaluate(o => { eval(o); window.BRADY.goToMap('world', 30, '30-2'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } const s = S(); return { mode: s.mode, cc: s.ow && s.ow.cc }; }, openGal);
+    check('the gallery has its own walkable map', r.cc === 'gal', r);
+    await page.evaluate(() => freeze()); await shot('70-gal-overworld-map.png');
+    const r2 = await page.evaluate(() => { thaw(); const s = S(); if (s.openRoute) s.openRoute({ dest: 'gal' }); for (let k = 0; k < 30; k++) sim(0.25); s.dest = 'gal'; sim(0.8); return { mode: s.mode }; });
+    await page.evaluate(() => freeze()); await shot('71-route-map-gal-pin.png');
+    check('the route map opens on the gallery\'s pin', !!r2.mode, r2);
+  });
+};
+
 // ---------------- the hidden entrance: Italy 14-1, the piazza before the finish ----------------
 LEVELS.entry = async (page, shot, run, pano) => {
   await run('entry', async () => {
@@ -355,6 +525,14 @@ LEVELS.entry = async (page, shot, run, pano) => {
 (async () => {
   await session({ width: 844, height: 390 }, async (page, shot, run, pano) => {
     for (const k of Object.keys(LEVELS).filter(k => k !== 'entry' && k !== 'map' && k !== 'bot').concat(['entry', 'map', 'bot'])) if (LEVELS[k]) await LEVELS[k](page, shot, run, pano);
+  });
+  if (!want.length || want.includes('portrait')) await session({ width: 390, height: 844 }, async (page, shot, run) => {
+    await run('portrait', async () => {
+      await page.evaluate(helpers);
+      await page.evaluate(() => { fresh(); playP('30-1'); place(12, 18); sim(0.4); freeze(); }); await shot('90-portrait-30-1.png');
+      await page.evaluate(() => { thaw(); playP('30-6'); toArea('studio', 6, 15); sim(1, { right: true }); for (let k = 0; k < 120 * 8 && !(S().boss && S().boss.state === 'fight' && S().boss.act === 'raise'); k++) sim(1 / 120); sim(0.6); freeze(); }); await shot('91-portrait-30-6-boss.png');
+      await page.evaluate(o => { thaw(); eval(o); window.BRADY.goToMap('world', 30, '30-2'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } freeze(); }, openGal); await shot('92-portrait-gal-map.png');
+    });
   });
   console.log(failures ? `${failures} GAL CHECK(S) FAILED` : 'ALL GAL CHECKS PASSED');
   process.exit(failures ? 1 : 0);

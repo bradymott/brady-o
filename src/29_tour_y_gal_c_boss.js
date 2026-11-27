@@ -107,8 +107,8 @@ const brain = {
       // out of the frame at chest height, across to the chin's tip, a hold, and back
       const out = b.at < 0.35 ? b.at / 0.35 : b.at < 1.6 ? 1 : Math.max(0, 1 - (b.at - 1.6) / 0.4);
       b.lunge = out; const tip = lerp(b.x, G.chin, out), top = b.floorY - 58, bot = b.floorY - 33;
-      if (p && !p.dead && p.cx > tip - 14 && p.cx < b.x + b.w && p.y < bot && p.y + p.h > top) p.hurt(b);
-      if (out >= 1 && !b.chinsMet && onMark && low && Math.abs(b.markX - G.chin) < 30) { b.chinsMet = true; b.window = 2.6; say(b, 'BOTH CHINS AT ONCE?! NO!', '#ffe08a'); TourKit.sfx('chime', 'pick', { vol: 0.6, pitch: 1.3 }); }
+      if (p && !p.dead && !b.chinsMet && p.cx > tip - 14 && p.cx < b.x + b.w && p.y < bot && p.y + p.h > top) p.hurt(b);
+      if (out >= 1 && !b.chinsMet && onMark && low && Math.abs(b.markX - G.chin) < 30) { b.chinsMet = true; b.window = 2.8; b.at = Math.max(b.at, 1.6); say(b, 'BOTH CHINS AT ONCE?! NO!', '#ffe08a'); TourKit.sfx('chime', 'pick', { vol: 0.6, pitch: 1.3 }); }
       if (b.at > 2.0) { b.lunge = 0; b.chinsMet = false; b.go('pause3'); }
     } else if (A === 'pause3') {
       if (b.at > (b.window > 0 ? 2.6 : 1.2)) b.go('chin');
