@@ -246,6 +246,9 @@ TourHats.NOT = new Set([].concat(
   // ridges, tumbling frames, auction lots and paddles, posing marks, the cord rack (and its crawling gnat), the rooms'
   // props, the fountain's way in
   'galPill galSitter galViewer galRidge galTumble galLot galPaddle galSitting galRack galCrawler galRoomProp galFountainGate'.split(' '),
+  // The Department of Unclaimed Shadows (world 35, hidden land A10): floating lines, claim boards, lamps and shelves,
+  // overlap screens, cutters and mail slots, split lamps, the filing wall (and its flea), the rooms' props, the keyhole
+  'shadPill shadBoard shadLamp shadOverlap shadCutter shadSlot shadSplit shadFiling shadCrawler shadRoomProp shadKeyholeGate'.split(' '),
   // Morocco: tagines, teapots, oranges, storms, pots, mirages, gales, lanterns, slabs, lines, portcullises, hooks, chains, grilles, winds
   'maTagine maTeapot maOrange maStorm maPot maMirage maGale maKickPot maShopLantern maMirageSlab maPhaseLine maPortcullis maLidHook maChain maRoofGrille maDownWind'.split(' '),
   // Mexico: peppers, elotes, popcorn, the piñata burro, lava blobs, salsa, melon carts, swingers, cannons, rails, sunbeams, bubbles, the Casa's gates
@@ -350,7 +353,9 @@ Object.assign(TourHats.HEADS, {
   // The Umbrella Repair District (31): the rivet tick, the puddle mule, the drip finch, the ferrule ferret
   umbTick: [0.45, 0.45, -1.25, 0], umbMule: [0.55, 0.55, -1.35, 0], umbFinch: [0.25, 0.25, -1.3, 0], umbFerret: [0.62, 0.62, -1.2, 0],
   // The Unflattering Gallery (world 30): the gilt gnat, the profile pigeon, the varnish toad, the velvet rope
-  galGnat: [-0.2, -0.2, -0.95, 0], galPigeon: [0.3, 0.3, -1.15, 0], galVarnish: [0.3, 0.3, -1.0, 0], galVelvet: [0.2, 0.2, -1.2, 0]
+  galGnat: [-0.2, -0.2, -0.95, 0], galPigeon: [0.3, 0.3, -1.15, 0], galVarnish: [0.3, 0.3, -1.0, 0], galVelvet: [0.2, 0.2, -1.2, 0],
+  // The Department of Unclaimed Shadows (world 35): the thumb rabbit, the staple hound, the shade flea, the carbon crow
+  shadRabbit: [0.3, 0.3, -0.9, 0], shadHound: [0.59, 0.59, -1.08, 0], shadFlea: [0.37, 0.37, -1.0, 0], shadCrow: [0.33, 0.33, -1.0, 0]
 
 });
 

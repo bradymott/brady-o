@@ -139,7 +139,7 @@ ShadArt.owner = function (ctx, kind, x, y, s, t, o) {
   o = o || {};
   ctx.save();
   // the empty place where its shadow belongs: a bold dashed outline on the wall behind it
-  ctx.save(); ctx.setLineDash([6, 4]); ctx.lineDashOffset = -(t || 0) * 10; ShadArt.shape(ctx, kind, x + 10 * s, y, s, { ink: INK, lw: 5 }); ShadArt.shape(ctx, kind, x + 10 * s, y, s, { ink: SAL_HI, lw: 2.5 }); ctx.restore();
+  ctx.save(); ctx.setLineDash([6, 4]); ctx.lineDashOffset = -(t || 0) * 10; ShadArt.shape(ctx, kind, x + 30 * s, y, s, { ink: INK, lw: 5 }); ShadArt.shape(ctx, kind, x + 30 * s, y, s, { ink: SAL_HI, lw: 2.5 }); ctx.restore();
   ShadArt.shape(ctx, kind, x, y + Math.sin((t || 0) * 3) * (o.happy ? 2 : 0), s, { fill: OWN_COL[kind] || WHITE, notch: o.notch, hole: o.hole || BUT, spoke: o.spoke, lw: 2 });
   // two little eyes (they are the department's customers, waiting)
   const ey = { umb: -30, umbOpen: -32, pot: -16, rab: -20, can: -16, ket: -12 }[kind] || -16, ex = kind === 'rab' ? 9 : 0;
@@ -188,15 +188,12 @@ const painters = {
     }
     ctx.fillStyle = shade(c, -0.24); ctx.fillRect(0, b, BG_W, H - b);
   },
-  // the lamp room: tall dim lamps far back, each with a faint cone, long soft shadows on the floor
+  // the lamp room: tall wainscoted walls, long soft grape shadows slanting across them (no lamps back here)
   shadLamps(ctx, L, rng, H) {
     const b = L.base, c = L.color;
     ctx.fillStyle = c; ctx.fillRect(0, 0, BG_W, H);
-    for (let x = 80; x < BG_W; x += 230) {
-      ctx.fillStyle = 'rgba(255,250,210,0.1)'; ctx.beginPath(); ctx.moveTo(x - 6, b - 160); ctx.lineTo(x + 6, b - 160); ctx.lineTo(x + 70, b); ctx.lineTo(x - 70, b); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = shade(c, -0.2); ctx.fillRect(x - 2, b - 160, 4, 160); ctx.beginPath(); ctx.moveTo(x - 12, b - 172); ctx.lineTo(x + 12, b - 172); ctx.lineTo(x + 18, b - 158); ctx.lineTo(x - 18, b - 158); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = 'rgba(58,24,72,0.1)'; ctx.beginPath(); ctx.ellipse(x + 90, b + 4, 60, 6, 0, 0, TAU); ctx.fill();
-    }
+    ctx.fillStyle = shade(c, -0.06); for (let x = 0; x < BG_W; x += 64) ctx.fillRect(x, b - 150, 30, 150);
+    ctx.fillStyle = 'rgba(58,24,72,0.08)'; for (let x = 40; x < BG_W; x += 230) { ctx.beginPath(); ctx.moveTo(x, b); ctx.lineTo(x + 30, b); ctx.lineTo(x + 150, b - 200); ctx.lineTo(x + 110, b - 200); ctx.closePath(); ctx.fill(); }
     ctx.fillStyle = shade(c, -0.24); ctx.fillRect(0, b, BG_W, H - b);
   },
   // the screen room: folding screens far back, their panels overlapping into darker patches

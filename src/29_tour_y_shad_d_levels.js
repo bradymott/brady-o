@@ -28,7 +28,7 @@ const rowsOf = Gr => Gr.map(r => r.join(''));
 // the secret nook: a solid block (x0..x0+4, rows top..floor-1) whose one face is only painted (fake), a hollow behind it
 // with the room's door and a postcard; the land's tell (a door's shadow, no door) on the wall beside the painted face
 const nook = (Gr, x0, top, fl, side) => {
-  fillG(Gr, x0, top, x0 + 4, fl - 1, 'H');
+  fillG(Gr, x0, top, x0 + 4, fl - 1, 'H'); Gr[top][x0] = '%';
   const fx = side < 0 ? x0 : x0 + 4, hx0 = side < 0 ? x0 + 1 : x0 + 1, hx1 = side < 0 ? x0 + 3 : x0 + 3;
   fillG(Gr, fx, fl - 2, fx, fl - 1, 'F'); fillG(Gr, hx0, fl - 2, hx1, fl - 1, '.');
   put(Gr, fx + side, fl - 1, 'x'); put(Gr, side < 0 ? hx0 + 1 : hx1 - 1, fl - 2, 'A'); put(Gr, side < 0 ? hx1 : hx0, fl - 1, 'D');
@@ -37,7 +37,7 @@ const stamps = {};
 const oldRoom = (to, items, look) => ({ floor: 12, rows: ['##############################', '#............................#'].concat(Array(9).fill('#............................#')).concat(['#.@D.....................?...#', '##############################', '##############################']), items, doors: [{ to, look: look || 'shadDoor' }] });
 const SIGN = text => ['spawn', 'sign', { text }];
 const GRILLE = (id, h) => ['piece', 'shad.grille', { id, h: h || 5 }];
-const COMMON = { k: ['decor', 'shadCrate'], l: ['decor', 'shadBell'], q: ['decor', 'shadSpool'], x: ['decor', 'shadTell'],
+const COMMON = { '%': ['piece', 'shad.cover', { w: 5, h: 3 }], k: ['decor', 'shadCrate'], l: ['decor', 'shadBell'], q: ['decor', 'shadSpool'], x: ['decor', 'shadTell'],
   u: ['enemy', 'shadRabbit'], w: ['enemy', 'shadHound'], j: ['enemy', 'shadFlea'], M: ['enemy', 'shadCrow'] };
 const GOLD = { '*': 'must', A: 'hidden', E: 'risky' };
 

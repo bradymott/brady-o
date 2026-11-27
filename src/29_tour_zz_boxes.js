@@ -411,6 +411,20 @@ const BoxArt = (() => {
     // ---- The Unflattering Gallery (hidden land A5): a framed palette case, an aubergine frame round a mustard panel,
     // a powder-blue palette hanging from its brass latch; hit: the palette swings off the latch and the lid flips up;
     // empty: the lid stands open over the case's white mount ----
+    // ---- The Department of Unclaimed Shadows (hidden land A10): a salmon boot-pull filing drawer with a butter label
+    // window and a grape boot shadow in it; hit: the drawer slides out and the boot's shadow hops out of the window;
+    // empty: the drawer stands pulled out over a dark slot, the window bare but for the department's notch ----
+    shad: { name: 'The Department of Unclaimed Shadows', draw(c, p) {
+      const Sa = '#f08470', Sl = '#c8604e', Bu = '#f6dc7a', Gr = '#5a2a6a';
+      const q = ease(seg(p, 0, 0.6)), hop = io(seg(p, 0.1, 0.7)), dy = q * 4;
+      R(c, 3, 6, 26, 24, 2, Sa); R(c, 2, 4, 28, 4, 1.5, Sl);
+      if (q > 0) { c.fillStyle = HOLE; c.fillRect(5, 9, 22, 1 + dy); }
+      R(c, 4, 9 + dy, 24, 19, 1.5, Sa); shine(c, 6, 10 + dy, 20, 1.1);
+      R(c, 7, 12 + dy, 18, 11, 1, Bu, 1.1);
+      R(c, 12, 24.5 + dy, 8, 2.2, 1, Sl, 1);
+      if (p < 0.98) { const by = 21 + dy - hop * 16, bx = 14 + hop * 3; c.save(); c.globalAlpha = 1 - seg(p, 0.6, 0.95); c.beginPath(); c.moveTo(bx - 3, by); c.lineTo(bx - 3, by - 7); c.lineTo(bx + 1.5, by - 7); c.lineTo(bx + 1.5, by - 3); c.lineTo(bx + 5, by - 2); c.lineTo(bx + 5, by); c.closePath(); fs(c, Gr, 0.8); c.restore(); }
+      else { c.fillStyle = Sa; c.beginPath(); c.moveTo(14, 12 + dy); c.lineTo(18, 12 + dy); c.lineTo(16, 15 + dy); c.closePath(); c.fill(); }
+    } },
     gal: { name: 'The Unflattering Gallery', draw(c, p) {
       const Au = '#5a2346', Ah = '#844070', Mu = '#e2b33a', Bl = '#9ab8e8', Wh = '#fffdf6';
       const sw = io(seg(p, 0, 0.45)), q = ease(seg(p, 0.25, 1));

@@ -130,18 +130,20 @@ class ShadBoard extends Ent {
       if (this.done && k === this.won) return;
       const x = this.markX(k), open = s.umb && k0 === k, kind = open ? 'umbOpen' : q[0];
       // the pins at the top and the shadow itself, flat against the wall, with its one notch
-      SA.shape(ctx, kind, x + 4, fy - 2, sc, { fill: GRA, notch: open ? null : q[1], spoke: open ? q[3] : null, hole: BUT, lw: 2 });
+      const by = fy - 62;
+      ctx.strokeStyle = 'rgba(255,253,242,0.8)'; ctx.lineWidth = 2; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(x, by); ctx.lineTo(x, fy - 6); ctx.stroke(); ctx.setLineDash([]);
+      SA.shape(ctx, kind, x + 4, by, sc, { fill: GRA, notch: open ? null : q[1], spoke: open ? q[3] : null, hole: BUT, lw: 2 });
       const top = { umb: -46, umbOpen: -38, pot: -30, rab: -42, can: -30, ket: -34 }[kind] || -30;
-      SA.pin(ctx, x + 4, fy + top * sc + 4, t);
+      SA.pin(ctx, x + 4, by + top * sc + 4, t);
       heels(ctx, x, fy, k0 === k);
     });
     // the reunited shadow flying home to its owner, then lying behind it
     if (this.done) {
-      const q = s.pins[this.won], f = this.fly, x = lerp(this.markX(this.won) + 4, ox + 10 * sc, f), y = fy - Math.sin(f * Math.PI) * 40;
+      const q = s.pins[this.won], f = this.fly, x = lerp(this.markX(this.won) + 4, ox + 10 * sc, f), y = lerp(fy - 62, fy, f) - Math.sin(f * Math.PI) * 40;
       SA.shape(ctx, f >= 1 && s.umb ? 'umbOpen' : q[0], x, y, sc, { fill: GRA, notch: f >= 1 && s.umb ? null : q[1], spoke: q[3], lw: 2 });
       if (f >= 1) SA.owner(ctx, O[0], ox, fy, sc, t, { notch: O[1], spoke: O[3], happy: true });
     }
-    if (k0 >= 0 && !this.done) hint(this, ctx, this.markX(k0), fy - 100, 'THROW: CLAIM IT');
+    if (k0 >= 0 && !this.done) hint(this, ctx, this.markX(k0), fy - 150, 'THROW: CLAIM IT');
     ctx.restore();
   }
 }
@@ -161,8 +163,8 @@ const shadScale = d => 1 + 3.0 * clamp((RANGE - Math.max(0.5 * TS, d)) / RANGE, 
 // the hand of Brady's wall shadow: lamp at pixel x lx, Brady's centre cx, his feet `rise` px above the floor fy
 const shadHand = (lx, cx, fy, rise) => {
   const d = Math.abs(cx - lx), s = shadScale(d), side = cx >= lx ? 1 : -1, H = H0 * s;
-  const lean = side * H * 0.45, feetY = fy - (rise || 0) * s;
-  return { x: cx + lean + side * H * 0.16, y: feetY - H * 1.08, H, s, side, lean, feetY };
+  const feetX = cx + side * H * 0.3, lean = side * H * 0.15, feetY = fy - (rise || 0) * s;
+  return { x: feetX + lean + side * H * 0.16, y: feetY - H * 1.08, H, s, side, lean, feetX, feetY };
 };
 // a level's handle for a lamp tile and a target tile (jump: the hand at a jump's apex there, one and a half tiles up)
 const handleAt = (lampTx, atTx, floorRow, jump) => { const h = shadHand((lampTx + 0.5) * TS, (atTx + 0.5) * TS, floorRow * TS, jump ? 1.5 * TS : 0); return [h.x, h.y]; };
@@ -201,7 +203,7 @@ class ShadLamp extends Ent {
     // the lamp's cone, wide and pale, across the wall
     SA.cone(ctx, this.lx, fy - 3.1 * TS + 18, fy, 3.2 * TS, 0.9);
     // Brady's own shadow on the wall, leaning away from the lamp, its hand up
-    if (this.near()) { const h = this.hand(); if (h) SA.bradyShadow(ctx, this.g.player.cx, h.feetY, h.H, h.lean, { armDir: h.side, col: 'rgba(58,24,72,0.88)' }); }
+    if (this.near()) { const h = this.hand(); if (h) SA.bradyShadow(ctx, h.feetX, h.feetY, h.H, h.lean, { armDir: h.side, col: 'rgba(58,24,72,0.9)' }); }
     // the shelf: a salmon board on its hinge, folded up to the handle, then swung down into a ledge
     const up = Math.atan2(this.hy - S.py, this.hx - S.px), down = dir > 0 ? 0 : Math.PI, a = lerp(up, down, this.done ? this.fold : 0);
     ctx.save(); ctx.translate(S.px, S.py); ctx.rotate(a); ctx.fillStyle = SAL; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(0, -6, len, 12); ctx.strokeRect(0, -6, len, 12); ctx.fillStyle = SAL_LO; ctx.fillRect(4, 2, len - 8, 3); ctx.restore();
@@ -439,6 +441,23 @@ Tour.pieces['shad.split'] = function (st, o) {
   if (o.lock) B.vkey(o.lock, [[o.at, st.gy - 1]]);
   return st.x;
 };
+
+/* ---------------- the secret nook's painted face: a cover over the hollow block, see-through while Brady is in it ---------------- */
+class ShadCover extends Ent {
+  constructor(g, s) { super(g, s, s.w * TS, s.h * TS); this.x = s.tx * TS; this.y = s.ty * TS; this.friendly = true; this.a = 1; }
+  update(dt) { this.t += dt; const p = this.g.player, inn = p && p.x + p.w > this.x + 4 && p.x < this.x + this.w - 4 && p.y + p.h > this.y && p.y < this.y + this.h; this.a = approach(this.a, inn ? 0.3 : 1, dt * 4); }
+  touchPlayer() {}
+  draw() {}
+  paint(ctx) {
+    ctx.save(); ctx.globalAlpha = this.a;
+    for (let y = this.y; y < this.y + this.h; y += TS) for (let x = this.x; x < this.x + this.w; x += TS) { ctx.fillStyle = GRA_LO; ctx.fillRect(x, y, TS, TS); ctx.strokeStyle = 'rgba(255,230,160,0.14)'; ctx.lineWidth = 1.5; ctx.strokeRect(x + 4.5, y + 4.5, TS - 9, TS - 9); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(x, y + TS - 3, TS, 3); }
+    ctx.restore();
+  }
+}
+ENTITY_TYPES.shadCover = ShadCover;
+TourHooks.on('afterEntities', (play, ctx) => { if (!inShad(play)) return; for (const e of play.entities) if (e instanceof ShadCover) e.paint(ctx); });
+// { w, h }: the letter is the block's top-left cell (solid)
+Tour.pieces['shad.cover'] = function (st, o) { const B = st.B, x = st.x, y = st.gy - 1; B.set(x, y, T.HARD); B.spawn('shadCover', x, y, { tx: x, ty: y, w: o.w || 5, h: o.h || 3 }); return st.x; };
 
 /* ======================= the filing wall: a climbing surface with two faces ======================= */
 // the drying-net physics and checker (29_tour_y_wash_a_net.js) read any zone of kind 'washNet'; this draws it as a wall
