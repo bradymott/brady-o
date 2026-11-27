@@ -150,7 +150,7 @@ const WIN = {
   // Australia (16)'s kinds (src/29_tour_au_rooms.js): the kookaburra chorus, the muster, the opal seam, the possum's
   // billy cans (the shell game), the odd big thing
   auEcho(g, A, R, kit) {
-    const L = kit.data.logs, onLog = k => { place(g, L[k], 7); wait(g, 0.15); place(g, L[0] - 3, 10); wait(g, 0.1); };
+    const L = kit.data.logs, onLog = k => { place(g, L[k], kit.data.logRow - 1); wait(g, 0.15); place(g, L[0] - 3, 10); wait(g, 0.1); };
     place(g, L[0] - 3, 10); wait(g, 20, () => R.phase === 'play');
     onLog((R.seq[0] + 1) % 4);
     check(g.level.id + ' ' + A.aid + ' auEcho: a wrong log first: the birds sing it again', !R.won && R.phase === 'show');
@@ -162,7 +162,7 @@ const WIN = {
   auOpals(g, A, R, kit) { wait(g, 2); for (const o of R.opals) { const p = P(g); p.x = o.cx - p.w / 2; p.y = o.cy - p.h / 2; p.vy = 0; frame(g); } wait(g, 0.5, () => R.won); },
   auShell(g, A, R, kit) { WIN.shell(g, A, R, kit); },
   auOddOne(g, A, R, kit) {
-    const Pl = kit.data.plinths, on = k => { place(g, Pl[k] + 1, 8); wait(g, 0.15); place(g, Pl[0] - 2, 10); wait(g, 0.1); };
+    const Pl = kit.data.plinths, on = k => { place(g, Pl[k] + 1, kit.data.plinthRow - 1); wait(g, 0.15); place(g, Pl[0] - 2, 10); wait(g, 0.1); };
     wait(g, 1); on((R.odd + 1) % 5);
     check(g.level.id + ' ' + A.aid + ' auOddOne: a wrong giant is a raspberry, no round', (R.round || 0) === 0 && !R.won);
     for (let k = 0; k < 3 && !R.won; k++) on(R.odd);

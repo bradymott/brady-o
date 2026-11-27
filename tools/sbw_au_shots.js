@@ -120,7 +120,7 @@ async function session(viewport, fn) {
       r = await page.evaluate(() => { thaw(); place(209, 8); sim(0.3); hop(1, 0.95, 1.5); return tile(); });
       check('16-1: a full wind-up from the cliff top lands on the shelf to THE BIG THINGS', !r.dead && r.ty === 3 && r.tx >= 214 && r.tx <= 219, r);
       await page.evaluate(() => { place(209, 8); sim(0.4); freeze(); });
-      await shot('15-16-1-big-things-sign.png');
+      await shot('15-16-1-cliff-top-tell.png');
       r = await page.evaluate(() => { thaw(); place(216, 2); sim(0.3, { right: true }); for (let k = 0; k < 600 && S().state === 'play'; k++) sim(1 / 120, { right: true }); sim(3); return { state: S().state, key: S().exitKey }; });
       check('16-1: the shelf gate is the secret exit', r.key === 'secret', r);
       await page.evaluate(() => { play('16-1'); toArea('burrow', 12, 11); sim(0.3); freeze(); });
@@ -277,8 +277,8 @@ async function session(viewport, fn) {
     await page.evaluate(() => {
       window.doorsOut = () => { const g = S(); return g.entities.filter(e => e.constructor.name === 'Portal' && e.target && e.target.area !== g.area.idx).sort((a, b) => a.x - b.x); };
       window.useDoor = e => { const p = P(); p.x = e.cx - p.w / 2; p.y = e.y + e.h - p.h; p.vx = p.vy = 0; sim(0.2); const a0 = S().area.idx; sim(0.05, { up: true, upPressed: true }); for (let k = 0; k < 400 && (S().area.idx === a0 || S().fade.a > 0.05); k++) sim(1 / 120); sim(0.3); return S().area.aid; };
-      window.hopOnto = (tx, hold) => { place(tx - 2, 10); sim(0.15); sim(0.02, { jump: true, jumpPressed: true, right: true }); sim(hold || 0.25, { jump: true, right: true }); for (let k = 0; k < 240 && !(P().onGround && P().vy >= 0 && k > 10); k++) sim(1 / 120, P().cx < (tx + 0.3) * 32 ? { right: true } : null); sim(0.1); return tile(); };
-      window.upOnto = (tx, row, hold) => { place(tx, 10); sim(0.15); sim(0.02, { jump: true, jumpPressed: true }); sim(hold || 0.3, { jump: true }); for (let k = 0; k < 240 && !(P().onGround && P().vy >= 0 && k > 10); k++) sim(1 / 120); sim(0.1); return tile(); };
+      window.hopOnto = (tx, hold) => { place(tx - 2, 7); sim(0.15); sim(0.02, { jump: true, jumpPressed: true, right: true }); sim(hold || 0.25, { jump: true, right: true }); for (let k = 0; k < 240 && !(P().onGround && P().vy >= 0 && k > 10); k++) sim(1 / 120, P().cx < (tx + 0.3) * 32 ? { right: true } : null); sim(0.1); return tile(); };
+      window.upOnto = (tx, row, hold) => { place(tx, row == null ? 10 : row); sim(0.15); sim(0.02, { jump: true, jumpPressed: true }); sim(hold || 0.3, { jump: true }); for (let k = 0; k < 240 && !(P().onGround && P().vy >= 0 && k > 10); k++) sim(1 / 120); sim(0.1); return tile(); };
       window.room = () => S().area.roomState;
     });
     // 16-1: the mesa's loose face -> the tunnel -> the Kookaburra Chorus -> out by the wombat's back tunnel
@@ -287,7 +287,7 @@ async function session(viewport, fn) {
       await shot('70-16-1-tell-red-dust-at-the-mesa.png');
       let r = await page.evaluate(() => { thaw(); for (let k = 0; k < 400 && P().cx < 135.5 * 32; k++) sim(1 / 120, { right: true }); const inTunnel = tile(); const d = doorsOut().find(e => Math.abs(e.cx / 32 - 136.5) < 2); const aid = d ? useDoor(d) : 'no door'; return { inTunnel, aid }; });
       check('16-1: walking the kangaroo into the mesa\'s dusty face finds the tunnel and the burrow door', r.inTunnel.tx >= 133 && r.inTunnel.ty === 15 && r.aid === 'burrow', r);
-      await page.evaluate(() => { const k = S().area.roomKit; place(k.data.logs[0] - 2, 10); sim(4); freeze(); });
+      await page.evaluate(() => { sim(3.5); freeze(); });
       await shot('71-16-1-kookaburra-chorus.png');
       r = await page.evaluate(() => {
         thaw(); const R = room(), L = S().area.roomKit.data.logs; for (let k = 0; k < 2400 && R.phase !== 'play'; k++) sim(1 / 120);
@@ -310,7 +310,7 @@ async function session(viewport, fn) {
       await page.evaluate(() => { sim(1.5); freeze(); }); await shot('74-16-2-muster.png');
       r = await page.evaluate(() => {
         thaw(); const R = room(); sim(1.5); const c0 = R.clock; sim(46); const reset = R.clock == null || R.clock > 40;
-        const p = P(); place(2, 10); sim(1.5);
+        const p = P(); place(7, 6); sim(1.5);
         for (let k = 0; k < 120 * 60 && !R.won; k++) { const left = R.sheep.filter(s => !s.penned); if (!left.length) break; const m = Math.min(...left.map(s => s.cx)); sim(1 / 120, p.cx < m - 2.2 * 32 ? { right: true } : p.cx > m - 1.2 * 32 ? { left: true } : null); }
         sim(0.5); return { c0: c0 != null, reset, won: R.won };
       });
@@ -372,7 +372,7 @@ async function session(viewport, fn) {
       r = await page.evaluate(() => {
         thaw(); const R = room(), Pl = S().area.roomKit.data.plinths; sim(1);
         hopOnto(Pl[(R.odd + 1) % 5] + 1); const failed = (R.round || 0) === 0 && !R.won;
-        for (let k = 0; k < 3 && !R.won; k++) { place(Pl[0] - 2, 10); sim(0.2); hopOnto(Pl[R.odd] + 1); }
+        for (let k = 0; k < 3 && !R.won; k++) { place(Pl[0] - 1, 7); sim(0.2); hopOnto(Pl[R.odd] + 1); }
         sim(0.5); return { failed, won: R.won, round: R.round };
       });
       check('16-6 room: a wrong giant is a raspberry; spotting the odd one three times wins', r.failed && r.won, r);
