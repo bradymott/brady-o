@@ -198,7 +198,7 @@ const CAP = Object.assign({}, ENEMY, {
   x: ['decor', 'saltCellarProp'],
   '1': ['piece', 'salt.cap', { id: 'cap1', holes: [2, 8], gold: 1, need: 1, bowlDy: 7, lock: 'gate1', plug: [2] }], U: ['piece', 'salt.gate', { id: 'gate1', h: 4 }],
   '2': ['piece', 'salt.cap', { id: 'cap2', holes: [2, 7, 12], gold: 2, need: 0.5, bowlDy: 7, lock: 'gate2', plug: [2, 7] }], V: ['piece', 'salt.gate', { id: 'gate2', h: 4 }],
-  '3': ['piece', 'salt.cap', { id: 'cap3', holes: [3, 8, 12], gold: 0, need: 0.5, bowlDy: 7, lock: 'gate3', plug: [8, 12] }], W: ['piece', 'salt.gate', { id: 'gate3', h: 4 }],
+  '3': ['piece', 'salt.cap', { id: 'cap3', holes: [3, 8, 12], gold: 0, need: 0.5, bowlDy: 7, lock: 'gate3', plug: [8, 12] }], E: ['piece', 'salt.gate', { id: 'gate3', h: 4 }],
   '4': ['piece', 'salt.cap', { id: 'cap4', holes: [3, 4, 10], gold: 2, need: 1, bowlDy: 7, lock: 'gate4', plug: [3, 4], narrow: true }], Y: ['piece', 'salt.gate', { id: 'gate4', h: 4 }],
   A: DOOR('rattle@in'), u: GRAIN(), a: ['anchor', 'rattleOut']
 });
