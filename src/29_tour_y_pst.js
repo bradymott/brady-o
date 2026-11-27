@@ -277,7 +277,8 @@ const painters = {
     let k = 0;
     for (let x = 40; x < BG_W; x += 170) {
       const y = 50 + (k % 2) * 60, w = 120;
-      farBubble(ctx, x, y, w, 0.85, null);
+      // (plain, faint, empty: with pictures in them these read as the stage's real picture bubbles and misled the eye)
+      farBubble(ctx, x, y, w * 0.8, 0.28, null); k++; continue;
       ctx.save(); ctx.translate(x + w / 2, y + w * 0.22); ctx.globalAlpha = 0.8; ctx.strokeStyle = INK; ctx.lineWidth = 1.5;
       const th = things[k++ % things.length];
       if (th === 'tub') { ctx.fillStyle = '#ffffff'; rr(ctx, -20, -8, 40, 16, 6); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#9ad8f0'; ctx.fillRect(-16, -8, 32, 4); }
