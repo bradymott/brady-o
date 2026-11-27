@@ -479,8 +479,7 @@ const stoatArt = (ctx, e, x, y, m, t) => {
 // a laid coil of cable (the hen's): a neat flat mulberry spiral
 const coilArt = (c, s) => { c.save(); c.translate(s.x + s.w / 2, s.y + s.h - 3); c.strokeStyle = INK; c.lineWidth = 4.2; c.beginPath(); c.ellipse(0, 0, 10, 4, 0, 0, TAU); c.stroke(); c.beginPath(); c.ellipse(0, -1, 6, 2.4, 0, 0, TAU); c.stroke(); c.strokeStyle = MUL_L; c.lineWidth = 2.4; c.beginPath(); c.ellipse(0, 0, 10, 4, 0, 0, TAU); c.stroke(); c.beginPath(); c.ellipse(0, -1, 6, 2.4, 0, 0, TAU); c.stroke(); c.restore(); };
 const enemies = {
-  // the crab: walks the rail; every few seconds stops and bolts itself down (0.5 s turning tell, then 1.6 s tight).
-  // Its nut shell bounces a stomp while it walks; stomp it while it is bolted down
+  // the crab: walks the rail; every few seconds stops and bolts itself down to it (2.1 s tight, very pleased)
   seatsCrab: { cls: TourEnemy.make({ w: 30, h: 26, speed: 0.75, behavior: 'walk', edgeTurn: true, art: crabArt, burst: RUST,
     init(e) { e.tieT = 2 + Math.random() * 2; e.stk = 0; },
     think(e, dt) {
@@ -496,11 +495,11 @@ const enemies = {
       if (!e.vx) e.vx = e.dir * e.speed; e.mode = 'walk';
       e.cd -= dt; if (e.cd <= 0) { e.cd = 3.2 + Math.random(); e.fold = 2.2; e.vx = 0; if (e.g.onScreen(e)) SeatsSay(e.g, e.cx, e.y - 12, 'IS THIS SEAT TAKEN?', CREAM); }
     } }), place: 'walk' },
-  // the hen: struts; fluffs up (0.7 s) and lays a neat coil of cable that rolls a little way along the boards
+  // the hen: struts; fluffs up (0.7 s) and lays a neat coil of cable behind her on the boards (it lies there 2.6 s: hop it)
   seatsHen: { cls: TourEnemy.make({ w: 28, h: 34, speed: 0.55, behavior: 'walk', edgeTurn: true, art: henArt, burst: CREAM,
     init(e) { e.cd = 2 + Math.random(); e.puff = 0; },
     think(e, dt) {
-      if (e.puff > 0) { e.puff -= dt; e.vx = 0; e.mode = 'notice'; if (e.puff <= 0) { e.cd = 3.4; e.vx = e.dir * e.speed; if (e.g.onScreen(e, 60)) { TourKit.sfx('plop', 'kick', { vol: 0.3, pitch: 0.8 }); tourFire(e.g, e.cx - e.dir * 10, e.y + e.h - 12, { vx: -e.dir * 1.6 * TS, vy: 0, grav: 0, w: 20, h: 10, life: 2.4, col: MUL, art: coilArt }); SeatsSay(e.g, e.cx, e.y - 12, 'IMMACULATE.', CREAM); } } return; }
+      if (e.puff > 0) { e.puff -= dt; e.vx = 0; e.mode = 'notice'; if (e.puff <= 0) { e.cd = 3.4; e.vx = e.dir * e.speed; if (e.g.onScreen(e, 60)) { TourKit.sfx('plop', 'kick', { vol: 0.3, pitch: 0.8 }); tourFire(e.g, e.cx - e.dir * 18, e.y + e.h - 10, { vx: 0, vy: 0, grav: 0, w: 18, h: 8, life: 2.6, col: MUL, art: coilArt }); SeatsSay(e.g, e.cx, e.y - 12, 'IMMACULATE.', CREAM); } } return; }
       if (!e.vx) e.vx = e.dir * e.speed; e.mode = 'walk';
       e.cd -= dt; if (e.cd <= 0 && TourKit.near(e, e.g.player, 9, 3)) { e.puff = 0.7; e.vx = 0; }
     } }), place: 'walk' },
@@ -514,14 +513,9 @@ const enemies = {
       e.cd -= dt; if (e.cd <= 0) { e.cd = 3.6 + Math.random(); e.bow = 0.8; e.vx = 0; if (e.g.onScreen(e)) SeatsSay(e.g, e.cx, e.y - 12, 'AFTER YOU, HEAVY ONE.', CREAM); }
     } }), place: 'walk' }
 };
-// the crab's nut shell: a stomp bounces off while it walks (stomp it while it is bolted down); the shrew folded into a
-// seat is a springy seat (a stomp bounces Brady high and does not hurt it)
+// the shrew folded into a seat is a springy seat (a stomp bounces Brady high and does not hurt it)
 {
   const h0 = TourEnemy.prototype.hit;
-  enemies.seatsCrab.cls.prototype.hit = function (kind, src) {
-    if ((kind === 'stomp' || kind === 'spin') && !this.dead && !(this.stk > 0) && !(this.stunT > 0)) { Sound.play('bump', { vol: 0.35, pitch: 1.3 }); return 'bounce'; }
-    return h0.call(this, kind, src);
-  };
   enemies.seatsShrew.cls.prototype.hit = function (kind, src) {
     if ((kind === 'stomp' || kind === 'spin') && !this.dead && this.fold > 0) { Sound.play('spring', { vol: 0.4, pitch: 1.3 }); const p = this.g.player; if (p) { p.vy = -PHYS.stompV * 1.25; } return 'bounce'; }
     return h0.call(this, kind, src);

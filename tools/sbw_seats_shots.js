@@ -463,7 +463,7 @@ const BOT_PAGE = () => {
         const crit = S().entities.some(e => (e.enemy || e.constructor.name === 'TourShot') && !e.dead && !e.remove && !e.boss && !e.isSeatsCrawler && (e.cx - q.cx) * dir > 0 && Math.abs(e.cx - q.cx) < 90 && Math.abs((e.y + e.h) - (q.y + q.h)) < 40);
         if ((gapAhead || wall || crit || q.hitWall) && (o.noHop !== true)) jump = true;
       }
-      const ok = jump ? T.hop(dir, o.action) : T.f({ right: dir > 0, left: dir < 0, action: !!o.action });
+      const ok = jump ? T.hop(dir, o.action, 0.6) : T.f({ right: dir > 0, left: dir < 0, action: !!o.action });
       if (!ok) return false;
     }
     return 'stuck';
@@ -500,6 +500,7 @@ const BOT_PAGE = () => {
     if (h && !f.inDoor(p()) && !T.fresh(h)) return false;
     if (T.to((f.doorL() + f.doorR()) / 2) === false) return false;
     for (let k = 0; k < 120 * 12 && f.x < f.max - 1; k++) if (!T.f({ right: true })) return false;
+    if (T.to((f.doorL() + f.doorR()) / 2) === false) return false;
     if (h) { for (let k = 0; k < 120 * 8 && h.state() !== 'look'; k++) if (!T.f({})) return false; for (let k = 0; k < 120 * 4 && h.state() === 'look'; k++) if (!T.f({})) return false; }
     return true;
   };
@@ -518,7 +519,8 @@ const BOT_PAGE = () => {
   T.push = dir => { for (let k = 0; k < 0.6 * 120; k++) if (!T.f({ right: dir > 0, left: dir < 0 })) return false; return true; };
   T.press = k => T.f({ [k]: true, [k + 'Pressed']: true });
   T.door = () => { if (!T.f({ up: true, upPressed: true })) return false; for (let k = 0; k < 600 && (S().fade.a > 0.05 || p().state !== 'play'); k++) sim(1 / 120); T.scene = S(); return true; };
-  T.gate = () => { for (let k = 0; k < 120 * 20 && !T.finished(); k++) { const gt = S().entities.find(e => e.constructor.name === 'Gate' && !e.secret && !e.remove); const tx = gt ? gt.cx : p().cx + 64; if (p().onGround && p().hitWall) { if (!T.hop(p().cx < tx ? 1 : -1, false, 0.45)) return false; continue; } if (!T.f({ right: p().cx < tx - 4, left: p().cx > tx + 4 })) return false; } return T.finished() || 'stuck'; };
+  T.gate = () => { const g0 = S().entities.find(e => e.constructor.name === 'Gate' && !e.secret && !e.remove); if (g0 && T.walk(g0.cx - 40) === false) return false; return T.gate0(); };
+  T.gate0 = () => { for (let k = 0; k < 120 * 20 && !T.finished(); k++) { const gt = S().entities.find(e => e.constructor.name === 'Gate' && !e.secret && !e.remove); const tx = gt ? gt.cx : p().cx + 64; if (p().onGround && p().hitWall) { if (!T.hop(p().cx < tx ? 1 : -1, false, 0.45)) return false; continue; } if (!T.f({ right: p().cx < tx - 4, left: p().cx > tx + 4 })) return false; } return T.finished() || 'stuck'; };
   T.finished = () => ['clear', 'tally', 'results'].includes(S().state);
   // a route: a list of steps [fn, ...args] and 'cp' markers; on a death the route goes back to the last 'cp'
   T.run = (id, route) => {
@@ -544,7 +546,7 @@ const BOT_ROUTES = {
   '33-1': [['walk', 19 * 32], ['grip', 1], ['climb', 31, 17], ['letGo', 1], 'cp', ['walk', 37 * 32], ['grip', 1], ['climb', 38, 16], ['cross'], ['climb', 54, 18], ['hopTo', 56, 0.3], 'cp',
     ['walk', 59 * 32], ['grip', 1], ['climb', 62, 15], ['cross'], ['climb', 69, 15], ['cross'], ['climb', 73, 14], ['letGo', 1], 'cp',
     ['walk', 91 * 32], ['grip', 1], ['climb', 91, 12], ['climb', 105, 12], ['letGo', 1], 'cp', ['walk', 145 * 32 + 16], ['grip', 1], ['climb', 148, 12], ['cross'], ['climb', 156, 14], ['mirror'], ['climb', 171, 17], ['letGo', 1], 'cp',
-    ['walk', 187 * 32 + 16], ['grip', 1], ['climb', 192, 13], ['cross'], ['climb', 201, 11], ['letGo', 1], ['walk', 205 * 32], ['grip', 1], ['climb', 208, 15], ['climb', 221, 17], ['letGo', 1], 'cp', ['gate']],
+    ['walk', 187 * 32 + 16], ['grip', 1], ['climb', 192, 13], ['cross'], ['climb', 201, 11], ['hopTo', 203, 0.3], ['to', 205 * 32], ['grip', 1], ['climb', 208, 15], ['climb', 221, 17], ['letGo', 1], 'cp', ['gate']],
   '33-2': [['slack'], ['walk', 32 * 32], 'cp', ['walk', 50 * 32], ['slack'], ['walk', 72 * 32], 'cp', ['slack'], ['walk', 116 * 32], 'cp', ['slack'], ['walk', 166 * 32], 'cp', ['gate']],
   '33-3': [['seat'], ['seat'], ['walk', 33 * 32], 'cp', ['seat'], ['seat'], ['seat'], ['seat'], ['walk', 71 * 32], 'cp', ['seat'], ['seat'], ['walk', 108 * 32], 'cp', ['seat'], ['seat'], ['walk', 139 * 32], 'cp', ['seat'], ['seat'], ['walk', 167 * 32], 'cp', ['gate']],
   '33-4': [['flat'], ['walk', 39 * 32], 'cp', ['flat'], ['walk', 77 * 32], 'cp', ['flat'], ['flat'], ['walk', 125 * 32], 'cp', ['twin'], ['walk', 171 * 32], 'cp', ['gate']],

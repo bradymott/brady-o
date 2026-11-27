@@ -49,9 +49,9 @@ const scafRows = (() => {
   // the tall scaffold up to the high bank; the cable-store ledge above its top left (only the scaffold reaches it)
   put(Gr, 90, 6, '6'); put(Gr, 93, 9, 'e'); put(Gr, 101, 15, 'q'); put(Gr, 95, 18, 'o.o.o'); put(Gr, 97, 8, 'o.o.o');
   fillG(Gr, 82, 5, 88, 5, 'H'); put(Gr, 83, 4, 'A'); put(Gr, 86, 4, 'u'); put(Gr, 85, 2, 'o.o');
-  ground(Gr, 106, 123, 13); put(Gr, 109, 12, 'c'); put(Gr, 113, 12, 'j'); put(Gr, 118, 9, '?'); put(Gr, 117, 12, 'x');
+  ground(Gr, 106, 123, 13); put(Gr, 109, 12, 'c'); put(Gr, 120, 12, 'j'); put(Gr, 118, 9, '?'); put(Gr, 117, 12, 'x');
   ground(Gr, 124, 127, 16); ground(Gr, 128, 131, 19); ground(Gr, 132, 146, 23);
-  put(Gr, 133, 22, 'a'); put(Gr, 136, 22, 'O'); put(Gr, 139, 22, 'l'); put(Gr, 125, 12, 'd');
+  put(Gr, 133, 22, 'a'); put(Gr, 135, 22, 'O'); put(Gr, 140, 22, 'l'); put(Gr, 125, 12, 'd');
   // ③ the late Bolt Crab: scaffold 146-171 over the pit 147-172, its collar at 156/14, the bolted board at 168
   put(Gr, 146, 10, '7'); put(Gr, 156, 14, 'X'); put(Gr, 168, 19, 'Z'); put(Gr, 150, 12, 'R');
   put(Gr, 149, 18, 'o.o.o'); put(Gr, 163, 17, 'o.o');
@@ -214,11 +214,11 @@ const dockRows = (() => {
   put(Gr, 3, 16, '@'); put(Gr, 6, 16, 'k'); put(Gr, 10, 13, '?'); put(Gr, 2, 12, 'o.o.o');
   put(Gr, 16, 16, 'e'); put(Gr, 16, 15, '1');
   put(Gr, 38, 16, 'c'); fillG(Gr, 39, 13, 42, 13, '-'); put(Gr, 40, 10, '*'); put(Gr, 41, 16, 'K');
-  put(Gr, 45, 16, 'i'); put(Gr, 46, 15, '2'); put(Gr, 44, 16, 'u'); put(Gr, 48, 16, 'A'); put(Gr, 62, 16, 'r');
+  put(Gr, 45, 16, 'i'); put(Gr, 46, 15, '2'); put(Gr, 44, 16, 'u'); put(Gr, 48, 16, 'A');
   put(Gr, 76, 16, 'c'); put(Gr, 78, 13, '?'); fillG(Gr, 79, 11, 82, 11, '-'); put(Gr, 80, 8, 'R'); put(Gr, 81, 16, 'a'); put(Gr, 83, 16, 'l');
-  put(Gr, 85, 16, 'm'); put(Gr, 86, 15, '3'); put(Gr, 104, 15, '4'); put(Gr, 110, 16, 'r');
-  put(Gr, 124, 16, 'c'); put(Gr, 128, 13, '?'); put(Gr, 126, 16, 'j'); put(Gr, 131, 16, 'O');
-  put(Gr, 135, 16, 'n'); put(Gr, 150, 15, '6'); put(Gr, 138, 15, '5'); put(Gr, 166, 16, 'Z');
+  put(Gr, 85, 16, 'm'); put(Gr, 86, 15, '3'); put(Gr, 104, 15, '4');
+  put(Gr, 124, 16, 'c'); put(Gr, 128, 13, '?'); put(Gr, 129, 16, 'd'); put(Gr, 131, 16, 'O');
+  put(Gr, 135, 16, 'n'); put(Gr, 147, 15, '6'); put(Gr, 140, 15, '5'); put(Gr, 166, 16, 'Z');
   put(Gr, 170, 16, 'c'); fillG(Gr, 174, 13, 177, 13, '-'); fillG(Gr, 179, 10, 182, 10, '-'); put(Gr, 180, 7, 'P'); put(Gr, 176, 11, 'o.o');
   put(Gr, 186, 16, 'd'); put(Gr, 196, 16, 'G'); fillG(Gr, W - 1, 0, W - 1, 16, 'H');
   return rowsOf(Gr);
@@ -234,9 +234,9 @@ const DK = {
   '2': ['piece', 'seats.backdrop', { w: 6, h: 5, dl: 3, dw: 2, track: 20, art: 1 }],
   m: ['piece', 'seats.house', { w: 36, period: 4.4, phase: 0.5 }],
   '3': ['piece', 'seats.backdrop', { w: 6, h: 5, dl: 2, dw: 2, track: 12, art: 2 }], '4': ['piece', 'seats.backdrop', { w: 6, h: 5, dl: 2, dw: 2, track: 11, art: 0 }],
-  n: ['piece', 'seats.house', { w: 31, period: 6.2, tell: 1.4, look: 2.4, phase: 2, finale: true, id: 'seats:finale', kx: 12 }],
-  '5': ['piece', 'seats.backdrop', { w: 6, h: 5, dl: 2, dw: 1.5, track: 14, fid: 'front', link: 'back', art: 1 }],
-  '6': ['piece', 'seats.backdrop', { w: 6, h: 6, dl: 3, dw: 1.5, track: -14, fid: 'back', rear: true, art: 2 }],
+  n: ['piece', 'seats.house', { w: 31, period: 8.5, tell: 1.4, look: 2.2, phase: 2, finale: true, id: 'seats:finale', kx: 11 }],
+  '5': ['piece', 'seats.backdrop', { w: 6, h: 5, dl: 2, dw: 1.5, track: 10, fid: 'front', link: 'back', art: 1 }],
+  '6': ['piece', 'seats.backdrop', { w: 6, h: 6, dl: 3, dw: 1.5, track: -10, fid: 'back', rear: true, art: 2 }],
   Z: ['piece', 'seats.curtain', { id: 'seats:finale', h: 7 }],
   A: ['spawn', 'portal', { kind: 'door', look: 'seatsDoor', targetRef: 'green@in' }], u: TELL(), a: ['anchor', 'greenOut']
 };
@@ -246,7 +246,7 @@ const L4 = { n: 4, time: 380, name: 'Please Mind the Scenery', mapLabel: 'Please
   gimmick: 'The show is on. When the house looks, stand in a painted doorway and they think you are scenery. Walk in a doorway and the flat rolls along with you. The twin flats\' doorways meet only once',
   hint: 'The eyes out front glint before the house looks. Twin flats: push the front one until the two doorways overlap and stand right in it. A little seat faces the floor where the second flat starts...',
   postcard: 'Brady! I crossed the stage in the middle of the show inside a painted door. A whole row of owls clapped. I bowed. ♥ C',
-  enemies: [['seatsStoat', 3], ['seatsCrab', 1], ['seatsHen', 1], ['seatsShrew', 1]],
+  enemies: [['seatsStoat', 1], ['seatsCrab', 1], ['seatsShrew', 2]],
   mapCell: [3, 0], mapFrom: 2,
   exits: { main: { to: '33-5' } },
   areas: [
