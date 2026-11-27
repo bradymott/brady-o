@@ -47,8 +47,7 @@ module.exports = async ({ page, check, shot }) => {
   r = await ev(() => {
     const b = boss(), p = P(), br = window.BRADY_TOUR.orchKit.committee, Pa = br.active(b), pw = p.power;
     // first the wrong way: stand on the basket's half while it points (from a fresh pause)
-    for (let k = 0; k < 120 * 10 && b.act !== 'idle'; k++) orchStep();
-    for (let k = 0; k < 120 * 10 && b.act !== 'tell'; k++) { const x = b.arenaX0 + 5 * 32; sim(1 / 120, Math.abs(p.cx - x) > 8 ? { right: p.cx < x, left: p.cx > x } : {}); }
+    for (let k = 0; k < 120 * 10 && b.act !== 'tell'; k++) { const x = b.arenaX0 + 11 * 32; sim(1 / 120, Math.abs(p.cx - x) > 8 ? { right: p.cx < x, left: p.cx > x } : {}); }
     let tell = 0; for (let k = 0; k < 120 * 3 && b.act === 'tell'; k++) { tell = b.at; sim(1 / 120); }
     for (let k = 0; k < 120 * 4 && b.act !== 'sit'; k++) sim(1 / 120);
     const side = Pa.perch && Pa.perch.x > (b.arenaX0 + b.arenaX1) / 2 ? 'far' : 'basket', hp0 = b.hp;

@@ -46,9 +46,10 @@ const brain = {
   },
   phase(b, n) {
     const g = b.g; b.memberVotes = 0;
+    // a longer pause while the new member's name is up (time to cross the lawn)
+    b.go('idle'); b.at = -1.4;
     if (n === 2) { g.bannerText = 'THE TREASURER'; g.bannerT = 2.0; say(g, b, 'THE TREASURER WILL NOW BLUSH.', '#ffffff'); }
     if (n === 3) { g.bannerText = 'THE SECRETARY'; g.bannerT = 2.0; say(g, b, 'THE SECRETARY HAS A POINT.', '#ffffff'); }
-    b.go('idle');
   },
   hurt(b) { b.go('idle'); },
   touch(b, p) { return true; },   // touching the committee never hurts (its drops and lunges do)

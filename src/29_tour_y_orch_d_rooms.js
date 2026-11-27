@@ -268,13 +268,14 @@ TourRooms.def('orchSorbet', {
     if (inp.action) { R.piping = true; R.h = Math.min(1.7, (R.h || 0) + 1 / 120 * 0.35); return; }
     if (R.piping) {
       R.piping = false;
-      if (R.h > 0.5 && Math.abs(this.sway(R)) < 0.28) { R.n++; chime(R.n, true); OK.say(play, (kit.data.nz + 0.5) * TS, 2 * TS, R.n >= 2 ? 'TWO TALL CONES!' : 'IT STANDS TALL!', '#ffd84a'); R.h = 0; if (R.n >= 2) TourRooms.win(play, A, R, { text: 'DO US A FLAVOUR!', coins: 4 }); }
+      if (R.h > 0.5 && Math.abs(this.sway(R)) < 0.28) { R.n++; chime(R.n, true); OK.say(play, (kit.data.nz + 0.5) * TS, 4.4 * TS, R.n >= 2 ? 'TWO TALL CONES!' : 'IT STANDS TALL!', '#ffd84a'); R.h = 0; if (R.n >= 2) TourRooms.win(play, A, R, { text: 'DO US A FLAVOUR!', coins: 4 }); }
       else { R.fails = (R.fails || 0) + 1; RK.raspberry(play, 'IT FLOPPED OVER'); R.h = 0; }
     }
   },
   update(play, dt, A, R) { if (R.won) return; const p = P(play); if (!(p && p.orchProp && p.orchProp.room)) R.piping = R.piping && false; },
   draw(play, ctx, A, R, kit) {
-    const t = play.t, x = (kit.data.nz + 0.5) * TS, base = 6.6 * TS;
+    // the cone stands on the counter a step from the mark (toward the cage), the piping bag over it
+    const t = play.t, x = (kit.data.nz + 0.5) * TS + (kit.data.mirror ? -1.6 : 1.6) * TS, base = 7 * TS - 16;
     // the dispenser on the counter wall: a plum box, a nozzle
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; const bx = x + (kit.data.mirror ? -34 : 34); ctx.fillStyle = '#f4ecd4'; ctx.beginPath(); ctx.moveTo(bx - 14, base - 74); ctx.lineTo(bx + 14, base - 74); ctx.lineTo(bx + (kit.data.mirror ? 14 : -14), base - 30); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = OA.PLUM; ctx.fillRect(bx - 14, base - 80, 28, 8); ctx.strokeRect(bx - 14, base - 80, 28, 8);
     // the cone on its turning stand, the curl growing in it, its tip swaying
@@ -290,7 +291,7 @@ TourRooms.def('orchSorbet', {
       if (up) { ctx.strokeStyle = `rgba(255,216,74,${0.6 + 0.4 * Math.sin(t * 10)})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(tx, tipY - 8, 12, 0, TAU); ctx.stroke(); }
     }
     // the cones already served, on the counter
-    for (let k = 0; k < (R.won ? 2 : R.n || 0); k++) { const cx2 = x + (kit.data.mirror ? 3 + k : -3 - k) * TS; OA.pear(ctx, cx2, 7 * TS - 22, 0.7, '#e4f0a0', false); ctx.fillStyle = '#d8a860'; ctx.beginPath(); ctx.moveTo(cx2 - 9, 7 * TS - 22); ctx.lineTo(cx2 + 9, 7 * TS - 22); ctx.lineTo(cx2, 7 * TS); ctx.closePath(); ctx.fill(); ctx.strokeStyle = INK; ctx.stroke(); }
+    for (let k = 0; k < (R.won ? 2 : R.n || 0); k++) { const cx2 = x + (kit.data.mirror ? -2 - k : 2 + k) * TS; OA.pear(ctx, cx2, 7 * TS - 22, 0.7, '#e4f0a0', false); ctx.fillStyle = '#d8a860'; ctx.beginPath(); ctx.moveTo(cx2 - 9, 7 * TS - 22); ctx.lineTo(cx2 + 9, 7 * TS - 22); ctx.lineTo(cx2, 7 * TS); ctx.closePath(); ctx.fill(); ctx.strokeStyle = INK; ctx.stroke(); }
     ctx.restore();
     if (!R.won && quiet(play, R)) hud(play, ctx, 'CONES ' + (R.n || 0) + ' OF 2');
   },

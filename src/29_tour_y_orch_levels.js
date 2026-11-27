@@ -335,13 +335,13 @@ if (typeof TOUR_OW_MAPS !== 'undefined') TOUR_OW_MAPS.orch = {
   w: 1520, h: 760,
   pal: { sea: '#5a4a7a', deep: '#3e3a6a', land: '#9ab84a', light: '#b8d06a', path: '#e8dcb8', beach: '#c8b07a', cliff: '#3e6a2a', roof: RUSTC(), wall: '#f4ecd4' },
   sea: 'clouds', coast: 'orchHedge', tufts: 'none', trail: 'stones', bridge: 'rope', meadow: false, woods: false, foam: false, birds: true,
-  land: [[[170, 380], [250, 230], [430, 170], [660, 200], [860, 150], [1090, 180], [1310, 240], [1390, 380], [1350, 540], [1210, 650], [970, 670], [720, 630], [470, 660], [270, 590]]],
-  // the route winds between the rows of trees like a mown path
-  nodes: { start: [260, 450], '28-1': [430, 280, 'n'], '28-2': [640, 470, 's'], '28-3': [840, 260, 'n'], '28-4': [1040, 470, 's'], '28-5': [1240, 300, 'n'], '28-6': [1170, 560, 's'], port: [960, 620] },
-  paths: { 'start>28-1': [[330, 340]], '28-1>28-2': [[540, 360]], '28-2>28-3': [[740, 360]], '28-3>28-4': [[940, 370]], '28-4>28-5': [[1140, 380]], '28-5>28-6': [[1250, 440]], '28-6>port': [[1070, 600]] },
+  land: [[[200, 420], [300, 240], [480, 170], [700, 190], [900, 170], [1120, 220], [1320, 240], [1400, 400], [1360, 600], [1200, 690], [960, 640], [720, 660], [480, 690], [260, 640]]],
+  // the route zigzags up and down the tree rows like a ladder leaned on one tree after another
+  nodes: { start: [300, 580], '28-1': [380, 360, 'n'], '28-2': [560, 250, 'n'], '28-3': [720, 470, 's'], '28-4': [900, 280, 'n'], '28-5': [1080, 500, 's'], '28-6': [1250, 330, 'n'], port: [1260, 610] },
+  paths: { 'start>28-1': [[320, 460]], '28-1>28-2': [[460, 280]], '28-2>28-3': [[650, 360]], '28-3>28-4': [[800, 380]], '28-4>28-5': [[1000, 400]], '28-5>28-6': [[1170, 420]], '28-6>port': [[1290, 470]] },
   feat: [
-    ['sprite', 'orchGateSprite', 230, 530, 24], ['sprite', 'orchTrellisSprite', 520, 250, 34], ['sprite', 'orchSkep', 720, 520, 22], ['sprite', 'orchTree', 940, 240, 26],
-    ['sprite', 'orchTree', 1140, 520, 24], ['sprite', 'orchTree', 400, 560, 22], ['sprite', 'orchBasketSprite', 820, 600, 28]
+    ['sprite', 'orchGateSprite', 250, 590, 24], ['sprite', 'orchTrellisSprite', 520, 420, 34], ['sprite', 'orchSkep', 620, 580, 22], ['sprite', 'orchTree', 780, 230, 26],
+    ['sprite', 'orchTree', 990, 610, 24], ['sprite', 'orchTree', 440, 600, 22], ['sprite', 'orchBasketSprite', 1150, 620, 28]
   ],
   flora: ['rock'], density: 0,
   live: [['circle', 700, 120, 60, 0.6]]
