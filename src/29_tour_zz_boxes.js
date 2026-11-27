@@ -384,6 +384,21 @@ const BoxArt = (() => {
       c.fillStyle = 'rgba(255,255,255,0.3)'; c.beginPath(); c.ellipse(16, yy, r * 0.85, ry * 0.85, 0, PI * 1.1, PI * 1.4); c.lineTo(16, yy); c.closePath(); c.fill();
     } },
     // ---- Lost & Found: worn ochre leather suitcase, mismatched corner caps, a big blank tag; catches pop, the tag whips over ----
+    // ---- The Spare Bone Quarry (hidden land A12): a petrol-green fossil specimen case, bone-white strap latch, a bone
+    // across the front pinned by a persimmon knob; hit: the knob pops, the bone swings down and the lid flips up;
+    // empty: the lid stands open over a dark case, the bone hangs from the front ----
+    bone: { name: 'The Spare Bone Quarry', draw(c, p) {
+      const G1 = '#2e6a5a', G2 = '#1e4a40', G3 = '#3e8a74', Bn = '#f4ead2', Pe = '#f06a2a';
+      const sw = io(seg(p, 0, 0.45)), q = ease(seg(p, 0.25, 1));
+      lidBack(c, q, 3, 11, 26, G2, 10);
+      R(c, 3, 11, 26, 19, 2.5, G1); shine(c, 6, 13, 20, 1.1);
+      R(c, 2, 27, 6, 4, 1, G2); R(c, 24, 27, 6, 4, 1, G2);
+      if (q > 0) R(c, 5, 11, 22, 3 + q * 4, 1.2, HOLE, 1.1);
+      if (q <= 0.5) { R(c, 2, 6, 28, 7, 2.5, G3); R(c, 14, 4.5, 4, 8, 1, Bn, 1.2); }
+      // the bone: across the front, pinned in the middle; swinging down from its right end when hit
+      rot(c, 24, 20, sw * 1.15, () => { R(c, 8, 18.6, 16, 3, 1.3, Bn, 1.1); for (const x of [8, 24]) { O(c, x, 18.6, 2.1, Bn, 1); O(c, x, 21.6, 2.1, Bn, 1); } });
+      if (sw < 0.3) O(c, 16, 20.1, 2.6, Pe, 1.1); else O(c, 16 + sw * 3, 20.1 - sw * 9, 2.4 * (1 - sw * 0.4), Pe, 1);
+    } },
     lost: { name: 'Lost & Found', draw(c, p) {
       const B1 = '#b07338', B2 = '#7a461d', B3 = '#d29a5c', Tl = '#2fb3a8', Or = '#f08a2e', Cr = '#f6ead0', Au = '#f2c23a';
       const c1 = seg(p, 0, 0.18), c2 = seg(p, 0.12, 0.3), wh = io(seg(p, 0.2, 0.8)), q = ease(seg(p, 0.35, 1));
