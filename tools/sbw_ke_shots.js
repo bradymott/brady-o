@@ -520,7 +520,7 @@ async function session(browser, viewport, fn) {
       // 15-4: the one gully with cool mist puffing up out of it: drop in
       await page.evaluate(() => { fresh(); play('15-4'); const g = S(); const pf = g.entities.find(e => e.constructor.name === 'KePuff' && e.mist); window._pf = pf.cx; place(Math.floor(pf.cx / 32) - 4, 13); sim(1.0); freeze(); });
       await shot('88-15-4-secret-tell-mist-in-the-gully.png');
-      const r = await page.evaluate(() => { thaw(); const p = P(); p.invuln = 99; walkTo(window._pf - 40, 3); until(() => S().area.aid === 'cool', 3, { right: true }); return { inRoom: waitArea('cool') }; });
+      const r = await page.evaluate(() => { thaw(); const p = P(); p.invuln = 99; until(() => S().area.aid === 'cool', 4, { right: true }); return { inRoom: waitArea('cool') }; });
       check('15-4 secret: dropping into the misty gully lands Brady in a hidden room (any other gully is a fall)', r.inRoom, r);
       await page.evaluate(() => { sim(0.5); freeze(); }); await shot('89-15-4-dung-ball-golf.png');
       const r2 = await page.evaluate(() => {
@@ -535,7 +535,7 @@ async function session(browser, viewport, fn) {
         // then play it properly: roll it along, and chip it over each rock by jumping just as he reaches it
         for (let k = 0; k < 24 && !R.won; k++) {
           until(() => b.onGround && Math.abs(b.vx) < 20, 2);
-          go(b.x - 3 * 32);
+          go(b.x - 2 * 32);
           if (rockAhead()) { until(() => p.x + p.w > b.x - 4, 2, { right: true }); sim(1 / 120, { right: true, jump: true, jumpPressed: true }); for (let q = 0; q < 70 && !R.won; q++) sim(1 / 120, { jump: q < 10 }); }
           else { for (let q = 0; q < 100 && !R.won; q++) sim(1 / 120, { right: true }); }
           sim(0.4);

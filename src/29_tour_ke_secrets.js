@@ -195,22 +195,25 @@ TourRooms.def('keSimon', {
    rolls it; jumping just as he reaches it chips it up and over a rock. It never gets lost: off a wall it
    rolls back. In the hole: the beetle dances and the prize cage opens. */
 class KeDungBall extends Ent {
-  constructor(g, s) { super(g, s, 26, 26); this.hx = this.x; this.hy = this.y; this.spin = 0; this.vx = 0; this.vy = 0; this.back = true; this.isBall = true; this.chipT = 0; }
+  constructor(g, s) { super(g, s, 36, 36); this.hx = this.x; this.hy = this.y; this.spin = 0; this.vx = 0; this.vy = 0; this.back = true; this.isBall = true; this.chipT = 0; }
   update(dt) {
     this.t += dt; const g = this.g, p = g.player, A = g.area;
     if (this.sunk) { this.y = approach(this.y, this.sinkY, 60 * dt); return; }
     if (this.chipT > 0) this.chipT -= dt;
     // Brady pushes it on the ground, chips it in the air
-    if (p && !p.dead && overlap(p, { x: this.x - 6, y: this.y - 4, w: this.w + 12, h: this.h + 4 })) {
+    const RS = A.roomState, settling = RS && RS.t < 0.8;   // (Brady drops in from the gully: the ball waits till he has landed)
+    if (p && !p.dead && !settling && overlap(p, { x: this.x - 6, y: this.y - 4, w: this.w + 12, h: this.h + 4 })) {
       const d = p.cx < this.cx ? 1 : -1;
       // jumping as he reaches it (on the way up, feet still low) chips it high; walking into it rolls it
-      if (!p.onGround && p.vy < 0 && this.chipT <= 0 && p.y + p.h > this.y - 2 && this.onGround) { this.vx = d * 6 * TS; this.vy = -14 * TS; this.chipT = 0.6; Sound.play('kick', { vol: 0.6 }); g.parts.text(this.cx, this.y - 10, 'CHIP!', '#ffe28a'); }
+      const dc = sign(p.vx) || p.facing || d;
+      if (!p.onGround && p.vy < 0 && this.chipT <= 0 && p.y + p.h > this.y - 2 && this.onGround) { this.vx = dc * 6 * TS; this.vy = -14 * TS; this.chipT = 0.6; this.liftT = 0.13; Sound.play('kick', { vol: 0.6 }); g.parts.text(this.cx, this.y - 10, 'CHIP!', '#ffe28a'); }
       else if (p.onGround && overlap(p, this)) { this.vx = d * Math.max(Math.abs(p.vx) * 1.2, 4 * TS); this.x = d > 0 ? Math.max(this.x, p.x + p.w) : Math.min(this.x, p.x - this.w); }
     }
     this.vy = Math.min(this.vy + PHYS.gDown * 0.6 * dt, 14 * TS);
     const vx0 = this.vx;
-    moveBody(this, A, dt, { semis: true });
-    if (this.hitWall) this.vx = -vx0 * 0.5;
+    // a chip goes straight up for a moment first (so a ball resting against a rock still clears it)
+    if (this.liftT > 0) { this.liftT -= dt; this.vx = 0; moveBody(this, A, dt, { semis: true }); this.vx = vx0; }
+    else { moveBody(this, A, dt, { semis: true }); if (this.hitWall) this.vx = -vx0 * 0.5; }
     if (this.onGround) this.vx = approach(this.vx, 0, 3.5 * TS * dt);
     this.spin += this.vx * dt / 13;
     // in the hole?
@@ -219,27 +222,39 @@ class KeDungBall extends Ent {
   }
   touchPlayer() {}
   draw(ctx) {
-    const x = this.cx, y = this.cy; ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
-    ctx.fillStyle = '#7a5a34'; ctx.beginPath(); ctx.arc(x, y, 13, 0, TAU); ctx.fill(); ctx.stroke();
-    ctx.strokeStyle = '#5a3e20'; ctx.lineWidth = 1.6; for (let k = 0; k < 3; k++) { const a = this.spin + k * 2.1; ctx.beginPath(); ctx.arc(x + Math.cos(a) * 6, y + Math.sin(a) * 6, 2.6, 0, TAU); ctx.stroke(); }
+    const x = this.cx, y = this.cy, t = this.t; ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2.6;
+    // a soft glow so the ball reads against any wall
+    ctx.fillStyle = 'rgba(255,230,160,0.25)'; ctx.beginPath(); ctx.arc(x, y, 26, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#8a6438'; ctx.beginPath(); ctx.arc(x, y, 18, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#a8804a'; ctx.beginPath(); ctx.arc(x - 6, y - 6, 6, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#5a3e20'; ctx.lineWidth = 2; for (let k = 0; k < 4; k++) { const a = this.spin + k * 1.6; ctx.beginPath(); ctx.arc(x + Math.cos(a) * 9, y + Math.sin(a) * 9, 3, 0, TAU); ctx.stroke(); }
+    // its beetle, riding on top of it (it waddles to keep upright as the ball rolls)
+    if (!this.sunk) {
+      const bx = x + Math.sin(t * 3) * 2, by = y - 22; ctx.strokeStyle = INK; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(bx - 6, by + 2); ctx.lineTo(bx - 9, by + 8); ctx.moveTo(bx + 6, by + 2); ctx.lineTo(bx + 9, by + 8); ctx.stroke();
+      ctx.fillStyle = '#2a3a2a'; ctx.beginPath(); ctx.ellipse(bx, by, 11, 8, 0, 0, TAU); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#6ac87a'; ctx.beginPath(); ctx.ellipse(bx - 3, by - 3, 4, 2, -0.3, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#2a3a2a'; ctx.beginPath(); ctx.arc(bx + 10, by + 2, 4, 0, TAU); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(bx + 11, by + 1, 1.6, 0, TAU); ctx.fill();
+    }
     ctx.restore();
   }
 }
 ENTITY_TYPES.keDungBall = KeDungBall;
 TourRooms.def('keGolf', {
-  title: 'DUNG BALL GOLF', rule: 'ROLL THE BEETLE\'S BALL INTO THE HOLE. JUMP AS YOU REACH IT TO CHIP IT OVER A ROCK', need: 'SINK THE BALL FIRST!',
+  title: 'DUNG BALL GOLF', rule: 'PUSH THE BALL INTO THE HOLE. JUMP TO CHIP IT.', need: 'SINK THE BALL FIRST!',
   make(o, keep, ctx, A, rng) {
-    const K = TourRoomKit, W = 34 + K.eastW(keep, o), g = K.room(W), Y = K.Y;
+    const K = TourRoomKit, W = 22 + K.eastW(keep, o), g = K.room(W), Y = K.Y;
     const x0 = g.west(keep) + 1, x1 = K.east(g, keep, A, o);
-    // the ball's tee, two low rocks, the hole (a dip one tile deep, two wide) near the right
-    const hx = x1 - 4;
+    // the ball's tee, two low rocks, the hole (a dip one tile deep, two wide) near the right: all on one screen
+    const hx = x1 - 3;
     g.put(hx, Y + 1, '.'); g.put(hx + 1, Y + 1, '.');
-    g.put(x0 + 3, Y, g.L(['spawn', 'keDungBall', {}]));
+    g.put(x0 + 2, Y, g.L(['spawn', 'keDungBall', {}]));
     const r1 = x0 + Math.round((hx - x0) * 0.35), r2 = x0 + Math.round((hx - x0) * 0.7);
     g.put(r1, Y, 'H'); g.put(r2, Y, 'H'); g.put(r2 + 1, Y, 'H');
     g.data.hole = [hx, hx + 1, Y + 1];
     // a ledge with coins over the course
-    g.hline(r1 + 2, r2 - 2, 6, '-'); g.coins(r1 + 2, r2 - 2, 5);
+    g.coins(r1 + 1, r2 - 1, 6);
     g.winSpot(A.id, hx + 2, Y);
     g.dress(keep, [x0 + 1], Y);
     return g;
@@ -251,20 +266,28 @@ TourRooms.def('keGolf', {
     if (b) { b.sunk = false; b.x = b.hx; b.y = b.hy; b.vx = b.vy = 0; }
   },
   update(play, dt, A, R, kit) {
+    // dropping in from the gully: Brady lands where he falls, he does not slide on into the ball
+    if (R.t < 0.4) { play.player.vx = 0; const b0 = play.entities.find(e => e.isBall); if (b0 && !b0.sunk && !R.won) { b0.x = b0.hx; b0.vx = 0; } }
     if (R.won) return;
     const b = play.entities.find(e => e.isBall);
     if (b && b.sunk) TourRooms.win(play, A, R, { text: 'HOLE IN ONE! (ISH)', coins: 6 });
   },
   draw(play, ctx, A, R, kit) {
-    const H = kit.data.hole, x = (H[0] + 1) * TS, y = (H[2]) * TS, t = play.t;
+    const H = kit.data.hole, x = (H[0] + 1) * TS, y = (H[2]) * TS, t = play.t, A2 = play.area;
+    // the rocks drawn as boulders over their tiles (so they read as rocks, not crates)
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2.4;
+    for (let tx = 1; tx < A2.W - 1; tx++) if (A2.tiles[TourRoomKit.Y * A2.W + tx] === T.HARD && A2.tiles[(TourRoomKit.Y - 1) * A2.W + tx] !== T.HARD) {
+      const bx = tx * TS + TS / 2, by = (TourRoomKit.Y + 1) * TS; ctx.fillStyle = '#9a8a7a'; ctx.beginPath(); ctx.moveTo(bx - 18, by); ctx.quadraticCurveTo(bx - 20, by - 34, bx - 2, by - 36); ctx.quadraticCurveTo(bx + 20, by - 36, bx + 18, by); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#c8baa8'; ctx.beginPath(); ctx.ellipse(bx - 6, by - 26, 6, 3, -0.4, 0, TAU); ctx.fill();
+    }
+    ctx.restore();
+    // the hole glows
+    ctx.save(); ctx.fillStyle = `rgba(255,230,120,${0.35 + 0.2 * Math.sin(t * 4)})`; ctx.beginPath(); ctx.ellipse(x, y + 4, 40, 12, 0, 0, TAU); ctx.fill(); ctx.restore();
     // the flag in the hole and the beetle waiting by it (it dances when the ball goes in)
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
     ctx.strokeStyle = '#6a4a2a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, y + 2); ctx.lineTo(x, y - 54); ctx.stroke();
     ctx.fillStyle = '#ff5a3a'; ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x, y - 54); ctx.lineTo(x + 22 + Math.sin(t * 6) * 3, y - 46); ctx.lineTo(x, y - 38); ctx.closePath(); ctx.fill(); ctx.stroke();
-    const bx = x + 2.5 * TS, hop = R.won ? Math.abs(Math.sin(t * 8)) * 10 : 0;
-    ctx.fillStyle = '#2a3a2a'; ctx.beginPath(); ctx.ellipse(bx, y - 8 - hop, 11, 8, 0, 0, TAU); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#6ac87a'; ctx.beginPath(); ctx.ellipse(bx - 3, y - 11 - hop, 4, 2, -0.3, 0, TAU); ctx.fill();
-    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(bx - 8, y - 8 - hop, 2, 0, TAU); ctx.fill();
+    if (R.won) { const bx = x + 1.6 * TS, hop = Math.abs(Math.sin(t * 8)) * 10; ctx.fillStyle = '#2a3a2a'; ctx.beginPath(); ctx.ellipse(bx, y - 8 - hop, 11, 8, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#6ac87a'; ctx.beginPath(); ctx.ellipse(bx - 3, y - 11 - hop, 4, 2, -0.3, 0, TAU); ctx.fill(); }
     ctx.restore();
   }
 });

@@ -342,7 +342,7 @@ const L5 = { n: 5, name: 'Big Kiboko', mapLabel: 'Waterhole', arch: 'lair', them
         ['door', { to: 'arena@in', perch: 0, look: 'keReedCurtain' }]
       ] },
     { id: 'hollow', gen: 'room', role: 'secret', theme: 'ke_mound', stamp: 'keHollow', room: 'shell',
-      shell: { title: 'THREE OSTRICH EGGS', rule: 'WATCH THE PRIZE GO UNDER AN EGG, WATCH THE SHUFFLE, THEN STOMP THE RIGHT EGG', cup: 'egg', dealer: 'secretary', joke: ['boot', 'fish'] } },
+      shell: { title: 'THREE OSTRICH EGGS', rule: 'WATCH THE PRIZE GO UNDER AN EGG, WATCH THE SHUFFLE, THEN STOMP THE RIGHT EGG', cup: 'egg', dealer: 'stork', joke: ['boot', 'fish'] } },
     { id: 'arena', gen: 'arena', role: 'arena', layout: 'pool', arenaW: 32, H: 18, roof: false, theme: 'ke_stage' }
   ] };
 
