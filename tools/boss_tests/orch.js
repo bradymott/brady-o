@@ -32,7 +32,7 @@ module.exports = async ({ page, check, shot }) => {
     window.fightUntil = (cond, sec) => { const b = boss(); let tell = 0, a0 = null; for (let k = 0; k < (sec || 40) * 120 && !cond(b); k++) { if (b.act === 'tell') tell = Math.max(tell, b.at); orchStep(); } return tell; };
   });
   // ① THE CHAIR
-  r = await ev(() => { const b = boss(), p = P(), pw = p.power; const tell = fightUntil(b => b.act === 'sit'); return { tell: +tell.toFixed(2), act: b.act, hurt: p.power !== pw }; });
+  r = await ev(() => { const b = boss(), p = P(), pw = p.power; fightUntil(b => b.act === 'idle'); const tell = fightUntil(b => b.act === 'sit'); return { tell: +tell.toFixed(2), act: b.act, hurt: p.power !== pw }; });
   check('orch: the Chair raises its leaf (a 0.9 s tell, a shadow) and drops onto a branch; Brady stands clear', r.tell >= 0.85 && r.act === 'sit' && !r.hurt, r);
   await snap('orch_committee_chair_sits.png');
   r = await ev(() => { const b = boss(), p = P(), pw = p.power; fightUntil(b => b.hp <= 4); sim(0.5); return { hp: b.hp, phase: b.phase, votes: b.votes, hurt: p.power !== pw }; });
@@ -46,7 +46,8 @@ module.exports = async ({ page, check, shot }) => {
   // ③ THE SECRETARY: from the basket's side it lunges away: its flick misses (TABLED); from the far side it scores
   r = await ev(() => {
     const b = boss(), p = P(), br = window.BRADY_TOUR.orchKit.committee, Pa = br.active(b), pw = p.power;
-    // first the wrong way: stand on the basket's half while it points
+    // first the wrong way: stand on the basket's half while it points (from a fresh pause)
+    for (let k = 0; k < 120 * 10 && b.act !== 'idle'; k++) orchStep();
     for (let k = 0; k < 120 * 10 && b.act !== 'tell'; k++) { const x = b.arenaX0 + 5 * 32; sim(1 / 120, Math.abs(p.cx - x) > 8 ? { right: p.cx < x, left: p.cx > x } : {}); }
     let tell = 0; for (let k = 0; k < 120 * 3 && b.act === 'tell'; k++) { tell = b.at; sim(1 / 120); }
     for (let k = 0; k < 120 * 4 && b.act !== 'sit'; k++) sim(1 / 120);
