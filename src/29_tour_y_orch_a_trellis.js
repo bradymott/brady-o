@@ -71,8 +71,8 @@ const forksOf = g => g.entities.filter(e => e instanceof OrchFork && !e.remove);
     moveBody(p, A, dt, { semis: false, hidden: true });
     // the grip point stays on a trellis: onto a neighbouring one (a bent branch, the next panel) or clamped to this one
     let gx = p.x + p.w / 2, gy = gripY(p);
-    const z2 = netAt(A, gx, gy);
-    if (z2 && z2 !== z) { if (!z2.forkE || (gx - (z2.forkE.rootX)) * z2.forkE.dir > 0 || z.forkE === z2.forkE) W.grip = z2; }
+    const z2 = netAt(A, gx + dx * 5, gy + dy * 5);
+    if (z2 && z2 !== z) { if (!z2.forkE || (gx + dx * 5 - z2.forkE.rootX) * z2.forkE.dir > 0 || z.forkE === z2.forkE) W.grip = z2; }
     const zz = W.grip;
     gx = clamp(gx, zz.x + 3, zz.x + zz.w - 3); gy = clamp(gy, zz.y + 2, zz.y + zz.h - 2);
     const nx = gx - p.w / 2, ny = gy - NET.grip;
