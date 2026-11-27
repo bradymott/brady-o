@@ -497,6 +497,23 @@ const BoxArt = (() => {
       if (q > 0.5) R(c, 5, 15, 22, 3, 0.8, '#a8987a', 0);
       // the plum pear clasp: hanging over the lid's edge, flipped up by the hit, dangling once open
       rot(c, 16, 14, q > 0.5 ? 0 : -flip * 2.6, () => { G(c, [[16, 14], [13, 17], [13.5, 21], [16, 22.5], [18.5, 21], [19, 17]], Pl); });
+    } },
+    // Below the Cheap Seats (hidden land A8, world 33): the stagehands' teal rope trunk; the hit throws its rust hasp up,
+    // the lid lifts and a cream rope tumbles over the front
+    seats: { name: 'Below the Cheap Seats', draw(c, p) {
+      const Tl = '#2a8a84', Td = '#1a5e5a', Ru = '#c8562a', Cr = '#f4e6c4';
+      const q = io(seg(p, 0.2, 0.9)), flip = seg(p, 0, 0.3);
+      const lh = 7 + 9 * q;
+      R(c, 3, 13 - lh, 26, lh, 1.5, Tl, 1.2);
+      c.fillStyle = Ru; c.fillRect(3, 13 - lh, 3, 3); c.fillRect(26, 13 - lh, 3, 3);
+      if (q > 0.4) { c.fillStyle = Td; c.fillRect(5, 14, 22, 3); }
+      R(c, 2, 14, 28, 16, 1.5, Tl, 1.3);
+      c.fillStyle = Td; c.fillRect(4, 19, 24, 1.2); c.fillRect(4, 24, 24, 1.2);
+      c.fillStyle = Ru; for (const [x, y] of [[2, 14], [26, 14], [2, 26], [26, 26]]) c.fillRect(x, y, 4, 4);
+      // the rope handle (or the rope spilling out once open)
+      c.strokeStyle = Cr; c.lineWidth = 2; c.beginPath(); if (q > 0.5) { c.moveTo(18, 15); c.quadraticCurveTo(26, 20, 22, 30); } else { c.moveTo(9, 21); c.quadraticCurveTo(16, 27, 23, 21); } c.stroke();
+      // the hasp: down over the lid's edge, flipped up by the hit
+      rot(c, 16, 14, q > 0.5 ? 0 : -flip * 2.6, () => { R(c, 13.5, 12, 5, 7, 1, Ru, 1); });
     } }
   };
 

@@ -301,6 +301,10 @@ Object.assign(ENEMY_SAFE_TYPES, { washCrawler: 'on a drying net: touches only Br
 // touch()); a trellis critter touches only Brady on its own face of the trellis (customCollide)
 Object.assign(BOSS_SAFE, { orch_committee: ['idle', 'tell', 'move', 'sit', 'flick', 'back'] });
 Object.assign(ENEMY_SAFE_TYPES, { orchCrawler: 'on a trellis: touches only Brady on its own face (customCollide)' });
+// Below the Cheap Seats (33): the Encore Coat never hurts by touch (its sweep, cartwheel and gust do: 29_tour_y_seats_c_boss.js
+// touch()); a scaffold critter and the mirror crab touch only Brady on their own face (customCollide)
+Object.assign(BOSS_SAFE, { seats_encore: ['idle', 'tell', 'move', 'bow', 'dunk'] });
+Object.assign(ENEMY_SAFE_TYPES, { seatsCrawler: 'on a scaffold: touches only Brady on its own face (customCollide)', seatsMirrorCrab: 'on a scaffold: touches only Brady on the near face (customCollide)' });
 const OLD_TYPES = { greeter: 1, pony: 1 };   // the old Black Rock City enemies (08a_chunks.js / 10b_burners.js): in no tour level
 if (!noSweep) {
   const noHurt = [];

@@ -270,7 +270,10 @@ TourHats.NOT = new Set([].concat(
   // The Orchard After Closing (28): trellises, forks, trellis critters (drawn behind the slats on the far face), the bitten
   // pear tell, blossoms, bells, buds, sleeves, grafts, loaded branches, the basket, the hedge gate, room and perch marks,
   // Japan's last pear tree
-  'orchTrellis orchFork orchCrawler orchBite orchBlossom orchBell orchBud orchSleeve orchGraft orchLoaded orchBasket orchHedgeGate orchRoomMark orchPerchMark orchJpTree'.split(' ')
+  'orchTrellis orchFork orchCrawler orchBite orchBlossom orchBell orchBud orchSleeve orchGraft orchLoaded orchBasket orchHedgeGate orchRoomMark orchPerchMark orchJpTree'.split(' '),
+  // Below the Cheap Seats (33): scaffolds, their critters, the mirror crab, the bolt board, the tell, flats, seats, the
+  // house, backdrops, curtains, follow-spots, the encore's actor, paddles and baskets, room marks, the Festival stand
+  'seatsScaffold seatsCrawler seatsMirrorCrab seatsBoltBoard seatsTell seatsFlat seatsSeat seatsHouse seatsBackdrop seatsCurtainLock seatsSpot seatsActor seatsLeadPaddle seatsLeadBasket seatsLeadCurtain seatsPaddleMark seatsRoomMark seatsFestStand'.split(' ')
 ));
 
 /* ---------- the animals: [fx, fxFlip, fy, size] (see the header) ---------- */
@@ -339,7 +342,9 @@ Object.assign(TourHats.HEADS, {
   // Postmark Sound (world 27): the gum gull, the margin crab, the blot pup, the crease eel
   postGull: [0.33, 0.33, -1.05, 0], postCrab: [0, 0, -1.2, 0], postPup: [0.43, 0.43, -1.0, 0], postEel: [0.4, 0.4, -0.9, 0],
   // The Orchard After Closing (28): the pear fly, the tie worm, the pip finch, the bark snail
-  orchFly: [0.3, 0.3, -1.1, 0], orchWorm: [0.4, 0.4, -0.9, 0], orchFinch: [0.3, 0.3, -1.3, 0], orchSnail: [0.5, 0.5, -1.15, 0]
+  orchFly: [0.3, 0.3, -1.1, 0], orchWorm: [0.4, 0.4, -0.9, 0], orchFinch: [0.3, 0.3, -1.3, 0], orchSnail: [0.5, 0.5, -1.15, 0],
+  // Below the Cheap Seats (33): the bolt crab, the seat shrew, the cable hen, the sandbag stoat
+  seatsCrab: [0.4, 0.4, -1.0, 0], seatsShrew: [0.6, 0.6, -0.9, 0], seatsHen: [0.35, 0.35, -1.25, 0], seatsStoat: [0.45, 0.45, -1.0, 0]
 
 });
 
