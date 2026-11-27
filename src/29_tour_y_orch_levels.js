@@ -110,16 +110,16 @@ const beeRows = (() => {
   pit(Gr, 51, 63); put(Gr, 49, 14, 'e'); put(Gr, 54, 25, '2'); put(Gr, 54, 14, 'i'); put(Gr, 59, 25, '3'); put(Gr, 59, 12, 'R');
   ground(Gr, 64, 92, 15); put(Gr, 72, 14, 'r'); put(Gr, 68, 11, '?'); put(Gr, 78, 14, 'c');
   // the pantry ledge: only a blossom's pad reaches it
-  put(Gr, 81, 14, 'j'); put(Gr, 84, 14, '4'); fillG(Gr, 86, 8, 92, 8, 'H'); put(Gr, 90, 7, 'A'); put(Gr, 87, 7, 'u'); put(Gr, 88, 5, 'o.o');
+  put(Gr, 81, 14, 'j'); put(Gr, 84, 14, '4'); fillG(Gr, 86, 9, 92, 9, 'H'); put(Gr, 90, 8, 'A'); put(Gr, 87, 8, 'u'); put(Gr, 88, 6, 'o.o');
   ground(Gr, 93, 95, 18); ground(Gr, 96, 119, 21); put(Gr, 100, 20, 'a'); put(Gr, 105, 20, 'l');
-  put(Gr, 110, 20, 'n'); put(Gr, 114, 20, '5'); put(Gr, 114, 16, 'q'); put(Gr, 117, 20, '6');
+  put(Gr, 110, 20, 'n'); put(Gr, 114, 20, '5'); put(Gr, 114, 17, 'q'); put(Gr, 117, 20, '6');
   ground(Gr, 120, 150, 13); put(Gr, 124, 12, 'c'); put(Gr, 130, 9, '?'); put(Gr, 140, 12, 'r'); put(Gr, 135, 8, 'd');
   ground(Gr, 151, 173, 21); put(Gr, 153, 20, 'c'); put(Gr, 156, 20, 'K'); put(Gr, 160, 20, 't'); put(Gr, 167, 20, 'p'); put(Gr, 171, 20, '7');
   ground(Gr, 174, W - 1, 15); put(Gr, 180, 11, '?'); put(Gr, 185, 14, 'z'); fillG(Gr, 190, 12, 191, 14, 'H'); put(Gr, 190, 9, 'P'); put(Gr, 196, 14, 'r'); put(Gr, 205, 14, 'G');
   fillG(Gr, W - 1, 0, W - 1, 14, 'H');
   return rowsOf(Gr);
 })();
-const BL = (id, o) => ['piece', 'orch.blossom', Object.assign({ id, w: 3, dy: 3 }, o || {})];
+const BL = (id, o) => ['piece', 'orch.blossom', Object.assign({ id, w: 3, dy: 2 }, o || {})];
 const BELL = to => ['piece', 'orch.bell', { to }];
 const BEE = {
   k: SIGN('KNOCK A BELL FLOWER WITH THROW AND ITS BEE FLIES TO THE BLOSSOM IT POINTS AT. AN OPEN BLOSSOM BLOOMS INTO A STEP'),
@@ -127,8 +127,8 @@ const BEE = {
   x: ['decor', 'orchCrate'], l: ['enemy', 'orchWorm'], r: ['enemy', 'orchFinch'], z: ['enemy', 'orchSnail'], d: ['enemy', 'orchFly'],
   f: BELL('b1'), '1': BL('b1'), e: BELL('b2'), '2': BL('b2', { dy: 10 }), i: BELL('b3'), '3': BL('b3', { dy: 10 }),
   j: BELL('b4'), '4': BL('b4'), A: ['spawn', 'portal', { kind: 'door', look: 'orchShed', targetRef: 'pantry@in' }], u: BITE(), a: ['anchor', 'pantryOut'],
-  n: BELL('b5'), '5': BL('b5'), q: BELL('b6'), '6': BL('b6', { dy: 6 }),
-  t: BELL('b7'), p: BELL('b7'), '7': BL('b7', { dy: 3, shy: true })
+  n: BELL('b5'), '5': BL('b5'), q: BELL('b6'), '6': BL('b6', { dy: 5 }),
+  t: BELL('b7'), p: BELL('b7'), '7': BL('b7', { shy: true })
 };
 stamps.orchBees = { floor: 21, rows: beeRows, legend: BEE, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power', 'power'] };
 stamps.orchPantry = roomStamp('meadow@pantryOut', 'orchHatch');

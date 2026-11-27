@@ -440,4 +440,5 @@ TourHooks.on('camera', (play, dt) => {
   const ct0 = Play.prototype.camTargetY;
   Play.prototype.camTargetY = function (snap) { const A = this.area; if (A && A.roomKit && /^orch/.test(A.roomKit.kind)) return clamp(TS, 0, Math.max(0, A.H * TS - Game.viewH)); return ct0.call(this, snap); };
 }
+Tour.orchKit.Rooms = TourRooms;
 })();

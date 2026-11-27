@@ -94,6 +94,58 @@ async function session(viewport, fn) {
 
 const STAGES = {};
 
+/* ---------------- the hidden entrance: Japan 11-3, the last pear tree ---------------- */
+STAGES.door = async ({ ev, shot, run }) => {
+  await run('door', async () => {
+    let r = await ev(() => {
+      fresh(); const T = window.BRADY_TOUR, st = T.Tour.stops.orch;
+      return { hidden: T.TourMap.stopState(st) === 'hidden', unlocked: T.TourProgress.isUnlocked('28-1'), land: T.TourProgress.countryUnlocked(T.Tour.countries.orch), pips: T.TourProgress.exitsFound('11-3') };
+    });
+    check('before the entrance: the land is hidden on the route map, 28-1 is locked, 11-3\'s card shows its two old exits', r.hidden && !r.unlocked && !r.land && r.pips.total === 2, r);
+    r = await ev(() => {
+      play('11-3'); const S0 = S(); const sp = S0.area.spawns ? null : null;
+      // find the last tree's column from the level spec (it spawns when in view)
+      const spn = S0.level.areas[0].spawns.find(q => q.type === 'orchJpTree'); window.__tree = { tx: spn.tx, gy: spn.gy };
+      place(spn.tx - 14, spn.gy - 1); sim(0.4); return { tx: spn.tx, gy: spn.gy, at: at(), coinsNear: (() => { const A = S().area; let n = 0; for (let x = spn.tx - 12; x <= spn.tx + 6; x++) for (let y = 0; y < A.H; y++) if (A.tiles[y * A.W + x] === 5) n++; return n; })() };
+    });
+    check('11-3: the little pear orchard stands by the path in the sunlit stretch (no coins leading to it)', r.tx > 0 && !r.at.dead, r);
+    await ev(() => { const { tx, gy } = window.__tree; place(tx - 9, gy - 1); sim(0.3); freeze(); });
+    await shot('00-entrance-11-3-the-orchard.png');
+    await ev(() => { thaw(); const { tx, gy } = window.__tree; place(tx - 4, gy - 1); sim(0.3); freeze(); });
+    await shot('01-entrance-11-3-before-the-clue.png');
+    // walking past does nothing; behind the trunk, a jump straight up into the fork's underside
+    r = await ev(() => {
+      thaw(); const { tx, gy } = window.__tree, p = P(); place(tx - 6, gy - 1); sim(0.2);
+      for (let k = 0; k < 240; k++) sim(1 / 120, { right: true }); const passed = S().state === 'play' && !S().entities.some(e => e.constructor.name === 'OrchJpTree' && e.arr >= 0);
+      for (let k = 0; k < 400 && Math.abs(p.cx - (tx * 32 + 16)) > 4; k++) sim(1 / 120, { right: p.cx < tx * 32 + 16, left: p.cx > tx * 32 + 16 });
+      sim(0.2); sim(0.35, { jump: true, jumpPressed: true }); const slipping = S().entities.some(e => e.constructor.name === 'OrchJpTree' && e.arr >= 0);
+      sim(0.6); return { passed, slipping, banner: S().bannerText };
+    });
+    check('11-3: walking past the tree does nothing; behind the trunk a jump into the fork\'s underside slips Brady up into the tree, the land\'s name comes up', r.passed && r.slipping && r.banner === 'THE ORCHARD AFTER CLOSING', r);
+    await ev(() => freeze()); await shot('02-entrance-slipping-in.png');
+    r = await ev(() => {
+      thaw(); for (let k = 0; k < 900 && S().state === 'play'; k++) sim(1 / 120); sim(2);
+      const T = window.BRADY_TOUR, d = window.BRADY.Save.data;
+      return { state: S().state, key: S().exitKey, land: !!d.tour.lands.orch, unlocked: T.TourProgress.isUnlocked('28-1'), pips: T.TourProgress.exitsFound('11-3') };
+    });
+    check('11-3 clears through its exit to the land: the land opens, 28-1 unlocks, the card now counts the found exit', r.key === 'orch' && r.land && r.unlocked && r.pips.total === 3 && r.pips.found >= 1, r);
+    r = await ev(() => {
+      window.BRADY.goToMap('world', 1, '11-3');
+      for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); }
+      if (S().openRoute) S().openRoute({ dest: 'orch' });
+      for (let k = 0; k < 60 && (S().rRevealQ == null || S().rReveal || (S().rRevealQ && S().rRevealQ.length)); k++) sim(0.25);
+      sim(1);
+      const T = window.BRADY_TOUR; return { state: T.TourMap.stopState(T.Tour.stops.orch), mode: S().mode };
+    });
+    check('the route map now shows The Orchard After Closing', r.state !== 'hidden', r);
+    await ev(() => freeze()); await shot('03-entrance-route-map.png');
+    r = await ev(() => { thaw(); window.BRADY.goToMap('world', 1, '28-1'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } const s = S(); return { cc: s.ow && s.ow.cc }; });
+    check('the land has its own walkable map, and 28-1 can be entered from it', r.cc === 'orch', r);
+    await ev(() => freeze()); await shot('04-orch-overworld-map.png');
+    await ev(() => thaw());
+  });
+};
+
 /* ---------------- 28-1 Elbows on the Trellis: grip, climb, collars, forks, the late fork ---------------- */
 STAGES.trellis = async ({ ev, shot, run, pano }) => {
   await run('trellis', async () => {
@@ -139,7 +191,174 @@ STAGES.trellis = async ({ ev, shot, run, pano }) => {
     await ev(() => { thaw(); play('28-1'); }); await pano('pano-28-1.png', 0.3);
   });
 };
-//STAGES
+
+/* ---------------- 28-2 Appointment with a Bee ---------------- */
+STAGES.bee = async ({ ev, shot, run, pano }) => {
+  await run('bee', async () => {
+    await ev(ROOM_HELPERS);
+    await ev(() => { fresh(); play('28-2'); place(4, 20); sim(0.4); freeze(); }); await shot('20-28-2-start.png');
+    let r = await ev(() => { thaw(); walkTo(18 * 32 + 16, 4); const pad0 = tile(22, 17); press('action'); sim(0.6); const bee = ents('OrchBee')[0]; const going = bee && bee.state === 'go'; sim(2.2); return { pad0, going, pad1: tile(22, 17) }; });
+    check('28-2: THROW on the bell flower sends its bee to the blossom; it blooms into a petal step', r.pad0 === 0 && r.going && r.pad1 !== 0, r);
+    await ev(() => { place(18, 20); press('action'); sim(0.3); freeze(); }); await shot('21-28-2-bee-flying.png');
+    r = await ev(() => { thaw(); place(20, 20); sim(0.2); sim(0.6, { jump: true, jumpPressed: true, right: true }); sim(0.5); const a1 = at(); walkTo(28 * 32, 6); return { a1, a2: at() }; });
+    check('28-2: up the petal step onto the first bank', r.a1.y === 17 && r.a2.y === 14, r);
+    // the shy blossom: from its near bell the bee bumps a shut bud; from the far bell it blooms
+    r = await ev(() => { place(167, 20); sim(1.2); const bl = ents('OrchBlossom').find(b => b.shy); press('action'); sim(3); const near = bl.done; walkTo(160 * 32 + 16, 4); press('action'); sim(4); return { near, far: bl.done }; });
+    check('28-2: the shy blossom shuts while Brady stands by it (the bee bumps the bud); sent from the far bell, it blooms', !r.near && r.far, r);
+    await ev(() => { place(165, 20); sim(0.3); freeze(); }); await shot('22-28-2-shy-blossom.png');
+    await ev(() => { thaw(); place(83, 14); sim(0.3); freeze(); }); await shot('23-28-2-pantry-ledge.png');
+    await ev(() => { thaw(); play('28-2'); }); await pano('pano-28-2.png', 0.3);
+  });
+};
+
+/* ---------------- 28-3 Cut Above ---------------- */
+STAGES.cut = async ({ ev, shot, run, pano }) => {
+  await run('cut', async () => {
+    await ev(ROOM_HELPERS);
+    await ev(() => { fresh(); play('28-3'); place(4, 20); sim(0.4); freeze(); }); await shot('30-28-3-start.png');
+    let r = await ev(() => { thaw(); walkTo(15 * 32 + 16, 4); const s0 = tile(14, 18); press('action'); sim(0.5); return { s0, s1: tile(14, 18) }; });
+    check('28-3: THROW on a bud\'s mark pinches it: two side shoots grow out into steps', r.s0 === 0 && r.s1 !== 0, r);
+    await ev(() => freeze()); await shot('31-28-3-shoots.png');
+    r = await ev(() => { thaw(); sim(0.4, { jump: true, jumpPressed: true }); sim(0.6); const a1 = at(); walkTo(15 * 32 + 16, 4); press('action'); sim(0.4); sim(0.4, { jump: true, jumpPressed: true }); sim(0.6); const a2 = at(); walkTo(22 * 32, 6); return { a1, a2, a3: at() }; });
+    check('28-3: up the shoots, a second pinch, onto the bank', r.a1.y === 17 && r.a2.y === 14 && r.a3.y === 13, r);
+    // the knob: pinch it and it is gone (it grows back); pinch the top bud from it
+    r = await ev(() => {
+      const st = ents('OrchBud').filter(b => b.knob)[0], top = ents('OrchBud').find(b => b.bx === st.bx && b.by === st.by - 3);
+      place(st.tx, st.by); sim(0.3); press('action'); sim(0.3); const gone = tile(st.knob[0], st.knob[1]) === 0; sim(4.6); const back = tile(st.knob[0], st.knob[1]) !== 0;
+      place(st.tx, st.by - 3); sim(0.3); const onKnob = at().y === st.by - 3; press('action'); sim(0.5); const top1 = top.done;
+      return { gone, back, onKnob, top1 };
+    });
+    check('28-3: pinching the knob bud loses the foothold (it grows back); from the knob the top bud pinches into the last shoots', r.gone && r.back && r.onKnob && r.top1, r);
+    await ev(() => { sim(0.3); freeze(); }); await shot('32-28-3-knob-top-bud.png');
+    await ev(() => { thaw(); place(90, 10); sim(0.3); freeze(); }); await shot('33-28-3-hedge-mound.png');
+    await ev(() => { thaw(); play('28-3'); }); await pano('pano-28-3.png', 0.3);
+  });
+};
+
+/* ---------------- 28-4 A Pear in a Sleeve ---------------- */
+STAGES.sleeve = async ({ ev, shot, run, pano }) => {
+  await run('sleeve', async () => {
+    await ev(ROOM_HELPERS);
+    await ev(() => { fresh(); play('28-4'); place(4, 11); sim(0.4); freeze(); }); await shot('40-28-4-start.png');
+    let r = await ev(() => {
+      thaw(); const sl = ents('OrchSleeve').sort((a, b) => a.x - b.x)[0]; walkTo(sl.cx, 6); const y0 = sl.y;
+      sim(1.0, { right: true }); const withSeam = sl.y; sim(3.0, { left: true }); const down = sl.y; walkTo(26 * 32, 6);
+      return { y0: y0 / 32, withSeam: withSeam / 32, down: down / 32, at: at() };
+    });
+    check('28-4: on the sleeve, walking with the seam does not lower it; walking against it unscrews it down to the lower ledge', r.withSeam <= r.y0 + 0.05 && r.down >= r.y0 + 5.9 && r.at.y === 17, r);
+    await ev(() => { const sl = ents('OrchSleeve').sort((a, b) => a.x - b.x)[0]; place(22, 11); sim(0.2); sim(1.0, { left: true }); freeze(); }); await shot('41-28-4-unscrewing.png');
+    // the late sleeve: past its tie the seam turns; the old way winds back up
+    r = await ev(() => {
+      thaw(); const sl = ents('OrchSleeve').find(s2 => s2.join != null && s2.y < (s2.join + 1) * 32); place(Math.floor(sl.cx / 32) - 3, sl.top); sim(0.2); walkTo(sl.cx, 6);
+      const hand = sl.hd(); const key = hand > 0 ? 'left' : 'right', other = hand > 0 ? 'right' : 'left';
+      sim(5, { [key]: true }); const stuck = sl.y / 32, flipped = sl.hd() !== hand; sim(4, { [other]: true }); const bottom = sl.y / 32;
+      return { join: sl.join, stuck, flipped, bottom, bot: sl.bot + 1 };
+    });
+    check('28-4: the late sleeve: past its rust tie the seam turns (the old way only winds it back to the tie); turning round takes it to the bottom', r.flipped && Math.abs(r.stuck - (r.join + 1)) < 0.6 && r.bottom >= r.bot - 0.05, r);
+    await ev(() => { sim(0.1); freeze(); }); await shot('42-28-4-late-sleeve.png');
+    // the lift past the high bank, up into the canopy niche
+    r = await ev(() => { thaw(); const sl = ents('OrchSleeve').find(s2 => s2.bot - s2.top > 15); place(Math.floor(sl.cx / 32) - 3, sl.bot); sim(0.2); walkTo(sl.cx, 6); sim(9, { right: true }); return { top: sl.y / 32, want: sl.top + 1 }; });
+    check('28-4: a sleeve wound WITH its seam rises past the high bank, up to the canopy niche', Math.abs(r.top - r.want) < 0.05, r);
+    await ev(() => { freeze(); }); await shot('43-28-4-canopy-niche.png');
+    await ev(() => { thaw(); play('28-4'); }); await pano('pano-28-4.png', 0.3);
+  });
+};
+
+/* ---------------- 28-5 The Graft Takes ---------------- */
+STAGES.graft = async ({ ev, shot, run, pano }) => {
+  await run('graft', async () => {
+    await ev(ROOM_HELPERS);
+    await ev(() => { fresh(); play('28-5'); place(8, 20); sim(0.4); freeze(); }); await shot('50-28-5-start.png');
+    let r = await ev(() => {
+      thaw(); const gf = ents('OrchGraft').sort((a, b) => a.x - b.x)[0]; walkTo(gf.cx, 4);
+      for (let k = 0; k < 600 && gf.lined(); k++) sim(1 / 120); press('action'); sim(0.2); const miss = !gf.done;
+      for (let k = 0; k < 900 && !gf.lined(); k++) sim(1 / 120); press('action'); sim(0.5);
+      return { miss, done: gf.done, tile: tile(gf.arch[3][0], gf.arch[3][1]) };
+    });
+    check('28-5: THROW while the notches are apart does nothing; when they meet the cuts grow into an arch', r.miss && r.done && r.tile !== 0, r);
+    await ev(() => { walkTo(29 * 32, 6); freeze(); }); await shot('51-28-5-arch.png');
+    r = await ev(() => {
+      thaw(); const gf = ents('OrchGraft').find(e => e.sag); place(gf.tx - 2, gf.fy - 1); sim(0.2); walkTo(gf.cx, 4);
+      for (let k = 0; k < 900 && !gf.lined(); k++) sim(1 / 120); const far = gf.far(); press('action'); sim(0.5); return { far: +far.toFixed(1), done: gf.done };
+    });
+    check('28-5: the last graft: Brady\'s weight sags the near cut, so they meet on the far cut\'s low swing', r.done && r.far > 8, r);
+    await ev(() => { sim(0.2); freeze(); }); await shot('52-28-5-last-graft.png');
+    await ev(() => { thaw(); place(5, 20); sim(0.3); freeze(); }); await shot('53-28-5-soft-hole.png');
+    await ev(() => { thaw(); play('28-5'); }); await pano('pano-28-5.png', 0.3);
+  });
+};
+
+/* ---------------- 28-6 the lawn: the pluck, the vote, the persuasion; the committee ---------------- */
+STAGES.lawn = async ({ ev, shot, run, pano }) => {
+  await run('lawn', async () => {
+    await ev(ROOM_HELPERS);
+    await ev(() => { fresh(); play('28-6'); place(4, 15); sim(0.4); freeze(); }); await shot('60-28-6-lawn.png');
+    let r = await ev(() => {
+      thaw(); const L = ents('OrchLoaded').sort((a, b) => a.x - b.x), B = ents('OrchBasket')[0];
+      walkTo(L[0].cx, 4); press('action'); sim(1.2); const v1 = B.votes;
+      walkTo(L[1].cx, 4); press('action'); sim(1.2);
+      walkTo(L[2].cx, 4); press('action'); sim(1.4); const wrong = B.votes;
+      walkTo((L[2].lx + 0.5) * 32, 4); press('action'); sim(0.6); walkTo(L[2].cx, 4); press('action'); sim(1.4);
+      sim(0.6); return { v1, wrong, votes: B.votes, open: tile(41, 15) === 0 };
+    });
+    check('28-6: plucked from underneath, a loaded branch flicks its pear into the basket; the leaning one first needs persuading; three votes open the hedge', r.v1 === 1 && r.wrong === 2 && r.votes === 3 && r.open, r);
+    await ev(() => freeze()); await shot('61-28-6-motion-carried.png');
+    // up through the gap in the boughs (the bitten pear under it) onto the run to the pip cellar
+    r = await ev(() => { thaw(); walkTo(50 * 32 + 16, 4); sim(0.4, { jump: true, jumpPressed: true }); sim(0.5); sim(0.45, { jump: true, jumpPressed: true }); sim(0.8); return at(); });
+    check('28-6: off the little branch and up through the gap in the boughs onto the run above', r.y === 9, r);
+    await ev(() => { walkTo(60 * 32, 6); freeze(); }); await shot('62-28-6-run-above.png');
+    r = await ev(() => { thaw(); walkTo(78 * 32 + 16, 6); sim(0.1, { up: true, upPressed: true }); for (let k = 0; k < 600 && (S().fade.a > 0.05 || P().state !== 'play'); k++) sim(1 / 120); walkTo(P().cx + 6 * 32, 8); sim(3); return { area: S().area.aid, boss: !!S().boss }; });
+    await ev(() => { thaw(); }).catch(() => {});
+    check('28-6: the shed door; the night orchard; the Windfall Committee wakes', r.area === 'orchard' && r.boss, r);
+    await ev(() => { sim(1.5); freeze(); }); await shot('63-28-6-boss-committee.png');
+    await ev(() => { thaw(); play('28-6'); }); await pano('pano-28-6.png', 0.3);
+  });
+};
+
+/* ---------------- the six rooms: found by their entrance, failed once, won, left ---------------- */
+const ROOMS = [
+  ['70-room-b11-borrowed-umbrella', '28-1', `place(84, 4); sim(0.2); press('up');`,
+    `walkTo(6.5 * 32, 6); sim(0.1); for (let k = 0; k < 240 && !room().fails; k++) sim(1 / 120, { right: true, action: true });`,
+    `walkTo(6.5 * 32, 6); const R = room(); const K = BRADY_TOUR.orchKit; for (let k = 0; k < 900 && !R.won; k++) { const p = P(); const sh = [[6, 8], [11, 12], [16, 17]].some(([a, b]) => p.cx + 12 >= a * 32 - 4 && p.cx - 2 <= (b + 1) * 32 + 4); const dr = (R.drops || []).some(d => d.swell > 0.6 && d.fall < 1 && Math.abs(p.cx + 30 - d.x) < 40); sim(1 / 120, { right: !(sh && dr && false), action: !sh }); }`],
+  ['71-room-b12-clean-cut', '28-2', `place(90, 8); sim(0.2); press('up');`,
+    `const m = ents('OrchRoomMark')[0]; walkTo(m.cx, 4); press('action');`,
+    `const m = ents('OrchRoomMark')[0], R = room(), K = kit(); walkTo(m.cx, 4); const sx = (K.data.snip + 0.5) * 32, Kd = BRADY_TOUR; for (let k = 0; k < 120 * 30 && !R.won; k++) { const J = window.joints(); const hit = J.some((x, i) => Math.abs(x - sx) < 6 && !(R.cut || []).includes(i)); if (hit) press('action'); else sim(1 / 120); }`],
+  ['72-room-b13-owls-shutter', '28-3', `place(89, 10); sim(0.2); for (let k = 0; k < 200 && Math.floor(P().cx / 32) < 94; k++) sim(1 / 120, { right: true }); press('up');`,
+    `const m = ents('OrchRoomMark')[0]; walkTo(m.cx, 4); for (let k = 0; k < 600 && window.owl() !== 'sleep'; k++) sim(1 / 120); press('action');`,
+    `const m = ents('OrchRoomMark')[0], R = room(); walkTo(m.cx, 4); for (let k = 0; k < 120 * 25 && !R.won; k++) { if (window.owl() === 'grin' && (R.c % 4.6) > 2.6) press('action'); else sim(1 / 120); }`],
+  ['73-room-b14-do-us-a-flavour', '28-4', `place(68, 7); sim(0.2); press('up');`,
+    `const m = ents('OrchRoomMark')[0]; walkTo(m.cx, 4); sim(0.4, { action: true }); sim(0.1);`,
+    `const m = ents('OrchRoomMark')[0], R = room(), Kd = window.sorbet; walkTo(m.cx, 4); for (let n = 0; n < 4 && !R.won; n++) { for (let k = 0; k < 900; k++) { sim(1 / 120, { action: true }); if (R.h > 0.6 && Math.abs(Kd()) < 0.08) break; } sim(0.2); }`],
+  ['74-room-b15-under-the-stamp', '28-5', `place(4, 20); sim(0.2); for (let k = 0; k < 300 && S().area.aid === 'nursery'; k++) sim(1 / 120, { left: true }); for (let k = 0; k < 600 && (S().fade.a > 0.05 || P().state !== 'play'); k++) sim(1 / 120);`,
+    `const m = ents('OrchRoomMark')[0], R = room(); walkTo(m.cx, 4); for (let k = 0; k < 400 && !(R.c % 2.4 > 1.6 && R.c % 2.4 < 1.7); k++) sim(1 / 120); press('action'); sim(4);`,
+    `const m = ents('OrchRoomMark')[0], R = room(); walkTo(m.cx, 4); const travel = (15.2 - 8) / 2.4, want = ((1.62 - travel) % 2.4 + 2.4) % 2.4; let c0 = R.c % 2.4; for (let k = 0; k < 120 * 20 && !R.won; k++) { const c = R.c % 2.4; if (c0 < want && c >= want) press('action'); else sim(1 / 120); c0 = c; }`],
+  ['75-room-one-loose-pip', '28-6', `place(70, 9); sim(0.2); press('up');`,
+    `const R = room(), sh = ents('OrchRoomMark').find(m => m.k === 's'); walkTo(sh.cx, 4); press('action'); sim(1.6); const w = ents('OrchRoomMark').find(m => m.k !== 's' && m.k !== R.loose); walkTo(w.cx, 4); press('action');`,
+    `const R = room(); for (let n = 0; n < 3 && !R.won; n++) { const sh = ents('OrchRoomMark').find(m => m.k === 's'); walkTo(sh.cx, 4); press('action'); sim(1.6); const m = ents('OrchRoomMark').find(e => e.k === R.loose); walkTo(m.cx, 4); press('action'); sim(0.3); }`]
+];
+STAGES.rooms = async ({ ev, shot, run }) => {
+  for (const [tag, id, enter, miss, win] of ROOMS) await run(tag, async () => {
+    await ev(ROOM_HELPERS);
+    await ev(() => {
+      window.joints = () => { const A = S().area; return window.BRADY_TOUR && A.roomKit ? TourRoomsJ(A) : []; };
+      window.TourRoomsJ = A => { const K = window.BRADY_TOUR.orchKit.Rooms.kinds.orchPeel; return K ? K.joints(A, A.roomState, A.roomKit) : []; };
+      window.owl = () => { const K = window.BRADY_TOUR.orchKit.Rooms.kinds.orchOwl; return K.phase(S().area.roomState).st; };
+      window.sorbet = () => window.BRADY_TOUR.orchKit.Rooms.kinds.orchSorbet.sway(S().area.roomState);
+    });
+    const r0 = await ev(([i, e]) => { fresh(); play(i); (new Function(e))(); for (let k = 0; k < 600 && (S().fade.a > 0.05 || P().state !== 'play'); k++) sim(1 / 120); sim(0.3); return { area: S().area.aid, kind: S().area.roomKit && S().area.roomKit.kind }; }, [id, enter]);
+    check(tag + ': entered by its hidden way in (' + id + ')', !!r0.kind && /^orch/.test(r0.kind), r0);
+    await ev(() => { P().invuln = 999; sim(0.4); freeze(); }); await shot(tag + '-title.png');
+    await ev(() => { thaw(); sim(1.6); freeze(); }); await shot(tag + '-entry.png');
+    let r = await ev(w => { thaw(); const R = room(); const f0 = R.fails || 0; (new Function(w))(); sim(0.5); return { fails: R.fails || 0, f0, won: R.won }; }, miss);
+    check(tag + ': a miss costs nothing: that turn starts again (no win)', r.fails >= r.f0 + 1 && !r.won, r);
+    r = await ev(w => { sim(1.5); (new Function(w))(); sim(1.2); return { won: room().won, cage: cageOpen() }; }, win);
+    check(tag + ': won with real inputs; the prize cage opens at the win', r.won && r.cage, r);
+    await ev(() => freeze()); await shot(tag + '-won.png'); await ev(() => thaw());
+    r = await ev(() => leave());
+    check(tag + ': its door lets Brady out into the level', r && r.area && !/^(shed|pantry|loft|parlour|office|cellar)$/.test(r.area), r);
+  });
+};
+
 const BOT_PAGE = () => {
   const B = window.BRADY;
   const T = window.BOT = { deaths: [], scene: null, cp: 0 };
@@ -199,6 +418,8 @@ const BOT_PAGE = () => {
   };
   T.cross = () => { const f0 = p().orchTr.face; if (!T.f({ jump: true, jumpPressed: true })) return false; T.wait(0.45); return p().orchTr && p().orchTr.face !== f0; };
   T.letGo = dir => T.hop(dir, false, 0.5);
+  T.ride = (dir, row) => { for (let k = 0; k < 120 * 10; k++) { const q = p(); if (Math.floor((q.y + q.h - 1) / 32) === row && q.onGround) return true; if (!T.f({ [dir]: true })) return false; } return 'stuck'; };
+  T.graft = () => { const gs = S().entities.filter(e => e.constructor.name === 'OrchGraft' && !e.done).sort((a, b) => Math.abs(a.cx - p().cx) - Math.abs(b.cx - p().cx)); const gf = gs[0]; if (!gf) return true; for (let k = 0; k < 120 * 10 && !gf.done; k++) { if (!T.f(gf.lined() && Math.abs(gf.far() - gf.near()) < 4 ? { action: true, actionPressed: true } : {})) return false; } return gf.done || 'stuck'; };
   T.push = dir => { for (let k = 0; k < 0.6 * 120; k++) if (!T.f({ right: dir > 0, left: dir < 0 })) return false; return true; };
   T.press = k => T.f({ [k]: true, [k + 'Pressed']: true });
   T.door = () => { if (!T.f({ up: true, upPressed: true })) return false; for (let k = 0; k < 600 && (S().fade.a > 0.05 || p().state !== 'play'); k++) sim(1 / 120); T.scene = S(); return true; };
@@ -229,10 +450,44 @@ const BOT_ROUTES = {
     ['walk', 59 * 32], ['grip', 1], ['climb', 62, 15], ['cross'], ['climb', 69, 15], ['cross'], ['climb', 73, 14], ['letGo', 1], 'cp',
     ['walk', 91 * 32], ['grip', 1], ['climb', 91, 12], ['climb', 105, 12], ['letGo', 1], 'cp', ['walk', 145 * 32 + 16], ['grip', 1], ['climb', 149, 14], ['cross'], ['climb', 155, 12], ['push', 1], ['climb', 163, 12], ['climb', 170, 17], ['letGo', 1], 'cp',
     ['walk', 188 * 32 + 16], ['grip', 1], ['climb', 191, 13], ['cross'], ['climb', 196, 11], ['push', 1], ['climb', 202, 11], ['climb', 203, 15], ['cross'], ['climb', 207, 15], ['climb', 207, 12], ['cross'], ['climb', 208, 13], ['push', 1], ['climb', 216, 13], ['climb', 222, 17], ['letGo', 1], 'cp', ['gate']],
+  '28-2': [['walk', 18 * 32 + 16, { noHop: true }], ['press', 'action'], ['wait', 2.6], ['hopTo', 22, 0.45], ['walk', 36 * 32], 'cp',
+    ['walk', 49 * 32 + 16, { noHop: true }], ['press', 'action'], ['wait', 2.4], ['hopTo', 54, 0.4], ['walk', 54 * 32 + 16, { noHop: true }], ['press', 'action'], ['wait', 2.4], ['hopTo', 59, 0.4], ['walk', 66 * 32], 'cp', ['walk', 92 * 32],
+    ['walk', 110 * 32 + 16, { noHop: true }], ['press', 'action'], ['wait', 2.4], ['hopTo', 114, 0.45], ['walk', 114 * 32 + 16, { noHop: true }], ['press', 'action'], ['wait', 2.4], ['hopTo', 117, 0.45], ['walk', 126 * 32], 'cp',
+    ['walk', 150 * 32], ['walk', 160 * 32 + 16, { noHop: true }], ['press', 'action'], ['wait', 3.6], ['walk', 169 * 32 + 16, { noHop: true }], ['hopTo', 171, 0.45], ['walk', 178 * 32], 'cp', ['gate']],
+  '28-3': [['walk', 15 * 32 + 16, { noHop: true }], ['press', 'action'], ['wait', 0.5], ['hopTo', 15, 0.45], ['press', 'action'], ['wait', 0.5], ['hopTo', 15, 0.45], ['walk', 30 * 32], 'cp',
+    ['walk', 59 * 32 + 16], ['press', 'action'], ['wait', 0.5], ['hopTo', 59, 0.45], ['press', 'action'], ['wait', 0.5], ['hopTo', 59, 0.45], ['press', 'action'], ['wait', 0.5], ['hopTo', 59, 0.45], ['walk', 70 * 32], 'cp',
+    ['walk', 112 * 32], 'cp', ['walk', 139 * 32 + 16], ['press', 'action'], ['wait', 0.5], ['hopTo', 139, 0.45], ['press', 'action'], ['wait', 0.5], ['hopTo', 139, 0.45], ['hopTo', 139, 0.45], ['press', 'action'], ['wait', 0.5], ['hopTo', 139, 0.45], ['walk', 148 * 32], 'cp', ['gate']],
+  '28-4': [['walk', 22 * 32 + 16, { noHop: true }], ['ride', 'left', 17], ['walk', 29 * 32], 'cp', ['walk', 47 * 32 + 16, { noHop: true }], ['ride', 'right', 24], ['walk', 53 * 32], 'cp',
+    ['walk', 71 * 32 + 16], ['ride', 'right', 14], ['walk', 77 * 32, { noHop: true }], 'cp', ['walk', 99 * 32], ['walk', 102 * 32 + 16, { noHop: true }], ['ride', 'left', 20], ['ride', 'right', 26], ['walk', 108 * 32], 'cp',
+    ['walk', 132 * 32 + 16, { noHop: true }], ['ride', 'right', 19], ['ride', 'left', 13], ['walk', 139 * 32, { noHop: true }], 'cp', ['walk', 166 * 32], ['walk', 170 * 32 + 16, { noHop: true }], ['ride', 'left', 18], ['ride', 'right', 24], ['walk', 176 * 32], 'cp', ['gate']],
+  '28-5': [['walk', 24 * 32 + 16, { noHop: true }], ['graft'], ['walk', 41 * 32], 'cp', ['walk', 70 * 32 + 16], ['graft'], ['walk', 85 * 32], 'cp', ['walk', 112 * 32 + 16], ['graft'], ['walk', 127 * 32], 'cp',
+    ['walk', 150 * 32 + 16], ['graft'], ['walk', 167 * 32], 'cp', ['gate']],
+  '28-6': [['walk', 14 * 32 + 16, { noHop: true }], ['press', 'action'], ['wait', 1.3], ['walk', 28 * 32 + 16, { noHop: true }], ['press', 'action'], ['wait', 1.3], ['walk', 37 * 32 + 16, { noHop: true }], ['press', 'action'], ['wait', 0.6],
+    ['walk', 34 * 32 + 16, { noHop: true }], ['press', 'action'], ['wait', 2], ['walk', 59 * 32], 'cp', ['walk', 78 * 32 + 16], ['door'], ['bossFight'], ['gate']],
 //ROUTES
 };
 const BOT_BOSS = () => {
-//BOSSBOT
+  const T = window.BOT, p = () => S().player;
+  // the committee, damage on: stand clear of a drop, wait on the other half from a blush, stand on the far side of a
+  // pointing stalk; pluck from underneath whenever a member sits on a branch
+  T.bossFight = () => {
+    const boss = () => S().entities.find(e => e.boss && !e.remove);
+    for (let k = 0; k < 120 * 6 && !(boss() && boss().perches); k++) if (!T.f({ right: p().cx < 6 * 32 })) return false;
+    for (let guard = 0; guard < 120 * 180; guard++) {
+      const b = boss(); if (!b || b.state === 'dying') return T.wait(3) && true;
+      if (!b.perches) { if (!T.f()) return false; continue; }
+      const q = p(), br = window.BRADY_TOUR.orchKit.committee, Pa = br.active(b), ph = b.phase || 1, mid = (b.arenaX0 + b.arenaX1) / 2;
+      let target = null, inp = {};
+      if (b.act === 'sit') target = Pa.perch.x;
+      else if (ph === 1 && b.act === 'tell' && Pa.perch) target = Pa.perch.x + (Pa.perch.x < mid ? 3 : -3) * 32;
+      else if (ph === 2 && (b.act === 'tell' || b.act === 'move')) target = Pa.side < 0 ? b.arenaX1 - 3 * 32 : b.arenaX0 + 4 * 32;
+      else if (ph === 3 && b.act !== 'sit') target = b.arenaX1 - 3 * 32;
+      if (b.act === 'sit' && Math.abs(q.cx - Pa.perch.x) < 10 && q.onGround) inp = { action: true, actionPressed: true };
+      else if (target != null && Math.abs(q.cx - target) > 8) inp = { right: q.cx < target, left: q.cx > target };
+      if (!T.f(inp)) return false;
+    }
+    return 'stuck';
+  };
 };
 
 /* ---------------- the secret rooms: shared moves ---------------- */
