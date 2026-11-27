@@ -432,7 +432,7 @@ const decorLights = { boneLamp: [80, '#ffd88a', -57] };
 // (it is moving house, not attacking: only its landing and its scurry can bump into him), and scurries to a new socket (it lives in the hollow bone it carries along on its back... sort of).
 const mouseArt = (ctx, e, x, y, m, t) => {
   ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, m === 'flat' ? 0.4 : 1); ctx.strokeStyle = INK; ctx.lineWidth = 1.7;
-  const home = m === 'idle' || m === 'notice', air = m === 'hop';
+  const home = m === 'hide' || m === 'idle' || m === 'notice', air = m === 'hop';
   if (home) {
     // the hollow bone socket it lives in, the mouse peeking out
     const tw = m === 'notice' ? Math.sin(t * 60) * 1.5 : 0;
@@ -520,7 +520,7 @@ const mouseThink = (e, dt) => {
   const p = e.g.player;
   e.st = (e.st || 0) + dt;
   if (!e.phase) e.phase = 'home';
-  if (e.phase === 'home') { e.vx = 0; e.mode = 'idle'; if (e.cool <= 0 && p && !p.dead && Math.abs(p.cx - e.cx) < 5 * TS && Math.abs(p.cy - e.cy) < 3 * TS) { e.phase = 'notice'; e.st = 0; e.dir = -(sign(p.cx - e.cx) || e.dir); TourKit.sfx('squeak', 'select', { vol: 0.35, pitch: 2.2 }); } }
+  if (e.phase === 'home') { e.vx = 0; e.mode = 'hide'; if (e.cool <= 0 && p && !p.dead && Math.abs(p.cx - e.cx) < 5 * TS && Math.abs(p.cy - e.cy) < 3 * TS) { e.phase = 'notice'; e.st = 0; e.dir = -(sign(p.cx - e.cx) || e.dir); TourKit.sfx('squeak', 'select', { vol: 0.35, pitch: 2.2 }); } }
   else if (e.phase === 'notice') { e.vx = 0; e.mode = 'notice'; if (e.st > 0.6) { e.phase = 'spring'; e.st = 0; e.vy = -10 * TS; e.vx = e.dir * 2.4 * TS; e.onGround = false; e.g.burst(e.cx, e.y + e.h, 4, BONE, 'dust'); } }
   else if (e.phase === 'spring') { e.mode = 'hop'; if (e.onGround && e.st > 0.15) { e.phase = 'scurry'; e.st = 0; e.vx = e.dir * e.speed; } }
   else { e.mode = 'walk'; if (!e.vx) e.vx = e.dir * e.speed; if (e.st > 2.6 && e.onGround) { e.phase = 'home'; e.st = 0; e.cool = 1.6; Tour.boneKit.pill(e.g, e.cx, e.y - 8, 'NEW HOUSE!', '#ffd88a'); } }

@@ -238,7 +238,7 @@ TourHats.NOT = new Set([].concat(
   'moonHand moonGolf moonGeyser moonGolfRain moonValve moonJunk moonMagPanel moonStarPad moonStarBridge moonCrescent moonGame'.split(' '),
   // The Spare Bone Quarry (world 37, hidden land A12): the dust brush (a brush), a dropped tail, the trackways, vertebrae,
   // rib rungs, clay presses, soft floors, chisels, limb sockets, the rooms' props, the fossil slab's way in
-  'boneBrush boneTail boneTrack boneVert boneRibs bonePress boneSoft boneChisel boneLimbGate boneRoomProp boneSlabGate'.split(' '),
+  'bonePill boneBrush boneTail boneTrack boneVert boneRibs bonePress boneSoft boneChisel boneLimbGate boneRoomProp boneSlabGate'.split(' '),
   // Morocco: tagines, teapots, oranges, storms, pots, mirages, gales, lanterns, slabs, lines, portcullises, hooks, chains, grilles, winds
   'maTagine maTeapot maOrange maStorm maPot maMirage maGale maKickPot maShopLantern maMirageSlab maPhaseLine maPortcullis maLidHook maChain maRoofGrille maDownWind'.split(' '),
   // Mexico: peppers, elotes, popcorn, the piñata burro, lava blobs, salsa, melon carts, swingers, cannons, rails, sunbeams, bubbles, the Casa's gates
