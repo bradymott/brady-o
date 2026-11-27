@@ -84,6 +84,14 @@ One stage at a time: write it, validate it, play it in the browser, LOOK at the 
 2. `tools/sbw_<cc>_shots.js <outdir> [--checks]` plays each stage's mechanic, each room (won once, failed once, each exit used), the entrance and the boss with real inputs, and saves 844x390 landscape screenshots of every stage, every room on entry, the entrance before and after, the boss, the map, plus 390x844 portrait of the first stage, the boss and the map, and a panorama of each stage. You have opened them and fixed what reads badly: game under the stick or buttons or top bar, overlapping text, enemies or Brady lost against the backdrop, two rooms that look alike.
 3. These pass with your build: `validate_levels` on your ids and the host level, `boss_test <cc>`, your shots `--checks`, `sbw_hats_test`, `sbw_hits_test`, `sbw_toolkit_test`, `save_test`, `apps_test`, `sbw_overworld_test`, `sbw_rooms_test` (your rooms), `sbw_soak_test --jobs 1 --levels <your ids and the host level>`, `gameplay_test <dir>`. Zero page errors. If one of these counts lands or levels and needs telling about a new bonus land, make the smallest additive edit and report it.
 
+## Learned from the first land reviewed (the organiser sends work back for these)
+- Rooms must not share one shell: each room has its own floor and wall material and its own arrangement of door, game, cage and prize, not only a different back wall.
+- Every floating line of text (boss lines, call-outs, hints) sits on a dark rounded pill, clear of the boss, Brady, the HUD, the stick and the buttons. Never pale text over the sky or over a character.
+- The boss arena has a real layered backdrop of the land, duller than the boss and Brady. Anything the player must touch is big and pulses.
+- Your shots tool has a `bot` mode (see `tools/sbw_moon_shots.js bot`) that plays each stage start to finish with enemies ON and invulnerability OFF, and the boss with damage on. Report deaths per stage; widen anything that kills the bot twice in one spot.
+- Give helper scripts in any shared folder your own land's name.
+- `tools/sbw_toolkit_test.js` (bonus land: up to 6 main levels) and `tools/sbw_boxes_shots.js` (land count `>= 22`) may need the same one-line edits the first builder made.
+
 ## Your report (your final message; it goes to the organising agent, not to Brady)
 - Per stage: id, name, arch, one line on how it plays and what makes it hard; its secret room (how found, the tell, the game, the prize, where the exit leads).
 - The boss: phases and how each is beaten.
