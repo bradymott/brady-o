@@ -308,6 +308,17 @@ const HELPERS = `(() => {
     if (!S().toggleBit(gi)) return { ok: false, why: 'no bridge' };
     return safeWalk(endTx, 6);
   };
+  // 32-2: wait for a fresh blink of eye group gi (so the whole shut time is ahead); climb the lashes at tile lx with
+  // real inputs: push UP to grip, keep pushing up to the top, step off toward dir
+  window.freshShut = gi => { const A = S().area, E = window.BRADY_PST.kit.blinkState; let q = 0; for (; q < 1500 && E(A, gi, A.pstBlinkT).shut; q++) sim(1 / 120); for (; q < 3000 && !E(A, gi, A.pstBlinkT).shut; q++) sim(1 / 120); return true; };
+  window.climb = (lx, gi, dir) => {
+    walkTo(lx - 1, 4); const p = P(); if (gi != null) freshShut(gi);
+    // step in toward the lashes with UP held: he grips as soon as he is over them (some hang over a pit)
+    let t = 0, gripped = false, top = null; while (t < 6 && (!gripped || p.pstGrip) && !p.dead) { const G = p.pstGrip, near = G && p.y + p.h - (G.topRung - 2) * 32 < 24, inn = !gripped && p.cx < lx * 32 + 20; if (G) top = G.topRung; window.__cl = { feet: +((p.y + p.h) / 32).toFixed(2), cx: +(p.cx / 32).toFixed(2), vx: Math.round(p.vx) }; sim(1 / 120, { up: true, upPressed: t === 0, right: (near || inn) && dir > 0, left: near && dir < 0 }); t += 1 / 120; if (p.pstGrip) gripped = true; }
+    if (!gripped) return { ok: false, why: 'no grip', at: tileOf() };
+    let ta = 0; window.__tr = []; while (ta < 1.5 && !(p.onGround && ta > 0.1) && !p.dead) { sim(1 / 120, { right: dir > 0, left: dir < 0 }); ta += 1 / 120; if (window.__tr.length < 12 && Math.round(ta * 120) % 4 === 0) window.__tr.push([Math.round(p.x), Math.round(p.y + p.h), Math.round(p.vx), Math.round(p.vy)]); }
+    sim(0.2); return { ok: !p.dead && p.onGround && tileOf()[1] <= (top || 99) - 1, at: tileOf(), top, t: +t.toFixed(2), last: window.__cl, after: { vx: Math.round(p.vx), cx: +(p.cx / 32).toFixed(2), rel: p.pstRel, w: p.w, h: p.h, tiles: [10, 11, 12, 13].map(r => S().area.tiles[r * S().area.W + Math.floor(p.cx / 32) + 1]), tr: window.__tr } };
+  };
   // 32-5: jump up into the picture bubble over tile tx (from standing under it, or from wherever he stands)
   window.picAt = (tx, gi, here) => { if (!here) walkTo(tx, 4); sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.5, { jump: true }); sim(0.8); return { ok: S().toggleBit(gi), at: tileOf() }; };
   window.yawnAt = (tx, side, maxT) => {
@@ -485,10 +496,19 @@ LEVELS.s2 = async (page, shot, run, pano) => {
       return { shutTiles, a, b, c, at: tileOf() };
     });
     check('32-2 played: across the shut lid, up the lash ladder while the eye is shut, onto the wall (P1 above)', r.shutTiles && r.a.ok && r.c.ok, r);
-    await page.evaluate(() => { play('32-2'); place(26, 20); const A = S().area, E = window.BRADY_PST.kit.blinkState; for (let q = 0; q < 1500 && !E(A, 0, A.pstBlinkT).shut; q++) sim(1 / 120); sim(0.6); freeze(); }); await shot('20-32-2-ladder-shut.png');
-    const o = await page.evaluate(() => { thaw(); const A = S().area, E = window.BRADY_PST.kit.blinkState; let warnLead = null; for (let q = 0; q < 1500 && E(A, 0, A.pstBlinkT).shut; q++) { if (warnLead == null && E(A, 0, A.pstBlinkT).warn) warnLead = S().t; sim(1 / 120); } const t1 = S().t; return { lead: warnLead == null ? null : +(t1 - warnLead).toFixed(2), gone: A.tiles[17 * A.W + 28] !== window.BRADY.T.SEMI }; });
+    // the climb: push UP on the meshed lashes to grip, the stick climbs, JUMP lets go; an opening eye drops him
+    const cl = await page.evaluate(() => { play('32-2'); place(25, 20); sim(0.2); const A = S().area, E = window.BRADY_PST.kit.blinkState, p = P(); walkTo(28, 3); freshShut(0);
+      sim(1 / 120, { up: true, upPressed: true }); const grip = !!p.pstGrip; const y0 = p.y; sim(0.5, { up: true }); const rose = +((y0 - p.y) / 32).toFixed(1);
+      sim(0.3); const holds = !!p.pstGrip; sim(1 / 120, { jump: true, jumpPressed: true }); const letGo = !p.pstGrip && p.vy < 0; sim(1.2);
+      freshShut(0); walkTo(28, 3); sim(0.5, { up: true }); let q = 0; for (; q < 900 && E(A, 0, A.pstBlinkT).shut; q++) sim(1 / 120, { up: q < 30 }); sim(1 / 120); const drop = !p.pstGrip;
+      return { grip, rose, holds, letGo, drop }; });
+    check('32-2: push UP on the meshed lashes: Brady grips and climbs; he holds on with the stick still; JUMP lets go; an eye that opens under him lets him drop', cl.grip && cl.rose > 1 && cl.holds && cl.letGo && cl.drop, cl);
+    await page.evaluate(() => { play('32-2'); place(25, 20); sim(0.2); walkTo(28, 3); freshShut(0); sim(1 / 120, { up: true, upPressed: true }); sim(0.45, { up: true }); sim(0.3); freeze(); }); await shot('20-32-2-ladder-shut.png');
+    await page.evaluate(() => { thaw(); const A = S().area, E = window.BRADY_PST.kit.blinkState; for (let q = 0; q < 1500 && !(E(A, 0, A.pstBlinkT).shut && E(A, 0, A.pstBlinkT).warn); q++) sim(1 / 120); sim(0.3); freeze(); }); await shot('24-32-2-eye-tremble.png');
+    await page.evaluate(() => { thaw(); play('32-2'); place(24, 20); sim(0.2); const A = S().area, E = window.BRADY_PST.kit.blinkState; for (let q = 0; q < 1500 && E(A, 0, A.pstBlinkT).shut; q++) sim(1 / 120); sim(0.6); freeze(); }); await shot('25-32-2-eye-open.png');
+    const o = await page.evaluate(() => { thaw(); const A = S().area, E = window.BRADY_PST.kit.blinkState; let warnLead = null; freshShut(0); for (let q = 0; q < 1500 && E(A, 0, A.pstBlinkT).shut; q++) { if (warnLead == null && E(A, 0, A.pstBlinkT).warn) warnLead = S().t; sim(1 / 120); } const t1 = S().t; return { lead: warnLead == null ? null : +(t1 - warnLead).toFixed(2), gone: A.tiles[17 * A.W + 28] !== window.BRADY.T.SEMI }; });
     check('32-2: the inner lashes tremble at least half a second before the eye opens, then let go', o.lead >= 0.5 && o.gone, o);
-    await page.evaluate(() => { play('32-2'); place(78, 20); const A = S().area, E = window.BRADY_PST.kit.blinkState; for (let q = 0; q < 1500 && E(A, 1, A.pstBlinkT).shut; q++) sim(1 / 120); sim(0.3); freeze(); }); await shot('21-32-2-lid-open.png');
+    await page.evaluate(() => { thaw(); play('32-2'); place(54, 20); const A = S().area, E = window.BRADY_PST.kit.blinkState; for (let q = 0; q < 1500 && E(A, 0, A.pstBlinkT).shut; q++) sim(1 / 120); for (let q = 0; q < 1500 && !E(A, 0, A.pstBlinkT).shut; q++) sim(1 / 120); for (let q = 0; q < 1500 && E(A, 0, A.pstBlinkT).shut; q++) sim(1 / 120); sim(0.6); freeze(); }); await shot('21-32-2-lid-open.png');
     await page.evaluate(() => { thaw(); play('32-2'); place(150, 8); sim(0.4); freeze(); }); await shot('22-32-2-last-blink.png');
     // the twist: down the outer lashes, across the last lid before it opens
     const t = await page.evaluate(() => { thaw(); play('32-2'); place(150, 8); sim(0.3); const A = S().area, E = window.BRADY_PST.kit.blinkState;
@@ -637,6 +657,12 @@ LEVELS.bot = async (page) => {
     [96, "lift({ walk: 0, air: 1, airAt: 0, to: [101, 14], tol: 1 })"], [100, "lift({ walk: 0, air: 1, airAt: 0, to: [106, 9], tol: 3 })"],
     [106, "AP.route([[113, 19], [119, 19], [127, 19], [140, 19]])"], [140, "AP.route([[158, 19], [164, 19]])"], [163, "lift({ walk: 1, walkT: 1.6, air: 1, airAt: 0, to: [175, 13], tol: 4 })"],
     [175, "AP.route([[186, 19], [198, 19]])"], [197, "lift({ walk: 1, walkT: 1.6, air: 1, airAt: 0, to: [210, 13], tol: 3 })"], [210, "AP.route([[215, 13], [228, 19]])"], [224, "safeWalk(240)"]]);
+  await botRun(page, '32-2', [
+    [3, "safeWalk(12)"], [12, "freshShut(0), AP.route([[22, 21]])"], [22, "climb(28, 0, 1)"], [30, "AP.route([[42, 21]])"], [41, "safeWalk(57)"],
+    [57, "freshShut(0), AP.route([[67, 21]])"], [66, "freshShut(1), AP.route([[78, 21]])"], [77, "climb(84, 1, 1)"], [86, "safeWalk(96)"],
+    [96, "freshShut(0), AP.route([[106, 9]])"], [105, "safeWalk(112)"], [112, "AP.route([[115, 21]])"], [114, "safeWalk(136)"],
+    [136, "climb(138, 0, 1)"], [140, "safeWalk(151)"], [151, "AP.route([[153, 11], [154, 13], [153, 15], [154, 17]])"],
+    [154, "freshShut(1), AP.route([[157, 19], [166, 19]])"], [165, "safeWalk(198)"]]);
   await botRun(page, '32-3', [
     [3, "safeWalk(18)"], [18, "yawnAt(18, 1)"], [18, "AP.route([[23, 16], [27, 13], [35, 19]])"], [34, "safeWalk(68)"], [68, "yawnAt(68, 1)"],
     [68, "AP.route([[74, 19], [84, 19]])"], [84, "safeWalk(92)"], [92, "yawnAt(92, 1)"], [92, "AP.route([[95, 15], [98, 12]])"], [98, "safeWalk(104)"],

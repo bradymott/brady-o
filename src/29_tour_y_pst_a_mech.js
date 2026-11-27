@@ -147,60 +147,148 @@ class PstLashes extends Ent {
   constructor(g, s) { super(g, s, 2 * TS, 4); this.friendly = true; this.back = true; const o = s; this.x = o.x - TS / 2; this.gi = o.g || 0; this.rungs = o.rungs || []; this.y = Math.min(...this.rungs.map(r => r[0])) * TS - 40; this.h = (Math.max(...this.rungs.map(r => r[0])) + 2) * TS - this.y; }
   update(dt) { this.t += dt; }
   touchPlayer() {}
+  get hasIn() { return this.rungs.some(r => r[1] === 'in'); }
+  get topRung() { return Math.min(...this.rungs.map(r => r[0])); }
+  get botRung() { return Math.max(...this.rungs.map(r => r[0])); }
+  // grippable: an eye's meshed lashes only while it is shut; an outer-lash ladder always
+  grippable() { return !this.hasIn || blinkState(this.g.area, this.gi, this.g.area.pstBlinkT || 0).shut; }
+  // how open the eye is, 0 (shut) .. 1 (wide): the lids slide shut over half a second, slide open over 0.35 s,
+  // and in the tremble before opening they part a crack and shiver
+  openness(s) {
+    const A = this.g.area, c = (A.pstBlinkDef && A.pstBlinkDef[this.gi]) || BLINK[this.gi] || BLINK[0];
+    if (s.shut) return s.warn ? 0.07 + 0.05 * Math.sin(this.t * 40) : 1 - s.k;
+    return clamp((s.q - c.shut) / 0.35, 0, 1);
+  }
   draw(ctx) {
-    const A = this.g.area, s = blinkState(A, this.gi, A.pstBlinkT || 0), x = this.x;
-    ctx.save(); ctx.lineCap = 'round';
-    // the eye the ladder belongs to: its two lid edges run up either side; open, they part over a sleepy honey
-    // iris; shut, they meet and the lashes cross into rungs
-    const ys = this.rungs.map(r => r[0] * TS), top = Math.min(...ys) - 20, bot = Math.max(...ys) + 26, cxm = x + TS, cym = (top + bot) / 2;
-    const hasIn = this.rungs.some(r => r[1] === 'in'), o = hasIn && !s.shut ? 1 : 0, tr0 = s.warn && hasIn ? Math.sin(this.t * 50) * 2 : 0;
-    if (o) { ctx.fillStyle = '#1a0a14'; ctx.beginPath(); ctx.ellipse(cxm, cym, TS * 1.1, (bot - top) / 2, 0, 0, TAU); ctx.fill(); ctx.fillStyle = HONEY; ctx.beginPath(); ctx.arc(cxm, cym + Math.sin(this.t * 0.7) * 10, 16, 0, TAU); ctx.fill(); ctx.fillStyle = '#1a0a14'; ctx.beginPath(); ctx.arc(cxm, cym + Math.sin(this.t * 0.7) * 10, 7, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.arc(cxm - 5, cym - 6 + Math.sin(this.t * 0.7) * 10, 3, 0, TAU); ctx.fill(); }
-    for (const sd of [-1, 1]) {
-      const ex = cxm + sd * (TS * 0.95 + o * 12) + tr0 * sd;
-      ctx.strokeStyle = INK; ctx.lineWidth = 15; ctx.beginPath(); ctx.moveTo(cxm, top - 10); ctx.quadraticCurveTo(ex + sd * 8, cym, cxm, bot + 10); ctx.stroke();
-      ctx.strokeStyle = PLUM; ctx.lineWidth = 11; ctx.stroke(); ctx.strokeStyle = PLUM_HI; ctx.lineWidth = 3; ctx.stroke();
-    }
-    for (const r of this.rungs) {
-      const y = r[0] * TS + 4, inner = r[1] === 'in', present = !inner || s.shut;
-      const trem = s.warn ? Math.sin(this.t * 60) * 2 : 0;
-      if (inner && !present) {
-        // the lashes drawn apart: two short stubs on each side
-        ctx.strokeStyle = INK; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(x - 4, y - 8); ctx.lineTo(x + 6, y); ctx.moveTo(x + 2 * TS + 4, y - 8); ctx.lineTo(x + 2 * TS - 6, y); ctx.stroke();
-        ctx.strokeStyle = PLUM_LO; ctx.lineWidth = 3.4; ctx.stroke();
-        continue;
+    const A = this.g.area, s = blinkState(A, this.gi, A.pstBlinkT || 0), x = this.x, t = this.t;
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    const ys = this.rungs.map(r => r[0] * TS), top = Math.min(...ys) - 26, bot = Math.max(...ys) + 30, cxm = x + TS, cym = (top + bot) / 2, H = bot - top;
+    if (this.hasIn) {
+      // Pupo's enormous sleepy eye, standing on its side: two plum lids meet down the middle; open, they slide
+      // apart over a cream eye with a honey iris and a big dark pupil; shut, their two combs of lashes mesh into rungs
+      const o = this.openness(s), W = TS * 1.55, sh = s.shut && s.warn ? Math.sin(t * 55) * 3 : 0;
+      const almond = (w) => { ctx.beginPath(); ctx.moveTo(cxm, top); ctx.quadraticCurveTo(cxm + 2 * w, cym, cxm, bot); ctx.quadraticCurveTo(cxm - 2 * w, cym, cxm, top); ctx.closePath(); };
+      // the socket's soft shadow and the eye white
+      ctx.fillStyle = 'rgba(42,12,40,0.35)'; almond(W + 12); ctx.fill();
+      ctx.fillStyle = '#fff6ea'; almond(W); ctx.fill();
+      // iris and pupil, drifting sleepily (only what the lids uncover shows: the lids are drawn over it)
+      const iy = cym + Math.sin(t * 0.6) * H * 0.12, ix = cxm + Math.sin(t * 0.37) * 6;
+      ctx.save(); almond(W); ctx.clip();
+      ctx.fillStyle = HONEY; ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(ix, iy, TS * 0.95, 0, TAU); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = HONEY_LO; ctx.beginPath(); ctx.arc(ix, iy, TS * 0.62, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#1a0a14'; ctx.beginPath(); ctx.arc(ix, iy, TS * 0.42, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(ix - 9, iy - 10, 6, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(ix + 8, iy + 8, 2.5, 0, TAU); ctx.fill();
+      ctx.restore();
+      ctx.strokeStyle = INK; ctx.lineWidth = 3.5; almond(W); ctx.stroke();
+      // the two lids: from the eye's outer rim to their sliding edge (open: out at the rim; shut: the middle)
+      for (const sd of [-1, 1]) {
+        const e = W * o, jig = sh * sd;
+        ctx.beginPath(); ctx.moveTo(cxm, top - 4); ctx.quadraticCurveTo(cxm + sd * 2 * (W + 14), cym, cxm, bot + 4); ctx.quadraticCurveTo(cxm + sd * 2 * e + jig, cym, cxm, top - 4); ctx.closePath();
+        ctx.fillStyle = PLUM; ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.stroke();
+        // a crease and a sheen along the lid
+        ctx.strokeStyle = PLUM_HI; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(cxm, top + 8); ctx.quadraticCurveTo(cxm + sd * (2 * (W + 6) + 2 * e) / 2, cym, cxm, bot - 8); ctx.stroke();
       }
-      // two lashes from each side crossing in the middle: the rung
-      const reach = inner ? 1 : 0.85;
+      // the lashes: a comb on each lid edge at every inner rung, three long curved lashes each; shut they reach
+      // across and mesh with the other comb (the rung); open they curl back along the lid
+      const edgeX = (sd, y) => { const u = (y - top) / H, w = 2 * W * o * 2 * u * (1 - u); return cxm + sd * w + sd * sh; };
+      for (const r of this.rungs) {
+        if (r[1] !== 'in') continue;
+        const y0 = r[0] * TS + 5;
+        for (const sd of [-1, 1]) for (let q = 0; q < 3; q++) {
+          const y = y0 - 7 + q * 6 + (sd > 0 ? 3 : 0), ex = edgeX(sd, y), reach = (1 - o) * (TS * 1.15) + o * 12;
+          const tx = ex - sd * reach, curl = o * 16 + (s.shut && s.warn ? Math.sin(t * 60 + q) * 3 : 0);
+          ctx.strokeStyle = INK; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(ex, y); ctx.quadraticCurveTo((ex + tx) / 2, y - 7 - curl * 0.4, tx, y - 2 - curl); ctx.stroke();
+          ctx.strokeStyle = '#c86a9a'; ctx.lineWidth = 3; ctx.stroke();
+        }
+      }
+      // the tremble before it opens: little shivers off the lid seam and a sliver of honey light
+      if (s.shut && s.warn) { ctx.strokeStyle = 'rgba(255,214,115,0.9)'; ctx.lineWidth = 2.5; for (const sd of [-1, 1]) for (let q = 0; q < 3; q++) { const yy = top + H * (0.25 + q * 0.25); ctx.beginPath(); ctx.moveTo(cxm + sd * (W + 18), yy); ctx.lineTo(cxm + sd * (W + 28 + Math.sin(t * 50) * 3), yy - 6); ctx.stroke(); } }
+    }
+    // the short dark outer lashes: they never move (always a rung)
+    for (const r of this.rungs) {
+      if (r[1] !== 'out') continue;
+      const y = r[0] * TS + 4;
       ctx.strokeStyle = INK; ctx.lineWidth = 9;
-      ctx.beginPath(); ctx.moveTo(x - 6, y - 10 + trem); ctx.quadraticCurveTo(x + TS * reach, y - 2, x + 2 * TS * reach + 2, y + 2 + trem); ctx.moveTo(x + 2 * TS + 6, y - 10 - trem); ctx.quadraticCurveTo(x + 2 * TS - TS * reach, y - 2, x + 2 * TS - 2 * TS * reach - 2, y + 2 - trem); ctx.stroke();
-      ctx.strokeStyle = inner ? '#c86a9a' : PLUM_LO; ctx.lineWidth = 5.5; ctx.stroke(); ctx.strokeStyle = inner ? HONEY_HI : CREAM_LO; ctx.lineWidth = 1.5; ctx.stroke();
-      if (s.warn && inner) { ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.arc(x + TS, y - 6, 2, 0, TAU); ctx.fill(); }
+      ctx.beginPath(); ctx.moveTo(x - 6, y - 10); ctx.quadraticCurveTo(x + TS * 0.85, y - 2, x + 2 * TS * 0.85 + 2, y + 2); ctx.moveTo(x + 2 * TS + 6, y - 10); ctx.quadraticCurveTo(x + 2 * TS - TS * 0.85, y - 2, x + 2 * TS - 2 * TS * 0.85 - 2, y + 2); ctx.stroke();
+      ctx.strokeStyle = PLUM_LO; ctx.lineWidth = 5.5; ctx.stroke(); ctx.strokeStyle = CREAM_LO; ctx.lineWidth = 1.5; ctx.stroke();
     }
     ctx.restore();
   }
 }
 ENTITY_TYPES.pstLashes = PstLashes;
+// climbing the lashes (the game only): push UP inside a ladder to grip; the stick steers up and down (and a little
+// sideways); JUMP lets go with a full jump; at the top he steps off with a little hop. An eye that opens under him
+// lets him drop (the tremble warns first); a hit makes him let go. The rungs stay one-way floors for the checker,
+// and every rung the checker stands on is one he can climb to and jump from.
+const LCLIMB = 4.2 * TS;
+const lashAt = (g, p) => g.entities.find(e => e instanceof PstLashes && !e.remove && p.cx >= e.x + 2 && p.cx <= e.x + 2 * TS - 2 && p.y + p.h <= (e.botRung + 2) * TS + 4 && p.y + p.h >= (e.topRung - 2) * TS - 2);
+{
+  const pu = Player.prototype.update;
+  Player.prototype.update = function (dt, inp) {
+    const g = this.g, A = g && g.area;
+    if (!(A && A.pstBlink) || this.state !== 'play' || this.dead || !inp) { if (this.pstGrip) this.pstGrip = null; return pu.call(this, dt, inp); }
+    if (this.pstLetGo > 0) this.pstLetGo -= dt;
+    if (!this.pstGrip && inp.up && !(this.pstLetGo > 0)) { const L = lashAt(g, this); if (L && L.grippable()) { this.pstGrip = L; this.vx = 0; this.vy = 0; this.jumping = false; TourKit.sfx('grip', 'select', { vol: 0.3, pitch: 1.8 }); } }
+    if (!this.pstGrip) return pu.call(this, dt, inp);
+    const L = this.pstGrip;
+    const letGo = (vy, t) => { this.pstGrip = null; this.pstLetGo = t || 0.3; if (vy != null) { this.vy = vy; this.jumping = vy < 0; } this.onGround = false; };
+    if (L.remove || !L.grippable()) { letGo(0, 0.4); this.pstRel = 'open'; return pu.call(this, dt, inp); }
+    if (inp.jumpPressed) { letGo(-PHYS.jumpV, 0.25); Sound.play('jump', { vol: 0.5 }); return pu.call(this, dt, Object.assign({}, inp, { jumpPressed: false })); }
+    this.inp = inp;
+    if (this.invuln > 0) this.invuln -= dt;
+    const dx = (inp.right ? 1 : 0) - (inp.left ? 1 : 0), dy = (inp.down ? 1 : 0) - (inp.up ? 1 : 0);
+    if (dx) this.facing = dx;
+    this.vx = dx * LCLIMB * 0.6; this.vy = dy * LCLIMB;
+    moveBody(this, A, dt, { semis: false });
+    this.onGround = false;
+    const feet = this.y + this.h, topY = (L.topRung - 2) * TS;
+    if (feet <= topY + 1) { this.y = topY - this.h - 6; letGo(-8 * TS, 0.35); this.jumping = false; this.vx = dx * 5 * TS; this.pstRel = 'top'; }
+    else if (this.cx < L.x - 2 || this.cx > L.x + 2 * TS + 2) { letGo(0, 0.3); this.pstRel = 'side'; }
+    else if (dy > 0 && SOLID[tileAt(A, Math.floor(this.cx / TS), Math.floor((feet + 2) / TS))]) { letGo(0, 0.3); this.pstRel = 'floor'; }
+    this.anim.t += dt; this.anim.state = 'hang'; this.updateHair(dt);
+  };
+  const hu0 = Player.prototype.hurt;
+  Player.prototype.hurt = function () { const inv0 = this.invuln || 0, r = hu0.apply(this, arguments); if (this.pstGrip && inv0 <= 0 && (this.invuln > 0 || this.dead)) { this.pstGrip = null; this.pstLetGo = 0.6; } return r; };
+}
 // a lid bridge: an eyelid lying across a gap; shut it is one smooth walkway (one-way), open it parts in the middle
 class PstLid extends Ent {
-  constructor(g, s) { super(g, s, (s.n || 6) * TS, 12); this.x = s.x - TS / 2; this.y = s.y - 6; this.n = s.n || 6; this.gi = s.g || 0; this.friendly = true; this.open0 = s.open || 0; }
+  constructor(g, s) { super(g, s, (s.n || 6) * TS, 12); this.x = s.x - TS / 2; this.y = s.y - 6; this.n = s.n || 6; this.gi = s.g || 0; this.friendly = true; this.back = true; this.open0 = s.open || 0; }
   update(dt) { this.t += dt; }
   touchPlayer() {}
   draw(ctx) {
-    const A = this.g.area, s = blinkState(A, this.gi, A.pstBlinkT || 0), w = this.n * TS, x = this.x, y = this.y + 6;
-    const part = s.shut ? 0 : 1, trem = s.warn ? Math.sin(this.t * 55) * 1.5 : 0;
-    ctx.save(); ctx.lineCap = 'round';
-    // the open eye between the lids (a sleepy honey iris looks up) when the lids part
-    if (part) { ctx.fillStyle = '#fff8ec'; ctx.beginPath(); ctx.ellipse(x + w / 2, y + 10, w * 0.38, 16, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = HONEY_LO; ctx.beginPath(); ctx.arc(x + w / 2, y + 12, 11, 0, TAU); ctx.fill(); ctx.fillStyle = '#1a0e14'; ctx.beginPath(); ctx.arc(x + w / 2, y + 12, 5, 0, TAU); ctx.fill(); }
-    // the two lid halves (shut: they meet in the middle)
-    const gap = part ? w * 0.3 : 0;
-    for (const sd of [-1, 1]) {
-      const xa = sd < 0 ? x : x + w / 2 + gap / 2, xb = sd < 0 ? x + w / 2 - gap / 2 : x + w;
-      ctx.fillStyle = PLUM; ctx.strokeStyle = INK; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(xa, y + trem); ctx.lineTo(xb, y - trem); ctx.lineTo(xb, y + 9); ctx.quadraticCurveTo((xa + xb) / 2, y + 16, xa, y + 9); ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = PLUM_HI; ctx.fillRect(xa + 3, y + 2, xb - xa - 6, 3);
-      // lashes along the lid's edge
-      ctx.strokeStyle = INK; ctx.lineWidth = 3.5; for (let lx = xa + 8; lx < xb - 4; lx += 14) { ctx.beginPath(); ctx.moveTo(lx, y + 12); ctx.lineTo(lx + 3 * sd, y + 22); ctx.stroke(); }
+    // an eye lying on its back across the gap: shut, its two plum lids meet in the middle (the walkway, lashes
+    // hanging under it); open, they slide back to the ends over a big cream eye with a honey iris looking up
+    const A = this.g.area, s = blinkState(A, this.gi, A.pstBlinkT || 0), w = this.n * TS, x = this.x, y = this.y + 6, t = this.t;
+    const o = PstLashes.prototype.openness.call(this, s), sh = s.shut && s.warn ? Math.sin(t * 55) * 2 : 0, cx = x + w / 2, R = TS * 1.15;
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    const almond = () => { ctx.beginPath(); ctx.moveTo(x + 4, y + 6); ctx.quadraticCurveTo(cx, y + 6 - 2 * R * 0.55, x + w - 4, y + 6); ctx.quadraticCurveTo(cx, y + 6 + 2 * R, x + 4, y + 6); ctx.closePath(); };
+    if (o > 0.02 || s.warn) {
+      ctx.fillStyle = 'rgba(42,12,40,0.4)'; ctx.save(); ctx.translate(0, 4); almond(); ctx.fill(); ctx.restore();
+      ctx.fillStyle = '#fff6ea'; almond(); ctx.fill();
+      ctx.save(); almond(); ctx.clip();
+      const ix = cx + Math.sin(t * 0.5) * w * 0.2, iy = y + 10;
+      ctx.fillStyle = HONEY; ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(ix, iy, R * 0.8, 0, TAU); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = HONEY_LO; ctx.beginPath(); ctx.arc(ix, iy, R * 0.52, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#1a0a14'; ctx.beginPath(); ctx.arc(ix, iy, R * 0.36, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(ix - 8, iy - 8, 5, 0, TAU); ctx.fill();
+      ctx.restore();
+      ctx.strokeStyle = INK; ctx.lineWidth = 3; almond(); ctx.stroke();
     }
+    // the two lids slide from the ends to the middle
+    const half = w / 2 * (1 - o * 0.85);
+    for (const sd of [-1, 1]) {
+      const xa = sd < 0 ? x - 4 : x + w - half, xb = sd < 0 ? x + half : x + w + 4, j = sh * sd;
+      ctx.fillStyle = PLUM; ctx.strokeStyle = INK; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(xa + j, y - 2); ctx.lineTo(xb + j, y - 2); ctx.quadraticCurveTo(xb + j + 6 * -sd, y + 8, xb + j, y + 14); ctx.quadraticCurveTo((xa + xb) / 2 + j, y + 20, xa + j, y + 14); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = PLUM_HI; ctx.fillRect(Math.min(xa, xb) + 4 + j, y + 1, Math.abs(xb - xa) - 8, 3);
+      // curved lashes along the lid's lower edge, the longest at its leading edge (where the two lids meet)
+      for (let lx = xa + 10; lx < xb - 4; lx += 13) {
+        const lead = sd < 0 ? (lx - xa) / Math.max(1, xb - xa) : (xb - lx) / Math.max(1, xb - xa), L = 8 + 10 * lead;
+        ctx.strokeStyle = INK; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(lx + j, y + 15); ctx.quadraticCurveTo(lx + j + 2 * sd, y + 15 + L * 0.7, lx + j - 5 * sd, y + 15 + L); ctx.stroke();
+        ctx.strokeStyle = '#c86a9a'; ctx.lineWidth = 2; ctx.stroke();
+      }
+    }
+    if (s.shut && s.warn) { ctx.strokeStyle = 'rgba(255,214,115,0.95)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(cx, y - 4); ctx.lineTo(cx, y + 16); ctx.stroke(); for (const sd of [-1, 1]) { ctx.beginPath(); ctx.moveTo(cx + sd * 8, y - 8); ctx.lineTo(cx + sd * 16, y - 16 - Math.sin(t * 50) * 3); ctx.stroke(); } }
     ctx.restore();
   }
 }
