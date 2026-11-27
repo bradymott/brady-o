@@ -296,7 +296,7 @@ const BOT_PAGE = () => {
   // one frame of input; returns false when Brady has died (then waits for the respawn)
   T.f = inp => {
     sim(1 / 120, inp || {}); T.n = (T.n || 0) + 1;
-    if (T.n % 360 === 0 && T.trace) { const q = p(); T.trace.push([T.step, Math.floor(q.cx / 32), Math.floor((q.y + q.h) / 32), S().area.aid, S().state, q.state, Math.round(S().timeLeft || 0)]); }
+    if (T.n % (T.traceEvery || 360) === 0 && T.trace) { const q = p(); T.trace.push([T.step, Math.floor(q.cx / 32), Math.floor((q.y + q.h) / 32), S().area.aid, S().state, q.state, Math.round(S().timeLeft || 0), q.ride ? q.ride.constructor.name.slice(4, 8) : '-', Math.round(q.power), T.deaths.length]); }
     if (!T.died()) return true;
     const q = p(), why = window.__lastDie || {}; window.__lastDie = null; T.deaths.push({ id: T.id, step: T.step, x: why.x != null ? why.x : Math.floor(q.cx / 32), y: why.y != null ? why.y : Math.floor((q.y + q.h) / 32), reason: why.reason || S().state, near: why.near || [] });
     for (let k = 0; k < 120 * 8 && !(S() !== T.scene && S().state === 'play' && S().player && !S().player.dead); k++) sim(1 / 120);
@@ -334,7 +334,7 @@ const BOT_PAGE = () => {
   T.finished = () => ['clear', 'tally', 'results'].includes(S().state);
   // a route: a list of steps [fn, ...args] and 'cp' markers; on a death the route goes back to the last 'cp'
   T.run = (id, route) => {
-    fresh(); T.id = id; T.trace = []; const [w, i] = id.split('-').map(Number); B.Save.data.lives = 9;
+    fresh(); T.id = id; T.trace = []; T.traceEvery = window.__trEvery || 360; const [w, i] = id.split('-').map(Number); B.Save.data.lives = 9;
     const g = new B.Play(B.getLevel(w, i), {}); B.Game.setScene(g); sim(1.6); T.scene = S(); p().invuln = 0;
     let k = 0, tries = 0, fails = []; const cps = [[0, -1e9]];
     // after a death: back to the last route marker Brady passed at or before where he now stands (his respawn)
@@ -349,7 +349,7 @@ const BOT_PAGE = () => {
       k++;
     }
     for (let n = 0; n < 120 * 6 && !T.finished(); n++) sim(1 / 120);
-    return { id, finished: T.finished(), deaths: T.deaths.filter(d => d.id === id), fails, trace: T.trace.slice(0, 60) };
+    return { id, finished: T.finished(), deaths: T.deaths.filter(d => d.id === id), fails, trace: T.trace.filter(t => t[9] >= 1).slice(0, 70) };
   };
 };
 
@@ -364,11 +364,12 @@ const BOT_SALT = () => {
 
   T.toPx = X => { if (T.walk(X, { tol: 24 }) === false) return false; for (let n = 0; n < 3; n++) { for (let k = 0; k < 240 && Math.abs(p().cx - X) > 3; k++) if (!T.f({ right: p().cx < X - 2, left: p().cx > X + 2 })) return false; if (!T.wait(0.2)) return false; } return true; };
   // onto the spoon at column x (by walking: the landing tips a dose); a second hop for a basin that needs two
-  T.spoon = (x, id) => { if (T.to(x - 2) === false) return false; if (!T.hopTo(x + 0.5, 0.3)) return false; const B = ent('SaltBasin', id); for (let k = 0; k < 6 && B.dose < B.need; k++) { if (!T.wait(0.8)) return false; if (B.dose < B.need) { if (!T.hop(0, false, 0.3)) return false; } } return T.wait(0.2); };
+  T.spoon = (x, id) => { const B = ent('SaltBasin', id); for (let n = 0; n < 8 && B.dose < B.need; n++) { const sp = S().entities.find(e => e.constructor.name === 'SaltSpoon' && e.basin === id); if (p().ride !== sp && T.to(x) === false) return false; if (!T.hop(0, false, 0.3)) return false; if (!T.wait(0.8)) return false; } return T.wait(0.2); };
   // step right onto the cork, ride it to the far side, step off
-  T.ride = id => { const B = ent('SaltBasin', id); for (let k = 0; k < 120 * 3 && !B.cork.afloat(); k++) if (!T.f()) return false; for (let k = 0; k < 120 * 2 && p().ride !== B.cork; k++) if (!T.f({ right: true })) return false; for (let k = 0; k < 120 * 8 && Math.abs(B.cork.x - B.cork.far) > 4; k++) if (!T.f()) return false; for (let k = 0; k < 120 * 2 && p().cx < (B.x1 + 2) * 32; k++) if (!T.f({ right: true })) return false; return true; };
+  T.ride = id => { const B = ent('SaltBasin', id); for (let k = 0; k < 120 * 3 && !(B.cork.afloat() && Math.abs(B.cork.ry - B.sy * 32) < 3); k++) if (!T.f()) return false; for (let k = 0; k < 120 * 2 && p().ride !== B.cork; k++) if (!T.f({ right: true })) return false; for (let k = 0; k < 120 * 8 && Math.abs(B.cork.x - B.cork.far) > 4; k++) if (!T.f()) return false; return T.walk((B.x1 + 3) * 32 + 16); };
   // stand on the crystal at column x and hold THROW until it has grown all its cubes
-  T.grow = (x, id) => { const c = ent('SaltCrystal', id); if (!c.saltTouch(p())) { if (!T.hopTo(x, 0.3)) return false; if (!T.wait(0.2)) return false; } for (let k = 0; k < 120 * 10 && c.n < c.plan.length; k++) if (!T.f({ action: true })) return false; return T.wait(0.2); };
+  T.hopOn = x => { const X = x * 32 + 16; if (T.to(x - 1) === false) return false; if (!T.f({ jump: true, jumpPressed: true })) return false; for (let k = 0; k < 30; k++) if (!T.f({ jump: true })) return false; for (let k = 0; k < 180 && !(k > 4 && p().onGround); k++) if (!T.f({ jump: k < 20, right: p().cx < X - 5, left: p().cx > X + 5 })) return false; return T.wait(0.2); };
+  T.grow = (x, id) => { const c = ent('SaltCrystal', id); for (let n = 0; n < 3 && !c.saltTouch(p()); n++) if (T.hopOn(x) === false) return false; if (!c.saltTouch(p())) return 'stuck'; for (let k = 0; k < 120 * 10 && c.n < c.plan.length; k++) if (!T.f({ action: true })) return false; return T.wait(0.2); };
   // stand at pixel X on a cap's disc until its gate's key is in
   T.plug = (X, lock) => { if (T.toPx(X) === false) return false; for (let k = 0; k < 120 * 14 && !S().keys.has(lock); k++) if (!T.f()) return false; return T.wait(0.5); };
   // a weighing spoon at column x: stand on it, hop off when the needle reads `at`
@@ -396,9 +397,9 @@ const BOT_SALT = () => {
 };
 const BOT_ROUTES = {
   '34-1': [['scuff', 16, 'n1'], ['walk', 31 * 32], 'cp', ['walk', 52 * 32], ['scuff', 69, 'n2'], ['walk', 91 * 32], ['walk', 101 * 32], 'cp', ['scuff', 118, 'n3'], ['scuff', 118, 'n4'], ['walk', 152 * 32], 'cp', ['walk', 186 * 32], ['gate']],
-  '34-2': [['spoon', 17, 'b1'], ['ride', 'b1'], ['walk', 33 * 32], 'cp', ['spoon', 41, 'b2'], ['ride', 'b2'], ['walk', 84 * 32], 'cp', ['spoon', 91, 'b3'], ['ride', 'b3'], ['walk', 136 * 32], 'cp', ['spoon', 148, 'b4'], ['ride', 'b4'], ['walk', 178 * 32], ['gate']],
-  '34-3': [['to', 16], ['grow', 18, 'c1'], ['walk', 30 * 32], 'cp', ['to', 48], ['grow', 50, 'c2'], ['walk', 61 * 32], ['grow', 63, 'c3'], ['walk', 81 * 32], 'cp', ['walk', 99 * 32], ['walk', 120 * 32], 'cp', ['walk', 145 * 32], ['to', 147], ['grow', 149, 'c5'], ['walk', 158 * 32, { noHop: true }], ['walk', 178 * 32], ['gate']],
-  '34-4': [['plug', 18 * 32 + 16, 'gate1'], ['walk', 32 * 32], 'cp', ['plug', 62 * 32 + 16, 'gate2'], ['walk', 78 * 32], 'cp', ['plug', 110 * 32 + 16, 'gate3'], ['walk', 120 * 32], 'cp', ['plug', 134 * 32, 'gate4'], ['walk', 150 * 32], ['gate']],
+  '34-2': [['spoon', 17, 'b1'], ['ride', 'b1'], ['walk', 33 * 32], 'cp', ['spoon', 41, 'b2'], ['ride', 'b2'], ['walk', 84 * 32], 'cp', ['spoon', 91, 'b3'], ['ride', 'b3'], ['walk', 136 * 32], 'cp', ['spoon', 148, 'b4'], ['ride', 'b4'], ['walk', 186 * 32], ['gate']],
+  '34-3': [['to', 15], ['grow', 17, 'c1'], ['walk', 30 * 32], 'cp', ['to', 48], ['grow', 50, 'c2'], ['walk', 60 * 32], ['grow', 62, 'c3'], ['walk', 81 * 32], 'cp', ['walk', 99 * 32], ['walk', 120 * 32], 'cp', ['walk', 145 * 32], ['to', 146], ['grow', 148, 'c5'], ['walk', 158 * 32, { noHop: true }], ['walk', 186 * 32], ['gate']],
+  '34-4': [['plug', 18 * 32 + 16, 'gate1'], ['walk', 32 * 32], 'cp', ['plug', 62 * 32 + 16, 'gate2'], ['walk', 78 * 32], 'cp', ['plug', 110 * 32 + 16, 'gate3'], ['walk', 120 * 32], 'cp', ['plug', 134 * 32, 'gate4'], ['walk', 150 * 32], ['walk', 176 * 32], ['gate']],
   '34-5': [['weigh', 13, 'w1', 0.95], ['walk', 24 * 32], 'cp', ['weigh', 48, 'w2', 1.38], ['walk', 76 * 32 + 16, { noHop: true }], ['door'], ['bossFight'], ['gate']]
 };
 //@@BOT@@
@@ -406,7 +407,7 @@ const BOT_ROUTES = {
 (async () => {
   if (args.includes('--bot')) {
     await session({ width: 874, height: 402 }, async ({ ev }) => {
-      await ev(BOT_PAGE); await ev(BOT_SALT);
+      await ev(BOT_PAGE); await ev(BOT_SALT); if (args.includes('--trace')) await ev(() => { window.__trEvery = 24; window.__trFrom = 0; });
       for (const id of Object.keys(BOT_ROUTES)) {
         if (want.length && !want.includes(id)) continue;
         const r = await ev(([i, route]) => window.BOT.run(i, route), [id, BOT_ROUTES[id]]);

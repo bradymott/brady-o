@@ -430,7 +430,7 @@ Object.assign(Tour.pieces, {
   // brine: { dx0, dx1, dy } relative (the row under which the brine must stay), time }
   'salt.crystal'(st, o) {
     const B = st.B, x = st.x, y = st.gy - 1, stem = [];
-    for (let k = 0; k < (o.h || 1); k++) { B.set(x, y + k, T.HARD); stem.push([x, y + k]); }
+    for (let q = 0; q < (o.w || 1); q++) for (let k = 0; k < (o.h || 1); k++) { B.set(x - q, y + k, T.HARD); stem.push([x - q, y + k]); }
     const plan = (o.plan || []).map(([dx, dy]) => [x + dx, y + dy]);
     // the checker: a cube that grows sideways or down is floor from the start; one that grows UP (lifting Brady) is a
     // one-way step (a column of hard cells would be a wall to it)

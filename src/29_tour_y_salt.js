@@ -373,7 +373,7 @@ const tongueArt = (c, s) => {};
 const enemies = {
   saltWren: { cls: TourFlyer.make({ w: 26, h: 22, range: 3, speed: 0.8, swoop: true, art: wrenArt, burst: COBALT,
     onSwoop: e => { if (e.g.onScreen(e)) SaltSay(e.g, e.cx, e.y - 10, 'OOPS. ATE MY PERCH.', CRYS); } }), place: 'fly' },
-  saltShrimp: { cls: TourEnemy.make({ w: 30, h: 22, speed: 0.7, behavior: 'walk', art: shrimpArt, burst: '#f48a8a',
+  saltShrimp: { cls: TourEnemy.make({ w: 30, h: 22, speed: 0.7, behavior: 'walk', edgeTurn: true, art: shrimpArt, burst: '#f48a8a',
     init(e) { e.spoonT = 2.5 + Math.random() * 1.5; },
     think(e, dt) {
       if (e.spoonS > 0) { e.spoonS -= dt; e.vx = 0; e.mode = 'notice'; if (e.spoonS <= 0) { e.mode = 'walk'; e.vx = e.dir * e.speed; } return; }
@@ -381,7 +381,7 @@ const enemies = {
       e.mode = 'walk'; e.spoonT -= dt;
       if (e.spoonT <= 0) { e.spoonT = 3 + Math.random() * 1.5; e.spoonS = 1.4; if (e.g.onScreen(e, 40)) SaltSay(e.g, e.cx, e.y - 14, pick(['I AM A TEASPOON.', 'JUST A SPOON HERE.', '(TEASPOON NOISES)']), CRYS); }
     } }), place: 'walk' },
-  saltWeevil: { cls: TourEnemy.make({ w: 30, h: 24, speed: 0.8, behavior: 'charge', range: 6, windup: 0.8, chargeSpeed: 4.0, chargeT: 0.9, art: weevilArt, burst: CORK,
+  saltWeevil: { cls: TourEnemy.make({ w: 30, h: 24, speed: 0.8, behavior: 'charge', edgeTurn: true, range: 6, windup: 0.8, chargeSpeed: 4.0, chargeT: 0.9, art: weevilArt, burst: CORK,
     onNotice: e => { if (e.g.onScreen(e)) SaltSay(e.g, e.cx, e.y - 12, 'A TIDY HOLE... TA-DA!', CORK_L); } }), place: 'walk' },
   saltLick: { cls: TourEnemy.make({ w: 30, h: 34, speed: 0, behavior: 'still', art: lickArt, burst: CRYS,
     init(e) { e.lickT = 1.5 + Math.random(); e.tongueL = 0; },

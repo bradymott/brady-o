@@ -84,13 +84,13 @@ const seaRows = (() => {
   const W = 200, H = 22, Gr = grid(W, H, '.');
   ground(Gr, 0, 19, 18); put(Gr, 3, 17, '@'); put(Gr, 6, 17, 'k'); put(Gr, 10, 14, '?'); put(Gr, 17, 17, '1'); pit(Gr, 20, 28); put(Gr, 20, 18, 'N');
   ground(Gr, 29, 43, 18); put(Gr, 32, 17, 'c'); put(Gr, 36, 13, '*'); put(Gr, 33, 15, 'o.o.o'); put(Gr, 38, 17, 'r'); put(Gr, 41, 17, '2'); pit(Gr, 44, 53); put(Gr, 44, 18, 'd');
-  ground(Gr, 54, 92, 18); put(Gr, 54, 17, 'K'); put(Gr, 73, 14, '?'); put(Gr, 76, 17, 'j');
+  ground(Gr, 54, 93, 18); put(Gr, 54, 17, 'K'); put(Gr, 73, 14, '?'); put(Gr, 76, 17, 'j');
   // the cellar block with its painted-glass left face (B42 inside)
   put(Gr, 58, 15, '--'); fillG(Gr, 61, 14, 69, 14, 'H'); fillG(Gr, 64, 11, 69, 13, 'H'); fillG(Gr, 65, 12, 68, 13, '.'); fillG(Gr, 64, 12, 64, 13, 'F'); put(Gr, 67, 13, 'A'); put(Gr, 66, 10, 'u');
-  put(Gr, 80, 17, 'x'); put(Gr, 84, 17, 'c'); put(Gr, 88, 17, 'a'); put(Gr, 86, 14, 'f');
-  put(Gr, 91, 17, '3'); put(Gr, 78, 17, 'l'); pit(Gr, 94, 105); put(Gr, 94, 18, 'e');
-  ground(Gr, 106, 150, 18); put(Gr, 110, 17, 'r'); put(Gr, 114, 16, '-'); put(Gr, 117, 13, '--'); put(Gr, 120, 10, '--'); put(Gr, 121, 8, 'P'); put(Gr, 125, 14, '?'); put(Gr, 128, 17, 'j');
-  put(Gr, 136, 17, 'c'); put(Gr, 140, 17, 'Z'); put(Gr, 144, 14, 'f');
+  put(Gr, 80, 17, 'x'); put(Gr, 84, 17, 'c'); put(Gr, 88, 17, 'a'); put(Gr, 68, 12, 'f');
+  put(Gr, 91, 17, '3'); put(Gr, 78, 17, 'r'); pit(Gr, 94, 105); put(Gr, 94, 18, 'e');
+  ground(Gr, 106, 150, 18); put(Gr, 116, 17, 'r'); put(Gr, 114, 16, '-'); put(Gr, 117, 13, '--'); put(Gr, 120, 10, '--'); put(Gr, 121, 8, 'P'); put(Gr, 125, 14, '?'); put(Gr, 128, 17, 'j');
+  put(Gr, 136, 17, 'c'); put(Gr, 140, 17, 'Z'); put(Gr, 130, 13, 'f');
   put(Gr, 148, 17, '4'); pit(Gr, 151, 163); put(Gr, 151, 18, 'M'); put(Gr, 157, 13, 'R');
   ground(Gr, 164, W - 1, 18); put(Gr, 168, 15, 'o.o.o'); put(Gr, 174, 17, 'r'); put(Gr, 180, 17, 'x'); put(Gr, 190, 17, 'G');
   fillG(Gr, W - 1, 0, W - 1, 17, 'H');
@@ -148,11 +148,11 @@ const CAVE = Object.assign({}, ENEMY, {
   K: SIGN('SOME CRYSTALS GROW UP. A CUBE GROWING UNDER YOU LIFTS YOU WITH IT'),
   Z: SIGN('THE LAST ONE TURNS A CORNER UNDER THE BEAM. THE BRINE RISES ONCE IT STARTS: KEEP GROWING'),
   x: ['decor', 'saltCellarProp'],
-  '1': ['piece', 'salt.crystal', { id: 'c1', h: 1, plan: [[1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0], [10, 0]] }],
+  '1': ['piece', 'salt.crystal', { id: 'c1', h: 1, w: 2, plan: [[1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0], [10, 0]] }],
   '2': ['piece', 'salt.crystal', { id: 'c2', h: 1, plan: [[0, -1], [0, -2], [0, -3], [0, -4], [0, -5]] }],
-  '3': ['piece', 'salt.crystal', { id: 'c3', h: 1, plan: [[1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0], [10, 0]] }],
+  '3': ['piece', 'salt.crystal', { id: 'c3', h: 1, w: 2, plan: [[1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0], [10, 0]] }],
   '4': ['piece', 'salt.crystal', { id: 'c4', h: 1, plan: [[0, -1], [0, -2], [0, -3], [0, -4], [0, -5], [0, -6]] }],
-  '5': ['piece', 'salt.crystal', { id: 'c5', h: 1, plan: [[1, 0], [2, 0], [3, 0], [4, 0], [4, 1], [4, 2], [4, 3], [5, 3], [6, 3], [7, 3], [8, 3], [9, 3], [10, 3], [11, 3]], brine: { dx0: 2, dx1: 11, dy: 4, time: 16 } }],
+  '5': ['piece', 'salt.crystal', { id: 'c5', h: 1, w: 2, plan: [[1, 0], [2, 0], [3, 0], [4, 0], [4, 1], [4, 2], [4, 3], [5, 3], [6, 3], [7, 3], [8, 3], [9, 3], [10, 3], [11, 3]], brine: { dx0: 2, dx1: 11, dy: 4, time: 16 } }],
   A: DOOR('mitts@in'), u: GRAIN(), a: ['anchor', 'mittsOut']
 });
 stamps.saltCave = { floor: 18, rows: caveRows, legend: CAVE, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power', 'power'] };
