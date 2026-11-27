@@ -4,6 +4,7 @@
    ("late on / the last one"); the last ordinary stage and the boss are the hardest.
    27-1 PERFORATION WALK (perforate)  tear paper islands free so they fall and plug the ink; the last two share a tooth
    27-2 STAMP DUTY (stampduty)        roll a loose stamp, THROW prints a mirrored foothold; the last is an L
+   27-3 BLOTTER BAY (blotter)         a pad drinks a bead, then a gap in the surf; the last needs two and a slap
    ============================================================ */
 (function () {
 const C = Tour.countries.post;
@@ -134,7 +135,53 @@ const L2 = { n: 2, name: 'Stamp Duty', mapLabel: 'Stamp Duty', arch: 'stampduty'
     { id: 'bureau', gen: 'room', role: 'secret', theme: 'post_room_bureau', stamp: 'postBureauOld', post: { room: true } }
   ] };
 
-Tour.amend('post', { stamps, levels: [L1, L2] });
+/* ---------------- 27-3 Blotter Bay ---------------- */
+// ① the teach: a blotting pad on a quay rail, a pen nib sweeping overhead: walk the pad under the swelling bead (its
+// shadow shows where it drops), then push the inky pad into the printed surf: it drinks a gap and the paper boat
+// sails through to make a bridge; ② the test: a thicker surf, a gull and a pup; a stamp-edge lid in the quay floor
+// (a corner curls up beside it) drops to a passage under the quay and the ink cellar; ③ the twist: the last surf
+// wants two beads, and the soaked pad only dries when Brady jumps and slaps it on the hanging blotter.
+const blotRows = (() => {
+  const W = 190, H = 24, Gr = grid(W, H, '.');
+  ground(Gr, 0, 16, 19); put(Gr, 3, 18, '@'); put(Gr, 5, 18, 'n'); put(Gr, 7, 15, '?'); put(Gr, 11, 18, '1');
+  ink(Gr, 17, 24, 20); put(Gr, 21, 15, '*');
+  ground(Gr, 25, 54, 19); put(Gr, 30, 18, 'c'); put(Gr, 33, 18, 'q'); put(Gr, 38, 18, 'e'); put(Gr, 43, 18, 'q'); put(Gr, 41, 18, 'u'); put(Gr, 47, 18, 'N'); put(Gr, 49, 18, '2');
+  ink(Gr, 55, 64, 20); put(Gr, 59, 9, 'M');
+  ground(Gr, 65, 103, 19); put(Gr, 68, 18, 'l'); put(Gr, 85, 15, '?'); put(Gr, 80, 18, 'c'); put(Gr, 90, 18, 'u'); put(Gr, 96, 18, 'a'); put(Gr, 99, 13, 'o.o.o');
+  // the ink cellar: a stamp-edge lid in the quay floor (a corner curls up beside it), a passage under the quay, a door
+  fillG(Gr, 72, 19, 73, 19, '-'); fillG(Gr, 72, 20, 80, 21, '.'); put(Gr, 74, 18, 'x'); put(Gr, 76, 21, 'A'); put(Gr, 79, 21, 'D'); put(Gr, 71, 18, 'z');
+  ground(Gr, 104, 114, 19); put(Gr, 102, 18, 'O'); put(Gr, 109, 18, '3');
+  ink(Gr, 115, 126, 20); put(Gr, 121, 14, 'R');
+  ground(Gr, 127, W - 1, 19); put(Gr, 130, 18, 'c'); put(Gr, 136, 18, 'q'); put(Gr, 141, 18, 'e'); put(Gr, 147, 18, 'q'); put(Gr, 152, 13, 'o.o.o'); put(Gr, 158, 18, 'u'); put(Gr, 156, 8, 'M'); put(Gr, 166, 18, 'i'); put(Gr, 172, 18, 'l');
+  put(Gr, 180, 18, 'G'); fillG(Gr, W - 1, 0, W - 1, 18, '#');
+  return rowsOf(Gr);
+})();
+const BLOT = o => ['piece', 'post.blotter', Object.assign({ w: 2, every: 1.0 }, o)];
+stamps.postBlot = { floor: 19, rows: blotRows, gold: { '*': 'must', A: 'hidden', R: 'risky' }, items: ['power', 'power'], doors: [{ to: 'cellar@in', look: 'postSlit' }], legend: Object.assign({}, COMMON, {
+  n: SIGN('A BLOTTING PAD! WALK WITH IT UNDER THE INK BEAD (ITS SHADOW SHOWS WHERE IT DROPS), THEN PUSH THE INKY PAD INTO THE SURF'),
+  N: SIGN('A THICK SURF DRINKS A LOT. ONE BEAD STILL DOES IT HERE'),
+  O: SIGN('THIS SURF NEEDS TWO BEADS. A SOGGY PAD DRIES IF YOU JUMP AND SLAP IT ON THE BLOTTER'),
+  '1': BLOT({ rail: [9, 14, 19], at: 12, nib: [9, 15, 9], surf: [17, 13, 18, 19], boat: { at: [22, 20], dock: [17, 19, 24] }, g: 0 }),
+  '2': BLOT({ rail: [46, 52, 19], at: 48, nib: [46, 53, 8], surf: [55, 12, 57, 19], boat: { at: [61, 20], dock: [55, 19, 64] }, g: 1 }),
+  '3': BLOT({ rail: [104, 112, 19], at: 106, nib: [104, 113, 8], surf: [115, 11, 118, 19], need: 2, blotter: [108, 14], boat: { at: [123, 20], dock: [115, 19, 126] }, g: 2 }),
+  // the checker: down + JUMP on the lid drops through it (the game's own drop-through of a one-way floor)
+  z: ['piece', st => { st.B.edge([72, 18], [73, 21]); st.B.edge([73, 18], [73, 21]); return st.x; }],
+  x: ['decor', 'postTell'], a: ['anchor', 'cellarOut']
+}) };
+stamps.postCellarOld = oldRoom('blot@cellarOut', ['oneup'], 'postSlit');
+const L3 = { n: 3, name: 'Blotter Bay', mapLabel: 'Blotter Bay', arch: 'blotter', theme: 'post_blot',
+  gimmick: 'A blotting pad on a quay rail: walk it under the bead swelling on the pen nib overhead, then push the inky pad into the printed surf to drink a gap and let the paper boat through. Late on, two beads, and the pad dries only on the hanging blotter',
+  hint: 'Stand on the pad and walk: it rolls with you. Watch the bead\'s shadow. A soggy pad: jump up and slap the blotter. A corner curls up beside a lid in the quay floor...',
+  postcard: 'Brady! The sea here is ink and the boats are folded. Pupo blotted the whole bay with his sleeve and now his sleeve is the bay. ♥ C',
+  enemies: [['postCrab', 2], ['postPup', 3], ['postGull', 2]],
+  mapCell: [2, 0], mapFrom: 1,
+  exits: { main: { to: '27-4' } },
+  areas: [
+    { id: 'blot', gen: 'room', theme: 'post_blot', stamp: 'postBlot', post: { blot: true }, bottomKill: true },
+    { id: 'cellar', gen: 'room', role: 'secret', theme: 'post_room_cellar', stamp: 'postCellarOld', post: { room: true } }
+  ] };
+
+Tour.amend('post', { stamps, levels: [L1, L2, L3] });
 
 /* ---------------- the land's map: the postcard's printed harbour ---------------- */
 if (typeof TOUR_OW_MAPS !== 'undefined') TOUR_OW_MAPS.post = {

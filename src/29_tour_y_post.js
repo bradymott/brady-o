@@ -113,8 +113,8 @@ const PostArt = {
     ctx.restore();
   },
   // a folded paper boat (plain, invented): cream hull, a cobalt band, a triangle sail
-  boat(ctx, x, y, s, col) {
-    ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.strokeStyle = INK; ctx.lineWidth = 2 / s; ctx.lineJoin = 'round';
+  boat(ctx, x, y, s, col, sy) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, sy || s); ctx.strokeStyle = INK; ctx.lineWidth = 2 / Math.min(s, sy || s); ctx.lineJoin = 'round';
     ctx.fillStyle = col || PAPER_HI; ctx.beginPath(); ctx.moveTo(-30, -10); ctx.lineTo(30, -10); ctx.lineTo(20, 4); ctx.lineTo(-20, 4); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.fillStyle = COBALT; ctx.fillRect(-30, -13, 60, 4); ctx.strokeRect(-30, -13, 60, 4);
     ctx.beginPath(); ctx.moveTo(-16, -10); ctx.lineTo(-10, 4); ctx.moveTo(16, -10); ctx.lineTo(10, 4); ctx.stroke();

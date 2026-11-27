@@ -271,6 +271,9 @@ const helpers = () => {
   window.playP = id => { play(id); for (let k = 0; k < 60 && S().state !== 'play'; k++) sim(0.1); P().invuln = 999; return S(); };
   // roll the nearest loose stamp (or pad) to left tile sx: walk onto it, then walk with it
   window.rollTo = (cls, sx) => { const e = ents(cls).sort((a, b) => Math.abs(a.cxF - P().cx) - Math.abs(b.cxF - P().cx))[0]; AP.exec({ walkTo: e.cxF, dir: 0 }, 4); AP.exec({ walkTo: (sx + e.cw / 2) * 32, dir: 0 }, 5); sim(0.2); return window.BRADY_POST.kit.carriage.sx(e); };
+  // ride the pad under the swelling bead until it drinks one (the pad rolls along with Brady)
+  window.catchBead = (maxT) => { const e = ents('PostBlotter').sort((a, b) => Math.abs(a.cxF - P().cx) - Math.abs(b.cxF - P().cx))[0]; AP.exec({ walkTo: e.cxF, dir: 0 }, 4); const p = P(); for (let k = 0; k < 60 * (maxT || 14) && e.pad !== 'inky'; k++) { const tx = e.bead ? e.bead.x : e.nibX(); sim(1 / 60, { left: tx < p.cx - 5, right: tx > p.cx + 5 }); } return e.pad; };
+  window.pushSurf = () => { const e = ents('PostBlotter').sort((a, b) => Math.abs(a.cxF - P().cx) - Math.abs(b.cxF - P().cx))[0]; rollTo('PostBlotter', e.s.rail[1]); sim(0.3, { right: true }); sim(0.3); return { pad: e.pad, drunk: e.drunk, done: e.done }; };
   window.throwN = (n, gap) => { for (let k = 0; k < n; k++) { sim(1 / 120, { action: true, actionPressed: true }); sim(gap || 0.45); } };
   window.isl = x => ents('PostIsland').find(e => e.r[0] <= x && e.r[2] >= x);
   window.tileName = (x, y) => { const A = S().area, T = window.BRADY.T; const t = A.tiles[y * A.W + x]; return Object.keys(T).find(k => T[k] === t); };
@@ -379,6 +382,36 @@ LEVELS.stamp = async (page, shot, run, pano) => {
     r = await page.evaluate(() => { const a = AP.route([[125, 14], [137, 16], [146, 19], [158, 19]]); sim(3, { right: true }); return { a: a.ok, state: S().state }; });
     check('27-2: on over the last ink to the gate', r.a && r.state !== 'play', r);
     await page.evaluate(() => { playP('27-2'); }); await pano('29-27-2-panorama.png', 0.35);
+  });
+};
+
+// ---------------- 27-3 Blotter Bay ----------------
+LEVELS.blot = async (page, shot, run, pano) => {
+  await run('blot', async () => {
+    await page.evaluate(helpers);
+    await page.evaluate(() => { fresh(); playP('27-3'); place(4, 18); sim(0.6); freeze(); }); await shot('30-27-3-start.png');
+    let r = await page.evaluate(() => { thaw(); const e = ents('PostBlotter')[0]; const pad = catchBead(); return { pad }; });
+    check('27-3: walking the pad under the bead: it drinks the ink', r.pad === 'inky', r);
+    await shotAt(page, shot, '31-27-3-inky-pad.png', () => { sim(0.1); });
+    r = await page.evaluate(() => { const a = pushSurf(); sim(2.2); return Object.assign(a, { dock: tileName(21, 19), surf: tileName(18, 16) }); });
+    check('27-3: the inky pad pushed into the surf drinks a gap; the paper boat sails through and docks as a bridge', r.done && r.dock === 'SEMI' && r.surf === 'EMPTY', r);
+    await shotAt(page, shot, '32-27-3-boat-through.png', () => { sim(0.1); });
+    r = await page.evaluate(() => AP.route([[16, 19], [21, 19], [27, 19]]));
+    check('27-3: across on the paper boat', r.ok, r);
+    r = await page.evaluate(() => { AP.route([[40, 19], [49, 19]]); const pad = catchBead(); const a = pushSurf(); sim(2.2); return Object.assign(a, { pad, b: AP.route([[54, 19], [60, 19], [66, 19]]) }); });
+    check('27-3: the second surf drunk, across on its boat', r.done && r.b.ok, r);
+    await shotAt(page, shot, '33-27-3-secret-tell.png', () => { place(70, 18); sim(0.3); });
+    r = await page.evaluate(() => { AP.go([72, 19]); const a = AP.go([75, 22], {}); return { ok: a.ok, at: tileOf() }; });
+    check('27-3: down + JUMP on the stamp-edge lid where the corner curls: through to the passage under the quay', r.ok, r);
+    // the twist: two beads, and a soaked pad dries only on the blotter
+    r = await page.evaluate(() => { place(100, 18); const e = ents('PostBlotter').find(q => q.s.need === 2); const p1 = catchBead(); const a = pushSurf(); const soaked = e.pad; const c2 = catchBead(4); return { p1, drunk: a.drunk, soaked, c2 }; });
+    check('27-3: twist: the first bead drinks half the surf; the soaked pad will not take another', r.p1 === 'inky' && r.drunk === 1 && r.soaked === 'full' && r.c2 === 'full', r);
+    await shotAt(page, shot, '34-27-3-twist-blotter.png', () => { sim(0.1); });
+    r = await page.evaluate(() => { const e = ents('PostBlotter').find(q => q.s.need === 2); rollTo('PostBlotter', e.s.blotter[0] - 1); sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.5, { jump: true }); sim(0.5); const dry = e.pad; catchBead(); const a = pushSurf(); sim(2.2); return { dry, a, b: AP.route([[114, 19], [120, 19], [128, 19]]) }; });
+    check('27-3: twist: a jump slaps the pad on the blotter, it drinks the second bead and the rest of the surf; across', r.dry === 'dry' && r.a.done && r.b.ok, r);
+    r = await page.evaluate(() => { const a = AP.route([[150, 19], [170, 19]]); sim(3, { right: true }); return { a: a.ok, state: S().state }; });
+    check('27-3: on to the gate', r.a && r.state !== 'play', r);
+    await page.evaluate(() => { playP('27-3'); }); await pano('39-27-3-panorama.png', 0.35);
   });
 };
 

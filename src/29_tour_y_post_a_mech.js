@@ -305,7 +305,7 @@ class PostBlotter extends Ent {
   update(dt) {
     this.t += dt; carriage.update(this, dt);
     const g = this.g, s = this.s, p = g.player, padL = this.cxF - this.cw * TS / 2, padR = this.cxF + this.cw * TS / 2;
-    if (this.done) { if (this.boatK < 1) { this.boatK = Math.min(1, this.boatK + dt / 1.6); if (this.boatK >= 1) { for (let x = s.boat.dock[0]; x <= s.boat.dock[2]; x++) if (tileAt(g.area, x, s.boat.dock[1]) === T.EMPTY) g.setTile(x, s.boat.dock[1], T.SEMI); g.refreshPlatforms && g.refreshPlatforms(); Sound.play('secret', { vol: 0.4 }); say(g, s.boat.dock[0] * TS + 40, s.boat.dock[1] * TS - 30, 'THE BOAT IS THROUGH!', '#ffe08a'); } } return; }
+    if (this.done) { if (this.boatK < 1) { this.boatK = Math.min(1, this.boatK + dt / 1.6); if (this.boatK >= 1) { for (let x = s.boat.dock[0]; x <= s.boat.dock[2]; x++) if (tileAt(g.area, x, s.boat.dock[1]) === T.EMPTY) g.setTile(x, s.boat.dock[1], T.SEMI); hideRect(g, [s.boat.dock[0], s.boat.dock[1], s.boat.dock[2], s.boat.dock[1]], 1); g.refreshPlatforms && g.refreshPlatforms(); Sound.play('secret', { vol: 0.4 }); say(g, s.boat.dock[0] * TS + 40, s.boat.dock[1] * TS - 30, 'THE BOAT IS THROUGH!', '#ffe08a'); } } return; }
     // the bead swelling on the nib (the tell: its shadow on the quay), then it drops
     if (!this.bead) { this.beadT -= dt; if (this.beadT <= 0) this.bead = { x: this.nibX(), y: (s.nib[2] + 1) * TS, r: 0, vy: 0, st: 'grow' }; }
     else {
@@ -377,9 +377,9 @@ class PostBlotter extends Ent {
       }
     }
     // the paper boat: waiting behind the surf, then sailing through the gap to its dock
-    const D = s.boat.dock, from = [s.boat.at[0] * TS, s.boat.at[1] * TS], to = [(D[0] + D[2] + 1) * TS / 2, D[1] * TS + 10];
-    const k = this.done ? this.boatK : 0, bxp = lerp(from[0], to[0], k), byp = lerp(from[1], to[1], k) + Math.sin(t * 2) * 2;
-    PA.boat(ctx, bxp, byp, ((D[2] - D[0] + 1) * TS) / 64);
+    const D = s.boat.dock, sy = 1.7, from = [s.boat.at[0] * TS, s.boat.at[1] * TS + 13 * sy], to = [(D[0] + D[2] + 1) * TS / 2, D[1] * TS + 13 * sy];
+    const k = this.done ? this.boatK : 0, bxp = lerp(from[0], to[0], k), byp = lerp(from[1], to[1], k) + (k >= 1 ? 0 : Math.sin(t * 2) * 2);
+    PA.boat(ctx, bxp, byp, ((D[2] - D[0] + 1) * TS) / 60, null, sy);
     // the pad: a curved rocker blotter on the rail, its felt dry (cream), inky (dark), or soaked
     const cx = this.cxF, fy = s.rail[2] * TS, w = this.cw * TS - 4;
     ctx.strokeStyle = INK; ctx.lineWidth = 2;
