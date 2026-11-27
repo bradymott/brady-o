@@ -4,7 +4,8 @@
 //               the seeds plop on the desk and it takes the hit
 // 2 THE CLAUSE  it raises a wing (tell) and sweeps a clause along the floor; the stop behind the second word cuts it off
 // 3 THE SHOUT   its beak opens round an empty bubble (tell) before the shout; a stop placed before Pupo says "please"
-//               is knocked away; stand quietly by the blank until he says it, then push the stop in: the hit
+//               is flicked back out; stand quietly by the blank until he says it (the parrot hushes), then push the
+//               stop in: the hit
 // A stomp never hurts it. At the end it passes the biscuits; the gate clears 32-6.
 module.exports = async ({ page, check, shot }) => {
   const ev = (fn, ...a) => page.evaluate(fn, ...a);
@@ -51,7 +52,7 @@ module.exports = async ({ page, check, shot }) => {
   for (let n = 3; n <= 4; n++) { r = await hitPhase(1, 'wing'); check(`pst hit ${n}: the full stop after "WOULD" cuts the sweep off`, r.ok && r.hp === r.hp0 - 1, r); }
   check('pst: PHASE 3 after four hits (THE SHOUT)', r.phase === 3, r);
   // too early: the stop in the last slot before "please" is knocked away by the shout
-  r = await ev(() => { const b = boss(), st = S().entities.find(e => e.constructor.name === 'PstStop'); for (const e of S().entities) if (e.constructor.name === 'TourShot') e.remove = true; b.please = false; b.quietT = 0; const ok = pushTo(2); const p = P(); p.x -= 120; sim(0.3); b.go('perch'); let t = 0; for (let k = 0; k < 120 * 6 && b.act !== 'beak'; k++) sim(1 / 120); const hp0 = b.hp; while (b.act === 'beak' && t < 3) { sim(1 / 60); t += 1 / 60; } sim(0.3); return { ok, tell: +t.toFixed(2), hp0, hp: b.hp, slot: st.slotIn }; });
+  r = await ev(() => { const b = boss(), st = S().entities.find(e => e.constructor.name === 'PstStop'); for (const e of S().entities) if (e.constructor.name === 'TourShot') e.remove = true; b.please = false; b.quietT = 0; const ok = pushTo(2); const p = P(); p.x = b.arenaX0 + 5 * 32; sim(0.3); b.go('perch'); let t = 0; for (let k = 0; k < 120 * 6 && b.act !== 'beak'; k++) sim(1 / 120); const hp0 = b.hp; while (b.act === 'beak' && t < 3) { sim(1 / 60); t += 1 / 60; } sim(0.3); return { ok, tell: +t.toFixed(2), hp0, hp: b.hp, slot: st.slotIn }; });
   check('pst phase 3: the beak opens round an empty bubble (a tell), and a stop placed before Pupo says "please" is knocked away', r.ok && r.tell >= 0.5 && r.hp === r.hp0 && r.slot === -1, r);
   await ev(() => { const b = boss(); b.go('beak'); sim(0.6); }); await snap('pst_parrot_shout.png');
   for (let n = 5; n <= 6; n++) {
@@ -59,14 +60,13 @@ module.exports = async ({ page, check, shot }) => {
       const b = boss(), p = P(), g = S(); for (const e of g.entities) if (e.constructor.name === 'TourShot') e.remove = true;
       b.hurtT = 0; b.go('perch'); b.at = 0;
       // stand quietly beside the blank space until Pupo says please
-      const blank = (b.arenaX0 / 32 + 15) * 32 + 16; p.x = blank - p.w / 2; p.y = 14 * 32 - p.h; p.vx = 0; p.vy = 0;
+      const blank = (b.arenaX0 / 32 + 15) * 32 + 16; p.x = blank - 3 * 32 - p.w / 2; p.y = 14 * 32 - p.h; p.vx = 0; p.vy = 0;
       let t = 0; while (!b.please && t < 6) { sim(1 / 60); t += 1 / 60; if (b.act !== 'perch') b.go('perch'); }
-      const please = b.please, hp0 = b.hp, ok = pushTo(2);
-      for (let k = 0; k < 120 * 6 && b.act !== 'beak'; k++) sim(1 / 120);
-      for (let k = 0; k < 240 && b.hp === hp0; k++) sim(1 / 120);
-      sim(0.2); return { please, wait: +t.toFixed(2), ok, hp0, hp: b.hp, state: b.state };
+      // "please": the parrot hushes (no shout); the stop walked into the last slot is the hit at once
+      const please = b.please, hush = b.pose, hp0 = b.hp, shots = S().entities.filter(e => e.constructor.name === 'TourShot').length; let ok = pushTo(2); ok = ok || b.hp < hp0;
+      sim(0.2); return { please, hush, shots, wait: +t.toFixed(2), ok, hp0, hp: b.hp, state: b.state };
     });
-    check(`pst hit ${n}: quiet by the blank until Pupo says "please", then the stop in the last slot`, r.please && r.ok && r.hp === r.hp0 - 1, r);
+    check(`pst hit ${n}: quiet by the blank until Pupo says "please", then the stop in the last slot`, r.please && r.hush === 'hush' && r.shots === 0 && r.ok && r.hp === r.hp0 - 1, r);
   }
   await snap('pst_parrot_biscuits.png');
   r = await ev(() => { for (let k = 0; k < 40 && boss() && !boss().remove; k++) sim(0.1); const b = S().entities.find(e => e.boss); return { gone: !b || b.remove || b.state === 'dying' }; });

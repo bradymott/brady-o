@@ -26,7 +26,7 @@ const WORDS = ['I', 'WOULD', 'LIKE', 'MORE...'];
 /* ---------------- the full stop: a fat ink ball, pushed by walking into it ---------------- */
 class PstStop extends Ent {
   constructor(g, s) { super(g, s, 28, 28); this.friendly = false; this.home = this.x; this.slots = s.slots || []; this.slotIn = -1; this.rot = 0; this.min = (s.minX != null ? s.minX : -1e9); this.max = (s.maxX != null ? s.maxX : 1e9); }
-  reset() { this.x = this.home; this.vx = 0; this.slotIn = -1; this.g.burst(this.cx, this.cy, 10, '#2a2a4a', 'dust'); }
+  reset(hx) { this.x = hx != null ? hx : this.home; this.vx = 0; this.slotIn = -1; this.leftT = 0.3; this.g.burst(this.cx, this.cy, 10, '#2a2a4a', 'dust'); }
   update(dt) {
     this.t += dt; if (this.leftT > 0) this.leftT -= dt; if (this.lockT > 0) this.lockT -= dt;
     const A = this.g.area;
@@ -46,8 +46,10 @@ class PstStop extends Ent {
     const d = sign(this.cx - p.cx);
     if (p.y + p.h <= this.y + 8) { if (p.vy >= 0) { p.y = this.y - p.h; p.vy = 0; p.onGround = true; } return; }
     // pushed from the side: it rolls ahead of Brady (out of a slot too, if he pushes it on)
-    if (p.vx * d > 0 && !(this.lockT > 0) && !(d > 0 && this.slotIn === this.slots.length - 1)) { if (this.slotIn >= 0) { this.slotIn = -1; this.leftT = 0.35; } this.vx = p.vx * 1.05; }
-    p.x = d > 0 ? Math.min(p.x, this.x - p.w + 2) : Math.max(p.x, this.x + this.w - 2);
+    if (d > 0 && p.vx > 0 && !(this.lockT > 0) && !(d > 0 && this.slotIn === this.slots.length - 1)) { if (this.slotIn >= 0) { this.slotIn = -1; this.leftT = 0.35; } this.vx = p.vx * 1.05; }
+    // a sentence reads one way: the stop only rolls forward, and Brady walks back past it (in front of it) freely,
+    // so after a hit he can always get behind it again without a jump
+    if (d > 0 && p.vx >= 0) p.x = Math.min(p.x, this.x - p.w + 2);
   }
   draw(ctx) {
     const x = this.cx, y = this.cy;
@@ -151,7 +153,8 @@ const brain = {
   guardText: 'EXCUSE ME!',
   wake(b) { b.phase = 1; PSAY(b.g, b.cx, b.y - 34, 'AND THEN HE SAID, AND THEN HE SAID-', '#c4f2d2'); b.homeX = b.x; this.restart(b); },
   parts(b) { const g = b.g; return { stop: g.entities.find(e => e instanceof PstStop && !e.remove), pupo: g.entities.find(e => e instanceof PstSpeaker && !e.remove) }; },
-  restart(b) { const { stop, pupo } = this.parts(b); if (stop) stop.reset(); b.word = 0; b.wordT = 0.4; b.please = false; b.quietT = 0; if (pupo) pupo.say('', 0); },
+  // in phase 3 the stop waits just before the blank (x0+14), so Brady stands behind it, beside the blank, and nudges it 3 tiles
+  restart(b) { const { stop, pupo } = this.parts(b); if (stop) stop.reset((b.phase || 1) >= 3 ? (b.arenaX0 / TS + 14) * TS + TS / 2 - stop.w / 2 : null); b.word = 0; b.wordT = 0.4; b.please = false; b.quietT = 0; if (pupo) pupo.say('', 0); },
   phase(b, n) {
     const g = b.g;
     if (n === 2) { g.bannerText = 'A WHOLE CLAUSE!'; g.bannerT = 2; PSAY(g, b.cx, b.y - 34, 'LET ME JUST SWEEP THAT ASIDE-', '#c4f2d2'); }
@@ -169,22 +172,38 @@ const brain = {
     if (b.wordT <= 0 && b.word < WORDS.length) { pupo.say(WORDS[b.word], 1.6); b.word++; b.wordT = 1.8; }
     if (b.word >= WORDS.length && b.wordT <= 0) { b.word = 0; b.wordT = 1.2; }
     if ((b.phase || 1) >= 3 && !b.please) {
-      const blank = (b.arenaX0 / TS + 15) * TS + TS / 2, near = p && p.onGround && Math.abs(p.cx - blank) < 1.6 * TS && Math.abs(p.vx) < 3 * TS;
-      b.quietT = near ? (b.quietT || 0) + dt : 0;
-      if (b.quietT > 1.8) { b.please = true; b.pleaseT = 8; pupo.say('PLEASE', 8); Sound.play('select', { vol: 0.6, pitch: 1.5 }); }
+      // quiet = near the blank (3 tiles either side) and not running; a hop over a shout only pauses the count,
+      // walking away resets it; the blank must still be blank (the stop not already in the last slot)
+      const blank = this.blankX(b), near = p && !p.dead && Math.abs(p.cx - blank) < 3.2 * TS && Math.abs(p.vx) < 3 * TS;
+      if (stop && stop.slotIn === 2) b.quietT = 0;
+      else if (near) { if (p.onGround) b.quietT = (b.quietT || 0) + dt; }
+      else b.quietT = 0;
+      if (!(b.wordT > 0.2) && b.quietT > 0) pupo.say('. . .', 0.4);
+      if (b.quietT > 1.5) {
+        b.please = true; b.pleaseT = 12; pupo.say('PLEASE', 12); Sound.play('select', { vol: 0.7, pitch: 1.5 });
+        g.bannerText = 'NOW! PUSH THE FULL STOP IN!'; g.bannerT = 2.6;
+        for (const e of g.entities) if (e.constructor && e.constructor.name === 'TourShot') { g.burst(e.cx, e.cy, 4, '#fff4dc', 'dust'); e.remove = true; }
+      }
     }
     if (b.please) { b.pleaseT -= dt; if (b.pleaseT <= 0) { b.please = false; b.quietT = 0; } }
   },
+  blankX(b) { return (b.arenaX0 / TS + 15) * TS + TS / 2; },
   update(b, dt) {
     const g = b.g, p = g.player, ph = b.phase || 1;
     b.guard = 'bounce';
     this.speak(b, dt);
     if (b.act === 'walk') b.go('perch');
+    if (ph >= 3 && b.please) {
+      // "please": the parrot holds its tongue (no shouts) until the stop drops into the last slot, which is the hit
+      b.pose = 'hush'; b.face(); b.y = approach(b.y, b.floorY - b.h - 40, 120 * dt);
+      if (this.inSlot(b)) { PSAY(g, b.cx, b.y - 34, '...', '#c4f2d2'); b.damage(1, { text: 'THANK YOU!' }); }
+      return;
+    }
     if (b.act === 'perch' || b.act === 'recover') {
       // perched on its inkstand, bobbing, chattering over Pupo
       b.pose = 'perch'; b.face(); b.y = approach(b.y, b.floorY - b.h - 40, 120 * dt); b.x = approach(b.x, b.homeX, 120 * dt);
       if (Math.random() < 0.006) PSAY(g, b.cx, b.y - 34, pick(SAY), '#c4f2d2');
-      if (b.at > (b.act === 'recover' ? 1.4 : ph >= 3 ? 1.6 : 2.0)) b.go(ph === 1 ? 'suck' : ph === 2 ? 'wing' : 'beak');
+      if (b.at > (b.act === 'recover' ? 1.4 : ph >= 3 ? 2.4 : 2.0)) b.go(ph === 1 ? 'suck' : ph === 2 ? 'wing' : 'beak');
     } else if (b.act === 'suck') {
       // phase 1's tell: the cheeks puff up (0.8 s)
       b.pose = 'suck'; if (b.first) TourKit.sfx('inhale', 'float', { vol: 0.4, pitch: 0.6 });
@@ -207,7 +226,7 @@ const brain = {
       b.pose = 'beak';
       if (b.at > 1.0) {
         if (this.inSlot(b) && b.please) { PSAY(g, b.cx, b.y - 34, '...', '#c4f2d2'); b.damage(1, { text: 'THANK YOU!' }); return; }
-        if (this.inSlot(b)) { const { stop } = this.parts(b); if (stop) { stop.slotIn = -1; stop.vx = -7 * TS; stop.leftT = 0.8; } PSAY(g, b.cx, b.y - 34, 'NOT UNTIL HE SAYS IT!', '#c4f2d2'); }
+        if (this.inSlot(b)) { const { stop } = this.parts(b); if (stop) { stop.slotIn = -1; stop.vx = -4 * TS; stop.leftT = 0.8; } PSAY(g, b.cx, b.y - 34, 'NOT UNTIL HE SAYS IT!', '#c4f2d2'); }
         tourFire(g, b.cx - 30, b.floorY - 40, { vx: -3.6 * TS, vy: 0, w: 26, h: 44, life: 6, thru: true, art: shoutArt });
         TourKit.sfx('squawk', 'bump', { vol: 0.6, pitch: 0.5 }); g.shake(3); b.go('perch');
       }
@@ -233,11 +252,28 @@ const brain = {
     // the head: cheeks puff for the commas, the beak opens round an empty bubble for the shout
     const k = P === 'suck' ? Math.min(1, b.at / 0.8) : 0, beak = P === 'beak' ? Math.min(1, b.at / 0.5) : 0;
     parrotHead(ctx, x - 6, y - 52, 0.95, k, t, beak);
+    if (P === 'hush') { ctx.fillStyle = PLUM; ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(x - 4, y - 72, 22, 9, -0.3, 0, TAU); ctx.fill(); ctx.stroke(); PstArt.bubble(ctx, x - 70, y - 150, 50, 30); ctx.fillStyle = PLUM; ctx.font = '12px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('...', x - 45, y - 135); }
     if (P === 'beak') { PstArt.bubble(ctx, x - 90, y - 150, 70, 34); PstArt.tail(ctx, x - 30, y - 114, x - 14, y - 90, 3, 4); }
+    // phase 3's cues: a hush ring on the floor at the blank filling while Brady waits; then NOW! over the stop
+    if ((b.phase || 1) >= 3 && !b.biscuit && b.state !== 'dying') {
+      const bx = this.blankX(b), fy = b.floorY, st = g0(b);
+      if (!b.please) {
+        const k = Math.min(1, (b.quietT || 0) / 1.5);
+        ctx.fillStyle = 'rgba(26,20,48,0.55)'; ctx.beginPath(); ctx.ellipse(bx - TS, fy - 3, 3.1 * TS, 9, 0, 0, TAU); ctx.fill();
+        ctx.fillStyle = 'rgba(140,230,170,0.75)'; ctx.beginPath(); ctx.ellipse(bx - TS, fy - 3, 3.1 * TS * k, 9 * k, 0, 0, TAU); ctx.fill();
+        ctx.font = '11px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 3.5; ctx.strokeStyle = INK; ctx.strokeText('SHH... WAIT FOR "PLEASE"', bx - TS, fy + 14); ctx.fillStyle = '#ffffff'; ctx.fillText('SHH... WAIT FOR "PLEASE"', bx - TS, fy + 14);
+      } else if (st) {
+        const j = Math.abs(Math.sin(t * 6)) * 8, sx = st.cx, sy = st.y - 18 - j, tx = st.slots[2] * TS + TS / 2;
+        ctx.fillStyle = '#5ee08a'; ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(sx - 16, sy - 10); ctx.lineTo(sx + 10, sy - 10); ctx.lineTo(sx + 10, sy - 20); ctx.lineTo(sx + 30, sy - 2); ctx.lineTo(sx + 10, sy + 16); ctx.lineTo(sx + 10, sy + 6); ctx.lineTo(sx - 16, sy + 6); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.font = '16px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 4; ctx.strokeText('NOW!', sx + 6, sy - 36); ctx.fillStyle = '#5ee08a'; ctx.fillText('NOW!', sx + 6, sy - 36);
+        ctx.strokeStyle = '#5ee08a'; ctx.lineWidth = 3; ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.ellipse(tx, fy - 2, 20 + j, 7, 0, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+      }
+    }
     if (b.biscuit) { ctx.fillStyle = '#d8a050'; ctx.beginPath(); ctx.arc(x - 40, y - 60, 10, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#7a4a2a'; for (let q = 0; q < 4; q++) { ctx.beginPath(); ctx.arc(x - 44 + (q % 2) * 7, y - 64 + Math.floor(q / 2) * 7, 1.4, 0, TAU); ctx.fill(); } }
     ctx.restore();
   }
 };
+const g0 = b => b.g.entities.find(e => e instanceof PstStop && !e.remove);
 const clauseArt = (c, s) => { c.save(); c.fillStyle = '#fff8ec'; c.strokeStyle = INK; c.lineWidth = 2; rr(c, s.x, s.y, s.w, s.h, 6); c.fill(); c.stroke(); c.fillStyle = PLUM; c.font = '8px ' + FONT_DISPLAY; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('AND', s.x + s.w / 2, s.y + 8); c.fillText('ANOTHER', s.x + s.w / 2, s.y + 18); c.restore(); };
 const shoutArt = (c, s) => { c.save(); c.strokeStyle = 'rgba(255,240,200,0.95)'; c.lineWidth = 4; for (let k = 0; k < 3; k++) { c.beginPath(); c.arc(s.x + s.w / 2 + k * 6, s.y + s.h / 2, 14 + k * 6, Math.PI * 0.65, Math.PI * 1.35); c.stroke(); } c.fillStyle = '#fff4dc'; c.font = '9px ' + FONT_DISPLAY; c.textAlign = 'center'; c.fillText('!!', s.x + s.w / 2, s.y - 2); c.restore(); };
 Tour.boss({ id: 'pst_parrot', name: 'The Interrupter', hp: 6, dims: [64, 96], music: 'tour_pst_boss', country: 'pst', brain });

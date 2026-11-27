@@ -541,6 +541,7 @@ LEVELS.map = async (page, shot, run) => {
 // ---------------- bot mode (--bot): enemies on, no invulnerability, the way a careful player goes ----------------
 const BOT = args.includes('--bot');
 const botRun = async (page, id, legs) => {
+  if (want.length && !want.includes(id)) return;
   const r = await page.evaluate(([id, legs]) => {
     fresh(); play(id); const g = S(); let deaths = [];
     const p0 = () => { const p = P(); p.invuln = 0; return p; };
@@ -573,22 +574,42 @@ LEVELS.bot = async (page) => {
     "lift({ walk: 0, air: 1, airAt: 0, to: [101, 14], tol: 1 })", "lift({ walk: 0, air: 1, airAt: 0, to: [106, 9], tol: 3 })",
     "AP.route([[113, 19], [119, 19], [127, 19], [140, 19], [158, 19], [164, 19]])", "lift({ walk: 1, walkT: 1.6, air: 1, airAt: 0, to: [175, 13], tol: 4 })",
     "AP.route([[186, 19], [198, 19]])", "lift({ walk: 1, walkT: 1.6, air: 1, airAt: 0, to: [210, 13], tol: 3 })", "AP.route([[215, 13], [228, 19]])"]);
-  // the boss with damage on: push the stop into each phase's slot and wait for the tell, dodging nothing by cheat
-  const r = await page.evaluate(() => {
-    fresh(); play('32-6'); toArea('stage', 6, 13); sim(3); const g = S(), p = P(); p.invuln = 0; let deaths = 0;
-    const b = g.entities.find(e => e.boss), st = g.entities.find(e => e.constructor.name === 'PstStop');
-    for (let n = 0; n < 6 && b && !b.remove && b.state !== 'dying'; n++) {
-      const k = (b.phase || 1) - 1, sx = st.slots[k] * 32 + 16;
-      if (P().dead) { deaths++; for (let q = 0; q < 600 && (P().dead || g.state !== 'play'); q++) sim(0.05); toArea('stage', 6, 13); sim(1); }
-      if (st.slotIn !== k) { walkTo(Math.floor(st.cx / 32) - 1, 3); for (let q = 0; q < 900 && st.slotIn !== k; q++) { sim(1 / 120, { right: true }); if (st.cx > sx + 20) break; } }
-      if (k === 2) { if (st.cx < b.arenaX0 + 15 * 32) { walkTo(Math.floor(st.cx / 32) - 2, 3); sim(1 / 120, { jump: true, jumpPressed: true, right: true }); sim(0.8, { jump: true, right: true }); } walkTo((b.arenaX0 / 32) + 15, 3); for (let q = 0; q < 900 && !b.please; q++) { sim(1 / 120); } walkTo(Math.floor(st.cx / 32) - 1, 3); for (let q = 0; q < 900 && st.slotIn !== k; q++) sim(1 / 120, { right: true }); }
-      walkTo(k === 2 ? Math.floor(st.cx / 32) - 2 : Math.floor(b.arenaX0 / 32) + 1, 3);
-      const hp = b.hp; for (let q = 0; q < 120 * 12 && b.hp === hp && !P().dead; q++) { const sh = g.entities.find(e => e.constructor.name === 'TourShot' && e.cx > P().cx - 10 && e.cx - P().cx < 75 && Math.abs(e.cy - P().cy) < 60); sim(1 / 120, sh && P().onGround ? { jump: true, jumpPressed: true } : { jump: !P().onGround }); }
+  // the boss with damage on, three runs in a row from a fresh start: push the stop into each phase's slot and wait
+  // for the tell, jumping whatever flies at Brady; phase 3: stand behind the stop beside the blank, wait for PLEASE,
+  // then walk the stop into the last slot
+  if (want.length && !want.includes('boss')) return;
+  const runs = [];
+  for (let run = 0; run < 3; run++) runs.push(await page.evaluate(run => {
+    fresh(); play('32-6'); toArea('stage', [6, 9, 4][run], 13); sim(3 + run * 0.7); let g = S(); P().invuln = 0; let deaths = 0, t = 0, b, st, X0;
+    const grab = () => { g = S(); b = g.entities && g.entities.find(e => e.boss); st = g.entities && g.entities.find(e => e.constructor.name === 'PstStop'); X0 = b ? Math.round(b.arenaX0 / 32) : 0; };
+    const dead = () => S() !== g || !P() || P().dead || g.state !== 'play';
+    const dodge = () => { const p = P(), sh = g.entities.find(e => e.constructor.name === 'TourShot' && !e.remove && e.cx > p.cx - 10 && e.cx - p.cx < 80 && Math.abs(e.cy - p.cy) < 60); return sh && p.onGround ? { jump: true, jumpPressed: true } : { jump: !p.onGround }; };
+    const tr = []; const step = inp => { sim(1 / 120, inp); t += 1 / 120; if (Math.round(t * 120) % 30 === 0 && P() && b) { tr.push([+t.toFixed(1), Math.round(P().cx / 3.2) / 10, Math.round(P().cy / 3.2) / 10, st && Math.round(st.cx / 3.2) / 10, st && st.slotIn, b.act, b.hp, P().state || '', g.state]); if (tr.length > 8) tr.shift(); } };
+    const log = []; grab();
+    while (t < 240) {
+      if (dead()) { deaths++; log.push({ ph: b && b.phase, hp: b && b.hp, at: P() ? tileOf() : null, X0, tr: tr.slice() }); for (let q = 0; q < 400 && (!S().player || S().player.dead || S().state !== 'play'); q++) { sim(0.05); t += 0.05; } grab(); if (!g.area || !g.player) { log.push({ scene: g.constructor.name, state: g.state }); break; } if (g.area.aid !== 'stage') toArea('stage', 6, 13); P().invuln = 0; sim(2); grab(); continue; }
+      if (!b || b.remove || b.state === 'dying' || b.hp <= 0) break;
+      const ph = b.phase || 1, k = ph - 1, sx = st.slots[k] * 32 + 16, hp = b.hp;
+      if (ph < 3) {
+        if (st.slotIn !== k) { walkTo(Math.floor(st.cx / 32) - 1, 3); for (let q = 0; q < 900 && st.slotIn !== k && !dead(); q++) { step({ right: true }); if (st.cx > sx + 20 || P().cx > st.cx + 8) break; } }
+        if (dead()) continue;
+        walkTo(X0 + 1, 3);
+        for (let q = 0; q < 120 * 12 && b.hp === hp && !dead(); q++) step(dodge());
+      } else {
+        // behind the stop, beside the blank; stand still (hopping only over a shout) until Pupo says PLEASE
+        if (st.slotIn === 2) { for (let q = 0; q < 120 * 6 && st.slotIn === 2 && !dead(); q++) step(dodge()); continue; }
+        walkTo(Math.max(X0 + 12, Math.floor(st.cx / 32) - 2), 3);
+        for (let q = 0; q < 120 * 10 && !b.please && !dead(); q++) step(dodge());
+        if (!b.please || dead()) continue;
+        for (let q = 0; q < 120 * 6 && b.hp === hp && !dead(); q++) step({ right: true });
+        sim(0.3);
+      }
     }
-    return { hp: b ? b.hp : null, deaths, dead: P().dead };
-  });
+    return { hp: b ? b.hp : null, deaths, log, t: Math.round(t) };
+  }, run));
+  const r = { runs };
   console.log('BOT boss ' + JSON.stringify(r));
-  check('bot 32-6: The Interrupter beaten with damage on', r.hp != null && r.hp <= 0, r);
+  check('bot 32-6: The Interrupter beaten with damage on, first try, three runs in a row', runs.every(q => q.hp != null && q.hp <= 0 && q.deaths === 0), r);
 };
 
 (async () => {
