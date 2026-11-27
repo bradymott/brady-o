@@ -94,7 +94,7 @@ const L1 = { n: 1, name: 'Elbows on the Trellis', mapLabel: 'Elbows on the Trell
   exits: { main: { to: '28-2' } },
   areas: [
     { id: 'rows', gen: 'room', theme: 'orch_trellis', stamp: 'orchTrellis', camera: 'free', bottomKill: true },
-    { id: 'shed', gen: 'room', role: 'secret', theme: 'orch_room_shed', stamp: 'orchShed' }
+    { id: 'shed', gen: 'room', role: 'secret', theme: 'orch_room_shed', stamp: 'orchShed', room: 'orchUmbrella' }
   ] };
 
 /* ---------------- 28-2 Appointment with a Bee ---------------- */
@@ -141,7 +141,7 @@ const L2 = { n: 2, name: 'Appointment with a Bee', mapLabel: 'Appointment with a
   exits: { main: { to: '28-3' } },
   areas: [
     { id: 'meadow', gen: 'room', theme: 'orch_bees', stamp: 'orchBees', camera: 'free', bottomKill: true },
-    { id: 'pantry', gen: 'room', role: 'secret', theme: 'orch_room_pantry', stamp: 'orchPantry' }
+    { id: 'pantry', gen: 'room', role: 'secret', theme: 'orch_room_pantry', stamp: 'orchPantry', room: 'orchPeel' }
   ] };
 
 /* ---------------- 28-3 Cut Above ---------------- */
@@ -185,7 +185,7 @@ const L3 = { n: 3, name: 'Cut Above', mapLabel: 'Cut Above', arch: 'pinch', them
   exits: { main: { to: '28-4' } },
   areas: [
     { id: 'yard', gen: 'room', theme: 'orch_prune', stamp: 'orchCut', camera: 'free', bottomKill: true },
-    { id: 'loft', gen: 'room', role: 'secret', theme: 'orch_room_loft', stamp: 'orchLoft' }
+    { id: 'loft', gen: 'room', role: 'secret', theme: 'orch_room_loft', stamp: 'orchLoft', room: 'orchOwl' }
   ] };
 
 /* ---------------- 28-4 A Pear in a Sleeve ---------------- */
@@ -240,7 +240,7 @@ const L4 = { n: 4, name: 'A Pear in a Sleeve', mapLabel: 'A Pear in a Sleeve', a
   exits: { main: { to: '28-5' } },
   areas: [
     { id: 'shed', gen: 'room', theme: 'orch_sleeve', stamp: 'orchSleeve', camera: 'free', bottomKill: true },
-    { id: 'parlour', gen: 'room', role: 'secret', theme: 'orch_room_parlour', stamp: 'orchParlour' }
+    { id: 'parlour', gen: 'room', role: 'secret', theme: 'orch_room_parlour', stamp: 'orchParlour', room: 'orchSorbet' }
   ] };
 
 /* ---------------- 28-5 The Graft Takes ---------------- */
@@ -284,7 +284,7 @@ const L5 = { n: 5, name: 'The Graft Takes', mapLabel: 'The Graft Takes', arch: '
   exits: { main: { to: '28-6' } },
   areas: [
     { id: 'nursery', gen: 'room', theme: 'orch_graft', stamp: 'orchGraft', camera: 'free', bottomKill: true },
-    { id: 'office', gen: 'room', role: 'secret', theme: 'orch_room_office', stamp: 'orchOffice' }
+    { id: 'office', gen: 'room', role: 'secret', theme: 'orch_room_office', stamp: 'orchOffice', room: 'orchStamp' }
   ] };
 
 /* ---------------- 28-6 Windfall Committee (the boss) ---------------- */
@@ -323,7 +323,7 @@ const L6 = { n: 6, name: 'Windfall Committee', mapLabel: 'Windfall Committee', a
   exits: { main: { to: null } },
   areas: [
     { id: 'lawn', gen: 'room', theme: 'orch_night', stamp: 'orchLawn' },
-    { id: 'cellar', gen: 'room', role: 'secret', theme: 'orch_room_cellar', stamp: 'orchCellar' },
+    { id: 'cellar', gen: 'room', role: 'secret', theme: 'orch_room_cellar', stamp: 'orchCellar', room: 'orchPip' },
     { id: 'orchard', gen: 'arena', role: 'arena', layout: 'committee', arenaW: 28, H: 20, roof: false, theme: 'orch_night' }
   ] };
 
