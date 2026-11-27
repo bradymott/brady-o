@@ -101,3 +101,9 @@ Last full suite (18 Nov, `sbw/integration-5`, soak with `--jobs 1`): everything 
 - **Deploy:** build from tested `main`; `node --check` every built `sw.js`; confirm `dist/site/super-brady-o-world/icon-180.png` matches `dist/icons/world/`; `apps_test`; then in a gh-pages worktree `rsync -a --delete dist/site/super-brady-o-world/ super-brady-o-world/`, commit, `git push origin HEAD:gh-pages`. Only that folder is replaced. The Art Cart agent also pushes to `main`: fetch and merge first.
 - **Rules that must hold:** original content only (nothing resembling Nintendo or other games); the player is always the code-drawn Brady (black tee and trousers, man bun, square shades, no stubble, blackwork sleeves); never caricature people; sacred buildings only as plain distant silhouettes; no Christ the Redeemer; iron tower in daylight or unlit; PG-13; never edit `src/40`–`src/43`; shared files additive only; no `blender -b`, no shared Blender MCP window.
 - The scratchpad under `/private/tmp` may be gone. Everything that matters is in git; recreate worktrees from the branches.
+
+## 27 Nov 2026: the new icon is live
+- Super Brady-O World's five icons in `dist/icons/world/` are now hand-drawn art (Brady and Pupo, from ChatGPT): "Golden sun" for 180/192/512, "Flat turquoise" for the 32 px tab icon and for the maskable one (shrunk to 82 % onto its own turquoise, bottom-anchored). Originals: `docs/design/icon/`.
+- `tools/make_icon.js` skips `world` unless given `--old-code-icon`. `window.__sbwIcon` is still in `src/28_tour_gt_title.js` but nothing in the game draws it.
+- `tools/build.js` now hashes the world app's icon files into its offline-cache name. Live cache name after this deploy: `app-world-30416731a7`.
+- Only the icons and `sw.js` changed on `gh-pages`. Not yet confirmed on Brady's iPhone (he must delete and re-add the home-screen icon to see it).
