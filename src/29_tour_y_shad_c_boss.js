@@ -32,7 +32,7 @@ const brain = {
     return (b.geoC = { x0, x1, L, R, hand: x0 + 6.5 * TS, boot: x0 + 15 * TS, at, feet, home: x0 + 18.4 * TS, lo: x0 + 5.5 * TS });
   },
   wake(b) {
-    const G = this.geo(b); b.phase = 1; b.ext = 0; b.claimed = false;
+    const G = this.geo(b); b.phase = 1; b.ext = 0; b.claimed = false; b.noShadow = true;
     b.x = G.home - b.w / 2; b.y = b.floorY - b.h;
     say(b, 'SIGN HERE. AND HERE. AND THIS ONE IS YOURS NOW.'); b.go('palm');
   },
@@ -201,6 +201,13 @@ TourHooks.on('afterEntities', (play, ctx) => {
   ctx.restore();
 });
 const tag = (ctx, x, y, str, col) => { ctx.save(); ctx.font = '10px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; const w = ctx.measureText(str).width + 16; ctx.fillStyle = 'rgba(28,20,38,0.9)'; rr(ctx, x - w / 2, y - 10, w, 20, 10); ctx.fill(); ctx.fillStyle = col; ctx.fillText(str, x, y + 1); ctx.restore(); };
+// a shadow has no ink line: the Understudy is drawn straight onto the wall, without the bosses' ink pass
+TourHooks.on('entityDraw', (play, ctx, e) => {
+  if (!e || !e.boss || e.style !== 'shad_understudy') return false;
+  if (e.state === 'dying') ctx.globalAlpha *= Math.max(0, e.timer / 1.6);
+  if (e.hurtT > 0 && Math.floor(e.hurtT * 24) % 2 === 0) ctx.globalAlpha *= 0.5;
+  brain.draw(e, ctx, e.t); return true;
+});
 const boss = { id: 'shad_understudy', name: 'The Understudy', hp: 6, dims: [80, 150], music: 'tour_shad_boss', country: 'shad', brain };
 Tour.boss(boss);
 if (typeof BOSS_INK_REACH !== 'undefined') BOSS_INK_REACH.shad_understudy = [60, 60, 60, 20];

@@ -247,8 +247,9 @@ TourHats.NOT = new Set([].concat(
   // props, the fountain's way in
   'galPill galSitter galViewer galRidge galTumble galLot galPaddle galSitting galRack galCrawler galRoomProp galFountainGate'.split(' '),
   // The Department of Unclaimed Shadows (world 35, hidden land A10): floating lines, claim boards, lamps and shelves,
-  // overlap screens, cutters and mail slots, split lamps, the filing wall (and its flea), the rooms' props, the keyhole
-  'shadPill shadBoard shadLamp shadOverlap shadCutter shadSlot shadSplit shadFiling shadCrawler shadRoomProp shadKeyholeGate'.split(' '),
+  // overlap screens, cutters and mail slots, split lamps, the filing wall (and its flea), the rooms' props, the keyhole,
+  // the secret nooks' painted covers
+  'shadPill shadBoard shadLamp shadOverlap shadCutter shadSlot shadSplit shadFiling shadCrawler shadRoomProp shadKeyholeGate shadCover'.split(' '),
   // Morocco: tagines, teapots, oranges, storms, pots, mirages, gales, lanterns, slabs, lines, portcullises, hooks, chains, grilles, winds
   'maTagine maTeapot maOrange maStorm maPot maMirage maGale maKickPot maShopLantern maMirageSlab maPhaseLine maPortcullis maLidHook maChain maRoofGrille maDownWind'.split(' '),
   // Mexico: peppers, elotes, popcorn, the piñata burro, lava blobs, salsa, melon carts, swingers, cannons, rails, sunbeams, bubbles, the Casa's gates

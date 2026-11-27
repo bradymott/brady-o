@@ -502,7 +502,7 @@ LEVELS.entry = async (page, shot, run, pano) => {
 // filing wall; { post: x, dir } walk into the slot at x; 'finish'; 'boss'
 const BOT = {
   '35-1': [[0, [{ bump: [7, 19] }, { claim: 9 }, [24, 19], { bump: [27, 19] }, [36, 19]]],
-    [36, [{ claim: 46 }, [56, 19], [64, 19], [70, 19], { bump: [72, 19] }, [84, 17], [90, 19], [96, 19]]],
+    [36, [{ claim: 46 }, [56, 19], { bump: [64, 19] }, [70, 19], [84, 17], [90, 19], [96, 19]]],
     [96, [{ claim: 103 }, [114, 19], [118, 16], [122, 15], [128, 19]]], [127, [{ claim: 139 }, [150, 19], [160, 19], 'finish']]],
   '35-2': [[0, [{ bump: [6, 19] }, { stand: 12 }, [15, 16], [19, 13], [30, 13], [36, 13]]],
     [33, [[44, 19], 'climb', [62, 9], { bump: [66, 9] }, [80, 9], [86, 19], { stand: 96 }, [98, 17], [101, 14], { bump: [110, 14] }, [121, 14]]],
@@ -523,18 +523,19 @@ LEVELS.bot = async (page, shot, run) => {
   const ids = Object.keys(BOT).filter(id => !want.some(w => /^35-/.test(w)) || want.includes(id));
   for (const id of ids) await run('bot', async () => {
     const r = await page.evaluate(([id, segs]) => {
-      fresh(); const B = window.BRADY; B.Save.data.lives = 5;
+      fresh(); window.__trail = []; const B = window.BRADY; B.Save.data.lives = 5;
       const [w, i] = id.split('-').map(Number); B.Game.setScene(new B.Play(B.getLevel(w, i), {})); sim(1.6);
       AP.careful = true; const deaths = []; let hurts = 0, lastPow = P().power;
       const PP = Object.getPrototypeOf(P()); if (!PP.__shadHurt) { const h0 = PP.hurt; PP.hurt = function (src) { if (!(this.invuln > 0) && !(this.star > 0)) (window.__hurtLog = window.__hurtLog || []).push((src && (src.style || src.constructor.name)) + ':' + (src && src.act) + '@' + Math.floor(this.cx / 32) + ' y' + Math.round(this.y) + ' g' + this.onGround + ' ' + window.__dec); return h0.apply(this, arguments); }; PP.__shadHurt = true; } window.__hurtLog = [];
       const alive = () => { const g = S(), p = P(); return p && !p.dead && g.state === 'play'; };
       const settle = () => { for (let k = 0; k < 120 * 8 && !(S().state === 'play' && P() && !P().dead && S().fade.a < 0.05); k++) sim(1 / 120); };
-      const doStep = st => {
+      const doStep = st => { (window.__trail = window.__trail || []).push(JSON.stringify(st) + '@' + tileOf().join(',') + (P().dead ? 'D' : '')); return doStep0(st); };
+      const doStep0 = st => {
         if (st === 'finish') { sim(3, { right: true }); return S().state !== 'play'; }
         if (st === 'boss') return bossFight();
         if (st === 'climb') { const r = climbWall(51, 9, 60); return alive() && r.at[1] === 9; }
-        if (Array.isArray(st)) { for (let k = 0; k < 8; k++) { if (k === 4) AP.careful = false; const r = AP.go(st); AP.careful = true; if (r.ok) return true; if (!alive()) return false; sim(0.5); } return false; }
-        if (st.bump) { AP.go(st.bump); const p = P(); sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.5, { jump: true }); sim(0.4); for (let q = 0; q < 240; q++) { const it = S().entities.find(e => !e.remove && e.constructor.name !== 'ShadPill' && (e.item || e.isItem || /Item|Power|Mushroom/.test(e.constructor.name))); if (!it) break; sim(1 / 60, { left: it.cx < p.cx - 6, right: it.cx > p.cx + 6 }); } return alive(); }
+        if (Array.isArray(st)) { window.__tgt = st.join(',') + ' from ' + tileOf().join(','); for (let k = 0; k < 8; k++) { if (k === 4) AP.careful = false; const r = AP.go(st); AP.careful = true; if (r.ok) return true; if (!alive()) return false; sim(0.5); } return false; }
+        if (st.bump) { AP.go(st.bump); const p = P(); sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.5, { jump: true }); sim(0.4); for (let q = 0; q < 240; q++) { const it = S().entities.find(e => !e.remove && e.constructor.name !== 'ShadPill' && (e.item || e.isItem || /Item|Power|Mushroom/.test(e.constructor.name)) && Math.abs(e.cx - p.cx) < 4 * 32 && Math.abs(e.cy - p.cy) < 80); if (!it) break; sim(1 / 60, { left: it.cx < p.cx - 6, right: it.cx > p.cx + 6 }); } return alive(); }
         if (st.claim != null) { const row = P().groundTy; AP.go([st.claim, row]); claimAt(st.claim); sim(0.6); return alive(); }
         if (st.stand != null) { AP.go([st.stand, P().groundTy]); walkX(st.stand * 32 + 16, 3); sim(1.4); return alive(); }
         if (st.hop != null) { AP.go([st.hop, P().groundTy]); walkX(st.hop * 32 + 16, 3); hopUp(!!st.act); sim(0.3); return alive(); }
@@ -573,7 +574,7 @@ LEVELS.bot = async (page, shot, run) => {
         for (; k < steps.length; k++) { if (!doStep(steps[k]) || (!alive() && !won())) { ok = false; break; } if (P().power < lastPow) hurts++; lastPow = P().power; if (won()) break; }
         if (ok) { if (won()) { si = segs.length; break; } si++; k = 0; continue; }
         if (alive()) { deaths.push({ stuck: tileOf(), seg: si, step: k }); break; }
-        deaths.push({ at: Math.floor(P().cx / 32), seg: si, step: k, boss: window.__bossAct || undefined }); window.__bossAct = null;
+        deaths.push({ at: Math.floor(P().cx / 32), seg: si, step: k, tgt: window.__tgt, trail: (window.__trail || []).slice(-5), boss: window.__bossAct || undefined }); window.__bossAct = null;
         sim(3); settle(); lastPow = P() ? P().power : 0;
         if (B.Save.data.lives <= 0 || !(S() instanceof B.Play)) break;
         const x = Math.floor(P().cx / 32); si = 0; for (let q = 0; q < segs.length; q++) if (segs[q][0] <= x + 2) si = q; k = 0;

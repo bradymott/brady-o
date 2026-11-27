@@ -53,7 +53,7 @@ const lostRows = (() => {
   ground(Gr, 35, 90, 19); put(Gr, 37, 18, 'c'); put(Gr, 40, 18, '2'); put(Gr, 52, 18, 'R'); put(Gr, 55, 15, '*');
   // the parcel room's block (its left face only painted)
   nook(Gr, 58, 16, 19, -1);
-  put(Gr, 66, 18, 'k'); put(Gr, 69, 18, 'w'); put(Gr, 72, 15, '?'); put(Gr, 76, 15, 'h'); put(Gr, 79, 18, 'j');
+  put(Gr, 66, 18, 'k'); put(Gr, 64, 15, '?'); put(Gr, 70, 18, 'w'); put(Gr, 76, 15, 'h'); put(Gr, 79, 18, 'j');
   ground(Gr, 81, 86, 17); put(Gr, 82, 14, 'o.o.o'); put(Gr, 88, 18, 'a');
   ink(Gr, 91, 94, 21); put(Gr, 92, 13, 'M');
   ground(Gr, 95, 115, 19); put(Gr, 97, 18, 'c'); put(Gr, 100, 18, '3'); put(Gr, 112, 18, 'P');
@@ -99,15 +99,15 @@ const divRows = (() => {
   ground(Gr, 39, 57, 19); put(Gr, 42, 15, 'o.o'); put(Gr, 45, 18, 'j'); put(Gr, 48, 18, 'N');
   // the filing wall up to the top floor
   put(Gr, 50, 9, 'f'); put(Gr, 52, 15, 'z'); put(Gr, 55, 11, 'Z');
-  ground(Gr, 58, 81, 9); put(Gr, 60, 8, 'c'); put(Gr, 63, 8, 'w'); put(Gr, 66, 5, '?'); put(Gr, 69, 5, 'h');
+  ground(Gr, 58, 81, 9); put(Gr, 60, 8, 'c'); put(Gr, 66, 5, '?'); put(Gr, 69, 5, 'h');
   // the low passage: a ceiling of drawers with a gap by the tell; the night corridor's hatch on top
   fillG(Gr, 72, 6, 80, 6, 'H'); fillG(Gr, 71, 1, 71, 6, 'H'); fillG(Gr, 81, 1, 81, 6, 'H'); fillG(Gr, 76, 6, 77, 6, '.'); put(Gr, 75, 8, 'x');
   put(Gr, 72, 5, 'o.o.o'); put(Gr, 78, 4, 'A'); put(Gr, 79, 5, 'D');
-  ground(Gr, 82, 99, 19); put(Gr, 84, 18, 'a'); put(Gr, 87, 18, 'k'); put(Gr, 92, 18, '2');
+  ground(Gr, 82, 99, 19); put(Gr, 84, 18, 'a'); put(Gr, 87, 18, 'k'); put(Gr, 90, 18, 'w'); put(Gr, 92, 18, '2');
   ground(Gr, 100, 125, 14); put(Gr, 103, 10, 'o.o.o'); put(Gr, 106, 13, 'j'); put(Gr, 110, 10, '?'); put(Gr, 112, 9, 'M'); put(Gr, 118, 13, 'u'); put(Gr, 122, 13, 'c');
   ground(Gr, 126, 144, 19); put(Gr, 130, 18, 'q'); put(Gr, 133, 18, 'O'); put(Gr, 136, 18, '3');
   ground(Gr, 145, W - 1, 13); put(Gr, 147, 12, 'c'); put(Gr, 149, 9, 'o.o');
-  ink(Gr, 152, 156, 15); put(Gr, 154, 10, 'E'); put(Gr, 153, 8, 'M');
+  ink(Gr, 153, 155, 15); put(Gr, 154, 10, 'E');
   put(Gr, 160, 12, 'j'); put(Gr, 164, 12, 'k'); put(Gr, 170, 12, 'G'); fillG(Gr, W - 1, 0, W - 1, 12, '#');
   return rowsOf(Gr);
 })();
@@ -126,7 +126,7 @@ const L2 = { n: 2, name: 'Long Division', mapLabel: 'Long Division', arch: 'lamp
   gimmick: 'A floor lamp throws Brady\'s own shadow up the wall: the nearer the lamp, the taller it grows. Put its hand on a folded shelf\'s handle and the shelf comes down as a step. A wall of filing drawers to climb. The last handle sits over a lip: jump at the right spot',
   hint: 'Walk to or from the lamp until the hand meets the brass ring. Push up into the drawers to climb. A door\'s shadow with no door...',
   postcard: 'Brady! A lamp here makes your shadow taller the closer you stand. I stood very close for a while. I was enormous, darling. The shadow clerk asked me to step back. ♥ C',
-  enemies: [['shadFlea', 3], ['shadHound', 1], ['shadRabbit', 1], ['shadCrow', 2]],
+  enemies: [['shadFlea', 3], ['shadHound', 1], ['shadRabbit', 1], ['shadCrow', 1]],
   mapCell: [1, 0], mapFrom: 0,
   exits: { main: { to: '35-3' } },
   areas: [
@@ -152,10 +152,9 @@ const ovRows = (() => {
   ground(Gr, 50, 70, 13); put(Gr, 54, 9, '*'); put(Gr, 57, 12, 'u'); put(Gr, 52, 10, 'o.o');
   nook(Gr, 64, 10, 13, 1);
   ground(Gr, 71, 89, 19); put(Gr, 73, 18, 'c'); put(Gr, 75, 18, 'a'); put(Gr, 77, 18, 'w'); put(Gr, 79, 15, '?'); put(Gr, 80, 18, '3');
-  ink(Gr, 90, 99, 21); put(Gr, 95, 11, 'E'); put(Gr, 96, 9, 'M');
-  ground(Gr, 100, 127, 19); put(Gr, 103, 18, 'c'); put(Gr, 106, 15, 'o.o.o'); put(Gr, 108, 15, 'h'); put(Gr, 110, 18, 'O'); put(Gr, 112, 18, '4');
-  ink(Gr, 124, 127, 21);
-  ground(Gr, 128, 150, 9); put(Gr, 131, 8, 'c'); put(Gr, 134, 5, 'o.o.o'); put(Gr, 140, 5, '?'); put(Gr, 143, 8, 'j'); put(Gr, 146, 4, 'M');
+  ink(Gr, 90, 99, 21); put(Gr, 95, 11, 'E'); put(Gr, 86, 9, 'M');
+  ground(Gr, 100, 127, 19); put(Gr, 103, 18, 'c'); put(Gr, 106, 15, 'o.o.o'); put(Gr, 156, 18, 'j'); put(Gr, 108, 15, 'h'); put(Gr, 110, 18, 'O'); put(Gr, 112, 18, '4');
+  ground(Gr, 128, 150, 9); put(Gr, 131, 8, 'c'); put(Gr, 134, 5, 'o.o.o'); put(Gr, 140, 5, '?');
   ground(Gr, 151, W - 1, 19); put(Gr, 154, 18, 'u'); put(Gr, 158, 18, 'k'); put(Gr, 162, 18, 'G'); fillG(Gr, W - 1, 0, W - 1, 18, '#');
   return rowsOf(Gr);
 })();
@@ -172,7 +171,7 @@ const L3 = { n: 3, name: 'Overlap Allowance', mapLabel: 'Overlap Allowance', arc
   gimmick: 'Two shadows on the wall are only solid where they overlap. Stand at a folding screen and walk to roll it: its shadow slides, and the dark overlap becomes a step. The last one: give up half the overlap for a taller step',
   hint: 'Roll the screen until the overlap is dark with a bright top: that\'s a step. Wide isn\'t always tall. A door\'s shadow with no door...',
   postcard: 'Brady! Two shadows overlapped and I stood on them. The clerk said that is not what they are for. I said it was exactly what I needed them for. ♥ C',
-  enemies: [['shadRabbit', 2], ['shadHound', 1], ['shadFlea', 1], ['shadCrow', 2]],
+  enemies: [['shadRabbit', 2], ['shadHound', 1], ['shadFlea', 1], ['shadCrow', 1]],
   mapCell: [2, 0], mapFrom: 1,
   exits: { main: { to: '35-4' } },
   areas: [
