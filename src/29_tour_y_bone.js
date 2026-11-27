@@ -168,7 +168,7 @@ const painters = {
           ctx.strokeStyle = shade(boneCol, -0.35); ctx.lineWidth = 15; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(cx, y + 20, 70, Math.PI * 1.08, Math.PI * 1.92); ctx.stroke();
           ctx.strokeStyle = boneCol; ctx.lineWidth = 10; ctx.stroke();
         } else if (kind === 1) { // a big leg bone leaning out
-          ctx.save(); ctx.globalAlpha = 0.95; BoneArt.bone(ctx, cx - 50, y + 10, cx + 30, y - 60, 16, true, boneCol); ctx.restore();
+          ctx.save(); ctx.globalAlpha = 0.95; BoneArt.bone(ctx, cx - 50, y + 10, cx + 30, y - 60, 16, !L.dull, boneCol); ctx.restore();
         } else { // a skull-ish knob of a hip with a socket
           ctx.fillStyle = boneCol; ctx.strokeStyle = shade(boneCol, -0.4); ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(cx, y - 10, 46, 30, 0.2, Math.PI, 0); ctx.fill(); ctx.stroke();
           ctx.fillStyle = shade(boneCol, -0.3); ctx.beginPath(); ctx.arc(cx + 8, y - 18, 10, 0, TAU); ctx.fill();
@@ -317,9 +317,9 @@ const MATS = {
 const mat = k => {
   const M = MATS[k];
   const ground = { style: 'room_' + k, cap: M.cap, capHi: M.cap, dirt: M.base, dirt2: M.capLo, rock: M.base,
-    paint(ctx, rng) { ctx.fillStyle = M.base; ctx.fillRect(0, 0, TS, TS); M.pat(ctx, rng); },
+    paint(ctx, rng) { ctx.fillStyle = M.base; ctx.fillRect(0, 0, TS, TS); M.pat(ctx, rng || (() => 0.5)); },
     paintCap(ctx, x0, x1) { ctx.fillStyle = M.capLo; ctx.fillRect(x0, 0, x1 - x0, 10); ctx.fillStyle = M.cap; ctx.fillRect(x0, 0, x1 - x0, 7); ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(x0, 0, x1 - x0, 1.5); ctx.fillStyle = INK; ctx.fillRect(x0, 9.5, x1 - x0, 1.5); } };
-  return { ground, hard: { c1: M.base, c2: M.capLo, paint(ctx, rng) { ctx.fillStyle = M.base; ctx.fillRect(0, 0, TS, TS); M.pat(ctx, rng); } } };
+  return { ground, hard: { c1: M.base, c2: M.capLo, paint(ctx, rng) { ctx.fillStyle = M.base; ctx.fillRect(0, 0, TS, TS); M.pat(ctx, rng || (() => 0.5)); } } };
 };
 const room = (name, painter, extra) => Object.assign({}, quarry, { name, music: 'tour_bone_room', particles: 'none', rays: null, sky: ['#2a2024', '#3a2a2a', '#4a3a30'], horizonGlow: '#ffd88a', celestial: { type: 'none' }, stars: 0, layers: [{ kind: painter, base: 400, f: 0.05 }], fog: '#4a3a30', decor: [] }, extra || {});
 const themes = {
@@ -356,7 +356,7 @@ const themes = {
   bone_arena: Object.assign({}, quarry, {
     name: 'The Dig', music: 'tour_bone_boss', particles: 'dust', rays: null,
     sky: ['#24183a', '#6a3a5a', '#c8705a'], horizonGlow: '#ff9a6a', celestial: { type: 'none' }, stars: 0.6,
-    layers: [{ kind: 'mountains', color: '#4a3050', base: 250, amp: 90, f: 0.03, blur: true, snow: true }, { kind: 'boneTerraces', color: '#6a3a2a', base: 300, f: 0.06 }, { kind: 'boneArcs', color: '#4a2a1e', bone: '#8a7a64', base: 350, f: 0.12 }, { kind: 'boneDigClutter', color: '#3a2218', base: 400, f: 0.22 }],
+    layers: [{ kind: 'mountains', color: '#4a3050', base: 250, amp: 90, f: 0.03, blur: true, snow: true }, { kind: 'boneTerraces', color: '#6a3a2a', base: 300, f: 0.06 }, { kind: 'boneArcs', color: '#4a2a1e', bone: '#8a7a64', dull: true, base: 350, f: 0.12 }, { kind: 'boneDigClutter', color: '#3a2218', base: 400, f: 0.22 }],
     fog: '#5a3a3a', decor: []
   }),
   bone_room_hall: room('The Great Hall', 'roomHall', mat('marble')),
