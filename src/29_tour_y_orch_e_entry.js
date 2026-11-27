@@ -38,7 +38,7 @@ function jpTree(ctx, x, y, s, part, tie, t) {
     ctx.beginPath(); ctx.moveTo(x, fy); ctx.quadraticCurveTo(x - 26 * s, fy - 24 * s, x - 56 * s, fy - 44 * s); ctx.moveTo(x, fy); ctx.quadraticCurveTo(x + 28 * s, fy - 22 * s, x + 58 * s, fy - 40 * s); ctx.moveTo(x, fy); ctx.lineTo(x + 3 * s, fy - 60 * s); ctx.stroke();
     for (const [dx, dy, r, c] of [[-58, -58, 34, JPC.leaf3], [58, -56, 34, JPC.leaf3], [0, -78, 40, JPC.leaf], [-30, -48, 30, JPC.leaf], [32, -46, 30, JPC.leaf], [-10, -92, 22, JPC.leaf2], [22, -66, 20, JPC.leaf2]]) { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x + dx * s, fy + dy * s, r * s, 0, TAU); ctx.fill(); }
     // its pears, hanging below the canopy on stalks (the tied one a little bigger, low over the fork)
-    const P = [[-66, -14], [-34, -10], [14, -4], [44, -12], [76, -16]];
+    const P = [[-66, -14], [-34, -10], [24, -6], [50, -14], [80, -18]];
     P.forEach(([dx, dy], k) => jpPear(ctx, x + dx * s, fy + dy * s + Math.sin(t * 1.3 + k) * 1.2, k === tie ? s * 1.25 : s, k === tie));
   }
   if (part !== 'back') {

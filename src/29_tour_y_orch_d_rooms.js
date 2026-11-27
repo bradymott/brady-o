@@ -237,7 +237,7 @@ TourRooms.def('orchOwl', {
     ctx.restore();
     // the camera on its tripod over the mark
     const cx = 9.5 * TS, cy = 8 * TS;
-    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(cx, cy - 2 * TS - 8); ctx.lineTo(cx - 14, cy - 2 * TS + 34); ctx.moveTo(cx, cy - 2 * TS - 8); ctx.lineTo(cx + 14, cy - 2 * TS + 34); ctx.stroke();
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(cx, cy - 2 * TS - 8); ctx.lineTo(cx - 16, cy); ctx.moveTo(cx, cy - 2 * TS - 8); ctx.lineTo(cx + 16, cy); ctx.moveTo(cx, cy - 2 * TS - 8); ctx.lineTo(cx + 4, cy); ctx.stroke();
     ctx.fillStyle = '#3a2a2a'; rr(ctx, cx - 18, cy - 2 * TS - 30, 36, 24, 4); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#8ab8d8'; ctx.beginPath(); ctx.arc(cx + 8, cy - 2 * TS - 18, 7, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore();
     if (R.flash > 0) { ctx.save(); ctx.fillStyle = `rgba(255,255,255,${R.flash * 2})`; ctx.fillRect(play.camX, play.camY, Game.viewW, Game.viewH); ctx.restore(); }
     if (!R.won && quiet(play, R)) hud(play, ctx, 'PHOTOS ' + (R.n || 0) + ' OF 2');
