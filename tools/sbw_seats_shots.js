@@ -115,8 +115,8 @@ STAGES.door = async ({ ev, shot, run }) => {
     // up the benches, down the back of the last one, under it; walking under without pressing down does nothing
     r = await ev(() => {
       thaw(); const s = window.__st, p = P(); place(s.tx - 1, s.gy - 1); sim(0.2);
-      hopOn(s.tx); hopOn(s.tx + 3); hopOn(s.tx + 5); const top = at();
-      walkTo((s.tx + 7.4) * 32, 6); sim(0.6); const behind = at();
+      jumpTo(s.tx + 1); jumpTo(s.tx + 4); const top = at();
+      walkTo((s.tx + 6.5) * 32, 6); sim(0.6); const behind = at();
       walkTo(s.x, 4); sim(0.6); const stand = S().entities.find(e => e.constructor.name === 'SeatsFestStand'), quiet = stand.arr < 0;
       return { top, behind, quiet, under: at(), cx: p.cx / 32 - s.x / 32 };
     });
@@ -214,7 +214,7 @@ STAGES.flies = async ({ ev, shot, run, pano }) => {
     await ev(() => { fresh(); play('33-2'); place(4, 16); sim(0.4); freeze(); }); await shot('20-33-2-start.png');
     let r = await ev(() => {
       thaw(); const f = ents('SeatsFlat').sort((a, b) => a.x0 - b.x0)[0]; walkTo(f.ta * 32 + 16, 4); sim(0.3);
-      const a0 = f.above(), prop = P().seatsProp === f; sim(0.6, { right: true }); const a1 = f.above(), clampedEarly = f.done;
+      const a0 = f.above(), prop = P().seatsProp === f; sim(0.3, { right: true }); const a1 = f.above(), clampedEarly = f.done; walkTo(f.ta * 32 + 16, 4);
       sim(0.4, { action: true }); for (let k = 0; k < 200 && f.above() > -f.win - 12; k++) sim(1 / 120, { action: true, right: true }); const low = f.above(); sim(0.1);
       const notLevelRelease = !f.done;
       return { a0, a1, prop, clampedEarly, low, notLevelRelease };
@@ -225,7 +225,7 @@ STAGES.flies = async ({ ev, shot, run, pano }) => {
     r = await ev(() => {
       thaw(); const f = ents('SeatsFlat').sort((a, b) => a.x0 - b.x0)[0], a0 = f.above();
       for (let k = 0; k < 400 && !f.level(); k++) sim(1 / 120, { action: true, left: f.above() < 0, right: f.above() > 0 });
-      const lv = f.level(); sim(0.2, { action: true }); window.BRADY.Game.scene.update(0); return { a0, lv, above: f.above() };
+      const lv = f.level(); return { a0, lv, above: f.above() };
     });
     check('33-2: holding THROW and walking back hauls the line in; the spirit level reads LEVEL', r.a0 < 0 && r.lv, r);
     await ev(() => freeze()); await shot('22-33-2-reads-level.png');
@@ -260,6 +260,98 @@ STAGES.flies = async ({ ev, shot, run, pano }) => {
     check('33-2 B37: the room lets Brady out on the far bank past the third flat', r.a && r.a.area === 'flies' && r.a.x >= 112, r);
 
     await ev(() => { thaw(); play('33-2'); }); await pano('pano-33-2.png', 0.3);
+  });
+};
+
+/* ---------------- 33-3 The Seat That Ate Row G: the seat's lip lifts, the shared hinge ---------------- */
+STAGES.rowg = async ({ ev, shot, run, pano }) => {
+  await run('rowg', async () => {
+    await ev(ROOM_HELPERS);
+    await ev(() => { fresh(); play('33-3'); place(4, 16); sim(0.4); freeze(); }); await shot('30-33-3-start.png');
+    let r = await ev(() => {
+      thaw(); const seats = ents('SeatsSeat').sort((a, b) => a.px - b.px), s2 = seats[1];
+      // a plain jump from the floor at the tall backrest: it does not clear
+      place(s2.px - 3, 16); sim(0.2); let maxUp = 0; const y0 = P().y; sim(1 / 120, { jump: true, jumpPressed: true }); for (let k = 0; k < 120; k++) { sim(1 / 120, { jump: true }); maxUp = Math.max(maxUp, (y0 - P().y) / 32); }
+      sim(0.8); const plain = { maxUp: Math.round(maxUp * 10) / 10, back: s2.bk[2] - s2.bk[1] + 1 };
+      // on the seat: the pan folds down; the jump rides the lip up and over
+      walkTo(s2.px * 32 + 16, 4); sim(0.4); const pressed = s2.press > 0.12; const y1 = P().y; let up2 = 0; sim(1 / 120, { jump: true, jumpPressed: true });
+      for (let k = 0; k < 160; k++) { sim(1 / 120, { jump: true, right: k > 20 }); up2 = Math.max(up2, (y1 - P().y) / 32); } sim(1.2, { right: true });
+      return { plain, pressed, lift: Math.round(up2 * 10) / 10, over: at().x > s2.bk[0] };
+    });
+    check('33-3: a plain jump does not clear a tall backrest', r.plain.maxUp < r.plain.back, r);
+    check('33-3: standing on a seat folds its pan down; the jump off it rides the rising lip up and over the next backrest', r.pressed && r.lift > r.plain.back && r.over, r);
+    await ev(() => { const s2 = ents('SeatsSeat').sort((a, b) => a.px - b.px)[1]; place(s2.px - 1, 16); walkTo(s2.px * 32 + 16, 4); sim(0.4); freeze(); }); await shot('31-33-3-on-the-seat.png');
+    r = await ev(() => {
+      thaw(); const pr = ents('SeatsSeat').find(e => e.pair); place(pr.px - 3, 16); sim(0.3); walkTo((pr.px - 1) * 32 + 16, 4); sim(0.5); const y0 = P().y; let up = 0; sim(1 / 120, { jump: true, jumpPressed: true }); for (let k = 0; k < 120; k++) { sim(1 / 120, { jump: true }); up = Math.max(up, (y0 - P().y) / 32); } sim(0.8);
+      const near = Math.round(up * 10) / 10; walkTo(pr.px * 32 + 16, 4); sim(0.4); const y1 = P().y; let up2 = 0; sim(1 / 120, { jump: true, jumpPressed: true }); for (let k = 0; k < 120; k++) { sim(1 / 120, { jump: true }); up2 = Math.max(up2, (y1 - P().y) / 32); }
+      return { near, far: Math.round(up2 * 10) / 10, back: pr.bk[2] - pr.bk[1] + 1 };
+    });
+    check('33-3: the shared hinge: from the near seat no lift; both feet on the far seat, the lip lifts over the tallest backrest', r.near < r.back && r.far > r.back, r);
+    await ev(() => { const pr = ents('SeatsSeat').find(e => e.pair); sim(1); place(pr.px - 1, 16); sim(0.6); freeze(); }); await shot('32-33-3-shared-hinge.png');
+    r = await ev(() => { thaw(); fresh(); play('33-3'); const kind = intoRoom(95, 8); return { kind }; });
+    check('33-3: the props door up in the balcony (a seat\'s lift through the gap in its front) leads to room B38 (Egg on End)', r.kind === 'seatsEgg', r);
+    await ev(() => { sim(0.7); freeze(); }); await shot('33-room-B38-egg-on-end-entry.png');
+    r = await ev(() => { thaw(); sim(1.8); const R = room(), f0 = R.fails || 0; toMark(0); for (let k = 0; k < 120 * 8 && (R.fails || 0) === f0; k++) sim(1 / 120, { right: R.a > 0 ? false : true, left: R.a > 0 }); return { fails: R.fails, f0, won: R.won }; });
+    check('33-3 B38: nudging the egg the wrong way topples it: a miss that costs nothing', r.fails === r.f0 + 1 && !r.won, r);
+    r = await ev(() => { sim(1); const R = room(); toMark(0); for (let k = 0; k < 120 * 20 && !R.won; k++) { const u = R.a * 1.6 + R.w * 0.9, d = Math.abs(u) < 0.06 ? 0 : Math.sign(u); sim(1 / 120, { right: d > 0, left: d < 0 }); } sim(1.2); return { won: R.won, cage: cageOpen() }; });
+    check('33-3 B38: nudged against its lean, let go straight, held two seconds: won, the cage opens', r.won && r.cage, r);
+    await ev(() => freeze()); await shot('34-room-B38-won.png');
+    r = await ev(() => { thaw(); const a = leave(); return { a }; });
+    check('33-3 B38: the room lets Brady out past the balcony', r.a && r.a.area === 'stalls' && r.a.x >= 100, r);
+    await ev(() => { thaw(); play('33-3'); }); await pano('pano-33-3.png', 0.3);
+  });
+};
+
+/* ---------------- 33-4 Please Mind the Scenery: the house looks, doorways, rolling flats, the twin flats ---------------- */
+STAGES.dock = async ({ ev, shot, run, pano }) => {
+  await run('dock', async () => {
+    await ev(ROOM_HELPERS);
+    await ev(() => { fresh(); play('33-4'); place(4, 16); sim(0.4); freeze(); }); await shot('40-33-4-start.png');
+    let r = await ev(() => {
+      thaw(); const h = ents('SeatsHouse').sort((a, b) => a.x0 - b.x0)[0], f = ents('SeatsBackdrop').sort((a, b) => a.x - b.x)[0];
+      place(Math.floor(f.x / 32) + 5, 16); P().invuln = 0; for (let k = 0; k < 120 * 6 && h.state() !== 'look'; k++) sim(1 / 120); const tellSeen = true; sim(0.3); const hit = P().invuln > 0 || P().dead; P().invuln = 999;
+      return { hit };
+    });
+    check('33-4: when the house looks, Brady standing on the stage outside a doorway is SPOTTED (a hit)', r.hit, r);
+    r = await ev(() => {
+      const h = ents('SeatsHouse').sort((a, b) => a.x0 - b.x0)[0], f = ents('SeatsBackdrop').sort((a, b) => a.x - b.x)[0];
+      for (let k = 0; k < 120 * 6 && h.state() !== 'idle'; k++) sim(1 / 120); walkTo((f.doorL() + f.doorR()) / 2, 4); sim(0.2); const x0 = f.x; sim(0.8, { right: true }); const rolled = (f.x - x0) / 32, framed = f.frames(P());
+      for (let k = 0; k < 120 * 6 && h.state() !== 'tell'; k++) sim(1 / 120); return { rolled, framed };
+    });
+    check('33-4: walking in a doorway rolls the flat along with Brady (the doorway stays round him)', r.rolled > 1 && r.framed, r);
+    await ev(() => freeze()); await shot('41-33-4-the-house-is-looking.png');
+    r = await ev(() => { thaw(); const h = ents('SeatsHouse').sort((a, b) => a.x0 - b.x0)[0]; P().invuln = 0; for (let k = 0; k < 120 * 3 && h.state() !== 'look'; k++) sim(1 / 120); sim(0.4); const hit = P().invuln > 0; P().invuln = 999; return { hit }; });
+    check('33-4: framed in the doorway when the house looks: not spotted', !r.hit, r);
+    await ev(() => freeze()); await shot('42-33-4-framed-in-the-doorway.png');
+    // the twin flats: push the front one; the back one slides the other way; framed only where the doorways overlap
+    r = await ev(() => {
+      thaw(); place(133, 16); sim(0.3); const fr = ents('SeatsBackdrop').find(e => e.fid === 'front'), bk = ents('SeatsBackdrop').find(e => e.fid === 'back'), hs = ents('SeatsHouse').find(e => e.finale);
+      walkTo((fr.doorL() + fr.doorR()) / 2, 3); const b0 = bk.x; sim(0.5, { right: true }); const opposite = bk.x < b0;
+      for (let k = 0; k < 600 && !fr.frames(P()); k++) sim(1 / 120, { right: (fr.doorL() + fr.doorR()) / 2 < (bk.doorL() + bk.doorR()) / 2 ? true : false, left: (fr.doorL() + fr.doorR()) / 2 > (bk.doorL() + bk.doorR()) / 2 });
+      const framed = fr.frames(P()), overlap = Math.min(fr.doorR(), bk.doorR()) - Math.max(fr.doorL(), bk.doorL());
+      P().invuln = 0; for (let k = 0; k < 120 * 14 && !hs.borne; k++) sim(1 / 120); const hit = P().invuln > 0; P().invuln = 999;
+      return { opposite, framed, overlap, borne: hs.borne, hit };
+    });
+    check('33-4: the twin flats slide opposite ways; their doorways meet only shoulder-wide', r.opposite && r.framed && r.overlap > 0 && r.overlap <= 40, r);
+    check('33-4: standing in that overlap Brady bears the big look (BRAVO) and the curtain across the way flies out', r.borne && !r.hit, r);
+    await ev(() => { sim(0.5); freeze(); }); await shot('43-33-4-twin-flats-overlap.png');
+    r = await ev(() => { thaw(); walkTo(170 * 32, 6); return { at: at() }; });
+    check('33-4: past the curtain', r.at.x >= 168, r);
+    // B39: the stage door behind the second flat's start
+    r = await ev(() => { thaw(); fresh(); play('33-4'); const kind = intoRoom(48, 16); return { kind }; });
+    check('33-4: rolling the second flat away shows a stage door (the wrong-way seat by it) to room B39 (Perfect Gap)', r.kind === 'seatsGap', r);
+    await ev(() => { sim(0.7); freeze(); }); await shot('44-room-B39-perfect-gap-entry.png');
+    r = await ev(() => {
+      thaw(); sim(1.8); const R = room(), cx = kit().data.mirror ? (28 - 1 - 11 + 0.5) * 32 : 11.5 * 32, f0 = R.fails || 0;
+      walkTo(cx + 5 * 32 * 0.7, 6); for (let k = 0; k < 120 * 8 && !R.on; k++) sim(1 / 120); walkTo(cx - 5 * 32 * 0.8, 6); for (let k = 0; k < 120 * 4 && (R.fails || 0) === f0; k++) sim(1 / 120); return { fails: R.fails, f0, won: R.won };
+    });
+    check('33-4 B39: the gap opening under the olive is a miss (it plops in) that costs nothing', r.fails === r.f0 + 1 && !r.won, r);
+    r = await ev(() => { sim(1); const R = room(), cx = kit().data.mirror ? (28 - 1 - 11 + 0.5) * 32 : 11.5 * 32; walkTo(cx + 5 * 32 * 0.7, 6); for (let k = 0; k < 120 * 12 && !R.won; k++) sim(1 / 120); sim(1.2); return { won: R.won, cage: cageOpen() }; });
+    check('33-4 B39: tipping the soup to one side brings the crackers together; the olive on both for a count of three: won', r.won && r.cage, r);
+    await ev(() => freeze()); await shot('45-room-B39-won.png');
+    r = await ev(() => { thaw(); const a = leave(); return { a }; });
+    check('33-4 B39: the room lets Brady out in the next wings', r.a && r.a.area === 'dock' && r.a.x >= 78, r);
+    await ev(() => { thaw(); play('33-4'); }); await pano('pano-33-4.png', 0.3);
   });
 };
 
@@ -324,6 +416,24 @@ const BOT_PAGE = () => {
   };
   T.cross = () => { const f0 = p().seatsSc.face; if (!T.f({ jump: true, jumpPressed: true })) return false; T.wait(0.45); return p().seatsSc && p().seatsSc.face !== f0; };
   T.letGo = dir => T.hop(dir, false, 0.5);
+  T.seat = () => { const s2 = S().entities.filter(e => e.constructor.name === 'SeatsSeat' && e.px * 32 + 16 > p().cx - 8).sort((a, b) => a.px - b.px)[0]; if (!s2) return true; if (T.to(s2.px * 32 + 16) === false) return false; if (!T.wait(0.3)) return false; if (!T.f({ jump: true, jumpPressed: true })) return false; for (let k = 0; k < 120 * 2.5 && !(k > 20 && p().onGround); k++) if (!T.f({ jump: k < 80, right: k > 12 })) return false; return p().cx > s2.bk[0] * 32 + 32 || 'stuck'; };
+  T.house = () => S().entities.find(e => e.constructor.name === 'SeatsHouse' && p().cx > e.x0 - 8 * 32 && p().cx < e.x1);
+  T.fresh = h => { for (let k = 0; k < 120 * 10; k++) { const c = (h.t + h.ph) % h.per; if (h.state() === 'idle' && c < 0.25) return true; if (!T.f({})) return false; } return true; };
+  T.flat = () => {
+    const f = S().entities.filter(e => e.constructor.name === 'SeatsBackdrop' && !e.rear && !e.link && e.doorR() > p().cx - 16).sort((a, b) => a.x - b.x)[0]; if (!f) return true; const h = T.house();
+    if (h && !f.inDoor(p()) && !T.fresh(h)) return false;
+    if (T.to((f.doorL() + f.doorR()) / 2) === false) return false;
+    for (let k = 0; k < 120 * 12 && f.x < f.max - 1; k++) if (!T.f({ right: true })) return false;
+    if (h) { for (let k = 0; k < 120 * 8 && h.state() !== 'look'; k++) if (!T.f({})) return false; for (let k = 0; k < 120 * 4 && h.state() === 'look'; k++) if (!T.f({})) return false; }
+    return true;
+  };
+  T.twin = () => {
+    const fr = S().entities.find(e => e.constructor.name === 'SeatsBackdrop' && e.fid === 'front'), bk = S().entities.find(e => e.constructor.name === 'SeatsBackdrop' && e.fid === 'back'), h = S().entities.find(e => e.constructor.name === 'SeatsHouse' && e.finale);
+    if (h.borne) return true; if (!fr.inDoor(p()) && !T.fresh(h)) return false;
+    if (T.to((fr.doorL() + fr.doorR()) / 2) === false) return false;
+    for (let k = 0; k < 120 * 30 && !h.borne; k++) { const fc = (fr.doorL() + fr.doorR()) / 2, bc = (bk.doorL() + bk.doorR()) / 2, ok = fr.frames(p()) && Math.abs(p().cx - (Math.max(fr.doorL(), bk.doorL()) + Math.min(fr.doorR(), bk.doorR())) / 2) < 4; if (!T.f(ok ? {} : { right: fc < bc - 1 || (fr.frames(p()) && p().cx < (Math.max(fr.doorL(), bk.doorL()) + Math.min(fr.doorR(), bk.doorR())) / 2), left: fc > bc + 1 || (fr.frames(p()) && p().cx > (Math.max(fr.doorL(), bk.doorL()) + Math.min(fr.doorR(), bk.doorR())) / 2 + 4) })) return false; }
+    return h.borne || 'stuck';
+  };
   T.slack = () => { const f = S().entities.filter(e => e.constructor.name === 'SeatsFlat' && !e.done && e.x0 * 32 > p().cx - 64).sort((a, b) => a.x0 - b.x0)[0]; if (!f) return true; if (T.to(f.ta * 32 + 20) === false) return false; for (let k = 0; k < 120 * 12 && !f.done; k++) { const a = f.above(), lv = f.level() && !(f.tipT > 0); if (!T.f(lv ? {} : f.tipT > 0 ? {} : { action: true, right: a > 0 && p().cx < (f.tb + 1) * 32 - 4, left: a < 0 && p().cx > f.ta * 32 + 4 })) return false; } return f.done || 'stuck'; };
   T.mirror = () => { const c = S().entities.find(e => e.constructor.name === 'SeatsMirrorCrab' && !e.dead); if (!c) return true; for (let k = 0; k < 120 * 6 && !c.dead; k++) if (!T.f(c.atCollar && p().seatsProp ? { action: true, actionPressed: true } : {})) return false; return c.dead || 'stuck'; };
   T.ride = (dir, row) => { const fr = () => Math.floor((p().y + p().h - 1) / 32), up = fr() > row; for (let k = 0; k < 120 * 10; k++) { if (up ? fr() <= row : fr() >= row) { for (let j = 0; j < 20; j++) if (!T.f({})) return false; return true; } if (!T.f({ [dir]: true })) return false; } return 'stuck'; };
@@ -360,6 +470,8 @@ const BOT_ROUTES = {
     ['walk', 91 * 32], ['grip', 1], ['climb', 91, 12], ['climb', 105, 12], ['letGo', 1], 'cp', ['walk', 145 * 32 + 16], ['grip', 1], ['climb', 148, 12], ['cross'], ['climb', 156, 14], ['mirror'], ['climb', 171, 17], ['letGo', 1], 'cp',
     ['walk', 187 * 32 + 16], ['grip', 1], ['climb', 192, 13], ['cross'], ['climb', 201, 11], ['letGo', 1], ['walk', 205 * 32], ['grip', 1], ['climb', 208, 15], ['climb', 221, 17], ['letGo', 1], 'cp', ['gate']],
   '33-2': [['slack'], ['walk', 32 * 32], 'cp', ['walk', 50 * 32], ['slack'], ['walk', 72 * 32], 'cp', ['slack'], ['walk', 116 * 32], 'cp', ['slack'], ['walk', 166 * 32], 'cp', ['gate']],
+  '33-3': [['seat'], ['seat'], ['walk', 33 * 32], 'cp', ['seat'], ['seat'], ['seat'], ['seat'], ['walk', 71 * 32], 'cp', ['seat'], ['seat'], ['walk', 108 * 32], 'cp', ['seat'], ['seat'], ['walk', 139 * 32], 'cp', ['seat'], ['seat'], ['walk', 167 * 32], 'cp', ['gate']],
+  '33-4': [['flat'], ['walk', 39 * 32], 'cp', ['flat'], ['walk', 77 * 32], 'cp', ['flat'], ['flat'], ['walk', 125 * 32], 'cp', ['twin'], ['walk', 171 * 32], 'cp', ['gate']],
 //ROUTES
 };
 const BOT_BOSS = () => {
@@ -378,6 +490,7 @@ const ROOM_HELPERS = () => {
   window.outDoor = () => S().entities.filter(e => e.constructor.name === 'Portal' && e.target && e.target.area !== S().area.idx)[0];
   window.leave = () => { const d = outDoor(); if (!d) return null; walkTo(d.cx, 6); sim(0.1, { up: true, upPressed: true }); for (let k = 0; k < 600 && (S().fade.a > 0.05 || P().state !== 'play'); k++) sim(1 / 120); sim(0.3); return at(); };
   window.intoRoom = (tx, ty) => { place(tx, ty); P().seatsSc = null; sim(0.2); const a0 = S().area.idx; sim(0.1, { up: true, upPressed: true }); for (let k = 0; k < 600 && (S().fade.a > 0.05 || P().state !== 'play'); k++) sim(1 / 120); sim(0.2); return S().area.idx !== a0 && S().area.roomKit ? S().area.roomKit.kind : null; };
+  window.jumpTo = (x, hold) => { const X = x * 32 + 16, p = P(); sim(1 / 120, { jump: true, jumpPressed: true }); for (let k = 0; k < 300 && !(k > 10 && p.onGround); k++) { const d = p.cx < X - 5 ? 1 : p.cx > X + 5 ? -1 : 0; sim(1 / 120, { jump: k < (hold || 0.4) * 120, right: d > 0, left: d < 0 }); } sim(0.2); return at(); };
   window.mark0 = k => S().entities.find(e => e.constructor.name === 'SeatsRoomMark' && e.k === k);
   window.toMark = k => { const m = mark0(k); walkTo(m.cx, 3); sim(0.3); return m; };
   window.goNet = (x, y) => { const p = P(); for (let k = 0; k < 1200 && (Math.abs(p.cx - (x * 32 + 16)) > 6 || Math.abs(p.y + 8 - (y * 32 + 16)) > 6); k++) sim(1 / 120, { right: p.cx < x * 32 + 10, left: p.cx > x * 32 + 22, down: p.y + 8 < y * 32 + 10, up: p.y + 8 > y * 32 + 22 }); };

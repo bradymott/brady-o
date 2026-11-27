@@ -9,7 +9,12 @@
      seatsScale   33-2 THE COUNTERWEIGHT CAGE SAILMAKER'S SCALE: three sandbags go in the pan one at a time; on the
                                              mark the stick slides the brass weight along the arm. Keep the needle in
                                              its notch for each reading.
-     (33-3 to 33-6: see their blocks below.)
+     seatsEgg     33-3 THE PROPS TABLE        EGG ON END: on the mark the stick nudges the wooden prop egg against its
+                                             lean; let go when it stands straight and it must stay up two seconds.
+     seatsGap     33-4 THE GREEN ROOM         PERFECT GAP: walking on the plank over the tureen tips the soup; the two
+                                             crackers slide (the current spreads them); the olive sits on both while
+                                             the gap is narrow: a slow count of three. If the gap opens, it plops in.
+     (33-5 and 33-6: see their blocks below.)
    A miss costs nothing (a raspberry, the turn starts again). The prize cage opens at the win. Each kind scripts its
    own win for tools/sbw_rooms_test.js (testWin). The title comes alone first, then the rule on a pill, then the
    room's counter in one spot under the HUD.
@@ -215,6 +220,121 @@ TourRooms.def('seatsScale', {
   }
 });
 const say0 = (play, A, txt) => SK.say(play, play.camX + Game.viewW / 2, 6 * TS, txt, '#9aff8a');
+
+/* ================= seatsEgg: EGG ON END (the props table) ================= */
+// the way in on a raised shelf (the room on posts); the props table's top is the stage at row 8 from column 6; the
+// wooden prop egg stands on its point by the table's middle (column 11); the mark beside it (column 9)
+const EGG = { x: 12.5, mark: 9 };
+TourRooms.def('seatsEgg', {
+  title: 'EGG ON END', rule: 'NUDGE AGAINST THE LEAN. LET GO WHEN STRAIGHT', need: 'STAND THE EGG UP FIRST!',
+  make(o, keep, ctx, A, rng) {
+    const g = stageRoom(keep, A, o, { st: 8, cx: 16, shelf: true });
+    mk(g, EGG.mark, 7, 0, 'STICK: NUDGE', true);
+    g.winSpot(A.id, 10, 7);
+    g.coins(9, 14, 3);
+    return g;
+  },
+  enter(play, A, R) { if (!R.won) { R.a = 0.25; R.w = 0; R.up = 0; R.push = 0; } },
+  input(play, A, R, kit, m, p, inp, dt) { R.push = quiet(play, R) ? (inp.right ? 1 : 0) - (inp.left ? 1 : 0) : 0; },
+  reset(play, A, R, why) { R.fails = (R.fails || 0) + 1; RK.raspberry(play, why); R.a = (R.fails % 2 ? -0.25 : 0.25); R.w = 0; R.up = 0; },
+  update(play, dt, A, R, kit) {
+    if (R.won) { R.a = approach(R.a, 0, dt); return; }
+    if (R.a == null) this.enter(play, A, R);
+    const p = P(play), m = marks(play)[0], onIt = m && p.seatsProp === m;
+    if (!onIt) R.push = 0;
+    R.t2 = (R.t2 || 0) + dt;
+    if (!quiet(play, R)) return;
+    // a wobbling egg on its point: it leans further the more it leans; a nudge pushes against the lean
+    const wob = Math.sin(R.t2 * 1.7) * 0.25 + Math.sin(R.t2 * 3.1 + 2) * 0.12;
+    R.w += (0.8 * R.a + wob * 0.35 * Math.min(1, Math.abs(R.a) * 6) - R.push * 2.2 - R.w * 1.2) * dt; R.a += R.w * dt;
+    if (Math.abs(R.a) > 0.95) { this.reset(play, A, R, 'IT TOPPLED! STAND IT AGAIN'); return; }
+    const straight = Math.abs(R.a) < 0.09 && Math.abs(R.w) < 0.35 && !R.push;
+    if (straight) { R.up += dt; if (Math.floor(R.up * 2) !== Math.floor((R.up - dt) * 2)) chime(Math.floor(R.up * 2), true); if (R.up >= 2) TourRooms.win(play, A, R, { text: 'BALANCED ON ITS END!', coins: 3 }); }
+    else R.up = 0;
+  },
+  draw(play, ctx, A, R, kit) {
+    const y8 = 8 * TS, x = EGG.x * TS, a = R.a || 0, straight = Math.abs(a) < 0.09;
+    // the props table's clutter (dull): a teapot, a crown, a rubber chicken, all behind the egg
+    ctx.save(); ctx.globalAlpha = 0.85; ctx.strokeStyle = INK; ctx.lineWidth = 1.6;
+    ctx.fillStyle = '#9a8a6a'; ctx.beginPath(); ctx.ellipse(7.2 * TS, y8 - 14, 16, 13, 0, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#b89a4a'; ctx.beginPath(); ctx.moveTo(15.2 * TS - 14, y8); ctx.lineTo(15.2 * TS - 14, y8 - 14); ctx.lineTo(15.2 * TS - 7, y8 - 6); ctx.lineTo(15.2 * TS, y8 - 18); ctx.lineTo(15.2 * TS + 7, y8 - 6); ctx.lineTo(15.2 * TS + 14, y8 - 14); ctx.lineTo(15.2 * TS + 14, y8); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.restore();
+    // the plumb line: where straight is (green when the egg stands straight)
+    ctx.save(); ctx.setLineDash([6, 5]); ctx.strokeStyle = straight ? 'rgba(154,255,138,0.95)' : 'rgba(255,236,170,0.6)'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(x, y8 - 4); ctx.lineTo(x, y8 - 3.2 * TS); ctx.stroke(); ctx.restore();
+    // the egg: a big wooden egg on its point, its grain, a painted gold band
+    ctx.save(); ctx.translate(x, y8 - 2); ctx.rotate(a); ctx.strokeStyle = INK; ctx.lineWidth = 2.4;
+    ctx.fillStyle = '#d8a86a'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.bezierCurveTo(-34, -6, -30, -84, 0, -86); ctx.bezierCurveTo(30, -84, 34, -6, 0, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = '#b8884a'; ctx.lineWidth = 1.4; for (const k of [-10, 0, 10]) { ctx.beginPath(); ctx.moveTo(k * 0.6, -6); ctx.quadraticCurveTo(k * 1.6, -44, k * 0.8, -80); ctx.stroke(); }
+    ctx.fillStyle = SA.TEAL; ctx.fillRect(-27, -42, 54, 8); ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.strokeRect(-27, -42, 54, 8);
+    ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.beginPath(); ctx.ellipse(-12, -60, 5, 12, 0.2, 0, TAU); ctx.fill();
+    ctx.restore();
+    // the lean's arrow (which way it is going), the count
+    if (!R.won && Math.abs(a) > 0.09) SA.pill(ctx, x + Math.sign(a) * 50, y8 - 3.6 * TS, Math.sign(a) > 0 ? 'LEANING >' : '< LEANING', '#ffd84a', 0.9);
+    if (R.up > 0 && !R.won) { ctx.save(); ctx.strokeStyle = '#9aff8a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(x, y8 - 3.9 * TS, 12, -Math.PI / 2, -Math.PI / 2 + TAU * Math.min(1, R.up / 2)); ctx.stroke(); ctx.restore(); }
+    if (!R.won && quiet(play, R)) hud(play, ctx, R.up > 0 ? 'HANDS OFF... HOLDING ' + Math.min(2, R.up).toFixed(1) + ' S' : 'STAND IT UP STRAIGHT, THEN LET GO');
+  },
+  testWin(g, A, R, kit, frame) {
+    const p = g.player, m = marks(g)[0]; hold(p, m.cx, 8 * TS);
+    for (let q = 0; q < 240; q++) frame(g, {});
+    for (let q = 0; q < 120 * 20 && !R.won; q++) { hold(p, m.cx, 8 * TS); const u = R.a * 1.6 + R.w * 0.9, d = Math.abs(u) < 0.06 ? 0 : Math.sign(u); frame(g, { right: d > 0, left: d < 0 }); }
+  }
+});
+
+/* ================= seatsGap: PERFECT GAP (the green room) ================= */
+// mirrored. A big tureen of soup on the stage, a plank across its rim the stage itself; Brady's weight on the plank
+// tips the tureen toward him: the two crackers floating on it slide that way (the soup's current spreads them
+// apart). The olive sits on them while the gap between them is narrow: a slow count of three wins; if the gap opens
+// under it, the olive plops in (a miss)
+const GAP = { c: 11, half: 5 * TS, cw: 40, oliveMax: 18 };
+TourRooms.def('seatsGap', {
+  title: 'PERFECT GAP', rule: 'WALK TO TIP THE SOUP. OLIVE ON BOTH, COUNT THREE', need: 'BRIDGE THE CRACKERS FIRST!',
+  make(o, keep, ctx, A, rng) {
+    const g = stageRoom(keep, A, o, { st: 8, cx: 17 });
+    g.winSpot(A.id, 11, 7);
+    g.coins(7, 9, 4); g.coins(13, 15, 4);
+    mirror(g, []);
+    return g;
+  },
+  cx(A) { return ((A.roomKit.data && A.roomKit.data.mirror ? W - 1 - GAP.c : GAP.c) + 0.5) * TS; },
+  enter(play, A, R) { if (!R.won) { R.c1 = -70; R.c2 = 70; R.v1 = 0; R.v2 = 0; R.n = 0; R.tilt = 0; R.on = false; } },
+  reset(play, A, R, why) { R.fails = (R.fails || 0) + 1; RK.raspberry(play, why); R.c1 = -70; R.c2 = 70; R.v1 = R.v2 = 0; R.n = 0; R.on = false; },
+  update(play, dt, A, R, kit) {
+    if (R.won) return;
+    if (R.c1 == null) this.enter(play, A, R);
+    const p = P(play), cx = this.cx(A), onPlank = p.onGround && p.groundTy === 8 && Math.abs(p.cx - cx) < GAP.half + 20;
+    R.tilt = approach(R.tilt, onPlank ? clamp((p.cx - cx) / GAP.half, -1, 1) : 0, dt * 2.5);
+    if (!quiet(play, R)) return;
+    // each cracker: down the tilt, the current spreading them from the middle, drag; the rims stop them
+    const step = (c, v) => { v += (R.tilt * 150 + Math.sign(c || 1) * 26 - v * 1.6) * dt; c += v * dt; const L = GAP.half - GAP.cw / 2 - 6; if (c < -L) { c = -L; v = Math.max(0, v) * 0; } if (c > L) { c = L; v = 0; } return [c, v]; };
+    [R.c1, R.v1] = step(R.c1, R.v1); [R.c2, R.v2] = step(R.c2, R.v2);
+    if (R.c2 - R.c1 < GAP.cw) { const m = (R.c1 + R.c2) / 2, v = (R.v1 + R.v2) / 2; R.c1 = m - GAP.cw / 2; R.c2 = m + GAP.cw / 2; R.v1 = R.v2 = v; }
+    const gap = R.c2 - R.c1 - GAP.cw;
+    if (gap <= GAP.oliveMax) { if (!R.on) { R.on = true; R.n = 0; Sound.play('pick', { vol: 0.3 }); } R.n += dt; if (Math.floor(R.n) !== Math.floor(R.n - dt)) chime(Math.floor(R.n), true); if (R.n >= 3) TourRooms.win(play, A, R, { text: 'A PERFECT GAP!', coins: 3 }); }
+    else if (R.on) { this.reset(play, A, R, 'PLOP! THE OLIVE FELL IN'); }
+  },
+  draw(play, ctx, A, R, kit) {
+    const y8 = 8 * TS, cx = this.cx(A), tilt = R.tilt || 0, a = tilt * 0.12;
+    // the tureen: a big cream bowl sunk in the stage under the plank
+    ctx.save(); ctx.translate(cx, y8 + 6); ctx.rotate(a); ctx.strokeStyle = INK; ctx.lineWidth = 2.4;
+    ctx.fillStyle = '#f0e8d0'; ctx.beginPath(); ctx.moveTo(-GAP.half - 16, -10); ctx.quadraticCurveTo(-GAP.half, 70, 0, 74); ctx.quadraticCurveTo(GAP.half, 70, GAP.half + 16, -10); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#e0a050'; ctx.beginPath(); ctx.ellipse(0, -10, GAP.half + 10, 9, 0, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,240,200,0.4)'; ctx.beginPath(); ctx.ellipse(-GAP.half * 0.4, -12, 30, 3, 0, 0, TAU); ctx.fill();
+    // the crackers and the olive (on a stagehand's cocktail stick until it can sit on both)
+    const gap = (R.c2 || 70) - (R.c1 || -70) - GAP.cw, ok = gap <= GAP.oliveMax;
+    for (const c of [R.c1 == null ? -70 : R.c1, R.c2 == null ? 70 : R.c2]) { ctx.fillStyle = '#e8c070'; rr(ctx, c - GAP.cw / 2, -18, GAP.cw, 10, 3); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#b8883a'; for (const d of [-10, 0, 10]) { ctx.beginPath(); ctx.arc(c + d, -13, 1.5, 0, TAU); ctx.fill(); } }
+    const ox = ((R.c1 || -70) + (R.c2 || 70)) / 2;
+    if (ok || R.won) { ctx.fillStyle = '#5a8a3a'; ctx.beginPath(); ctx.ellipse(ox, -26, 11, 9, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#d84a3a'; ctx.beginPath(); ctx.arc(ox + 4, -28, 3, 0, TAU); ctx.fill(); }
+    ctx.restore();
+    if (!(ok || R.won)) { ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#5a8a3a'; const oy = y8 - 3 * TS; ctx.beginPath(); ctx.ellipse(cx + ox, oy, 11, 9, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.strokeStyle = SA.CREAM; ctx.beginPath(); ctx.moveTo(cx + ox, oy - 9); ctx.lineTo(cx + ox, oy - 40); ctx.stroke(); ctx.setLineDash([4, 5]); ctx.strokeStyle = 'rgba(255,236,170,0.7)'; ctx.beginPath(); ctx.moveTo(cx + ox, oy + 10); ctx.lineTo(cx + ox, y8 - 10); ctx.stroke(); ctx.restore(); }
+    if (!R.won && quiet(play, R)) hud(play, ctx, R.on ? 'COUNT: ' + Math.min(3, Math.floor(R.n) + 1) + '...' : 'CLOSE THE GAP: ' + Math.max(0, Math.round(gap - GAP.oliveMax)));
+  },
+  testWin(g, A, R, kit, frame) {
+    const p = g.player, cx = this.cx(A); hold(p, cx, 8 * TS);
+    for (let q = 0; q < 240; q++) frame(g, {});
+    // stand over the crackers' middle, nudging toward the far one
+    const want = cx + GAP.half * 0.7; for (let q = 0; q < 120 * 25 && !R.won; q++) frame(g, { right: p.cx < want - 6, left: p.cx > want + 6 });
+  }
+});
 
 //ROOMS
 

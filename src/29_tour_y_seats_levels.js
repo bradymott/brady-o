@@ -128,7 +128,7 @@ const FLY = {
   '1': ['piece', 'seats.flat', { w: 6, tail: 6, gap: 2, target: 3 }],
   '2': ['piece', 'seats.flat', { w: 8, tail: 6, gap: 2, target: 4 }],
   '3': ['piece', 'seats.flat', { w: 12, tail: 7, gap: 2, target: 4 }],
-  '4': ['piece', 'seats.flat', { w: 16, tail: 7, gap: 2, target: 5, win: 5, mid: 8 }],
+  '4': ['piece', 'seats.flat', { w: 16, tail: 8, gap: 2, target: 5, win: 7, k: 0.8, mid: 8 }],
   A: ['spawn', 'portal', { kind: 'door', look: 'seatsDoor', targetRef: 'weights@in' }], u: TELL(), a: ['anchor', 'weightsOut']
 };
 stamps.seatsFlies = { floor: 17, rows: fliesRows, legend: FLY, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power'] };
@@ -145,9 +145,118 @@ const L2 = { n: 2, time: 360, name: 'Slack Department', mapLabel: 'Slack Departm
     { id: 'weights', gen: 'room', role: 'secret', theme: 'seats_room_weights', stamp: 'seatsWeights', room: 'seatsScale' }
   ] };
 
+/* ---------------- 33-3 The Seat That Ate Row G ---------------- */
+// the stalls under the balcony, ground tops row 17. ① the teach: a seat whose backrest a plain jump clears, then one
+// whose backrest only the seat's rising lip clears; ② Row G: seats one after another, Seat Shrews folding themselves
+// into seats between them; ③ the balcony overhead: a gap in its front over a seat (the wrong-way seat by it) is the
+// way up to the props table (room B38), which lets Brady out further along; ④ the late twist: two seats share one
+// hinge in front of the tallest backrest: only the far seat, both feet on it, lifts
+const rowgRows = (() => {
+  const W = 206, H = 22, Gr = grid(W, H, '.');
+  ground(Gr, 0, W - 1, 17);
+  // ① the teach
+  put(Gr, 3, 16, '@'); put(Gr, 6, 16, 'k'); put(Gr, 9, 12, '?'); put(Gr, 3, 12, 'o.o');
+  put(Gr, 13, 16, '1'); put(Gr, 22, 16, 'K'); put(Gr, 25, 16, '2'); put(Gr, 26, 8, 'o.o.o'); put(Gr, 27, 6, '*');
+  put(Gr, 32, 16, 'c'); put(Gr, 36, 16, 'd');
+  // ② Row G: four seats in a row (G1-G4), shrews between, a crab
+  put(Gr, 42, 16, '3'); put(Gr, 49, 16, '4'); put(Gr, 56, 16, '5'); put(Gr, 63, 16, '6');
+  put(Gr, 47, 16, 'e'); put(Gr, 54, 16, 'l'); put(Gr, 61, 16, 'e'); put(Gr, 50, 9, 'R'); put(Gr, 57, 9, 'o.o');
+  put(Gr, 70, 16, 'c'); put(Gr, 74, 13, '?');
+  // ③ the balcony: rows 2-9 over columns 78-100, its floor row 9 with a gap over the seat at 85; inside, the props door
+  fillG(Gr, 78, 0, 100, 9, 'H'); fillG(Gr, 79, 3, 99, 8, '.'); fillG(Gr, 85, 9, 86, 9, '.');
+  put(Gr, 84, 16, '7'); put(Gr, 88, 8, 'u'); put(Gr, 95, 8, 'A'); put(Gr, 90, 6, 'o.o.o');
+  put(Gr, 80, 16, 'r'); put(Gr, 92, 16, '8'); put(Gr, 97, 16, 'd'); put(Gr, 104, 16, 'a'); put(Gr, 107, 16, 'c');
+  // more rows: a pair of seats back to back (jump one, then the next), a stoat, a hen
+  put(Gr, 114, 16, '9'); put(Gr, 122, 16, '0'); put(Gr, 118, 16, 'r'); put(Gr, 128, 16, 'j'); fillG(Gr, 131, 13, 134, 13, '-'); put(Gr, 132, 11, 'o.o');
+  put(Gr, 138, 16, 'c'); put(Gr, 141, 16, 'O');
+  // ④ the shared hinge before the tallest backrest; then the high postcard over the last row
+  put(Gr, 147, 16, 'X'); put(Gr, 154, 16, 'e'); put(Gr, 158, 16, 'Y'); put(Gr, 161, 8, 'P');
+  put(Gr, 166, 16, 'c'); put(Gr, 172, 16, 'l'); put(Gr, 180, 13, '?'); put(Gr, 186, 16, 'j'); put(Gr, 198, 16, 'G');
+  fillG(Gr, W - 1, 0, W - 1, 16, 'H');
+  return rowsOf(Gr);
+})();
+const SEAT = (h, o) => ['piece', 'seats.seat', Object.assign({ h }, o || {})];
+const RG = {
+  k: SIGN('FOLD-UP SEATS! STAND ON ONE AND JUMP: ITS RISING LIP LIFTS YOU OVER THE NEXT BACKREST'),
+  K: SIGN('A PLAIN JUMP WILL NOT CLEAR THIS BACKREST. JUMP FROM THE SEAT'),
+  O: SIGN('TWO SEATS ON ONE HINGE: THE LIP ONLY LIFTS WITH BOTH FEET ON THE FAR SEAT'),
+  l: ['enemy', 'seatsCrab'], r: ['enemy', 'seatsStoat'], j: ['enemy', 'seatsHen'], d: ['enemy', 'seatsShrew'], e: ['enemy', 'seatsShrew'],
+  '1': SEAT(3, { label: 'F1' }), '2': SEAT(5, { label: 'F2' }),
+  '3': SEAT(5, { label: 'G1' }), '4': SEAT(5, { label: 'G2' }), '5': SEAT(6, { label: 'G3' }), '6': SEAT(5, { label: 'G4' }),
+  '7': SEAT(3, { label: 'H1' }), '8': SEAT(5, { label: 'H2' }), '9': SEAT(5, { label: 'J1' }), '0': SEAT(6, { label: 'J2' }),
+  X: SEAT(6, { pair: true, label: 'K1' }), Y: SEAT(5, { label: 'K2' }),
+  A: ['spawn', 'portal', { kind: 'door', look: 'seatsDoor', targetRef: 'props@in' }], u: TELL(), a: ['anchor', 'propsOut']
+};
+stamps.seatsRowG = { floor: 17, rows: rowgRows, legend: RG, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power', 'power'] };
+stamps.seatsProps = roomStamp('stalls@propsOut', 'seatsDoor');
+const L3 = { n: 3, time: 360, name: 'The Seat That Ate Row G', mapLabel: 'The Seat That Ate Row G', arch: 'foldseat', theme: 'seats_rowg',
+  gimmick: 'Fold-up seats with tall backrests. Stand on a seat and jump: its rising lip lifts you over the next backrest. Two seats on one shared hinge lift only from the far seat',
+  hint: 'A plain jump clears a short backrest, never a tall one. On a shared hinge, both feet on the far seat. A little seat faces the floor up in the balcony...',
+  postcard: 'Brady! A seat in row G folded me up like a sandwich. A shrew pretended to be a seat next to me. I sat on it. We are friends now. ♥ C',
+  enemies: [['seatsShrew', 4], ['seatsCrab', 2], ['seatsStoat', 2], ['seatsHen', 2]],
+  mapCell: [2, 0], mapFrom: 1,
+  exits: { main: { to: '33-4' } },
+  areas: [
+    { id: 'stalls', gen: 'room', theme: 'seats_rowg', stamp: 'seatsRowG', camera: 'free', bottomKill: true },
+    { id: 'props', gen: 'room', role: 'secret', theme: 'seats_room_props', stamp: 'seatsProps', room: 'seatsEgg' }
+  ] };
+
+/* ---------------- 33-4 Please Mind the Scenery ---------------- */
+// the stage during the show, ground tops row 17: the wings between stretches of stage the house watches. ① the teach:
+// one flat on its track across a short stage; ② a longer stage: the flat starts over a stage door (the wrong-way seat
+// by it): roll it away and the door to the green room (room B39) shows, which lets Brady out in the next wings; ③ two
+// flats in a row (hand over between looks), a Sandbag Stoat; ④ the finale: twin flats roped over one pulley, their
+// doorways overlap only shoulder-wide; the big look can only be borne standing in that overlap, and then the curtain
+// across the way flies out
+const dockRows = (() => {
+  const W = 206, H = 22, Gr = grid(W, H, '.');
+  ground(Gr, 0, W - 1, 17);
+  put(Gr, 3, 16, '@'); put(Gr, 6, 16, 'k'); put(Gr, 10, 13, '?'); put(Gr, 2, 12, 'o.o.o');
+  put(Gr, 16, 16, 'v'); put(Gr, 16, 15, '1');
+  put(Gr, 38, 16, 'c'); fillG(Gr, 39, 13, 42, 13, '-'); put(Gr, 40, 10, '*'); put(Gr, 41, 16, 'K');
+  put(Gr, 45, 16, 'i'); put(Gr, 46, 15, '2'); put(Gr, 44, 16, 'u'); put(Gr, 48, 16, 'A'); put(Gr, 62, 16, 'r');
+  put(Gr, 76, 16, 'c'); put(Gr, 78, 13, '?'); fillG(Gr, 79, 11, 82, 11, '-'); put(Gr, 80, 8, 'R'); put(Gr, 81, 16, 'a'); put(Gr, 83, 16, 'l');
+  put(Gr, 85, 16, 'm'); put(Gr, 86, 15, '3'); put(Gr, 104, 15, '4'); put(Gr, 110, 16, 'r');
+  put(Gr, 124, 16, 'c'); put(Gr, 128, 13, '?'); put(Gr, 126, 16, 'j'); put(Gr, 131, 16, 'O');
+  put(Gr, 135, 16, 'n'); put(Gr, 150, 15, '6'); put(Gr, 138, 15, '5'); put(Gr, 166, 16, 'Z');
+  put(Gr, 170, 16, 'c'); fillG(Gr, 174, 13, 177, 13, '-'); fillG(Gr, 179, 10, 182, 10, '-'); put(Gr, 180, 7, 'P'); put(Gr, 176, 11, 'o.o');
+  put(Gr, 186, 16, 'd'); put(Gr, 196, 16, 'G'); fillG(Gr, W - 1, 0, W - 1, 16, 'H');
+  return rowsOf(Gr);
+})();
+const DK = {
+  k: SIGN('THE SHOW IS ON! WHEN THE HOUSE LOOKS, STAND IN A PAINTED DOORWAY. WALK IN ONE AND THE FLAT ROLLS WITH YOU'),
+  K: SIGN('THE EYES OUT FRONT GLINT BEFORE THE HOUSE LOOKS. GET IN A DOORWAY'),
+  O: SIGN('TWIN FLATS ON ONE ROPE: PUSH THE FRONT ONE AND THE BACK ONE SLIDES THE OTHER WAY. THEIR DOORWAYS MEET ONCE'),
+  l: ['enemy', 'seatsCrab'], r: ['enemy', 'seatsStoat'], j: ['enemy', 'seatsHen'], d: ['enemy', 'seatsShrew'],
+  v: ['piece', 'seats.house', { w: 20, period: 4.6, phase: 0 }],
+  '1': ['piece', 'seats.backdrop', { w: 6, h: 5, dl: 2, dw: 2, track: 14, art: 0 }],
+  i: ['piece', 'seats.house', { w: 28, period: 4.6, phase: 1.2 }],
+  '2': ['piece', 'seats.backdrop', { w: 6, h: 5, dl: 3, dw: 2, track: 20, art: 1 }],
+  m: ['piece', 'seats.house', { w: 36, period: 4.4, phase: 0.5 }],
+  '3': ['piece', 'seats.backdrop', { w: 6, h: 5, dl: 2, dw: 2, track: 12, art: 2 }], '4': ['piece', 'seats.backdrop', { w: 6, h: 5, dl: 2, dw: 2, track: 11, art: 0 }],
+  n: ['piece', 'seats.house', { w: 31, period: 6.2, tell: 1.4, look: 2.4, phase: 2, finale: true, id: 'seats:finale', kx: 12 }],
+  '5': ['piece', 'seats.backdrop', { w: 6, h: 5, dl: 2, dw: 1, track: 14, fid: 'front', link: 'back', art: 1 }],
+  '6': ['piece', 'seats.backdrop', { w: 6, h: 6, dl: 3, dw: 1, track: -14, fid: 'back', rear: true, art: 2 }],
+  Z: ['piece', 'seats.curtain', { id: 'seats:finale', h: 7 }],
+  A: ['spawn', 'portal', { kind: 'door', look: 'seatsDoor', targetRef: 'green@in' }], u: TELL(), a: ['anchor', 'greenOut']
+};
+stamps.seatsDock = { floor: 17, rows: dockRows, legend: DK, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power'] };
+stamps.seatsGreen = roomStamp('dock@greenOut', 'seatsDoor');
+const L4 = { n: 4, time: 380, name: 'Please Mind the Scenery', mapLabel: 'Please Mind the Scenery', arch: 'pushflat', theme: 'seats_dock',
+  gimmick: 'The show is on. When the house looks, stand in a painted doorway and they think you are scenery. Walk in a doorway and the flat rolls along with you. The twin flats\' doorways meet only once',
+  hint: 'The eyes out front glint before the house looks. Twin flats: push the front one until the two doorways overlap and stand right in it. A little seat faces the floor where the second flat starts...',
+  postcard: 'Brady! I crossed the stage in the middle of the show inside a painted door. A whole row of owls clapped. I bowed. ♥ C',
+  enemies: [['seatsStoat', 3], ['seatsCrab', 1], ['seatsHen', 1], ['seatsShrew', 1]],
+  mapCell: [3, 0], mapFrom: 2,
+  exits: { main: { to: '33-5' } },
+  areas: [
+    { id: 'dock', gen: 'room', theme: 'seats_dock', stamp: 'seatsDock', camera: 'free', bottomKill: true },
+    { id: 'green', gen: 'room', role: 'secret', theme: 'seats_room_green', stamp: 'seatsGreen', room: 'seatsGap' }
+  ] };
+
 //NEXT
-Tour.amend('seats', { stamps, levels: [L1, L2] });
-Tour.seatsKit.L = { L1, L2 };
+Tour.amend('seats', { stamps, levels: [L1, L2, L3, L4] });
+Tour.seatsKit.L = { L1, L2, L3, L4 };
 
 /* ---------------- the land's map: a stage seen from the wings, the route a loop round the trap room ---------------- */
 if (typeof TOUR_OW_MAPS !== 'undefined') TOUR_OW_MAPS.seats = {

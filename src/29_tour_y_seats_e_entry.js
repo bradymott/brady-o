@@ -2,7 +2,7 @@
    BELOW THE CHEAP SEATS: the hidden way in (the land's best secret), in Festival Fields 23-1 CAMPSITE SCRAMBLE.
    ChatGPT's entrance: "climb down the back of the last bench and press down between its two middle legs. A single seat
    faces the ground underneath."
-   In guy-rope alley (the campsite field next to the main stage) a little grandstand of three benches steps up toward
+   In guy-rope alley (the campsite field next to the main stage) a little grandstand of two benches steps up toward
    the stage, painted the way Festival Fields paints its props (bright flat fills, the soft dark ink). Every bench has
    its folding seats upright on top, facing the stage. Under the LAST (highest) bench, between its two middle legs, ONE
    plain folding seat hangs facing the ground: the only odd thing there. No sign, no arrow, no coins, nothing on the
@@ -45,20 +45,20 @@ function bench(ctx, tx, ty, w, gy) {
   ctx.fillStyle = FC.wood2; ctx.fillRect(x0, y + 5, x1 - x0, 2);
   ctx.restore();
 }
-// the stand: three benches stepping up (rows gy-2, gy-3, gy-4) from column tx; the seats upright on top, the one under
+// the stand: two benches stepping up (rows gy-2, gy-3) from column tx; the seats upright on top, the one under
 // the last bench facing the ground
-const BENCHES = [[0, 2, 2], [3, 3, 2], [5, 4, 2]];
+const BENCHES = [[0, 2, 2], [3, 3, 3]], LAST = BENCHES[BENCHES.length - 1];
 function stand(ctx, tx, gy, t) {
   for (const [dx, up, w] of BENCHES) bench(ctx, tx + dx, gy - up, w, gy);
   for (const [dx, up, w] of BENCHES) for (let q = 0; q < w; q++) upSeat(ctx, (tx + dx + q + 0.5) * TS, (gy - up) * TS + 1);
-  const [dx, up, w] = BENCHES[2];
+  const [dx, up, w] = LAST;
   downSeat(ctx, (tx + dx + w / 2) * TS, (gy - up) * TS + 8, t);
 }
 
 class SeatsFestStand extends Ent {
   constructor(g, s) {
     super(g, s, TS, TS); this.tx = s.tx; this.gy = s.gy; this.back = true; this.friendly = true; this.exitKey = 'seats'; this.secret = true; this.arr = -1;
-    const [dx, up, w] = BENCHES[2]; this.midX = (this.tx + dx + w / 2) * TS; this.seatY = (this.gy - up) * TS + 8; this.x = this.midX - TS / 2; this.y = (this.gy - 2) * TS; this.h = 2 * TS; this.downT = 0;
+    const [dx, up, w] = LAST; this.midX = (this.tx + dx + w / 2) * TS; this.seatY = (this.gy - up) * TS + 8; this.x = this.midX - TS / 2; this.y = (this.gy - 2) * TS; this.h = 2 * TS; this.downT = 0;
   }
   update(dt) {
     this.t += dt;
@@ -102,7 +102,7 @@ if (typeof VALIDATOR_EXITS !== 'undefined') VALIDATOR_EXITS.seatsFestStand = { w
 Tour.pieces['seats.festStand'] = function (st, o) {
   const B = st.B, x = st.x, gy = st.gy;
   for (const [dx, up, w] of BENCHES) for (let q = 0; q < w; q++) B.set(x + dx + q, gy - up, T.SEMI);
-  const [dx, up, w] = BENCHES[2];
+  const [dx, up, w] = LAST;
   const s = B.spawn('seatsFestStand', x + dx + 1, gy - 1, { tx: x, gy, exit: 'seats' });
   s.x = (x + dx + w / 2) * TS; s.y = gy * TS;
   return st.x;
