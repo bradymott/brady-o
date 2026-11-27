@@ -499,9 +499,148 @@ LEVELS.rooms = async (page, shot, run) => {
   }
 };
 
+// ---------------- 27-6 Return to Sender: the torn addresses, the den's fake wall, the desk's door ----------------
+LEVELS.ret = async (page, shot, run, pano) => {
+  await run('ret', async () => {
+    await page.evaluate(helpers);
+    await page.evaluate(() => { fresh(); playP('27-6'); place(4, 18); sim(0.6); freeze(); }); await shot('80-27-6-start.png');
+    let r = await page.evaluate(() => { thaw(); AP.go([16, 19]); const e = ents('PostAddress')[0]; for (let k = 0; k < 120 * 6 && !e.done; k++) sim(1 / 120); return { done: e.done, dead: P().dead }; });
+    check('27-6: with nobody on the crease the postmark only misses (the halves stay apart)', !r.done, r);
+    r = await page.evaluate(() => { const e = ents('PostAddress')[0]; AP.go([23, 19]); for (let k = 0; k < 120 * 6 && e.phase !== 'ring'; k++) sim(1 / 120); sim(0.5); freeze(); return { k: e.k }; });
+    await shot('81-27-6-address-ring.png');
+    r = await page.evaluate(() => { thaw(); const e = ents('PostAddress')[0]; for (let k = 0; k < 120 * 6 && !e.done; k++) sim(1 / 120); sim(0.8); return { done: e.done, barrier: tileName(26, 15), dead: P().dead }; });
+    check('27-6: on the crease plate the halves join; the postmark cancels the whole address and the letters lift', r.done && r.barrier === 'EMPTY' && !r.dead, r);
+    r = await page.evaluate(() => { const a = AP.route([[30, 19], [52, 19]]); const e = ents('PostAddress')[1]; AP.go([54, 19]); for (let k = 0; k < 120 * 10 && !e.done; k++) sim(1 / 120); sim(0.8); return { a: a.ok, done: e.done }; });
+    check('27-6: the second address too', r.a && r.done, r);
+    await shotAt(page, shot, '82-27-6-secret-tell.png', () => { place(66, 18); sim(0.3); });
+    r = await page.evaluate(() => { const a = AP.go([74, 19]); return { ok: a.ok, at: tileOf() }; });
+    check('27-6: the pillar\'s foot where the corner curls is paper: through to the den\'s door (before the boss)', r.ok, r);
+    r = await page.evaluate(() => { place(88, 18); sim(0.2); toDoor(); return {}; });
+    r = await page.evaluate(() => { const g = S(); const d = g.entities.filter(e => e.constructor.name === 'Portal' && e.target && e.target.area !== g.area.idx).sort((a, b) => b.cx - a.cx)[0]; const p = P(); p.x = d.cx - p.w / 2; p.y = d.y + d.h - p.h; sim(0.2); sim(0.1, { up: true, upPressed: true }); for (let k = 0; k < 200 && S().area.aid !== 'desk'; k++) sim(1 / 60); sim(3); freeze(); return { area: S().area.aid }; });
+    await shot('83-27-6-boss-desk.png'); await page.evaluate(() => thaw());
+    check('27-6: the sorting desk\'s letterbox leads into the boss arena', r.area === 'desk', r);
+    await page.evaluate(() => { playP('27-6'); }); await pano('89-27-6-panorama.png', 0.35);
+  });
+};
+const openPost = `(() => { fresh(); const B = window.BRADY, T = window.BRADY_TOUR; B.Save.data.seenEncoreIntro = true; const Tp = T.TourProgress, D = Tp.data(); D.seen.vn = true; try { Tp.exit('10-3', 'post'); Tp.exit('27-1', 'main'); Tp.exit('27-2', 'main'); } catch (e) {} for (const id of ['27-1', '27-2']) B.Save.data.done[id] = true; D.pending = []; D.seen.post = true; })()`;
+LEVELS.map = async (page, shot, run) => {
+  await run('map', async () => {
+    const r = await page.evaluate(o => { eval(o); window.BRADY.goToMap('world', 27, '27-2'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } const s = S(); return { mode: s.mode, cc: s.ow && s.ow.cc }; }, openPost);
+    check('the harbour has its own walkable map', r.cc === 'post', r);
+    await page.evaluate(() => freeze()); await shot('70-post-overworld-map.png');
+    const r2 = await page.evaluate(() => { thaw(); const s = S(); if (s.openRoute) s.openRoute({ dest: 'post' }); for (let k = 0; k < 30; k++) sim(0.25); s.dest = 'post'; sim(0.8); return { mode: s.mode }; });
+    await page.evaluate(() => freeze()); await shot('71-route-map-post-pin.png');
+    check('the route map opens on the harbour\'s pin', !!r2.mode, r2);
+  });
+};
+
+// ---------------- bot: one honest run of each stage, enemies on, no invulnerability, the lives a level gives ----------------
+// Steps: [x, row] walk/hop there; { j: [x, row] } land exactly there; { bump: [x, row] } hit the box above; { isl: [to, back] }
+// tear an island and get back; { stamp: sx }; { blot: 1|2 }; { fold: mx }; { scale: [x0, x1, end] }; { addr: plateX }; 'finish'; 'boss'
+const BOT = {
+  '27-1': [[0, [{ bump: [10, 19] }, [20, 19], [26, 17], [29, 15], { isl: [36, 29] }, [34, 17], [44, 17]]],
+    [46, [{ bump: [49, 17] }, [55, 17], [62, 17], { isl: [70, 62] }, [68, 19], [80, 19], [90, 19]]],
+    [90, [[96, 17], [99, 16], { isl: [106, 99] }, [104, 18], [116, 18], [136, 18]]],
+    [136, [[144, 17], [149, 17], { j: [151, 17] }, [154, 17], [160, 17], [180, 17], 'finish']]],
+  '27-2': [[0, [{ bump: [7, 19] }, { stamp: 11 }, [16, 19], [21, 19], [29, 19]]],
+    [31, [{ bump: [40, 19] }, { stamp: 34 }, [44, 19], [48, 16], [53, 14], [70, 14]]],
+    [71, [[78, 19], { stamp: 90 }, [100, 19], [102, 18], [103, 17], [107, 14], [120, 14]]],
+    [120, [[125, 14], [137, 16], [146, 19], [158, 19], 'finish']]],
+  '27-3': [[0, [{ bump: [7, 19] }, { blot: 1 }, [16, 19], [21, 19], [27, 19]]],
+    [30, [[40, 19], [49, 19], { blot: 1 }, [54, 19], [60, 19], [66, 19], [78, 19]]],
+    [80, [{ bump: [85, 19] }, [100, 19], { blot: 2 }, [114, 19], [120, 19], [128, 19]]],
+    [130, [[150, 19], [170, 19], 'finish']]],
+  '27-4': [[0, [{ bump: [8, 19] }, { fold: 19 }, [24, 19], [29, 19]]],
+    [30, [{ bump: [40, 19] }, { fold: 46 }, [52, 19], [60, 19]]],
+    [62, [[76, 19], [84, 25], [100, 25]]], [100, [[117, 23], [121, 19]]],
+    [122, [{ fold: 134 }, [144, 19], [150, 19], 'finish']]],
+  '27-5': [[0, [{ bump: [7, 19] }, { scale: [9, 14, 'big'] }, [16, 19], [22, 19], [31, 19], [38, 19]]],
+    [40, [{ bump: [50, 19] }, { scale: [43, 48, 'small'] }, [52, 19], [57, 19], [70, 19]]],
+    [72, [{ scale: [78, 84, 'big'] }, [88, 19], [93, 19], { scale: [94, 99, 'small'] }, [100, 19], [102, 16], [108, 13]]],
+    [110, [[125, 13], [135, 13], 'finish']]],
+  '27-6': [[0, [{ bump: [7, 19] }, { addr: 23 }, [28, 19]]], [30, [{ bump: [35, 19] }, { addr: 54 }, [60, 19]]], [63, [[88, 19], 'boss']]]
+};
+LEVELS.bot = async (page, shot, run) => {
+  if (!want.includes('bot')) return;
+  await page.evaluate(helpers);
+  const ids = Object.keys(BOT).filter(id => !want.some(w => /^27-/.test(w)) || want.includes(id));
+  for (const id of ids) await run('bot', async () => {
+    const r = await page.evaluate(([id, segs]) => {
+      fresh(); const B = window.BRADY; B.Save.data.lives = 5;
+      const [w, i] = id.split('-').map(Number); B.Game.setScene(new B.Play(B.getLevel(w, i), {})); sim(1.6);
+      AP.careful = true; const deaths = []; let hurts = 0, lastPow = P().power;
+      const alive = () => { const g = S(), p = P(); return p && !p.dead && g.state === 'play'; };
+      const settle = () => { for (let k = 0; k < 120 * 8 && !(S().state === 'play' && P() && !P().dead && S().fade.a < 0.05); k++) sim(1 / 120); };
+      const near = (cls) => ents(cls).sort((a, b) => Math.abs((a.cxF || a.cx) - P().cx) - Math.abs((b.cxF || b.cx) - P().cx))[0];
+      const doStep = st => {
+        if (st === 'finish') { sim(3, { right: true }); return S().state !== 'play'; }
+        if (st === 'boss') return bossFight();
+        if (Array.isArray(st)) { for (let k = 0; k < 8; k++) { if (k === 4) AP.careful = false; const r = AP.go(st); AP.careful = true; if (r.ok) return true; if (!alive()) return false; sim(0.5); } return false; }
+        if (st.j) { for (let k = 0; k < 8; k++) { const r = AP.go(st.j, { jump: true }); if (r.ok && tileOf()[0] === st.j[0]) return true; if (!alive()) return false; sim(0.4); } return false; }
+        if (st.bump) { AP.go(st.bump); const p = P(); sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.5, { jump: true }); sim(0.4); for (let q = 0; q < 240; q++) { const it = S().entities.find(e => !e.remove && e.constructor.name !== 'PostPill' && (e.item || e.isItem || /Item|Power|Mushroom/.test(e.constructor.name))); if (!it) break; sim(1 / 60, { left: it.cx < p.cx - 6, right: it.cx > p.cx + 6 }); } return alive(); }
+        if (st.isl) { const row = tileOf()[1], e = isl(st.isl[0]); AP.exec({ walkTo: st.isl[0] * 32 + 16, dir: 0 }, 3); AP.go([st.isl[1], row]); waitIsl(e, 'landed', 4); return alive(); }
+        if (st.stamp != null) { rollTo('PostStamp', st.stamp); throwN(1); return alive(); }
+        if (st.blot) { catchBead(); pushSurf(); if (st.blot === 2) { const e = near('PostBlotter'); rollTo('PostBlotter', e.s.blotter[0] - 1); sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.5, { jump: true }); sim(0.5); catchBead(); pushSurf(); } sim(2.4); return alive(); }
+        if (st.fold) { foldAt(st.fold); return alive(); }
+        if (st.scale) { scaleEnd(st.scale[0], st.scale[1], st.scale[2]); return alive(); }
+        if (st.addr) { const e = near('PostAddress'); AP.go([st.addr, 19]); for (let k = 0; k < 120 * 12 && !e.done && alive(); k++) sim(1 / 120); sim(0.6); return alive() && e.done; }
+        return true;
+      };
+      function bossFight() {
+        const g0 = S(); const d = g0.entities.filter(e => e.constructor.name === 'Portal' && e.target && e.target.area !== g0.area.idx).sort((a, b) => b.cx - a.cx)[0];
+        if (d) { AP.go([Math.floor(d.cx / 32), 19]); for (let k = 0; k < 20 && S().area.aid !== 'desk'; k++) sim(0.1, { up: true, upPressed: true }); }
+        if (S().area.aid !== 'desk') return false;
+        sim(1); let hold = 0;
+        for (let f = 0; f < 60 * 150; f++) {
+          const g = S(), b = g.entities.find(e => e.boss && !e.remove), p = P();
+          if (!b || b.state === 'dying') { sim(3); for (let q = 0; q < 12 && S().state === 'play'; q++) sim(0.5, { right: true }); return true; }
+          if (!alive()) return false;
+          const G = window.BRADY_TOUR.Tour.postKit.thumbBrain.geo(b), A = b.act, ph = b.phase || 1;
+          let tx = ph === 1 ? G.a1 : G.plate, jump = false;
+          if (A === 'ring' && b.at >= 0.7) tx = G.a1 + 4 * 32;
+          if ((A === 'stamp' || A === 'down') && Math.abs(p.cx - b.tx) < 70) tx = b.tx + 4 * 32;
+          if (A === 'roll' && b.stripeX != null && b.stripeX < p.cx && p.cx - b.stripeX < 80 && p.onGround) jump = true;
+          if (A === 'double' && b.hitDone) tx = G.plate + 4 * 32;
+          if (A === 'roll' && b.stripeX != null && b.stripeX > p.cx) tx = p.cx;
+          const inp = { left: tx < p.cx - 8, right: tx > p.cx + 8 };
+          if (jump) { inp.jump = true; inp.jumpPressed = true; hold = 0.35; } else if (hold > 0) { inp.jump = true; hold -= 1 / 60; }
+          window.__bossAct = A;
+          sim(1 / 60, inp);
+        }
+        return false;
+      }
+      settle(); for (let q = 0; q < 240 && S().state !== 'play'; q++) sim(1 / 60); lastPow = P().power;
+      const t0 = Date.now(); let si = 0, k = 0, tries = {};
+      while (si < segs.length && Date.now() - t0 < 300000) {
+        const steps = segs[si][1]; let ok = true;
+        const won = () => ['clear', 'tally', 'results'].indexOf(S().state) >= 0;
+        for (; k < steps.length; k++) { if (!doStep(steps[k]) || (!alive() && !won())) { ok = false; break; } if (P().power < lastPow) hurts++; lastPow = P().power; if (won()) break; }
+        if (ok) { if (won()) { si = segs.length; break; } si++; k = 0; continue; }
+        if (alive()) { deaths.push({ stuck: tileOf(), seg: si, step: k }); break; }
+        deaths.push({ at: Math.floor(P().cx / 32), seg: si, step: k, boss: window.__bossAct || undefined }); window.__bossAct = null;
+        sim(3); settle(); lastPow = P() ? P().power : 0;
+        if (B.Save.data.lives <= 0 || !(S() instanceof B.Play)) break;
+        const x = Math.floor(P().cx / 32); si = 0; for (let q = 0; q < segs.length; q++) if (segs[q][0] <= x + 2) si = q; k = 0;
+        tries[si] = (tries[si] || 0) + 1; if (tries[si] > 3) break;
+      }
+      const g = S(); return { id, done: ['clear', 'tally', 'results'].indexOf(g && g.state) >= 0, state: g && g.state, deaths, hurts, lives: B.Save.data.lives, sec: Math.round((Date.now() - t0) / 1000) };
+    }, [id, BOT[id]]);
+    console.log('BOT ' + JSON.stringify(r));
+    check(`bot ${id}: an ordinary run (enemies on, damage on) reaches the end`, r.done, r);
+  });
+};
+
 (async () => {
   await session({ width: 844, height: 390 }, async (page, shot, run, pano) => {
     for (const k of Object.keys(LEVELS).filter(k => k !== 'entry' && k !== 'map' && k !== 'bot').concat(['entry', 'map', 'bot'])) if (LEVELS[k]) await LEVELS[k](page, shot, run, pano);
+  });
+  if (!want.length || want.includes('portrait')) await session({ width: 390, height: 844 }, async (page, shot, run) => {
+    await run('portrait', async () => {
+      await page.evaluate(helpers);
+      await page.evaluate(() => { fresh(); playP('27-1'); place(20, 18); sim(0.4); freeze(); }); await shot('90-portrait-27-1.png');
+      await page.evaluate(() => { thaw(); playP('27-6'); toArea('desk', 6, 15); sim(3); freeze(); }); await shot('91-portrait-27-6-boss.png');
+      await page.evaluate(o => { thaw(); eval(o); window.BRADY.goToMap('world', 27, '27-2'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } freeze(); }, openPost); await shot('92-portrait-post-map.png');
+    });
   });
   console.log(failures ? `${failures} POST CHECK(S) FAILED` : 'ALL POST CHECKS PASSED');
   process.exit(failures ? 1 : 0);
