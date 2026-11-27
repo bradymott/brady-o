@@ -113,6 +113,7 @@ Object.assign(Tour.pieces, {
   'moon.geyser'(st, o) {
     const B = st.B, w = o.w || 2, x = st.x, bot = st.gy - 1, top = o.top != null ? o.top : bot - (o.up || 10), gid = 'g' + (++geyserN);
     const z = B.zone(x, top, w, bot - top + 1, 0, -(o.force || 95) * TS, (o.vmax || 7.6) * TS, 'updraft', { pull: o.pull != null ? o.pull : 3, moonGeyser: gid });
+    if (o.jumpOnly) z.moonJump = true;
     if (!o.steady) z.pulse = true;
     B.spawn('moonGeyser', x, bot, { w, h: bot - top + 1, steady: !!o.steady, on: o.on, off: o.off, phase: o.phase || 0, gid, faint: !!o.faint });
     return st.x;
@@ -468,9 +469,10 @@ class MoonMagPanel extends Ent {
     ctx.save();
     // the panels: blue steel with bolts and a magnet stripe, hung under the ceiling row
     ctx.strokeStyle = INK; ctx.lineWidth = 2;
-    ctx.fillStyle = on ? '#4a9aff' : '#3a6ac8'; ctx.fillRect(x, cy - 8, w, 8); ctx.strokeRect(x, cy - 8, w, 8);
-    ctx.fillStyle = '#e8424a'; for (let k = x + 6; k < x + w - 6; k += 32) ctx.fillRect(k, cy - 6, 10, 4);
-    ctx.fillStyle = '#c8d8ff'; for (let k = x + 20; k < x + w - 4; k += 32) { ctx.beginPath(); ctx.arc(k, cy - 4, 1.6, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = on ? '#4ab8ff' : '#2a7aff'; ctx.fillRect(x, cy - 2, w, 12); ctx.strokeRect(x, cy - 2, w, 12);
+    ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(x + 2, cy, w - 4, 2);
+    ctx.fillStyle = '#e8424a'; for (let k = x + 6; k < x + w - 6; k += 32) ctx.fillRect(k, cy + 4, 10, 4);
+    ctx.fillStyle = '#c8d8ff'; for (let k = x + 20; k < x + w - 4; k += 32) { ctx.beginPath(); ctx.arc(k, cy + 6, 1.6, 0, TAU); ctx.fill(); }
     // the field: faint arcs down into the band (bright and moving with the boots on)
     const a = on ? 0.35 : 0.1;
     ctx.strokeStyle = `rgba(120,200,255,${a})`; ctx.lineWidth = 1.5;
@@ -577,6 +579,22 @@ Object.assign(Tour.pieces, {
 
 Object.assign(TourLandscape.ARCH_LABEL, { lowg: 'LOW-G', drift: 'SPACEWALK', rover: 'BUGGY', mag: 'MAG BOOTS', stars: 'STARS' });
 Tour.moonKit.MOON_G = MOON_G;
+// a lift that only takes a FULL jump from below (zone flag moonJump): the ceiling gap in 18-1 never yanks Brady up
+// from a hop or a stomp under it; once it has him it keeps him until he leaves it. The game and the checker share it.
+{
+  const zf0 = zoneForce;
+  zoneForce = function (area, b) {
+    const Z = area.zones;
+    if (!Z || !Z.some(z => z.moonJump && !z.off)) return zf0(area, b);
+    const cx = b.x + b.w / 2, cy = b.y + b.h * 0.6;
+    let inJ = null; for (const z of Z) if (z.moonJump && !z.off && cx >= z.x && cx <= z.x + z.w && cy >= z.y && cy <= z.y + z.h) inJ = z;
+    if (inJ && (b.moonCaught || b.vy < -6 * TS)) { b.moonCaught = true; return zf0(area, b); }
+    if (!inJ) b.moonCaught = false;
+    if (!inJ) return zf0(area, b);
+    // inside a jump lift without the jump: the other zones only
+    const keep = area.zones; area.zones = Z.filter(z => !z.moonJump); try { return zf0(area, b); } finally { area.zones = keep; }
+  };
+}
 // the camera on the moon looks further UP (Brady's feet at 70 % of the view, not 55 %): the jumps go high and the
 // spike overhangs and the gaps in them must be on screen before you jump
 {

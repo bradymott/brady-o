@@ -311,24 +311,25 @@ LEVELS.hop = async (page, shot, run, pano) => {
     // THE RUN ABOVE: a faint dust vent rises into a gap in the big overhang (the tell); ride it up, run along the top
     // and the rafters over the golf balls to the quiet hatch of Piwi's practice green
     await page.evaluate(() => { thaw(); play('18-1'); place(170, 26); sim(0.5); freeze(); }); await shot('19-18-1-tell-vent-in-the-gap.png');
+    const hop = await page.evaluate(() => { thaw(); play('18-1'); place(171, 26); sim(0.3); const p = P(); sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.2, { jump: true }); sim(1.5); return { row: p.groundTy, x: Math.floor(p.cx / 32) }; });
+    check('18-1: a medium hop under the ceiling gap does not get lifted (only a full jump does)', hop.row === 27, hop);
     const up = await page.evaluate(() => { thaw(); play('18-1'); place(170, 26); sim(0.3); return AP.route([[171, 27], [169, 8], [181, 8], [186, 9], [194, 9], [204, 9]], { maxT: 8 }); });
     check('18-1: played: up the vent through the gap in the overhang, along the run above and the rafters to the hatch', up.ok, up);
     await page.evaluate(() => { sim(0.2); freeze(); }); await shot('20-18-1-the-run-above.png');
     const gn = await page.evaluate(() => { thaw(); for (let k = 0; k < 20 && S().area.aid !== 'green'; k++) sim(0.1, { up: true, upPressed: true }); sim(1.2); return { area: S().area.aid, kind: S().area.roomType }; });
     check('18-1: the hatch at the end of the run leads into Piwi\'s practice green (a putting game)', gn.area === 'green' && gn.kind === 'moonPutt', gn);
-    await page.evaluate(() => { place(6, 11); sim(0.3); freeze(); }); await shot('21-18-1-practice-green.png');
-    // lose once: three kicks the wrong way, the ball goes back to the tee
+    await page.evaluate(() => { sim(0.3); freeze(); }); await shot('21-18-1-practice-green.png'); await page.evaluate(() => { thaw(); place(10, 5); sim(1.5); freeze(); }); await shot('21b-18-1-practice-green-on-the-stage.png');
+    // lose once: a kick the wrong way sends the ball off the green: out of bounds, back to the tee
     const pf = await page.evaluate(() => {
-      thaw(); const G = ents('MoonGame')[0], S0 = G.st;
-      for (let k = 0; k < 3; k++) { const b = S0.ball; place(Math.floor((b.x + 8) / 32) + 3, 11); sim(0.3); AP.exec({ walkTo: b.x - 40, dir: 0 }, 3); sim(2.5); }
-      sim(1.5); return { kicks: S0.kicks, home: Math.round(S0.ball.x / 32), won: G.won };
+      thaw(); const G = ents('MoonGame')[0], S0 = G.st, b = S0.ball; place(Math.floor((b.x + 8) / 32) + 3, 5); sim(0.3); AP.exec({ walkTo: b.x - 40, dir: 0 }, 3); const k1 = S0.kicks;
+      sim(3); return { k1, kicks: S0.kicks, home: Math.round(S0.ball.x / 32), won: G.won };
     });
-    check('18-1 green: three kicks that miss: the ball goes back to the tee (lose)', !pf.won && pf.kicks === 0 && pf.home === 8, pf);
+    check('18-1 green: a kick off the edge of the green: out of bounds, the ball goes back to the tee (lose)', !pf.won && pf.k1 === 1 && pf.kicks === 0 && pf.home === 10, pf);
     // win: two walking kicks, the second drops it in as it crosses the cup slowly enough
     const pw = await page.evaluate(() => {
       const G = ents('MoonGame')[0], S0 = G.st;
-      for (let k = 0; k < 3 && !G.won; k++) { const b = S0.ball; place(Math.max(2, Math.floor((b.x + 8) / 32) - 2), 11); sim(0.3); AP.exec({ walkTo: b.x + 60, dir: 0 }, 3); for (let q = 0; q < 40 && Math.abs(S0.ball.vx) > 2; q++) sim(0.1); sim(0.5); }
-      const won = G.won; place(23, 11); sim(0.2); AP.exec({ walkTo: 27 * 32 + 16, dir: 0 }, 3); sim(0.2); sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.5, { jump: true }); sim(1);
+      for (let k = 0; k < 3 && !G.won; k++) { const b = S0.ball; place(Math.max(7, Math.floor((b.x + 8) / 32) - 2), 5); AP.exec({ walkTo: Math.max(7, Math.floor((b.x + 8) / 32) - 2) * 32 + 16, dir: 0 }, 1); sim(0.3); AP.exec({ walkTo: b.x + 60, dir: 0 }, 3); for (let q = 0; q < 40 && Math.abs(S0.ball.vx) > 2; q++) sim(0.1); sim(0.5); }
+      const won = G.won; place(22, 5); sim(0.2); AP.exec({ walkTo: 27 * 32 + 16, dir: 0 }, 3); sim(0.2); sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.5, { jump: true }); sim(1);
       return { won, kicks: S0.kicks, lock: S().keys.has('moon:green'), lives: window.BRADY.Save.data.lives };
     });
     check('18-1 green: two kicks along the green: HOLE IN 2, the alcove lock opens (win)', pw.won && pw.lock, pw);
@@ -473,14 +474,14 @@ LEVELS.walk = async (page, shot, run, pano) => {
 // game lost once and won once, the prize alcove opened, each way out used ----------------
 LEVELS.secrets = async (page, shot, run) => {
   const into = aid => page.evaluate(aid => { for (let k = 0; k < 20 && S().area.aid !== aid; k++) sim(0.1, { up: true, upPressed: true }); sim(1.2); return { area: S().area.aid, kind: S().area.roomType }; }, aid);
-  const prize = () => page.evaluate(() => { const G = ents('MoonGame')[0]; place(23, 11); sim(0.2); AP.exec({ walkTo: 27 * 32 + 16, dir: 0 }, 3); const inside = Math.floor(P().cx / 32) >= 26; sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.5, { jump: true }); sim(0.8); return { inside, lock: !G || S().keys.has(G.lockId) }; });
+  const prize = () => page.evaluate(() => { const G = ents('MoonGame')[0]; place(22, 5); sim(0.2); AP.exec({ walkTo: 27 * 32 + 16, dir: 0 }, 3); const inside = Math.floor(P().cx / 32) >= 26; sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.5, { jump: true }); sim(0.8); return { inside, lock: !G || S().keys.has(G.lockId) }; });
   const leave = () => page.evaluate(() => { place(4, 11); sim(0.2); const a0 = S().area.aid; for (let k = 0; k < 20 && S().area.aid === a0; k++) sim(0.1, { up: true, upPressed: true }); sim(1.2); return { area: S().area.aid, at: tileOf() }; });
   await run('sec-walk', async () => {
     await page.evaluate(() => { fresh(); play('18-2'); place(110, 4); sim(0.4); freeze(); }); await shot('25-18-2-tell-coins-up-to-the-hatch.png');
     const r = await page.evaluate(() => { thaw(); play('18-2'); place(110, 4); sim(0.3); const a = AP.route([[112, 5], [116, 3]], { maxT: 7 }); const b = AP.go([118, 3], { tol: 0 }); return { ok: a.ok && b.ok }; });
-    const e = await into('locker');
+    const e = await into('locker'); await page.evaluate(() => freeze()); await shot('24b-18-2-pressure-panel-entry.png'); await page.evaluate(() => thaw());
     check('18-2: played: puffs up past the coin trail to the quiet hatch under the hull: the pressure panel', r.ok && e.area === 'locker' && e.kind === 'moonLights', [r, e]);
-    const g = await page.evaluate(() => { const G = ents('MoonGame')[0], S0 = G.st; AP.go([5, 12]); AP.go([8, 12], { jump: true }); const after1 = S0.on.slice(), won1 = G.won; AP.go([9, 12]); AP.go([8, 12], { jump: true }); AP.go([11, 12], { jump: true }); AP.go([14, 12], { jump: true }); sim(0.3); return { after1, won1, won: G.won, on: S0.on }; });
+    const g = await page.evaluate(() => { const G = ents('MoonGame')[0], S0 = G.st; const P0 = G.pads; place(7, 5); sim(0.5); AP.go(P0[0], { jump: true }); const after1 = S0.on.slice(), won1 = G.won; AP.go([P0[0][0] + 1, 6]); AP.go(P0[0], { jump: true }); AP.go(P0[1], { jump: true }); AP.go(P0[2], { jump: true }); sim(0.3); return { after1, won1, won: G.won, on: S0.on }; });
     check('18-2 locker: a wrong lamp leaves it unsolved (lose); undo it, then lamps 2 and 3: ALL LIT (win)', !g.won1 && g.won && g.on.every(Boolean), g);
     await page.evaluate(() => freeze()); await shot('26-18-2-pressure-panel-won.png'); await page.evaluate(() => thaw());
     const pz = await prize(); check('18-2 locker: the alcove lock opens on the win', pz.inside && pz.lock, pz);
@@ -490,9 +491,9 @@ LEVELS.secrets = async (page, shot, run) => {
     await page.evaluate(roverHook);
     await page.evaluate(() => { fresh(); play('18-3'); place(160, 19); sim(0.4); freeze(); }); await shot('35-18-3-tell-dust-on-the-boulder.png');
     const r = await page.evaluate(() => { thaw(); play('18-3'); place(158, 19); sim(0.3); return AP.go([166, 17], { tol: 0 }); });
-    const e = await into('depot');
+    const e = await into('depot'); await page.evaluate(() => freeze()); await shot('34b-18-3-wheel-rack-entry.png'); await page.evaluate(() => thaw());
     check('18-3: played: the buggy hops onto the tall boulder where dust puffs; the hatch on top: the spare-wheel rack', r.ok && e.area === 'depot' && e.kind === 'moonOdd', [r, e]);
-    const g = await page.evaluate(() => { const G = ents('MoonGame')[0], S0 = G.st, pads = G.pads; AP.go([5, 12]); const wrong = (S0.odd + 1) % pads.length; AP.go(pads[wrong], { jump: true }); const sh = S0.shuffles, won1 = G.won; for (let k = 0; k < 3 && !G.won; k++) { AP.go([5, 12]); AP.go(pads[S0.odd], { jump: true }); } return { won1, sh, won: G.won }; });
+    const g = await page.evaluate(() => { const G = ents('MoonGame')[0], S0 = G.st, pads = G.pads; place(7, 5); sim(0.5); const wrong = (S0.odd + 1) % pads.length; AP.go(pads[wrong], { jump: true }); const sh = S0.shuffles, won1 = G.won; for (let k = 0; k < 3 && !G.won; k++) { AP.go([7, 6]); AP.go(pads[S0.odd], { jump: true }); } return { won1, sh, won: G.won }; });
     check('18-3 depot: a wrong wheel shuffles the rack (lose); the odd wheel wins', !g.won1 && g.sh === 1 && g.won, g);
     await page.evaluate(() => freeze()); await shot('36-18-3-wheel-rack-won.png'); await page.evaluate(() => thaw());
     const pz = await prize(); check('18-3 depot: the alcove lock opens on the win', pz.inside && pz.lock, pz);
@@ -501,11 +502,11 @@ LEVELS.secrets = async (page, shot, run) => {
   await run('sec-base', async () => {
     await page.evaluate(() => { fresh(); play('18-4'); place(118, 19); sim(0.4); freeze(); }); await shot('45-18-4-tell-coins-by-the-ledge.png');
     const r = await page.evaluate(() => { thaw(); play('18-4'); place(111, 10); sim(0.3); AP.boots(); const a = AP.route([[112, 2, 1], [124, 2, 1]], { tol: 1 }); AP.boots(); const b = AP.go([124, 9], { tol: 0 }); return { ok: a.ok && b.ok }; });
-    const e = await into('store');
+    const e = await into('store'); await page.evaluate(() => freeze()); await shot('44b-18-4-fuse-cupboard-entry.png'); await page.evaluate(() => thaw());
     check('18-4: played: along the magnet ceiling, boots off over the ledge only the ceiling reaches: the fuse cupboard', r.ok && e.area === 'store' && e.kind === 'moonFuses', [r, e]);
     const g = await page.evaluate(() => {
-      const G = ents('MoonGame')[0], S0 = G.st; AP.go([8, 12]); const started = S0.running; AP.go([4, 12]); sim(21); const reset = !S0.running && S0.got.length === 0, won1 = G.won;
-      AP.go([8, 12]); AP.go([12, 12]); AP.go([21, 12]); AP.go([15, 12]); AP.boots(); AP.go([12, 0, 1], { tol: 0 }); AP.go([17, 0, 1], { tol: 0 }); sim(0.2);
+      const G = ents('MoonGame')[0], S0 = G.st; place(7, 5); sim(0.5); AP.go([8, 6]); const started = S0.running; AP.go([11, 6]); sim(21); const reset = !S0.running && S0.got.length === 0, won1 = G.won;
+      AP.go([8, 6]); AP.go([20, 6]); AP.go([15, 6]); AP.boots(); AP.go([12, 2, 1], { tol: 0 }); AP.go([17, 2, 1], { tol: 0 }); sim(0.2);
       const won = G.won; AP.boots(); return { started, reset, won1, won, got: S0.got.length, left: +S0.left.toFixed(1) };
     });
     check('18-4 store: one fuse starts the clock; too slow and they all go back (lose); two on the floor and two on the magnet ceiling in time (win)', g.started && g.reset && !g.won1 && g.won, g);
@@ -517,6 +518,7 @@ LEVELS.secrets = async (page, shot, run) => {
     await page.evaluate(() => { fresh(); play('18-5'); place(34, 15); sim(0.4); freeze(); }); await shot('52-18-5-tell-loose-panel.png');
     const r = await page.evaluate(() => { thaw(); play('18-5'); place(33, 15); sim(0.3); AP.exec({ walkTo: 40 * 32 + 16, dir: 0 }, 3); for (let k = 0; k < 20 && S().area.aid !== 'dressing'; k++) sim(0.1, { right: true, up: true, upPressed: true }); sim(1.2); return { area: S().area.aid, kind: S().area.roomType }; });
     check('18-5: walking into the loose panel in the wings: the headliner\'s hatboxes (a shell game)', r.area === 'dressing' && r.kind === 'shell', r);
+    await page.evaluate(() => freeze()); await shot('52b-18-5-hatboxes-entry.png'); await page.evaluate(() => thaw());
     const g = await page.evaluate(() => {
       const A = S().area, D = A.roomKit.data; const R = () => A.roomState; for (let k = 0; k < 120 * 20 && !(R() && R().phase === 'pick'); k++) sim(1 / 120);
       const stomp = c => { const tx = Math.floor(c.x / 32); AP.go([tx, D.row + 1], { jump: true, maxT: 4 }); sim(0.2); };
@@ -531,11 +533,12 @@ LEVELS.secrets = async (page, shot, run) => {
     await page.evaluate(() => { fresh(); play('18-6'); place(129, 6); sim(0.4); freeze(); }); await shot('64-18-6-tell-loose-panel.png');
     const r = await page.evaluate(() => { thaw(); play('18-6'); place(126, 6); sim(0.2); AP.go([131, 7]); for (let k = 0; k < 20 && S().area.aid !== 'scope'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.8); return { area: S().area.aid, kind: S().area.roomType }; });
     check('18-6: the loose panel on the plateau: the observatory (a star echo)', r.area === 'scope' && r.kind === 'moonEcho', r);
+    await page.evaluate(() => freeze()); await shot('63b-18-6-observatory-entry.png'); await page.evaluate(() => thaw());
     const g = await page.evaluate(() => {
-      const G = ents('MoonGame')[0], S0 = G.st, pads = G.pads; for (let k = 0; k < 600 && S0.show > 0; k++) sim(1 / 120);
+      const G = ents('MoonGame')[0], S0 = G.st, pads = G.pads; place(8, 5); sim(0.3); for (let k = 0; k < 600 && S0.show > 0; k++) sim(1 / 120);
       AP.go(pads[S0.order[1]], { jump: true }); const lost = S0.show > 0 && !G.won; for (let k = 0; k < 900 && S0.show > 0; k++) sim(1 / 120);
       const steps = [];
-      for (const i of S0.order) { let ok = false; for (const side of [-2, 2, -1, 1]) { AP.go([pads[i][0] + side, 12]); const n0 = S0.next; const r = AP.go(pads[i], { jump: true }); sim(0.1); if (S0.next > n0 || G.won) { ok = true; break; } if (S0.show > 0) for (let k = 0; k < 900 && S0.show > 0; k++) sim(1 / 120); } steps.push(ok); }
+      for (const i of S0.order) { let ok = false; for (const side of [-2, 2, -1, 1]) { AP.go([pads[i][0] + side, 6]); const n0 = S0.next; const r = AP.go(pads[i], { jump: true }); sim(0.1); if (S0.next > n0 || G.won) { ok = true; break; } if (S0.show > 0) for (let k = 0; k < 900 && S0.show > 0; k++) sim(1 / 120); } steps.push(ok); }
       return { lost, won: G.won, steps };
     });
     check('18-6 scope: a star out of order: watch again (lose); the order the telescope showed (win)', g.lost && g.won, g);

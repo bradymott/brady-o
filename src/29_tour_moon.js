@@ -203,6 +203,68 @@ const MoonArt = {
 
 /* ---------------- painted backdrops ---------------- */
 const painters = {
+
+  /* ---------- the secret rooms' own backdrops ---------- */
+  // 18-1: a putting green under a glass dome: the dome's ribs against the stars, flags on the far rim, the green
+  roomGreenDome(ctx, L, rng, H) {
+    const b = L.base;
+    ctx.fillStyle = '#0a0a24'; ctx.fillRect(0, 0, BG_W, H);
+    ctx.fillStyle = '#ffffff'; for (let k = 0; k < 60; k++) ctx.fillRect(rng() * BG_W, rng() * b * 0.8, 1.5, 1.5);
+    MoonArt.earth(ctx, 760, 80, 26, rng);
+    ctx.strokeStyle = 'rgba(180,220,255,0.35)'; ctx.lineWidth = 3;
+    for (let k = -4; k <= 4; k++) { ctx.beginPath(); ctx.ellipse(BG_W / 2, b, Math.abs(k) * 120 + 20, b - 20, 0, Math.PI, 0); ctx.stroke(); }
+    for (let r = 1; r <= 3; r++) { ctx.beginPath(); ctx.ellipse(BG_W / 2, b, BG_W * 0.6, (b - 20) * r / 4, 0, Math.PI, 0); ctx.stroke(); }
+    ctx.fillStyle = '#4ab86a'; ctx.beginPath(); ctx.ellipse(BG_W / 2, b + 30, BG_W * 0.7, 60, 0, Math.PI, 0); ctx.fill();
+    ctx.fillStyle = '#3a9a58'; for (let x = 0; x < BG_W; x += 40) ctx.fillRect(x, b - 4, 20, 3);
+    for (const fx of [140, 420, 700, 930]) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(fx, b - 10); ctx.lineTo(fx, b - 90); ctx.stroke(); ctx.fillStyle = fx % 2 ? '#ff4f8a' : '#ffd84a'; ctx.beginPath(); ctx.moveTo(fx, b - 90); ctx.lineTo(fx + 34, b - 80); ctx.lineTo(fx, b - 70); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#1a1630'; ctx.beginPath(); ctx.ellipse(fx, b - 8, 10, 3, 0, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = '#2a7a48'; ctx.fillRect(0, b + 30, BG_W, H - b);
+  },
+  // 18-2: the pressure-panel airlock: steel wall, fat pipes with valve wheels, round gauges, the round outer hatch
+  roomAirlock(ctx, L, rng, H) {
+    const b = L.base;
+    ctx.fillStyle = '#5a6478'; ctx.fillRect(0, 0, BG_W, H);
+    for (let x = 0; x < BG_W; x += 96) { ctx.fillStyle = '#4e586c'; ctx.fillRect(x, 0, 4, H); }
+    const pipe = (x0, y0, x1, y1, w, col) => { ctx.strokeStyle = '#2a3042'; ctx.lineWidth = w + 6; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); ctx.strokeStyle = col; ctx.lineWidth = w; ctx.stroke(); };
+    pipe(0, 70, BG_W, 70, 18, '#c8a03a'); pipe(0, b - 60, BG_W, b - 60, 14, '#8ab0c8');
+    for (let x = 80; x < BG_W; x += 260) { pipe(x, 70, x, b - 60, 12, '#c8a03a'); ctx.strokeStyle = '#e8424a'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(x, 150, 16, 0, TAU); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - 16, 150); ctx.lineTo(x + 16, 150); ctx.moveTo(x, 134); ctx.lineTo(x, 166); ctx.stroke(); }
+    for (let x = 200; x < BG_W; x += 260) { ctx.fillStyle = '#2a3042'; ctx.beginPath(); ctx.arc(x, 180, 30, 0, TAU); ctx.fill(); ctx.fillStyle = '#f2f2e8'; ctx.beginPath(); ctx.arc(x, 180, 25, 0, TAU); ctx.fill(); ctx.strokeStyle = '#e8424a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, 180); ctx.lineTo(x + 16, 166); ctx.stroke(); ctx.fillStyle = '#3ac8a8'; ctx.beginPath(); ctx.arc(x, 180, 25, Math.PI * 0.8, Math.PI * 1.3); ctx.lineTo(x, 180); ctx.fill(); }
+    ctx.fillStyle = '#3a4256'; ctx.beginPath(); ctx.arc(BG_W - 140, b - 150, 70, 0, TAU); ctx.fill(); ctx.fillStyle = '#6a7486'; ctx.beginPath(); ctx.arc(BG_W - 140, b - 150, 56, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#ffd84a'; for (let x = 0; x < BG_W; x += 28) ctx.fillRect(x, b - 20, 14, 8);
+  },
+  // 18-3: the tyre depot: a warm garage wall, stacks of spare wheels, a trolley jack, an oil drum, a tool board
+  roomTyres(ctx, L, rng, H) {
+    const b = L.base;
+    ctx.fillStyle = '#7a6a5a'; ctx.fillRect(0, 0, BG_W, H);
+    ctx.fillStyle = '#6a5a4a'; for (let y = 0; y < b; y += 40) ctx.fillRect(0, y, BG_W, 3);
+    const tyre = (x, y, r) => { ctx.fillStyle = '#222228'; ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.38, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#5a5a64'; ctx.beginPath(); ctx.ellipse(x, y, r * 0.45, r * 0.16, 0, 0, TAU); ctx.fill(); };
+    for (const sx of [80, 330, 610, 900]) for (let k = 0; k < 6; k++) tyre(sx, b - 14 - k * 22, 40);
+    ctx.fillStyle = '#c8402a'; ctx.fillRect(460, b - 34, 90, 16); ctx.fillRect(540, b - 70, 10, 40); ctx.fillStyle = '#2a2a34'; for (const wx of [470, 540]) { ctx.beginPath(); ctx.arc(wx, b - 14, 8, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = '#3a6ac8'; ctx.fillRect(760, b - 110, 64, 100); ctx.fillStyle = '#2a4a98'; ctx.fillRect(760, b - 80, 64, 6); ctx.fillRect(760, b - 44, 64, 6);
+    ctx.fillStyle = '#8a7a5a'; ctx.fillRect(180, 60, 220, 120); ctx.fillStyle = '#5a4a3a'; for (let k = 0; k < 6; k++) ctx.fillRect(200 + k * 34, 80 + (k % 2) * 20, 8, 70);
+  },
+  // 18-4: the fuse cupboard: grey breaker panels with rows of switches, cables, a hazard stripe
+  roomFuses(ctx, L, rng, H) {
+    const b = L.base;
+    ctx.fillStyle = '#3a3e4c'; ctx.fillRect(0, 0, BG_W, H);
+    for (let x = 30; x < BG_W; x += 200) {
+      ctx.fillStyle = '#8a92a6'; ctx.fillRect(x, 120, 150, 180); ctx.fillStyle = '#6a7286'; ctx.fillRect(x + 8, 128, 134, 164);
+      for (let r = 0; r < 5; r++) for (let c = 0; c < 6; c++) { ctx.fillStyle = '#2a2a34'; ctx.fillRect(x + 16 + c * 21, 140 + r * 30, 14, 20); ctx.fillStyle = (r + c) % 4 ? '#c8ccd4' : '#e8424a'; ctx.fillRect(x + 18 + c * 21, 142 + r * 30 + ((r * 3 + c) % 2) * 8, 10, 10); }
+    }
+    const cab = (y, col) => { ctx.strokeStyle = col; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(0, y); for (let x = 0; x <= BG_W; x += 64) ctx.quadraticCurveTo(x + 32, y + 26, x + 64, y); ctx.stroke(); };
+    cab(80, '#e8424a'); cab(96, '#3ac8a8'); cab(110, '#ffd84a');
+    ctx.fillStyle = '#ffd84a'; for (let x = 0; x < BG_W; x += 28) ctx.fillRect(x, b - 18, 14, 8);
+  },
+  // 18-6: the observatory dome: the curved dome, its open slit full of stars, the big telescope, a star chart
+  roomObservatory(ctx, L, rng, H) {
+    const b = L.base;
+    ctx.fillStyle = '#1a1a44'; ctx.fillRect(0, 0, BG_W, H);
+    ctx.strokeStyle = '#2a2a5a'; ctx.lineWidth = 4; for (let k = 1; k < 8; k++) { ctx.beginPath(); ctx.ellipse(BG_W / 2, b, k * 70, b - 10, 0, Math.PI, 0); ctx.stroke(); }
+    ctx.fillStyle = '#05051a'; ctx.fillRect(BG_W / 2 - 60, 0, 120, b - 40);
+    ctx.fillStyle = '#ffffff'; for (let k = 0; k < 40; k++) ctx.fillRect(BG_W / 2 - 56 + rng() * 112, rng() * (b - 60), 1.6, 1.6);
+    ctx.fillStyle = '#c8ccd4'; ctx.save(); ctx.translate(BG_W / 2, b - 50); ctx.rotate(-0.9); ctx.fillRect(-20, -14, 200, 28); ctx.fillStyle = '#8a7aff'; ctx.fillRect(150, -16, 40, 32); ctx.restore();
+    ctx.fillStyle = '#5a6276'; ctx.fillRect(BG_W / 2 - 14, b - 50, 28, 50);
+    for (const cx of [150, 860]) { ctx.fillStyle = '#e8dcb8'; ctx.fillRect(cx - 80, 90, 160, 120); ctx.strokeStyle = '#3a4a8a'; ctx.lineWidth = 2; ctx.beginPath(); const pts = [[-50, 30], [-20, -10], [10, 20], [40, -30], [55, 10]]; pts.forEach(([x, y], i) => i ? ctx.lineTo(cx + x, 150 + y) : ctx.moveTo(cx + x, 150 + y)); ctx.stroke(); ctx.fillStyle = '#3a4a8a'; for (const [x, y] of pts) { ctx.beginPath(); ctx.arc(cx + x, 150 + y, 4, 0, TAU); ctx.fill(); } }
+  },
   // the Earth, high in the black sky (a far layer that hardly moves)
   moonEarth(ctx, L, rng, H) {
     MoonArt.earth(ctx, L.x || 760, L.y || 90, L.r || 34, rng);
@@ -308,6 +370,17 @@ const painters = {
 // the shared night sky
 const SPACE_SKY = ['#04040e', '#0a0a24', '#16163a'];
 const themes = {
+
+  // the secret rooms' own places (one each)
+  moon_room_green: Object.assign({}, regolith, {
+    ground: Object.assign({}, dustGround, { style: 'turf', cap: '#6ad87a', capHi: '#a8f0b0', paintCap(ctx, x0, x1) {
+      ctx.fillStyle = '#2a7a48'; ctx.fillRect(x0, 0, x1 - x0, 11); ctx.fillStyle = '#5ac86a'; ctx.fillRect(x0, 0, x1 - x0, 8);
+      ctx.fillStyle = '#7ae08a'; for (let x = x0; x < x1; x += 16) ctx.fillRect(x, 0, 8, 8); ctx.fillStyle = '#c8ffd0'; ctx.fillRect(x0, 0, x1 - x0, 1.5);
+    } }), name: 'Piwi\'s Practice Green', music: 'tour_moon_stars', particles: 'none', rays: null, sky: SPACE_SKY, horizonGlow: '#4ab86a', celestial: { type: 'none' }, stars: 0, layers: [{ kind: 'roomGreenDome', base: 380, f: 0.05 }], fog: '#1a2a3a', decor: [] }),
+  moon_room_airlock: Object.assign({}, hull, { name: 'The Pressure Panel', music: 'tour_moon_base', particles: 'none', rays: null, sky: ['#3a4256', '#4a5266', '#5a6276'], horizonGlow: '#a8c8ff', celestial: { type: 'none' }, stars: 0, layers: [{ kind: 'roomAirlock', base: 400, f: 0.05 }], fog: '#5a6a8a', decor: [] }),
+  moon_room_tyres: Object.assign({}, hull, { name: 'The Spare-Wheel Rack', music: 'tour_moon_buggy', particles: 'none', rays: null, sky: ['#5a4a3a', '#6a5a4a', '#7a6a5a'], horizonGlow: '#ffc88a', celestial: { type: 'none' }, stars: 0, layers: [{ kind: 'roomTyres', base: 400, f: 0.05 }], fog: '#6a5a4a', decor: [] }),
+  moon_room_fuses: Object.assign({}, hull, { name: 'The Fuse Cupboard', music: 'tour_moon_base', particles: 'none', rays: null, sky: ['#2a2e3c', '#3a3e4c', '#4a4e5c'], horizonGlow: '#ffd84a', celestial: { type: 'none' }, stars: 0, layers: [{ kind: 'roomFuses', base: 400, f: 0.05 }], fog: '#3a3e4c', decor: [] }),
+  moon_room_dome: Object.assign({}, glass, { name: 'The Observatory', music: 'tour_moon_stars', particles: 'none', rays: null, sky: ['#0a0a2a', '#1a1a44', '#2a2a5a'], horizonGlow: '#8a7aff', celestial: { type: 'none' }, stars: 0, layers: [{ kind: 'roomObservatory', base: 400, f: 0.05 }], fog: '#1a1a44', decor: [] }),
   moon_surface: Object.assign({}, regolith, {
     name: 'One Small Hop', music: 'tour_moon', particles: 'none', rays: null,
     sky: SPACE_SKY, horizonGlow: '#6a6aa8', celestial: { type: 'none' }, stars: 1.2,
