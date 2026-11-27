@@ -155,7 +155,7 @@ const WIN = {
   hourglass(g, A, R, kit) { place(g, 14, kit.data.top - 1); wait(g, 0.5, () => R.won); check(g.level.id + ' ' + A.aid + ' hourglass: once at the rim the sand stops', A.risingLava && A.risingLava.speed === 0); },
   treasure(g, A, R, kit) { const e = g.entities.find(x => x.id === kit.o.map && !x.remove); if (e) e.touchPlayer(P(g)); wait(g, 0.3, () => R.won); },
   // Italy's kinds (src/29_tour_it_secrets.js): the scooter time trial's flags in order, the pizza order's jars, the bells' tune
-  itLap(g, A, R, kit) { for (const f of kit.data.flags) { place(g, f[0], f[1]); wait(g, 0.1); } wait(g, 0.3, () => R.won); },
+  itLap(g, A, R, kit) { wait(g, 10, () => !R.hold); for (const f of kit.data.flags) { place(g, f[0], f[1]); wait(g, 0.1); } wait(g, 0.3, () => R.won); },
   itPizza(g, A, R, kit) { for (const k of R.order.slice()) { g.bumpBlock(kit.data.jars[k], kit.data.row, true, P(g)); frame(g); } wait(g, 0.3, () => R.won); },
   itBells(g, A, R, kit) {
     place(g, kit.data.bells[1] + 3, 10); wait(g, 10, () => R.phase === 'echo');

@@ -97,7 +97,7 @@ const L1 = { n: 1, name: 'Scooter Dash', arch: 'scoot', theme: 'it_vicolo',
         ['oil', { n: 6, gap: 5 }],
         ['gate', { exit: 'main' }]
       ] },
-    { id: 'garage', gen: 'room', role: 'secret', theme: 'it_cantina', stamp: 'itGarage', it: { scoot: true }, room: 'itLap', itLap: { exit: 'vicolo@garageOut' } }
+    { id: 'garage', gen: 'room', role: 'secret', theme: 'it_garage', stamp: 'itGarage', it: { scoot: true, frame: { props: [['itTyres', 7], ['itOilCans', 22], ['itTyres', 37]] } }, room: 'itLap', itLap: { exit: 'vicolo@garageOut' } }
   ] };
 
 /* ---------------- 14-2 The Pizzeria ---------------- */
@@ -141,7 +141,7 @@ const L2 = { n: 2, name: 'The Pizzeria', arch: 'dough', theme: 'it_pizzeria',
         ['ovens', { n: 12, ovens: 2 }],
         ['gate', { exit: 'main' }]
       ] },
-    { id: 'dispensa', gen: 'room', role: 'secret', theme: 'it_cantina', stamp: 'itDispensa', room: 'itPizza' }
+    { id: 'dispensa', gen: 'room', role: 'secret', theme: 'it_pass', stamp: 'itDispensa', it: { frame: { props: [['itTomatoCans', 5], ['itFlourSacks', 19]] } }, room: 'itPizza' }
   ] };
 
 /* ---------------- 14-3 The Leaning Tower ---------------- */
@@ -208,7 +208,7 @@ const L3 = { n: 3, name: 'The Leaning Tower', arch: 'lean', theme: 'it_torre',
   exits: { main: { to: '14-4' } },
   areas: [
     { id: 'torre', gen: 'room', theme: 'it_torre', stamp: 'itTorre', camera: 'free', it: { tower: true } },
-    { id: 'store', gen: 'room', role: 'secret', theme: 'it_torre', stamp: 'itStore', room: 'itBells', itBells: { exit: 'torre@storeOut' } }
+    { id: 'store', gen: 'room', role: 'secret', theme: 'it_belfry', stamp: 'itStore', it: { frame: { props: [['itRopeCoil', 11], ['itBarrel', 17]] } }, room: 'itBells', itBells: { exit: 'torre@storeOut' } }
   ] };
 
 /* ---------------- 14-4 Night at the Opera ---------------- */
@@ -301,7 +301,7 @@ const L4 = { n: 4, name: 'Night at the Opera', arch: 'aria', theme: 'it_opera',
   areas: [
     { id: 'teatro', gen: 'room', theme: 'it_opera', stamp: 'itOpera', camera: 'free', bottomKill: true, seams: [{ side: 'top', a: 18, b: 20, to: 'loggione@in' }] },
     { id: 'loggione', gen: 'room', role: 'sub', theme: 'it_opera', stamp: 'itLoggione' },
-    { id: 'loggia', gen: 'room', role: 'secret', theme: 'it_opera', stamp: 'itLoggia', room: 'shell', shell: { title: 'THE OPERA HATS', rule: 'WATCH WHICH TOP HAT THE PRIZE GOES UNDER, THEN STOMP THAT HAT', cup: 'tophat', joke: ['sock', 'chicken'] } }
+    { id: 'loggia', gen: 'room', role: 'secret', theme: 'it_box', stamp: 'itLoggia', it: { frame: { w: 30, props: [['itBoxChairs', 6], ['itBoxChairs', 21]] } }, room: 'shell', shell: { title: 'THE OPERA HATS', rule: 'WATCH THE HAT WITH THE PRIZE, THEN STOMP IT', cup: 'tophat', joke: ['sock', 'chicken'] } }
   ] };
 
 /* ---------------- 14-5 Il Polpettone ---------------- */
@@ -330,7 +330,7 @@ const L5 = { n: 5, name: 'Il Polpettone', mapLabel: 'Grand Stage', arch: 'lair',
         ['postcard', { kind: 'risky', dy: -4 }],
         ['door', { to: 'palco@in', perch: 0, look: 'itStageDoor' }]
       ] },
-    { id: 'camerino', gen: 'room', role: 'secret', theme: 'it_opera', stamp: 'itCamerino', room: 'prank', prank: { title: "THE TENOR'S DRESSING ROOM", rule: 'HIS GOLD RECORD! TOTALLY REAL. GO ON, OPEN THE CASE', gag: 'cushion', label: 'GOLD RECORD', line: 'OK, OK. HIS REAL STASH IS IN THE CAGE.' } },
+    { id: 'camerino', gen: 'room', role: 'secret', theme: 'it_dressing', stamp: 'itCamerino', it: { frame: { w: 30, props: [['itLitMirror', 7], ['itWigStand', 20]] } }, room: 'prank', prank: { title: "THE TENOR'S DRESSING ROOM", rule: 'HIS GOLD RECORD! TOTALLY REAL. OPEN THE CASE', gag: 'cushion', label: 'GOLD RECORD', line: 'OK, OK. HIS REAL STASH IS IN THE CAGE.' } },
     { id: 'palco', gen: 'arena', role: 'arena', layout: 'stage', arenaW: 28, H: 18, theme: 'it_stage' }
   ] };
 
@@ -373,7 +373,7 @@ const L6 = { n: 6, name: 'Doppio', arch: 'espresso', secret: true, theme: 'it_ba
         ['leap', { gap: 11, run: 8, liquid: true }],
         ['gate', { exit: 'main' }]
       ] },
-    { id: 'retro', gen: 'room', role: 'secret', theme: 'it_bar', stamp: 'itRetro', room: 'rush', rush: { title: 'THE BEAN STORE', rule: 'THE SACKS SPLIT! GRAB ALL SIX BEANS BEFORE THE CLOCK RUNS OUT', look: 'tokBean', n: 6, t: 15 } }
+    { id: 'retro', gen: 'room', role: 'secret', theme: 'it_beans', stamp: 'itRetro', it: { frame: { w: 30, props: [['itGrinder', 6], ['itBeanSacks', 22]] } }, room: 'rush', rush: { title: 'THE BEAN STORE', rule: 'THE SACKS SPLIT! ALL SIX BEANS BEFORE THE CLOCK RUNS OUT', look: 'tokBean', n: 6, t: 15 } }
   ] };
 
 Tour.amend('it', { stamps, levels: [L1, L2, L3, L4, L5, L6] });

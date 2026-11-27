@@ -131,21 +131,23 @@ const TOPPINGS = [
 ];
 
 /* ---- itLap: THE BACK-ALLEY TIME TRIAL (14-1). The garage is a scooter room: three flags in order on the clock ---- */
+// The garage is too long for one phone view (a scooter needs a run-up): the flags that are off screen show as numbered
+// markers at the edge of the view, so the whole route reads before the clock starts (it starts at flag 1).
 TourRooms.def('itLap', {
-  title: 'THE BACK-ALLEY TIME TRIAL', rule: 'RIDE THROUGH THE THREE FLAGS IN ORDER BEFORE THE CLOCK RUNS OUT', need: 'WIN THE TIME TRIAL FIRST!', timed: true,
+  title: 'THE BACK-ALLEY TIME TRIAL', rule: 'RIDE THROUGH FLAGS 1, 2, 3 BEFORE THE CLOCK RUNS OUT', need: 'WIN THE TIME TRIAL FIRST!', timed: true,
   make(o, keep, ctx, A, rng) {
     const Kt = RK(), W = 46 + Kt.eastW(keep, o);
     const g = Kt.room(W), Y = Kt.Y;
     const x0 = g.west(keep), x1 = Kt.east(g, keep, A, o);
     // flag 1 on the floor; a crate hop; a shelf with flag 2; a bouncy washing-line patch in the floor that throws
-    // Brady up to the high shelf with flag 3; the roller door out next to the cage
+    // Brady up to the high shelf with flag 3 (all of it below the HUD's band); the roller door out next to the cage
     const f1 = [x0 + 5, Y];
     g.fill(x0 + 10, 9, x0 + 11, 10, 'H');
     g.hline(x0 + 14, x0 + 20, 7, '-'); const f2 = [x0 + 17, 6];
     g.hline(x0 + 23, x0 + 25, 11, 'b');
-    g.hline(x0 + 27, x0 + 32, 4, '-'); const f3 = [x0 + 30, 3];
-    g.coins(x0 + 14, x0 + 20, 5); g.coinsArc(x0 + 22, x0 + 27, 8, 4);
-    if (keep.gold) { g.hline(x0 + 2, x0 + 5, 5, '-'); g.put(x0 + 3, 4, '*'); }
+    g.hline(x0 + 27, x0 + 32, 5, '-'); const f3 = [x0 + 30, 4];
+    g.coins(x0 + 14, x0 + 20, 5); g.coinsArc(x0 + 22, x0 + 27, 8, 5);
+    if (keep.gold) { g.hline(x0 + 2, x0 + 5, 6, '-'); g.put(x0 + 3, 4, '*'); }
     if (o.exit) { g.door(x1 - 1, Y, { to: o.exit, look: 'itGarage' }); g.need('the roller door out', x1 - 1, Y); }
     g.winSpot(A.id, f3[0], f3[1]);
     for (const f of [f1, f2]) g.need('a flag', f[0], f[1]);
@@ -153,10 +155,23 @@ TourRooms.def('itLap', {
     g.dress(keep, [x0 + 7, x1 - 4], Y);
     return g;
   },
-  enter(play, A, R, kit) { if (!R.won) { R.next = 0; R.left = null; } },
+  // on the way in the scooter is held at the start: the title, then the camera rides the route to flag 3 and back
+  // (the rule shows meanwhile), then GO! The clock starts at flag 1.
+  enter(play, A, R, kit) { if (!R.won) { R.next = 0; R.left = null; R.hold = true; R.holdX = null; R.pan = null; R.camX = null; } },
+  waiting(play, dt, A, R, kit) { this.park(play, R); },
+  park(play, R) { const p = play.player; if (R.holdX == null) R.holdX = p.x; p.x = R.holdX; p.vx = 0; },
   update(play, dt, A, R, kit) {
     if (R.won) return;
     const p = play.player, F = kit.data.flags;
+    if (R.hold) {
+      this.park(play, R);
+      if (R.pan == null) R.pan = { t: 0, x0: play.camX, x1: Math.max(play.camX, (F[2][0] + 3) * TS - Game.viewW) };
+      R.pan.t += dt;
+      const u = clamp((R.pan.t - 0.3) / 3.2, 0, 1);
+      R.camX = lerp(R.pan.x0, R.pan.x1, Math.sin(u * Math.PI));
+      if (u >= 1) { R.hold = false; R.camX = null; Sound.play('checkpoint', { vol: 0.5, pitch: 1.5 }); play.parts.text(p.cx, p.y - 24, 'GO!', '#ffd84a'); }
+      return;
+    }
     const f = F[R.next];
     if (f && overlap(p, { x: f[0] * TS, y: (f[1] - 1) * TS, w: TS, h: 2 * TS })) {
       R.next++; Sound.play('checkpoint', { vol: 0.6, pitch: 1 + R.next * 0.15 }); play.burst(f[0] * TS + 16, f[1] * TS, 12, '#ffd24a', 'confetti');
@@ -165,64 +180,88 @@ TourRooms.def('itLap', {
     }
     if (R.left != null) { R.left -= dt; if (R.left <= 0) { R.left = null; R.next = 0; R.fails = (R.fails || 0) + 1; RK().raspberry(play, 'TOO SLOW! BACK TO FLAG 1'); } }
   },
+  flagArt(ctx, x, y, k, done, cur, t) {
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    ctx.fillStyle = '#5a5a64'; ctx.fillRect(x - 2, y - 58, 4, 58);
+    const wv = Math.sin(t * 8 + k) * 3;
+    ctx.fillStyle = done ? '#7ad86a' : cur ? '#ffd24a' : '#e8424a'; ctx.beginPath(); ctx.moveTo(x + 2, y - 58); ctx.quadraticCurveTo(x + 18, y - 52 + wv, x + 28, y - 50); ctx.lineTo(x + 2, y - 40); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = INK; ctx.font = TourBackstage.F8; ctx.textAlign = 'center'; ctx.fillText(String(k + 1), x + 13, y - 46);
+    if (cur) { ctx.globalAlpha = 0.5 + 0.4 * Math.sin(t * 6); ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.moveTo(x - 8, y - 72); ctx.lineTo(x + 8, y - 72); ctx.lineTo(x, y - 62); ctx.fill(); }
+    ctx.restore();
+  },
   draw(play, ctx, A, R, kit) {
-    const F = kit.data.flags, t = play.t;
+    const F = kit.data.flags, t = play.t, k0 = Tour.itRoomHud.perCss();
     F.forEach((f, k) => {
       const x = f[0] * TS + TS / 2, y = (f[1] + 1) * TS, done = R.won || k < R.next, cur = !R.won && k === R.next;
+      this.flagArt(ctx, x, y, k, done, cur, t);
+      // off screen: a numbered marker at the edge of the view, pointing at it
+      if (R.won || done) return;
+      const L = play.camX + 6 * k0, Rr = play.camX + Game.viewW - 6 * k0, off = x < L + 20 ? -1 : x > Rr - 20 ? 1 : 0;
+      if (!off) return;
+      const mx = off < 0 ? L + 22 : Rr - 22, my = clamp(y - 34, play.camY + 110 * k0, play.camY + Game.viewH - 150 * k0);
       ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
-      ctx.fillStyle = '#5a5a64'; ctx.fillRect(x - 2, y - 58, 4, 58);
-      const wv = Math.sin(t * 8 + k) * 3;
-      ctx.fillStyle = done ? '#7ad86a' : cur ? '#ffd24a' : '#e8424a'; ctx.beginPath(); ctx.moveTo(x + 2, y - 58); ctx.quadraticCurveTo(x + 18, y - 52 + wv, x + 28, y - 50); ctx.lineTo(x + 2, y - 40); ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = INK; ctx.font = TourBackstage.F8; ctx.textAlign = 'center'; ctx.fillText(String(k + 1), x + 13, y - 46);
-      if (cur) { ctx.globalAlpha = 0.5 + 0.4 * Math.sin(t * 6); ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.moveTo(x - 8, y - 72); ctx.lineTo(x + 8, y - 72); ctx.lineTo(x, y - 62); ctx.fill(); }
+      ctx.fillStyle = cur ? '#ffd24a' : '#fffaf0'; ctx.beginPath(); ctx.arc(mx, my, 15, 0, TAU); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(mx + off * 15, my - 8); ctx.lineTo(mx + off * 26, my); ctx.lineTo(mx + off * 15, my + 8); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = INK; ctx.font = TourBackstage.F8; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(k + 1), mx, my + 1);
       ctx.restore();
     });
-    if (!R.won && R.left != null) TourRooms.clock(play, ctx, Math.max(0, R.left), kit.data.t);
+    // the clock: full and waiting until flag 1, then running
+    if (!R.won) TourRooms.clock(play, ctx, R.left != null ? Math.max(0, R.left) : kit.data.t, kit.data.t);
   }
 });
 
 /* ---- itPizza: THE PIZZA ORDER (14-2). The ticket shows three toppings: bump those jars (from below) ---- */
+// The whole room in one phone view: the ticket big at the top of the middle band, the six jars in a row under it.
 TourRooms.def('itPizza', {
-  title: 'THE PIZZA ORDER', rule: 'THE TICKET SAYS WHICH THREE TOPPINGS: BUMP THOSE JARS FROM BELOW. NOT THE OTHERS!', need: 'MAKE THE PIZZA FIRST!',
+  title: 'THE PIZZA ORDER', rule: 'BUMP THE 3 TOPPINGS ON THE TICKET. NOT THE OTHERS!', need: 'MAKE THE PIZZA FIRST!',
   make(o, keep, ctx, A, rng) {
-    const Kt = RK(), W = 34 + Kt.eastW(keep, o);
+    const Kt = RK(), W = o.w || 30;
     const g = Kt.room(W), Y = Kt.Y;
     const x0 = g.west(keep), x1 = Kt.east(g, keep, A, o);
-    // six jars on a shelf at row 6, three tiles apart; the oven and the ticket (drawn) between the jars and the cage
-    const jars = []; for (let k = 0; k < 6; k++) { const jx = x0 + 2 + k * 3; g.put(jx, 7, 'H'); jars.push(jx); g.need('under a jar', jx, Y); }
-    g.hline(x0 + 1, x0 + 18, 4, '-'); g.coins(x0 + 2, x0 + 17, 3);
-    if (keep.gold) g.put(x0 + 19, 3, '*');
-    g.hline(x0 + 18, x0 + 21, 4, '-');
-    g.winSpot(A.id, Math.min(x1 - 2, x0 + 22), Y);
+    // six jars on blocks at row 7, two tiles apart (a gap between, so each is bumped on its own)
+    const jx0 = Math.max(x0 + 1, Math.floor((x0 + x1 - 10) / 2));
+    const jars = []; for (let k = 0; k < 6; k++) { const jx = jx0 + k * 2; g.put(jx, 7, 'H'); jars.push(jx); g.need('under a jar', jx, Y); }
+    for (let k = 0; k < 5; k++) g.put(jars[k] + 1, 9, 'o');
+    if (keep.gold) g.put(Math.min(x1, jars[5] + 2), 4, '*');
+    g.winSpot(A.id, jars[2] + 1, Y);
     g.data.jars = jars; g.data.row = 7;
-    g.dress(keep, [x1 - 3], Y);
+    g.dress(keep, [x1], Y);
     return g;
   },
   enter(play, A, R, kit) { if (!R.won) this.order(play, R); },
-  order(play, R) { const L = [0, 1, 2, 3, 4, 5]; for (let k = L.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [L[k], L[j]] = [L[j], L[k]]; } R.order = L.slice(0, 3); R.got = []; R.burnT = 0; },
-  // a jar bumped from below (Play.bumpBlock below): right topping onto the pizza, wrong one burns it
+  order(play, R) { const L = [0, 1, 2, 3, 4, 5]; for (let k = L.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [L[k], L[j]] = [L[j], L[k]]; } R.order = L.slice(0, 3); R.got = []; R.burnT = 0; R.newT = 0.5; },
+  // a jar bumped from below (Play.bumpBlock below): right topping onto the pizza, wrong one burns it (said at the jar:
+  // the ticket turns red and a new order comes in)
   bump(play, A, R, k) {
     if (R.won) return;
-    if (R.order.indexOf(k) >= 0) { if (R.got.indexOf(k) < 0) { R.got.push(k); Sound.play('pick', { vol: 0.6 }); play.parts.text(play.player.cx, play.player.y - 20, TOPPINGS[k].name + '!', '#ffffff'); } if (R.got.length >= 3) winRoom(play, A, R, { text: 'PERFETTA!', coins: 6 }); }
-    else { R.fails = (R.fails || 0) + 1; R.burnT = 1.2; RK().raspberry(play, 'BURNT! ' + TOPPINGS[k].name + ' WAS NOT ON THE ORDER'); this.order(play, R); }
+    const jx = A.roomKit.data.jars[k] * TS + TS / 2, jy = A.roomKit.data.row * TS - 30;
+    if (R.order.indexOf(k) >= 0) { if (R.got.indexOf(k) < 0) { R.got.push(k); Sound.play('pick', { vol: 0.6 }); play.parts.text(jx, jy, TOPPINGS[k].name + '!', '#ffffff'); } if (R.got.length >= 3) winRoom(play, A, R, { text: 'PERFETTA!', coins: 6 }); }
+    else { R.fails = (R.fails || 0) + 1; Sound.play('powerdown', { vol: 0.6 }); play.parts.text(jx, jy, 'BURNT!', '#ff6a5a'); play.shake(4); this.order(play, R); R.burnT = 1.2; }
   },
-  update(play, dt, A, R) { if (R.burnT > 0) R.burnT -= dt; },
+  update(play, dt, A, R) { if (R.burnT > 0) R.burnT -= dt; if (R.newT > 0) R.newT -= dt; },
   draw(play, ctx, A, R, kit) {
     const D = kit.data, t = play.t;
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 1.6;
-    // the jars: a glass jar on each shelf block, its topping inside, its picture
+    // the jars: a glass jar on each block, its topping inside
     D.jars.forEach((jx, k) => {
       const x = jx * TS + TS / 2, y = D.row * TS + TS - 2, on = R.got && R.got.indexOf(k) >= 0;
-      ctx.fillStyle = on ? 'rgba(255,240,180,0.9)' : 'rgba(220,240,250,0.85)'; rr(ctx, x - 13, y - 30, 26, 30, 6); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = on ? 'rgba(255,240,180,0.95)' : 'rgba(220,240,250,0.92)'; rr(ctx, x - 13, y - 30, 26, 30, 6); ctx.fill(); ctx.stroke();
       ctx.fillStyle = '#c8ccd4'; ctx.fillRect(x - 11, y - 34, 22, 5); ctx.strokeRect(x - 11, y - 34, 22, 5);
       TOPPINGS[k].draw(ctx, x, y - 14);
     });
-    // the order ticket pinned on the wall: the three toppings wanted (ticked when on)
-    if (!R.won && R.order) {
-      const x = (D.jars[5] + 4.5) * TS, y = 8.5 * TS;   // pinned on the wall right of the jars
-      ctx.fillStyle = R.burnT > 0 ? '#ffb0a0' : '#fffaf0'; rr(ctx, x - 50, y - 26, 100, 60, 6); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = INK; ctx.font = TourBackstage.F7; ctx.textAlign = 'center'; ctx.fillText('ORDER #14', x, y - 14);
-      R.order.forEach((k, i) => { const tx = x - 30 + i * 30; TOPPINGS[k].draw(ctx, tx, y + 8); if (R.got.indexOf(k) >= 0) { ctx.strokeStyle = '#2aa84a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(tx - 8, y + 8); ctx.lineTo(tx - 2, y + 15); ctx.lineTo(tx + 9, y - 1); ctx.stroke(); ctx.strokeStyle = INK; ctx.lineWidth = 1.6; } });
+    // the order ticket, big, clipped to the pass's rail over the jars (it comes in once the room's title has gone)
+    if (!R.won && R.order && !(play.bannerT > 0.1)) {
+      const x = (D.jars[0] + D.jars[5] + 1) / 2 * TS, top = 3.1 * TS, w = 230, h = 108, drop = R.newT > 0 ? -R.newT * 60 : 0, y = top + drop;
+      ctx.fillStyle = '#9aa0aa'; ctx.fillRect(x - w / 2 - 20, top - 6, w + 40, 6);
+      ctx.fillStyle = R.burnT > 0 && Math.floor(R.burnT * 8) % 2 ? '#ffb0a0' : '#fffaf0'; rr(ctx, x - w / 2, y, w, h, 6); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#c8ccd4'; ctx.fillRect(x - 14, y - 4, 28, 10); ctx.strokeRect(x - 14, y - 4, 28, 10);
+      ctx.fillStyle = INK; ctx.font = TourBackstage.F8; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('ORDER #14', x, y + 18);
+      ctx.strokeStyle = 'rgba(40,30,20,0.25)'; ctx.beginPath(); ctx.moveTo(x - w / 2 + 12, y + 30); ctx.lineTo(x + w / 2 - 12, y + 30); ctx.stroke(); ctx.strokeStyle = INK;
+      R.order.forEach((k, i) => {
+        const tx = x + (i - 1) * 70, ty = y + 66;
+        ctx.save(); ctx.translate(tx, ty); ctx.scale(2, 2); ctx.lineWidth = 0.9; TOPPINGS[k].draw(ctx, 0, 0); ctx.restore();
+        if (R.got.indexOf(k) >= 0) { ctx.strokeStyle = '#2aa84a'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(tx - 16, ty); ctx.lineTo(tx - 4, ty + 14); ctx.lineTo(tx + 18, ty - 16); ctx.stroke(); ctx.strokeStyle = INK; ctx.lineWidth = 1.6; }
+      });
     }
     ctx.restore();
   }
@@ -237,19 +276,21 @@ TourRooms.def('itPizza', {
 }
 
 /* ---- itBells: THE BELL ECHO (14-3). Three bells ring a tune; ring it back by jumping into them ---- */
+// The whole room in one phone view: the bells hang in the middle of the screen, all three together.
 const BELL_PITCH = [0.7, 0.95, 1.3];
 TourRooms.def('itBells', {
-  title: 'THE BELL ECHO', rule: 'LISTEN TO THE BELLS, THEN RING THEM BACK IN THE SAME ORDER (JUMP INTO THEM)', need: 'RING THE TUNE BACK FIRST!',
+  title: 'THE BELL ECHO', rule: 'LISTEN, THEN RING THE BELLS BACK IN ORDER (JUMP INTO THEM)', need: 'RING THE TUNE BACK FIRST!',
   make(o, keep, ctx, A, rng) {
-    const Kt = RK(), W = 34 + Kt.eastW(keep, o);
+    const Kt = RK(), W = o.w || 30;
     const g = Kt.room(W), Y = Kt.Y;
     const x0 = g.west(keep), x1 = Kt.east(g, keep, A, o);
-    const mid = Math.floor((x0 + x1) / 2), bells = [mid - 7, mid, mid + 7];
+    // the door out at the right end; the three bells over the middle, five apart
+    const r = o.exit ? x1 - 3 : x1, mid = Math.round((x0 + 2 + r) / 2), bells = [mid - 5, mid, mid + 5];
     for (const bx of bells) g.need('under a bell', bx, Y);
-    if (keep.gold) { g.hline(x0 + 1, x0 + 4, 7, '-'); g.hline(x0 + 3, x0 + 6, 4, '-'); g.put(x0 + 4, 3, '*'); }
+    if (keep.gold) { g.hline(x0 + 1, x0 + 2, 7, '-'); g.put(x0 + 1, 4, '*'); }
     if (o.exit) { g.door(x1 - 1, Y, { to: o.exit, look: 'itTowerDoor' }); g.need('the door up', x1 - 1, Y); }
-    g.winSpot(A.id, mid + 3, Y);
-    g.data.bells = bells; g.data.n = o.n || 4;
+    g.winSpot(A.id, mid + 2, Y);
+    g.data.bells = bells; g.data.n = o.n || 4; g.data.bellY = 5;
     g.dress(keep, [x0 + 1, x1 - 3], Y);
     return g;
   },
@@ -261,17 +302,18 @@ TourRooms.def('itBells', {
     if (R.won) return;
     const p = play.player, D = kit.data;
     R.pt += dt;
-    if (R.phase === 'wait') { if (RK().inside(play, A, R) && R.pt > 0.8) { R.phase = 'play'; R.pt = 0; R.i = 0; } return; }
+    // (the tune waits for the title to go)
+    if (R.phase === 'wait') { if (RK().inside(play, A, R) && R.pt > 0.8 && !(play.bannerT > 0.1)) { R.phase = 'play'; R.pt = 0; R.i = 0; } return; }
     if (R.phase === 'play') {
       // the bells ring the tune, 0.75 s apart
       const k = Math.floor(R.pt / 0.75);
       if (k < R.tune.length && Math.floor((R.pt - dt) / 0.75) !== k) this.ring(play, R, R.tune[k]);
-      if (R.pt > R.tune.length * 0.75 + 0.4) { R.phase = 'echo'; R.i = 0; play.toast('YOUR TURN!'); }
+      if (R.pt > R.tune.length * 0.75 + 0.4) { R.phase = 'echo'; R.i = 0; }
       return;
     }
     if (R.phase === 'echo') {
       D.bells.forEach((bx, k) => {
-        const box = { x: bx * TS - 8, y: 4 * TS, w: TS + 16, h: 2 * TS }, hit = overlap(p, box) && p.vy < 0;
+        const box = { x: bx * TS - 8, y: D.bellY * TS, w: TS + 16, h: 2.5 * TS }, hit = overlap(p, box) && p.vy < 0;
         if (hit && !R.was[k]) {
           this.ring(play, R, k);
           if (R.tune[R.i] === k) { R.i++; if (R.i >= R.tune.length) winRoom(play, A, R, { text: 'BRAVO!', coins: 6 }); }
@@ -282,23 +324,28 @@ TourRooms.def('itBells', {
     }
   },
   draw(play, ctx, A, R, kit) {
-    const D = kit.data, t = play.t;
+    const D = kit.data, t = play.t, oy = D.bellY * TS;
     D.bells.forEach((bx, k) => {
-      const x = bx * TS + TS / 2, y = 4 * TS, sw = Math.sin(t * 14) * (R.ring ? R.ring[k] : 0) * 0.5, col = ['#c8783a', '#d8a83a', '#e8d070'][k];
-      ctx.save(); ctx.strokeStyle = '#7a5430'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, TS); ctx.lineTo(x, y - 20); ctx.stroke();
-      ctx.translate(x, y - 20); ctx.rotate(sw); ctx.strokeStyle = INK; ctx.lineWidth = 2;
-      if (R.ring && R.ring[k] > 0.2) { ctx.fillStyle = 'rgba(255,240,170,0.45)'; ctx.beginPath(); ctx.arc(0, 26, 34, 0, TAU); ctx.fill(); }
-      ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(-10, 0); ctx.quadraticCurveTo(0, -8, 10, 0); ctx.quadraticCurveTo(18, 22, 24, 34); ctx.lineTo(-24, 34); ctx.quadraticCurveTo(-18, 22, -10, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#5a3a1a'; ctx.beginPath(); ctx.arc(0, 38, 5, 0, TAU); ctx.fill(); ctx.stroke();
+      const x = bx * TS + TS / 2, sw = Math.sin(t * 14) * (R.ring ? R.ring[k] : 0) * 0.5, col = ['#c8783a', '#d8a83a', '#e8d070'][k];
+      ctx.save();
+      // the headstock: a beam across and the rope up to the ceiling
+      ctx.strokeStyle = '#7a5430'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, TS); ctx.lineTo(x, oy - 6); ctx.stroke();
+      ctx.fillStyle = '#6a4a2a'; ctx.fillRect(x - 22, oy - 10, 44, 8);
+      ctx.translate(x, oy - 4); ctx.rotate(sw); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+      if (R.ring && R.ring[k] > 0.2) { ctx.fillStyle = 'rgba(255,240,170,0.45)'; ctx.beginPath(); ctx.arc(0, 28, 38, 0, TAU); ctx.fill(); }
+      ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(-11, 0); ctx.quadraticCurveTo(0, -9, 11, 0); ctx.quadraticCurveTo(20, 24, 27, 38); ctx.lineTo(-27, 38); ctx.quadraticCurveTo(-20, 24, -11, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#5a3a1a'; ctx.beginPath(); ctx.arc(0, 43, 5.5, 0, TAU); ctx.fill(); ctx.stroke();
       // the bell's mark (colour AND shape: the tune reads without colour vision)
-      TourRoomArt.sym(ctx, k, 0, 18, 6);
+      TourRoomArt.sym(ctx, k, 0, 20, 7);
       ctx.restore();
     });
+    // where the tune is at: in the room's fixed spot (top-left, under the HUD)
     if (!R.won && R.tune) {
-      const x = play.camX + Game.viewW / 2, y = TourRooms.hudY(play, 0) + 72;
-      ctx.save(); ctx.fillStyle = 'rgba(14,8,26,0.72)'; rr(ctx, x - 70, y - 14, 140, 28, 14); ctx.fill();
-      ctx.fillStyle = '#ffffff'; ctx.font = TourBackstage.F8; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(R.phase === 'echo' ? 'RING IT BACK: ' + R.i + ' / ' + R.tune.length : 'LISTEN...', x, y + 1); ctx.restore();
+      const s = Tour.itRoomHud.spot(play, 0), txt = R.phase === 'echo' ? 'YOUR TURN ' + R.i + ' / ' + R.tune.length : 'LISTEN...';
+      ctx.save(); ctx.font = TourBackstage.F8; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      const w = ctx.measureText(txt).width + 24; ctx.fillStyle = 'rgba(14,8,26,0.78)'; rr(ctx, s.x, s.y - 14, w, 28, 14); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,216,74,0.6)'; ctx.lineWidth = 1.2; ctx.stroke();
+      ctx.fillStyle = R.phase === 'echo' ? '#ffd84a' : '#ffffff'; ctx.fillText(txt, s.x + 12, s.y + 1); ctx.restore();
     }
   }
 });

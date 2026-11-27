@@ -295,6 +295,17 @@ async function session(viewport, fn) {
       await ev(() => { window.room = () => S().area.roomState; window.kit = () => S().area.roomKit; window.waitArea = (aid, sec) => until(sec || 4, () => ({}), () => S().area.aid === aid && S().fade.a < 0.05 && P().state === 'play'); window.upDoor = () => { sim(0.05, { up: true, upPressed: true }); }; window.runTo = (tx, sec) => { const A = S().area; return until(sec || 12, () => { const p = P(), row = Math.round((p.y + p.h) / 32), fx = Math.floor(p.cx / 32), gap = p.onGround && [1, 2].some(d => A.tiles[row * A.W + fx + d] === 0); return { right: p.cx < tx - 6, left: p.cx > tx + 20, jump: true, jumpPressed: gap }; }, () => Math.abs(P().cx - tx) < 10 && P().onGround); };
       window.floorAt = (tx, ty) => { const A = S().area; let r = Math.max(0, ty); while (r < A.H && !A.tiles[r * A.W + tx]) r++; return r - 1; };
       window.hop = sec => { let n = 0; until(sec || 1.4, k => ({ jump: true, jumpPressed: k === 0 }), () => ++n > 30 && P().onGround); }; });
+      // a room's entry on the phone: the title alone first, then the rule; the whole room in one view where it fits
+      const entryShots = async (num, name, fits) => {
+        const a = await ev(() => { const g = S(), A = g.area, G = window.BRADY.Game; return { aid: A.aid, title: g.bannerT > 0 && !(g.toastT > 0), fit: A.W * 32 <= G.viewW + 2 && g.camX === 0 && g.camY === Math.max(0, A.H * 32 - G.viewH), rows: +G.rows.toFixed(2) }; });
+        await shot(`${num}a-${name}-entry-title.png`);
+        const b = await ev(() => { const g = S(); until(4, () => ({}), () => !(g.bannerT > 0)); sim(0.4); return { rule: g.toastT > 0 && g.toastText === g.area.roomKit.rule }; });
+        await shot(`${num}b-${name}-entry-rule.png`);
+        const r = Object.assign(a, b);
+        check(`${name}: on entry the room's title shows alone, then its rule`, r.title && r.rule, r);
+        if (fits) check(`${name}: the whole room in one phone view (fixed camera)`, r.fit, r);
+        return r;
+      };
       // 14-1: a boosted launch off the first ramp reaches the pigeon loft; inside, the scooter time trial; out through the roller door
       await ev(() => { fresh(); play('14-1'); const loft = S().entities.find(e => e.s && e.s.look === 'itLoft'); const ramp = ents('ItRamp').filter(r => r.x < loft.x).sort((a, b) => b.x - a.x)[0]; place(Math.floor(ramp.x / 32) - 8, Math.floor((ramp.y + ramp.h) / 32) - 1); sim(0.4); });
       await shot('80-14-1-tell-pigeon-loft.png');
@@ -312,9 +323,11 @@ async function session(viewport, fn) {
         return { plainTop, loftRow: Math.floor((loft.y + loft.h) / 32), onLedge, area: S().area.aid };
       });
       check('14-1 secret: a plain ramp launch tops out under the pigeon loft; a BOOSTED one lands on it and its door leads in', r.plainTop > r.loftRow && r.onLedge && r.area === 'garage', r);
+      await entryShots('81', '14-1-time-trial', false);
       await shot('81-14-1-time-trial.png');
       r = await ev(() => {
         const K = kit(), F = K.data.flags, p = P(), Rm = room();
+        until(8, () => ({}), () => !Rm.hold);   // the scooter is held at the start while the camera rides the route
         // fail: pass flag 1, then dawdle (brake) until the clock runs out
         place(F[0][0] - 2, F[0][1]); until(1.5, () => ({}), () => Rm.next >= 1); until(14, () => ({ down: true }), () => Rm.next === 0 && Rm.fails >= 1);
         const failed = Rm.fails >= 1 && !Rm.won;
@@ -350,6 +363,7 @@ async function session(viewport, fn) {
         return { halfTop, up, hatchRow: Math.floor((hatch.y + hatch.h) / 32), area: S().area.aid };
       });
       check('14-2 secret: half a charge falls short; a full fling goes up through the vent, the cupboard-top run leads to the pantry hatch', r.halfTop >= r.hatchRow && r.up <= r.hatchRow && r.area === 'dispensa', r);
+      await entryShots('84', '14-2-pizza-order', true);
       await shot('84-14-2-pizza-order.png');
       r = await ev(() => {
         const K = kit(), Rm = room(), p = P(), jump = k => { place(K.data.jars[k], 10); hop(1.2); };
@@ -369,6 +383,7 @@ async function session(viewport, fn) {
       await shot('86-14-3-tell-cracked-wall.png');
       r = await ev(() => { place(3, 65); until(2, () => ({ left: true }), () => S().area.aid === 'store'); waitArea('store'); return { area: S().area.aid }; });
       check('14-3 secret: walking into the cracked stretch of wall goes in (no door, no Up)', r.area === 'store', r);
+      await entryShots('87', '14-3-bell-echo', true);
       r = await ev(() => {
         const K = kit(), Rm = room(), ring = k => { place(K.data.bells[k], 10); hop(1.4); };
         until(10, () => ({}), () => Rm.phase === 'echo');
@@ -392,6 +407,7 @@ async function session(viewport, fn) {
       await shot('89-14-4-gantry.png');
       r = await ev(() => { const d = S().entities.find(e => e.s && e.s.look === 'itStageDoor'); const dx = d && d.cx / 32; P().invuln = 30;   /* a sour note is a hit: the checker proves the route; here just the inputs */ runTo(d.cx, 14); const p1 = { x: P().cx / 32, y: (P().y + P().h) / 32, aid: S().area.aid }; upDoor(); waitArea('loggia'); return { area: S().area.aid, p1, dx }; });
       check('14-4 secret: along the gantry (spike pits, sour notes) to the royal box door', r.area === 'loggia', r);
+      await entryShots('90', '14-4-opera-hats', true);
       r = await ev(() => {
         const K = kit(), Rm = room(), p = P(), pickCup = c => { p.x = c.x - p.w / 2; p.y = (K.data.row + 1) * 32 - 34 - p.h + 4; p.vy = 4 * 32; sim(0.05); };
         place(K.data.slots[1] - 2, K.data.row); until(20, () => ({}), () => Rm.phase === 'pick'); pickCup(Rm.cups.find(c => c.k !== Rm.prizeCup)); const failed = !Rm.won && !!Rm.joke;
@@ -405,7 +421,9 @@ async function session(viewport, fn) {
       // 14-5: the curtain in the wings, the tenor's gold record (a prank), then the real cage
       await ev(() => { play('14-5'); const c = S().entities.find(e => e.constructor.name === 'TourCurtain'); place(Math.floor(c.cx / 32) - 3, 13); sim(0.3); });
       await shot('91-14-5-tell-curtain.png');
-      r = await ev(() => { const c = S().entities.find(e => e.constructor.name === 'TourCurtain'); place(Math.floor(c.cx / 32), 13); upDoor(); waitArea('camerino'); const Rm = room(); const ch = S().entities.find(e => e.constructor.name === 'TourRoomChest'); until(9, k => ({ right: P().cx < ch.cx - 4, left: P().cx > ch.cx + 14, jump: true, jumpPressed: P().onGround && k % 40 === 0 }), () => Rm.won); return { area: S().area.aid, won: Rm.won }; });
+      await ev(() => { const c = S().entities.find(e => e.constructor.name === 'TourCurtain'); place(Math.floor(c.cx / 32), 13); upDoor(); waitArea('camerino'); });
+      await entryShots('92', '14-5-dressing-room', true);
+      r = await ev(() => { const Rm = room(); const ch = S().entities.find(e => e.constructor.name === 'TourRoomChest'); until(9, k => ({ right: P().cx < ch.cx - 4, left: P().cx > ch.cx + 14, jump: true, jumpPressed: P().onGround && k % 40 === 0 }), () => Rm.won); return { area: S().area.aid, won: Rm.won }; });
       check('14-5 secret: behind the curtain, the gold record is a prank, then the cage opens', r.area === 'camerino' && r.won, r);
       await shot('92-14-5-dressing-room.png');
       // 14-6: the pit with no coffee: drop in; the bean store; out further along
@@ -413,6 +431,7 @@ async function session(viewport, fn) {
       await shot('93-14-6-tell-sack-pit.png');
       r = await ev(() => { const t = ents('ItSackTell')[0]; for (const d of ents('TourDoom')) d.front = -1e5; const tx = Math.floor(t.x / 32) - 1; place(tx, floorAt(tx, 1)); until(3, () => ({ right: P().cx < t.cx }), () => S().area.aid === 'retro'); waitArea('retro'); return { area: S().area.aid, dead: P().dead }; });
       check('14-6 secret: dropping into the pit with the bean sacks (no coffee) lands in the bean store', r.area === 'retro' && !r.dead, r);
+      await entryShots('94', '14-6-bean-store', true);
       r = await ev(() => {
         const K = kit(), Rm = room(); place(10, 10); until(4, () => ({}), () => Rm.phase === 'run');
         until(K.data.t + 4, () => ({}), () => Rm.phase === 'rest'); const failed = Rm.phase === 'rest' && !Rm.won;
