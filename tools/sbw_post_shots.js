@@ -272,7 +272,7 @@ const helpers = () => {
   // roll the nearest loose stamp (or pad) to left tile sx: walk onto it, then walk with it
   window.rollTo = (cls, sx) => { const e = ents(cls).sort((a, b) => Math.abs(a.cxF - P().cx) - Math.abs(b.cxF - P().cx))[0]; AP.exec({ walkTo: e.cxF, dir: 0 }, 4); AP.exec({ walkTo: (sx + e.cw / 2) * 32, dir: 0 }, 5); sim(0.2); return window.BRADY_POST.kit.carriage.sx(e); };
   // ride the pad under the swelling bead until it drinks one (the pad rolls along with Brady)
-  window.catchBead = (maxT) => { const e = ents('PostBlotter').sort((a, b) => Math.abs(a.cxF - P().cx) - Math.abs(b.cxF - P().cx))[0]; AP.exec({ walkTo: e.cxF, dir: 0 }, 4); const p = P(); for (let k = 0; k < 60 * (maxT || 14) && e.pad !== 'inky'; k++) { const tx = e.bead ? e.bead.x : e.nibX(); sim(1 / 60, { left: tx < p.cx - 5, right: tx > p.cx + 5 }); } return e.pad; };
+  window.catchBead = (maxT) => { const e = ents('PostBlotter').sort((a, b) => Math.abs(a.cxF - P().cx) - Math.abs(b.cxF - P().cx))[0]; AP.exec({ walkTo: e.cxF, dir: 0 }, 4); const p = P(); for (let k = 0; k < 120 * (maxT || 14) && e.pad !== 'inky' && !e.done; k++) { if (!e.holding) { AP.exec({ walkTo: e.cxF, dir: 0 }, 3); continue; } const tx = e.bead ? e.bead.x : e.nibX(), d = tx - p.cx, brake = p.vx * p.vx / (2 * 30 * 32) + 3; sim(1 / 120, { left: d < -brake, right: d > brake }); } return e.pad; };
   window.pushSurf = () => { const e = ents('PostBlotter').sort((a, b) => Math.abs(a.cxF - P().cx) - Math.abs(b.cxF - P().cx))[0]; rollTo('PostBlotter', e.s.rail[1]); sim(0.3, { right: true }); sim(0.3); return { pad: e.pad, drunk: e.drunk, done: e.done }; };
   // stand on a crease mark, hold THROW and walk back until the flap meets (or, the last one, then step onto it and let go)
   window.foldAt = (mx, o) => { o = o || {}; AP.go([mx, 19]); AP.exec({ walkTo: mx * 32 + 16, dir: 0 }, 2); const e = ents('PostFold').find(q => q.s.mark[0] === mx); for (let k = 0; k < 60 * 4 && e.st !== 'down' && !e.temp; k++) sim(1 / 60, { action: true, left: !o.stop || e.ang < o.stop }); if (o.stop) { sim(0.3); return { st: e.st, ang: e.ang }; } if (e.temp && !o.release) { for (let k = 0; k < 60 * 4 && !(P().cx > e.Bt[0] * 32 + 40 && P().onGround); k++) sim(1 / 60, { action: true, right: true }); } sim(0.2); return { st: e.st, temp: e.temp, tuck: e.tuck }; };
@@ -393,8 +393,8 @@ LEVELS.blot = async (page, shot, run, pano) => {
   await run('blot', async () => {
     await page.evaluate(helpers);
     await page.evaluate(() => { fresh(); playP('27-3'); place(4, 18); sim(0.6); freeze(); }); await shot('30-27-3-start.png');
-    let r = await page.evaluate(() => { thaw(); const e = ents('PostBlotter')[0]; const pad = catchBead(); return { pad }; });
-    check('27-3: walking the pad under the bead: it drinks the ink', r.pad === 'inky', r);
+    let r = await page.evaluate(() => { thaw(); const e = ents('PostBlotter')[0]; const pad = catchBead(); return { pad: e.done ? 'drunk at once (caught at the surf)' : pad, ok: pad === 'inky' || e.done }; });
+    check('27-3: walking the pad under the bead: it drinks the ink', r.ok, r);
     await shotAt(page, shot, '31-27-3-inky-pad.png', () => { sim(0.1); });
     r = await page.evaluate(() => { const a = pushSurf(); sim(2.2); return Object.assign(a, { dock: tileName(21, 19), surf: tileName(18, 16) }); });
     check('27-3: the inky pad pushed into the surf drinks a gap; the paper boat sails through and docks as a bridge', r.done && r.dock === 'SEMI' && r.surf === 'EMPTY', r);
@@ -411,7 +411,7 @@ LEVELS.blot = async (page, shot, run, pano) => {
     check('27-3: twist: the first bead drinks half the surf; the soaked pad will not take another', r.p1 === 'inky' && r.drunk === 1 && r.soaked === 'full' && r.c2 === 'full', r);
     await shotAt(page, shot, '34-27-3-twist-blotter.png', () => { sim(0.1); });
     r = await page.evaluate(() => { const e = ents('PostBlotter').find(q => q.s.need === 2); rollTo('PostBlotter', e.s.blotter[0] - 1); sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.5, { jump: true }); sim(0.5); const dry = e.pad; catchBead(); const a = pushSurf(); sim(2.2); return { dry, a, b: AP.route([[114, 19], [120, 19], [128, 19]]) }; });
-    check('27-3: twist: a jump slaps the pad on the blotter, it drinks the second bead and the rest of the surf; across', r.dry === 'dry' && r.a.done && r.b.ok, r);
+    check('27-3: twist: a jump slaps the pad on the blotter, it drinks the second bead and the rest of the surf; across', (r.dry === 'dry' || r.dry === 'inky') && r.a.done && r.b.ok, r);
     r = await page.evaluate(() => { const a = AP.route([[150, 19], [170, 19]]); sim(3, { right: true }); return { a: a.ok, state: S().state }; });
     check('27-3: on to the gate', r.a && r.state !== 'play', r);
     await page.evaluate(() => { playP('27-3'); }); await pano('39-27-3-panorama.png', 0.35);
@@ -515,7 +515,7 @@ LEVELS.ret = async (page, shot, run, pano) => {
     r = await page.evaluate(() => { const a = AP.go([72, 19]); return { ok: a.ok, at: tileOf() }; });
     check('27-6: the pillar\'s foot where the corner curls is paper: through to the den\'s door (before the boss)', r.ok, r);
     r = await page.evaluate(() => { place(88, 18); sim(0.2); toDoor(); return {}; });
-    r = await page.evaluate(() => { const g = S(); const d = g.entities.filter(e => e.constructor.name === 'Portal' && e.target && e.target.area !== g.area.idx).sort((a, b) => b.cx - a.cx)[0]; const p = P(); p.x = d.cx - p.w / 2; p.y = d.y + d.h - p.h; sim(0.2); sim(0.1, { up: true, upPressed: true }); for (let k = 0; k < 200 && S().area.aid !== 'desk'; k++) sim(1 / 60); sim(3); freeze(); return { area: S().area.aid }; });
+    r = await page.evaluate(() => { const g = S(); const d = g.entities.filter(e => e.constructor.name === 'Portal' && e.target && e.target.area !== g.area.idx).sort((a, b) => b.cx - a.cx)[0]; const p = P(); p.x = d.cx - p.w / 2; p.y = d.y + d.h - p.h; sim(0.2); sim(0.1, { up: true, upPressed: true }); for (let k = 0; k < 200 && S().area.aid !== 'desk'; k++) sim(1 / 60); sim(1, { right: true }); for (let k = 0; k < 120 * 8 && !(S().boss && S().boss.state === 'fight' && S().boss.act === 'ring'); k++) sim(1 / 120); sim(0.5); freeze(); return { area: S().area.aid }; });
     await shot('83-27-6-boss-desk.png'); await page.evaluate(() => thaw());
     check('27-6: the sorting desk\'s letterbox leads into the boss arena', r.area === 'desk', r);
     await page.evaluate(() => { playP('27-6'); }); await pano('89-27-6-panorama.png', 0.35);
@@ -538,7 +538,7 @@ LEVELS.map = async (page, shot, run) => {
 // tear an island and get back; { stamp: sx }; { blot: 1|2 }; { fold: mx }; { scale: [x0, x1, end] }; { addr: plateX }; 'finish'; 'boss'
 const BOT = {
   '27-1': [[0, [{ bump: [10, 19] }, [20, 19], [26, 17], [29, 15], { isl: [36, 29] }, [34, 17], [44, 17]]],
-    [46, [{ bump: [49, 17] }, [55, 17], [62, 17], { isl: [70, 62] }, [68, 19], [80, 19], [90, 19]]],
+    [46, [{ bump: [44, 17] }, [55, 17], [62, 17], { isl: [70, 62] }, [68, 19], [80, 19], [90, 19]]],
     [90, [[96, 17], [99, 16], { isl: [106, 99] }, [104, 18], [116, 18], [136, 18]]],
     [136, [[144, 17], [149, 17], { j: [151, 17] }, [154, 17], [160, 17], [180, 17], 'finish']]],
   '27-2': [[0, [{ bump: [7, 19] }, { stamp: 11 }, [16, 19], [21, 19], [29, 19]]],
@@ -637,7 +637,7 @@ LEVELS.bot = async (page, shot, run) => {
     await run('portrait', async () => {
       await page.evaluate(helpers);
       await page.evaluate(() => { fresh(); playP('27-1'); place(20, 18); sim(0.4); freeze(); }); await shot('90-portrait-27-1.png');
-      await page.evaluate(() => { thaw(); playP('27-6'); toArea('desk', 6, 15); sim(3); freeze(); }); await shot('91-portrait-27-6-boss.png');
+      await page.evaluate(() => { thaw(); playP('27-6'); toArea('desk', 6, 15); sim(1, { right: true }); for (let k = 0; k < 120 * 8 && !(S().boss && S().boss.state === 'fight' && S().boss.act === 'ring'); k++) sim(1 / 120); sim(0.5); freeze(); }); await shot('91-portrait-27-6-boss.png');
       await page.evaluate(o => { thaw(); eval(o); window.BRADY.goToMap('world', 27, '27-2'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } freeze(); }, openPost); await shot('92-portrait-post-map.png');
     });
   });

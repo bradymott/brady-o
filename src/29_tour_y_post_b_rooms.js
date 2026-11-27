@@ -42,7 +42,14 @@ function frame(keep, A, o, opts) {
 }
 const fail = (play, txt) => { TourKit.sfx('fizz', 'bump', { vol: 0.5, pitch: 0.6 }); const p = play.player; if (p) K.pill(play, p.cx, p.y - 24, txt, '#ffb0a0'); };
 const good = (play, txt) => { TourKit.sfx('chime', 'pick', { vol: 0.5, pitch: 1.2 }); const p = play.player; if (p) K.pill(play, p.cx, p.y - 24, txt, '#ffe08a'); };
-const hud = (play, ctx, str) => { if (play.bannerT > 0) return; TourRooms.hudText(play, ctx, str, '#ffe08a', 13, 0); };
+// the room's counter / prompt: one pill in a fixed spot just above the room's game (never over it), after the title
+// and the rule have gone
+const hud = (play, ctx, str, y) => {
+  if (play.bannerT > 0 || play.toastT > 0) return;
+  const x = play.camX + Game.viewW / 2, yy = Math.max(y || 100, play.camY + 62);
+  ctx.save(); ctx.font = '12px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; const w = ctx.measureText(str).width + 22;
+  ctx.fillStyle = 'rgba(22,20,40,0.88)'; rr(ctx, x - w / 2, yy - 11, w, 22, 11); ctx.fill(); ctx.fillStyle = '#ffe08a'; ctx.fillText(str, x, yy + 1); ctx.restore();
+};
 // the camera holds still on the room
 {
   const uc0 = Play.prototype.updateCamera;
@@ -71,7 +78,7 @@ const pad = (ctx, x, y, lit, n) => { ctx.save(); ctx.fillStyle = lit ? '#ffe08a'
 /* ================= postGap: MIND THE GAP (the stamp press) ================= */
 const GAP_PADS = [6, 10, 14], SHAPES = [0, 1, 3, 4, 5];
 TourRooms.def('postGap', {
-  title: 'MIND THE GAP', rule: 'FOUR STAMPS PRINT IN A ROW, THEN AGAIN WITH A GAP: JUMP ON THE STAMP THAT FILLS IT. TWICE', need: 'FILL THE GAP FIRST!',
+  title: 'MIND THE GAP', rule: 'JUMP ON THE STAMP THAT FILLS THE GAP', need: 'FILL THE GAP FIRST!',
   make(o, keep, ctx, A, rng) {
     const { g } = frame(keep, A, o, {});
     g.spawn(10, 5, 'postRoomProp', { role: 'press', w: 10, h: 2 });
@@ -91,7 +98,7 @@ TourRooms.def('postGap', {
     if (R.choices[i] === R.seq[R.blank]) { R.round++; if (R.round >= 2) TourRooms.win(play, A, R, { text: 'THE GAP IS FILLED! (TWICE)', coins: 3 }); else { good(play, 'THAT ONE! AGAIN...'); this.deal(R); } }
     else { fail(play, 'NOT THAT ONE: WATCH AGAIN'); R.show = 0; R.phase = 'show'; }
   },
-  draw(play, ctx, A, R) { hud(play, ctx, R.won ? 'FILLED!' : 'ROUND ' + Math.min(2, (R.round || 0) + 1) + ' / 2'); }
+  draw(play, ctx, A, R) { hud(play, ctx, R.won ? 'FILLED!' : 'ROUND ' + Math.min(2, (R.round || 0) + 1) + ' / 2', 100); }
 });
 DRAW.press = (ctx, e, R) => {
   // the press's sheet: four stamp places in a row; pass 1 prints them one by one, pass 2 again with a gap
@@ -121,10 +128,10 @@ DRAW.gapPad = (ctx, e, R) => {
 /* ================= postFake: COUNTERFEIT POSTMARK (the inspector's bureau) ================= */
 const FAKE_X = [6, 11, 16];
 TourRooms.def('postFake', {
-  title: 'COUNTERFEIT POSTMARK', rule: 'STUDY THE THREE POSTMARKS. THE CARD TURNS OVER AND BACK: STAND UNDER THE ONE THAT CHANGED AND THROW', need: 'SPOT THE FAKE FIRST!',
+  title: 'COUNTERFEIT POSTMARK', rule: 'WATCH THE CARD. THROW UNDER THE CHANGED MARK', need: 'SPOT THE FAKE FIRST!',
   make(o, keep, ctx, A, rng) {
     const { g } = frame(keep, A, o, { doorRight: true, cageLeft: true, plinth: true, cageH: 3 });
-    g.spawn(11, 4, 'postRoomProp', { role: 'card', w: 14, h: 2 });
+    g.spawn(11, 5, 'postRoomProp', { role: 'card', w: 14, h: 2 });
     FAKE_X.forEach((x, k) => g.spawn(x, Y, 'postRoomProp', { role: 'lens', k, w: 2, h: 2 }));
     g.winSpot(A.id, FAKE_X[1], Y);
     return g;
@@ -138,7 +145,7 @@ TourRooms.def('postFake', {
     if (I.by.k === R.odd) TourRooms.win(play, A, R, { text: 'A COUNTERFEIT! WELL SPOTTED', coins: 3 });
     else { fail(play, 'GENUINE! LOOK AGAIN'); R.t0 = 0; R.odd = (R.odd + 1 + Math.floor(Math.random() * 2)) % 3; }
   },
-  draw(play, ctx, A, R) { hud(play, ctx, R.won ? 'CASE CLOSED' : (R.t0 || 0) < 2.4 ? 'STUDY THEM...' : (R.t0 || 0) < 4.2 ? 'TURNING OVER...' : 'WHICH ONE CHANGED?'); }
+  draw(play, ctx, A, R) { hud(play, ctx, R.won ? 'CASE CLOSED' : (R.t0 || 0) < 2.4 ? 'STUDY THEM...' : (R.t0 || 0) < 4.2 ? 'TURNING OVER...' : 'WHICH ONE CHANGED?', 106); }
 });
 DRAW.card = (ctx, e, R) => {
   // the big postcard; at 2.4 s it turns over (it squashes to its back and back again), then one mark is different
@@ -161,7 +168,7 @@ DRAW.lens = (ctx, e, R) => { const x = e.cx, y = e.y + e.h; pad(ctx, x, y, (R.t0
 /* ================= postEcho: ECHO IN AN INKWELL (the ink cellar) ================= */
 const WELL_X = [5, 10, 15], CLOUD = ['TALL', 'SHORT', 'RIPPLED'];
 TourRooms.def('postEcho', {
-  title: 'ECHO IN AN INKWELL', rule: 'THREE INKWELLS PUFF A TALL, A SHORT AND A RIPPLED CLOUD. PLAY THEIR PHRASE BACK: THROW AT AN INKWELL TO PUFF IT', need: 'ECHO THE PHRASE FIRST!',
+  title: 'ECHO IN AN INKWELL', rule: 'WATCH THE PUFFS, THEN PUFF THEM BACK', need: 'ECHO THE PHRASE FIRST!',
   make(o, keep, ctx, A, rng) {
     const { g } = frame(keep, A, o, { cageX: 18 });
     WELL_X.forEach((x, k) => g.spawn(x, Y, 'postRoomProp', { role: 'well', k, w: 2, h: 2 }));
@@ -179,7 +186,7 @@ TourRooms.def('postEcho', {
     if (R.got[R.got.length - 1] !== R.seq[R.got.length - 1]) { fail(play, 'THAT ECHO WAS OFF: LISTEN AGAIN'); R.got = []; R.play = 0; return; }
     if (R.got.length >= 3) TourRooms.win(play, A, R, { text: 'A PERFECT ECHO!', coins: 3 });
   },
-  draw(play, ctx, A, R) { hud(play, ctx, R.won ? 'ECHOED!' : (R.play || 0) < 3.6 ? 'LISTEN...' : 'YOUR TURN: ' + (R.got ? R.got.length : 0) + ' / 3'); }
+  draw(play, ctx, A, R) { hud(play, ctx, R.won ? 'ECHOED!' : (R.play || 0) < 3.6 ? 'WATCH...' : 'YOUR TURN: ' + (R.got ? R.got.length : 0) + ' / 3', 96); }
 });
 DRAW.well = (ctx, e, R) => {
   const x = e.cx, y = e.y + e.h, k = e.k, pf = (R.puff && R.puff[k]) || 0;
@@ -187,11 +194,13 @@ DRAW.well = (ctx, e, R) => {
   ctx.fillStyle = ['#1e3490', '#16141e', '#8a2a3a'][k]; rr(ctx, x - 18, y - 30, 36, 30, 6); ctx.fill(); ctx.stroke();
   ctx.fillStyle = '#c8b898'; ctx.fillRect(x - 8, y - 38, 16, 9); ctx.strokeRect(x - 8, y - 38, 16, 9);
   ctx.fillStyle = WHITE; ctx.font = '7px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText(CLOUD[k], x, y - 12);
+  if (pf > 0) { ctx.save(); ctx.strokeStyle = `rgba(255,224,138,${Math.min(1, pf * 1.5)})`; ctx.lineWidth = 5; rr(ctx, x - 24, y - 44, 48, 48, 10); ctx.stroke(); ctx.restore(); }
   if (pf > 0) {
     ctx.globalAlpha = Math.min(1, pf * 2); ctx.fillStyle = ['#5a7ae8', '#3a3a5a', '#c85a6a'][k];
     const h = k === 0 ? 90 : k === 1 ? 36 : 60, top = y - 40 - h * (1 - pf * 0.5);
     if (k === 2) for (let q = 0; q < 4; q++) { ctx.beginPath(); ctx.arc(x + Math.sin(q * 2 + e.t * 8) * 8, top + q * 14, 10, 0, TAU); ctx.fill(); }
-    else { ctx.beginPath(); ctx.ellipse(x, top + h / 2, 14, h / 2, 0, 0, TAU); ctx.fill(); }
+    else if (k === 0) { ctx.beginPath(); ctx.ellipse(x, top + h / 2, 12, h / 2, 0, 0, TAU); ctx.fill(); }
+    else { ctx.beginPath(); ctx.ellipse(x, y - 52, 34, 12, 0, 0, TAU); ctx.fill(); }
   }
   ctx.restore();
 };
@@ -199,7 +208,7 @@ DRAW.well = (ctx, e, R) => {
 /* ================= postDrop: THE LAST DROP (the pen shop) ================= */
 const BOT_X = 10, CAP_X = 13, LINE = 0.72;
 TourRooms.def('postDrop', {
-  title: 'THE LAST DROP', rule: 'TWO NIBS DRIP INTO ONE BOTTLE. STAND AT THE CAP AND THROW WHEN THE INK MEETS THE ETCHED LINE', need: 'CAP IT AT THE LINE FIRST!',
+  title: 'THE LAST DROP', rule: 'THROW TO CAP IT AT THE LINE', need: 'CAP IT AT THE LINE FIRST!',
   make(o, keep, ctx, A, rng) {
     const { g } = frame(keep, A, o, { doorRight: true, cageLeft: true });
     g.spawn(BOT_X, Y, 'postRoomProp', { role: 'bottle', w: 3, h: 4 });
@@ -217,7 +226,7 @@ TourRooms.def('postDrop', {
     if (Math.abs(R.lvl - LINE) <= 0.05) TourRooms.win(play, A, R, { text: 'CAPPED AT THE LINE!', coins: 3 });
     else { fail(play, R.lvl < LINE ? 'TOO SOON: NOT UP TO THE LINE' : 'TOO LATE: OVER THE LINE'); R.over = 0.8; }
   },
-  draw(play, ctx, A, R) { hud(play, ctx, R.won ? 'THE LAST DROP!' : 'CAP IT AT THE LINE'); }
+  draw(play, ctx, A, R) { hud(play, ctx, R.won ? 'THE LAST DROP!' : 'CAP IT AT THE LINE', 76); }
 });
 DRAW.bottle = (ctx, e, R) => {
   const x = e.cx, y = e.y + e.h, w = 50, h = 72, lv = clamp(R.lvl || 0, 0, 1);
@@ -236,7 +245,7 @@ DRAW.capper = (ctx, e, R) => { const x = e.cx, y = e.y + e.h; pad(ctx, x, y, !R.
 /* ================= postFlip: PICTURE SIDE UP (the chute room) ================= */
 const TRAY_X = 11;
 TourRooms.def('postFlip', {
-  title: 'PICTURE SIDE UP', rule: 'A POSTCARD TUMBLES DOWN THE CHUTE. AT THE TRAY, THROW WHILE ITS PICTURE IS UP. TWICE', need: 'CATCH IT PICTURE UP FIRST!',
+  title: 'PICTURE SIDE UP', rule: 'THROW WHEN THE PICTURE IS UP. TWICE', need: 'CATCH IT PICTURE UP FIRST!',
   make(o, keep, ctx, A, rng) {
     const { g } = frame(keep, A, o, { cageX: 18, roof: 1 });
     g.spawn(TRAY_X, Y, 'postRoomProp', { role: 'tray', w: 3, h: 2 });
@@ -253,7 +262,7 @@ TourRooms.def('postFlip', {
     if (this.up(R)) { R.n++; R.caught = 0.6; if (R.n >= 2) TourRooms.win(play, A, R, { text: 'PICTURE SIDE UP! (TWICE)', coins: 3 }); else good(play, 'PICTURE UP! ONE MORE'); }
     else { fail(play, 'BLANK SIDE UP! WATCH IT TURN'); R.n = 0; }
   },
-  draw(play, ctx, A, R) { hud(play, ctx, R.won ? 'SORTED!' : 'PICTURE UP: ' + (R.n || 0) + ' / 2'); }
+  draw(play, ctx, A, R) { hud(play, ctx, R.won ? 'SORTED!' : 'PICTURE UP: ' + (R.n || 0) + ' / 2', 76); }
 });
 DRAW.tray = (ctx, e, R) => {
   const x = e.cx, y = e.y + e.h, a = R.a || 0, up = Math.cos(a) > 0.35;
@@ -273,7 +282,7 @@ DRAW.tray = (ctx, e, R) => {
 // the stamp's edge is a loop of four sides; the curl moves along it while the stick points the way the edge goes
 const PEEL_X = 11, PEEL_DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1]], PEEL_NAMES = ['RIGHT', 'DOWN', 'LEFT', 'UP'];
 TourRooms.def('postPeel', {
-  title: 'PEEL HERE', rule: 'THROW AT THE LOOSE CORNER, THEN STEER ALONG THE CURLING EDGE WITH THE STICK. HOLD A WRONG WAY TOO LONG AND IT TEARS', need: 'PEEL IT FIRST!',
+  title: 'PEEL HERE', rule: 'PEEL THE STAMP: FOLLOW THE CURL', need: 'PEEL IT FIRST!',
   make(o, keep, ctx, A, rng) {
     const { g } = frame(keep, A, o, { doorRight: true, cageLeft: true, plinth: true, cageH: 3 });
     g.spawn(PEEL_X, Y, 'postRoomProp', { role: 'peel', w: 2, h: 2 });
@@ -295,7 +304,7 @@ TourRooms.def('postPeel', {
     else if (sx || sy) { R.wrong += dt; if (R.wrong > 0.7) { fail(play, 'RIIIP! IT TORE: START AGAIN'); R.on = false; R.torn = 0.8; R.prog = 0; } }
     if (R.prog >= 4) TourRooms.win(play, A, R, { text: 'PEELED IN ONE PIECE!', coins: 4 });
   },
-  draw(play, ctx, A, R) { hud(play, ctx, R.won ? 'IN ONE PIECE!' : R.on ? 'PEEL: ' + PEEL_NAMES[Math.min(3, Math.floor(R.prog || 0))] : 'THROW AT THE CORNER'); }
+  draw(play, ctx, A, R) { hud(play, ctx, R.won ? 'IN ONE PIECE!' : R.on ? 'PEEL: ' + PEEL_NAMES[Math.min(3, Math.floor(R.prog || 0))] : 'THROW AT THE CORNER', 100); }
 });
 DRAW.peel = (ctx, e, R) => { pad(ctx, e.cx, e.y + e.h, !R.on && !R.won); };
 DRAW.bigstamp = (ctx, e, R) => {

@@ -38,11 +38,11 @@ const perfRows = (() => {
   ground(Gr, 0, 24, 19); put(Gr, 3, 18, '@'); put(Gr, 6, 18, 'n'); put(Gr, 10, 15, '?'); put(Gr, 14, 16, 'o.o.o'); put(Gr, 20, 18, 'l');
   ground(Gr, 25, 26, 17); ground(Gr, 27, 30, 15); put(Gr, 28, 14, '1');
   ink(Gr, 31, 40, 17); put(Gr, 34, 11, '*');
-  ground(Gr, 41, 58, 17); put(Gr, 43, 16, 'q'); put(Gr, 46, 16, 'c'); put(Gr, 49, 13, '?'); put(Gr, 52, 16, 'e'); put(Gr, 56, 16, 'q');
+  ground(Gr, 41, 58, 17); put(Gr, 49, 16, 'q'); put(Gr, 46, 16, 'c'); put(Gr, 44, 13, '?'); put(Gr, 53, 16, 'e'); put(Gr, 57, 16, 'q');
   // ② the test: two more islands
   ground(Gr, 59, 64, 17); put(Gr, 60, 16, 'N'); put(Gr, 63, 16, '2');
   ink(Gr, 65, 74, 19); put(Gr, 68, 12, 'o.o'); put(Gr, 72, 10, 'M');
-  ground(Gr, 75, 92, 19); put(Gr, 79, 18, 'k'); put(Gr, 84, 18, 'u'); put(Gr, 90, 18, 'c');
+  ground(Gr, 75, 92, 19); put(Gr, 79, 18, 'k'); put(Gr, 84, 18, 'l'); put(Gr, 90, 18, 'c');
   ground(Gr, 93, 94, 18); ground(Gr, 95, 96, 17); ground(Gr, 97, 100, 16); put(Gr, 99, 15, '3');
   ink(Gr, 101, 110, 18); put(Gr, 104, 9, 'M');
   ground(Gr, 111, 140, 18);
@@ -86,7 +86,7 @@ const L1 = { n: 1, name: 'Perforation Walk', mapLabel: 'Perforation Walk', arch:
   gimmick: 'Paper islands outlined in perforations: walk over every tooth of an island\'s dotted edge and it tears free; jump off before it falls and plugs the ink. Late on, two islands share one tooth',
   hint: 'Walk, don\'t jump, to tear the teeth. Jump OFF when it trembles. The two-coloured tooth holds two islands: hop over it. A corner of the print curls down from a tunnel roof...',
   postcard: 'Brady! The harbour on my postcard tears along the dotted line. Mind the ink, it never comes out of black trousers. I know. ♥ C',
-  enemies: [['postCrab', 2], ['postPup', 2], ['postGull', 3]],
+  enemies: [['postCrab', 3], ['postPup', 1], ['postGull', 2]],
   mapCell: [0, 0], mapFrom: -1,
   exits: { main: { to: '27-2' } },
   areas: [
@@ -111,8 +111,8 @@ const stampRows = (() => {
   ground(Gr, 76, 103, 19); put(Gr, 78, 18, 'O'); put(Gr, 84, 18, '3'); put(Gr, 81, 18, 'u'); put(Gr, 90, 13, 'o.o.o'); put(Gr, 99, 9, 'M');
   ground(Gr, 104, 135, 14); put(Gr, 110, 13, 'k'); put(Gr, 116, 13, 'e'); put(Gr, 112, 13, 'q'); put(Gr, 124, 13, 'q'); put(Gr, 120, 13, 'c'); put(Gr, 118, 10, 'o.o.o');
   ground(Gr, 136, 137, 16); ground(Gr, 138, 150, 19); put(Gr, 143, 18, 'u');
-  ink(Gr, 151, 154, 20); put(Gr, 152, 13, 'M'); put(Gr, 151, 15, 'o.o.o');
-  ground(Gr, 155, W - 1, 19); put(Gr, 160, 18, 'l'); put(Gr, 166, 18, 'k'); put(Gr, 172, 18, 'G'); fillG(Gr, W - 1, 0, W - 1, 18, '#');
+  ink(Gr, 151, 153, 20); put(Gr, 151, 15, 'o.o.o');
+  ground(Gr, 154, W - 1, 19); put(Gr, 166, 11, 'M'); put(Gr, 160, 18, 'l'); put(Gr, 166, 18, 'k'); put(Gr, 172, 18, 'G'); fillG(Gr, W - 1, 0, W - 1, 18, '#');
   return rowsOf(Gr);
 })();
 const STAMP = (rail, at, crease, shape, ty, good, g) => ['piece', 'post.stamp', { rail, w: 2, at, crease, shape, ty, good, g }];

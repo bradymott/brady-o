@@ -301,7 +301,7 @@ class PostBlotter extends Ent {
     fitBox(this, [[s.rail[0], s.rail[2]], [s.rail[1] + this.cw, s.rail[2]], [s.nib[0], s.nib[2]], [s.nib[1], s.nib[2]], [s.surf[0], s.surf[1]], [s.surf[2], s.surf[3]], [s.boat.dock[0], s.boat.dock[1]], [s.boat.dock[2], s.boat.dock[1]], s.boat.at], 3, 3, 3);
   }
   postClaim() { return this.holding && !this.done; }
-  nibX() { const s = this.s, k = 0.5 - 0.5 * Math.cos(this.t * (s.nibSpeed || 0.7)); return (lerp(s.nib[0], s.nib[1], k) + 0.5) * TS; }
+  nibX() { const s = this.s, k = 0.5 - 0.5 * Math.cos(this.t * (s.nibSpeed || 0.55)); return (lerp(s.nib[0], s.nib[1], k) + 0.5) * TS; }
   surfCols() { const s = this.s, n = s.surf[2] - s.surf[0] + 1, need = s.need || 1, gone = Math.round(n * this.drunk / need); return [s.surf[0], s.surf[0] + gone - 1]; }
   update(dt) {
     this.t += dt; carriage.update(this, dt);
@@ -316,7 +316,7 @@ class PostBlotter extends Ent {
         b.vy += PHYS.gDown * 0.35 * dt; b.y += b.vy * dt;
         const floorY = s.rail[2] * TS - 10;
         if (b.y >= floorY) {
-          if (b.x > padL - 4 && b.x < padR + 4 && this.pad === 'dry') { this.pad = 'inky'; TourKit.sfx('gulp', 'pick', { vol: 0.5, pitch: 0.7 }); g.burst(b.x, floorY, 8, '#3a3a6a', 'dust'); say(g, this.cxF, floorY - 50, 'IT DRANK THE INK! PUSH IT INTO THE SURF', '#ffe08a'); }
+          if (b.x > padL - 12 && b.x < padR + 12 && this.pad === 'dry') { this.pad = 'inky'; TourKit.sfx('gulp', 'pick', { vol: 0.5, pitch: 0.7 }); g.burst(b.x, floorY, 8, '#3a3a6a', 'dust'); say(g, this.cxF, floorY - 50, 'IT DRANK THE INK! PUSH IT INTO THE SURF', '#ffe08a'); }
           else { g.burst(b.x, floorY + 8, 6, '#3a3a6a', 'dust'); if (b.x > padL - 4 && b.x < padR + 4) say(g, this.cxF, floorY - 50, this.pad === 'full' ? 'TOO SOGGY! SLAP IT ON THE BLOTTER' : 'IT IS FULL', '#c8d8ff'); }
           this.bead = null; this.beadT = s.every || 1.2;
         }
