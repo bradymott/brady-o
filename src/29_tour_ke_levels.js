@@ -36,7 +36,7 @@ stamps.keDen = {
     '##############################',
     '##############################'],
   gold: { '*': 'hidden' }, hidden: ['oneup'],
-  doors: [{ to: 'plain@denBack', look: 'keMoundDoor' }],
+  doors: [{ to: 'plain@denOut', look: 'keBurrow' }],
   legend: { t: ['decor', 'kePebbles'], k: ['decor', 'keRoots'] }
 };
 const L1 = { n: 1, name: 'The Great Migration', mapLabel: 'Migration', arch: 'stampede', theme: 'ke_mara',
@@ -65,13 +65,13 @@ const L1 = { n: 1, name: 'The Great Migration', mapLabel: 'Migration', arch: 'st
         ['herdOn', { n: 8, every: 1.0 }],
         ['river', { w: 13, crocs: 1, gold: 'risky', goldDy: 5 }],
         ['plain', { n: 3 }],
-        ['thicket', { h: 7, w: 3 }],
+        ['thicket', { h: 7, w: 3, canopy: { len: 26, to: 'den@in', fly: 'keWeaver', gaps: [[12, 2]] } }],
         'cp',
         ['river', { w: 16, crocs: 2, fly: 'keVulture' }],
         ['herdOff', { n: 4 }],
-        ['moundDoor', { to: 'den@in', back: 'denBack' }],
         ['enemies', { kind: 'keWarthog', n: 1, len: 12 }],
         ['box', { item: 'power' }],
+        ['anchor', { name: 'denOut' }],
         'cp',
         // ③ twist: the gorge leap straight into the long river, a thicket on the far bank, one more river
         ['herdOn', { n: 8, every: 0.95 }],
@@ -84,7 +84,7 @@ const L1 = { n: 1, name: 'The Great Migration', mapLabel: 'Migration', arch: 'st
         ['enemies', { kind: 'keWarthog', n: 1, len: 10 }],
         ['end', { exit: 'main' }]
       ] },
-    { id: 'den', gen: 'room', role: 'secret', theme: 'ke_den', stamp: 'keDen' }
+    { id: 'den', gen: 'room', role: 'secret', theme: 'ke_weave', stamp: 'keDen', room: 'keSimon', keSimon: { title: 'THE WEAVERS\' SONG' } }
   ] };
 
 /* ---------------- 15-2 Giraffe Grove ---------------- */
@@ -125,12 +125,10 @@ const L2 = { n: 2, name: 'Giraffe Grove', mapLabel: 'Giraffes', arch: 'necks', t
         ['leaves', {}],
         ['plain', { n: 4 }],
         // ① a living lift up the cliff
-        ['giraffe', { n: 9, at: 3, path: [[3, 0], [3, -6]], rise: 6, gold: [3, -9, 'must'] }],
+        ['giraffe', { n: 9, at: 3, path: [[3, 0], [3, -6], [0, -12]], rise: 6, gold: [3, -9, 'must'],
+          secret: { dx: -7, w: 6, row: 12, burrow: { to: 'manor@in', back: 'manorBack' }, trail: [[2, -10], [1, -12]] } }],
         ['plain', { n: 5 }],
         ['enemies', { kind: 'keBeetle', n: 1, len: 8 }],
-        // the high kopje: a second giraffe reaches it; the meerkats' burrow (the hidden exit) is up there
-        ['giraffe', { n: 7, at: 2, path: [[3, 0], [3, -4]] }],
-        ['ledge', { h: 5, w: 6, n: 8, burrow: { to: 'manor@in', back: 'manorBack' } }],
         ['plain', { n: 4 }],
         ['step', { h: -6 }],
         'cp',
@@ -149,7 +147,8 @@ const L2 = { n: 2, name: 'Giraffe Grove', mapLabel: 'Giraffes', arch: 'necks', t
         ['enemies', { kind: 'keWarthog', n: 1, len: 10 }],
         ['end', { exit: 'main' }]
       ] },
-    { id: 'manor', gen: 'room', role: 'secret', theme: 'ke_den', stamp: 'keManorDoor' }
+    { id: 'manor', gen: 'room', role: 'secret', theme: 'ke_den', stamp: 'keManorDoor', room: 'doors',
+      doors: { title: 'THE MEERKAT BURROWS', rule: 'WHICH BURROW GOES WHERE? THE MEERKATS HID A PRIZE DOWN ONE OF THEM', look: 'keBurrow', joke: 'A MEERKAT\'S BEDROOM. VERY TIDY. NOTHING HERE.' } }
   ] };
 
 /* ---------------- 15-3 Flamingo Lake ---------------- */
@@ -172,7 +171,7 @@ stamps.keNests = {
     '##############################',
     '##############################'],
   gold: { '*': 'hidden' }, hidden: ['oneup'],
-  doors: [{ to: 'lake@nestsBack', look: 'keMoundDoor' }],
+  doors: [{ to: 'lake@nestsOut', look: 'keReedGap' }],
   legend: { n: ['decor', 'keMudNest'] }
 };
 const L3 = { n: 3, name: 'Flamingo Lake', mapLabel: 'Flamingos', arch: 'flock', theme: 'ke_lake',
@@ -196,8 +195,8 @@ const L3 = { n: 3, name: 'Flamingo Lake', mapLabel: 'Flamingos', arch: 'flock', 
         'cp',
         // ② a longer crossing; one flamingo hops between two spots; a fish-eagle overhead
         ['lake', { w: 22, posts: [[3], [8, { alt: 2 }], [14], [19]], fly: 'keVulture' }],
-        ['moundDoor', { to: 'nests@in', back: 'nestsBack' }],
-        ['flock', { w: 20, ax: 14, ay: -3, speed: 1.2, y: 2, gold: 'high' }],
+        ['flock', { w: 20, ax: 14, ay: -6, speed: 1.2, y: 2, gold: 'high', secret: { to: 'nests@in', ledge: [17, 5], up: 3 } }],
+        ['anchor', { name: 'nestsOut' }],
         ['box', { item: 'power' }],
         'cp',
         // ③ the panic chain: startle the first and the whole line takes off behind you
@@ -210,7 +209,8 @@ const L3 = { n: 3, name: 'Flamingo Lake', mapLabel: 'Flamingos', arch: 'flock', 
         ['flock', { w: 18, ax: 12, ay: -2, speed: 1.5, y: 2 }],
         ['end', { exit: 'main' }]
       ] },
-    { id: 'nests', gen: 'room', role: 'secret', theme: 'ke_den', stamp: 'keNests' }
+    { id: 'nests', gen: 'room', role: 'secret', theme: 'ke_reeds', stamp: 'keNests', room: 'rush',
+      rush: { title: 'FEATHER DASH', rule: 'GRAB THE SIX FLAMINGO FEATHERS BEFORE THE CLOCK RUNS OUT', look: 'tokFeather', n: 6 } }
   ] };
 
 /* ---------------- 15-4 High Noon ---------------- */
@@ -233,7 +233,7 @@ stamps.keSpring = {
     '##############################',
     '##############################'],
   gold: { '*': 'hidden' }, hidden: ['oneup'],
-  doors: [{ to: 'plain@springBack', look: 'keMoundDoor' }]
+  doors: [{ to: 'plain@springOut', look: 'keBurrow' }]
 };
 const L4 = { n: 4, name: 'High Noon', mapLabel: 'High Noon', arch: 'shade', theme: 'ke_noon',
   gimmick: 'The sun is the hazard: a heat gauge fills out in the open and empties in the shade. Hop from acacia to rock, drift with the clouds\' shadows, walk in the elephant\'s shade',
@@ -264,7 +264,6 @@ const L4 = { n: 4, name: 'High Noon', mapLabel: 'High Noon', arch: 'shade', them
         ['open', { n: 22 }],
         ['enemies', { kind: 'keWarthog', n: 1, len: 12 }],
         ['open', { n: 12 }],
-        ['moundDoor', { to: 'cool@in', back: 'springBack' }],
         ['box', { item: 'power' }],
         'cp',
         // ③ the elephant: sixty tiles of open plain; walk in her shade and keep up
@@ -281,8 +280,9 @@ const L4 = { n: 4, name: 'High Noon', mapLabel: 'High Noon', arch: 'shade', them
         ['cloud', { dx: 2, w: 7, ax: 26, speed: 0.05, sky: 3 }],
         ['gully', { n: 3 }],
         ['open', { n: 6 }],
-        ['gully', { n: 4 }],
+        ['gully', { n: 4, seam: 'cool@in' }],
         ['postcard', { kind: 'risky', dx: -3, dy: -6 }],
+        ['anchor', { name: 'springOut' }],
         ['open', { n: 6 }],
         ['gully', { n: 3 }],
         'cp',
@@ -292,7 +292,7 @@ const L4 = { n: 4, name: 'High Noon', mapLabel: 'High Noon', arch: 'shade', them
         ['enemies', { kind: 'keVulture', n: 1, len: 8 }],
         ['end', { exit: 'main' }]
       ] },
-    { id: 'cool', gen: 'room', role: 'secret', theme: 'ke_den', stamp: 'keSpring' }
+    { id: 'cool', gen: 'room', role: 'secret', theme: 'ke_kopje', stamp: 'keSpring', room: 'keGolf', keGolf: { title: 'DUNG BALL GOLF' } }
   ] };
 
 /* ---------------- 15-5 Big Kiboko (the boss) ---------------- */
@@ -341,7 +341,8 @@ const L5 = { n: 5, name: 'Big Kiboko', mapLabel: 'Waterhole', arch: 'lair', them
         ['plain', { n: 4 }],
         ['door', { to: 'arena@in', perch: 0, look: 'keReedCurtain' }]
       ] },
-    { id: 'hollow', gen: 'room', role: 'secret', theme: 'ke_den', stamp: 'keHollow' },
+    { id: 'hollow', gen: 'room', role: 'secret', theme: 'ke_mound', stamp: 'keHollow', room: 'shell',
+      shell: { title: 'THREE OSTRICH EGGS', rule: 'WATCH THE PRIZE GO UNDER AN EGG, WATCH THE SHUFFLE, THEN STOMP THE RIGHT EGG', cup: 'egg', dealer: 'secretary', joke: ['boot', 'fish'] } },
     { id: 'arena', gen: 'arena', role: 'arena', layout: 'pool', arenaW: 32, H: 18, roof: false, theme: 'ke_stage' }
   ] };
 
@@ -365,7 +366,7 @@ stamps.keNursery = {
     '##############################',
     '##############################'],
   gold: { '*': 'hidden' }, hidden: ['oneup'],
-  doors: [{ to: 'manor@nurseryBack', look: 'keBurrow' }],
+  doors: [{ to: 'manor@nurseryOut', look: 'keBurrow' }],
   legend: { p: ['decor', 'kePups'] }
 };
 const L6 = { n: 6, name: 'Meerkat Manor', mapLabel: 'Meerkats', arch: 'burrow', secret: true, theme: 'ke_warren',
@@ -387,15 +388,16 @@ const L6 = { n: 6, name: 'Meerkat Manor', mapLabel: 'Meerkats', arch: 'burrow', 
         // ② thorns close the top: go under; a rock plug closes the tunnel: come up between the sentries
         ['warren', { n: 34, mouths: [2, 14, 27], thorns: [[8, 2, 6]], rocks: [[20, 2]], sentries: [17, 24], enemies: [['keWarthog', 6]], box: [21, 'top', 'power'] }],
         'cp',
-        ['burrowDoor', { to: 'nursery@in', back: 'nurseryBack', sign: true }],
         // ③ the long run: thorns and rocks alternate; three sentries watch the gaps
-        ['warren', { n: 48, mouths: [2, 12, 24, 36], thorns: [[7, 2, 6], [30, 2, 7]], rocks: [[17, 2], [41, 2]], sentries: [14, 22, 40], enemies: [['keBeetle', 8], ['keWarthog', 28]], gold: [[20, 'top', 'risky']] }],
+        ['warren', { n: 48, mouths: [2, 12, 24, 36], thorns: [[7, 2, 6], [30, 2, 7]], rocks: [[17, 2], [41, 2]], walkIn: [41, 'nursery@in'], sentries: [14, 22, 40], enemies: [['keBeetle', 8], ['keWarthog', 28]], gold: [[20, 'top', 'risky']] }],
+        ['anchor', { name: 'nurseryOut' }],
         'cp',
         ['warren', { n: 30, mouths: [2, 16], thorns: [[9, 3, 6]], rocks: [[22, 2]], sentries: [20, 26], enemies: [['keWarthog', 12]] }],
         ['plain', { n: 4 }],
         ['end', { exit: 'main' }]
       ] },
-    { id: 'nursery', gen: 'room', role: 'secret', theme: 'ke_den', stamp: 'keNursery' }
+    { id: 'nursery', gen: 'room', role: 'secret', theme: 'ke_sand', stamp: 'keNursery', room: 'whack',
+      whack: { title: 'BOP-A-MEERKAT', rule: 'BOP THE MEERKAT PUPS AS THEY POP UP. THEY THINK IT\'S A GAME', critter: 'meerkat', need: 8 } }
   ] };
 
 Tour.amend('ke', { stamps, levels: [L1, L2, L3, L4, L5, L6] });
