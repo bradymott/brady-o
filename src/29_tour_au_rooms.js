@@ -25,7 +25,7 @@ class AuPuff extends Ent {
   constructor(g, s) { super(g, s, TS, TS); this.back = true; this.clock = 0.5 + Math.random(); this.down = !!s.down; }
   update(dt) {
     this.t += dt; this.clock -= dt;
-    if (this.clock <= 0) { this.clock = 2.2; const n = 4; for (let k = 0; k < n; k++) this.g.burst(this.cx + (Math.random() - 0.5) * 12, this.down ? this.y + 4 : this.y + this.h - 4, 1, k % 2 ? '#d8683a' : '#e8a070', 'dust'); }
+    if (this.clock <= 0) { this.clock = 2.2; const n = 4; for (let k = 0; k < n; k++) this.g.burst(this.cx + (Math.random() - 0.5) * 12, this.down ? this.y + 4 : this.y + this.h - 4, 1, k % 2 ? '#d8683a' : '#e8a070', 'debris'); }
   }
   touchPlayer() {}
 }

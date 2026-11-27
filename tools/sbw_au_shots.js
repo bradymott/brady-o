@@ -305,7 +305,7 @@ async function session(viewport, fn) {
     await run('rooms2', async () => {
       await page.evaluate(() => { thaw(); fresh(); play('16-2'); P().invuln = 999; place(144, 6); sim(1.2); freeze(); });
       await shot('73-16-2-tell-red-dust-on-the-van.png');
-      let r = await page.evaluate(() => { thaw(); place(147, 6); sim(0.3); sim(0.05, { down: true, jump: true, jumpPressed: true }); sim(0.6); const cub = tile(); const d = doorsOut().find(e => Math.abs(e.cx / 32 - 149.5) < 2); const aid = d ? useDoor(d) : 'no door'; return { cub, aid }; });
+      let r = await page.evaluate(() => { thaw(); place(147, 6); sim(0.15); sim(0.05, { down: true, jump: true, jumpPressed: true }); sim(0.6); const cub = tile(); const d = doorsOut().find(e => Math.abs(e.cx / 32 - 149.5) < 2); const aid = d ? useDoor(d) : 'no door'; return { cub, aid }; });
       check('16-2: DOWN + JUMP on the loose roof hatch drops into the cubby and the sheep van', r.cub.tx >= 145 && r.cub.tx <= 149 && r.cub.ty === 10 && r.aid === 'van', r);
       await page.evaluate(() => { sim(1.5); freeze(); }); await shot('74-16-2-muster.png');
       r = await page.evaluate(() => {

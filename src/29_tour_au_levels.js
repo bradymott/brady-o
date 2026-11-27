@@ -55,7 +55,7 @@ const pouchRows = (() => {
   pit(104, 111); m.coins(105, 110, 8); m.put(107, 6, 'm');
   mound(113, 3, 2, 'H');
   pit(118, 128); m.put(123, 5, 'R'); m.coins(120, 126, 7);
-  mound(130, 10, 3, 'H'); m.put(136, 11, 'a');
+  mound(130, 10, 3, '#'); m.put(136, 11, 'a');
   // the hidden way in: the mesa's left face is loose (a puff of red dust now and then): walk into it, along the
   // tunnel inside (P2 hangs in it), the burrow's door at the end
   m.fill(130, 13, 130, 14, 'F'); m.fill(131, 13, 136, 14, '.'); m.put(133, 13, 'V'); m.put(136, 14, 'D'); m.put(129, 14, 'P'); m.put(134, 14, 'x');
@@ -115,7 +115,7 @@ const L1 = { n: 1, name: 'Pouch Express', arch: 'pouch', theme: 'au_outback',
   mapCell: [0, 0], mapFrom: -1,
   exits: { main: { to: '16-2' }, secret: { to: '16-6', hint: 'A brown sign points up a cliff: THE BIG THINGS...' } },
   areas: [
-    { id: 'red', gen: 'room', theme: 'au_outback', stamp: 'auPouch', camera: 'free', au: { pouch: true } },
+    { id: 'red', gen: 'room', theme: 'au_outback', stamp: 'auPouch', camera: 'free', au: { pouch: true, fakeFill: [[130, 13, 136, 14]] } },
     { id: 'burrow', gen: 'room', role: 'secret', theme: 'au_burrow', stamp: 'auBurrow', room: 'auEcho', auEcho: { exit: 'red@burrowOut' } }
   ] };
 
@@ -129,7 +129,8 @@ const L1 = { n: 1, name: 'Pouch Express', arch: 'pouch', theme: 'au_outback',
    (box vans and tankers, cockatoos, the first ute), twist (bridges, a ute and magpies together in the last third). */
 const convoyRows = (() => {
   const m = mk(248, 16);
-  const trailer = (x0, w, top) => { m.fill(x0, top, x0 + w - 1, top, '#'); m.fill(x0, top + 1, x0 + w - 1, 11, 'H'); m.put(x0 + 1, 12, 'w'); if (w > 10) m.put(x0 + w - 5, 12, 'w'); };
+  const trailer = (x0, w, top) => { m.fill(x0, top, x0 + w - 1, top, '#'); m.fill(x0, top + 1, x0 + w - 1, 11, top < 10 ? '#' : 'H');   // (box vans and tankers: steel all through)
+ m.put(x0 + 1, 12, 'w'); if (w > 10) m.put(x0 + w - 5, 12, 'w'); };
   trailer(0, 30, 10); m.put(3, 9, '@').put(6, 9, 'k').put(1, 9, 'Z').put(9, 6, 'p'); m.fill(14, 8, 15, 9, 'B'); m.coins(18, 26, 7);
   trailer(33, 20, 10); m.put(48, 9, 'a'); m.coins(36, 44, 8);
   trailer(57, 14, 7); m.put(63, 4, '*'); m.fill(55, 9, 56, 9, '.');
@@ -140,7 +141,7 @@ const convoyRows = (() => {
   trailer(144, 17, 7); m.put(150, 6, 'a'); m.put(158, 6, 'c');
   // the hidden way in: one roof panel of the box van is a loose hatch (a different tile; red dust puffs up beside it):
   // DOWN + JUMP on it drops into a cubby in the van (P2) and the sheep van's door
-  m.put(147, 7, '-'); m.fill(145, 8, 149, 9, '.'); m.put(146, 8, 'V'); m.put(149, 9, 'D'); m.put(148, 6, 'P'); m.put(145, 9, 'x'); m.put(155, 6, 'X'); m.put(147, 6, 'A'); m.put(147, 9, 'J');
+  m.fill(147, 7, 148, 7, '-'); m.fill(145, 8, 149, 9, '.'); m.put(146, 8, 'V'); m.put(149, 9, 'D'); m.put(149, 6, 'P'); m.put(145, 9, 'x'); m.put(155, 6, 'X'); m.put(147, 6, 'A'); m.put(147, 9, 'J');
   trailer(165, 26, 10); m.fill(172, 8, 173, 9, 'B'); m.coins(176, 186, 8);
   m.put(191, 11, 'u'); m.put(196, 5, 'm'); m.coins(193, 199, 10);
   trailer(202, 13, 10);
@@ -185,7 +186,7 @@ const L2 = { n: 2, name: 'Road Train', arch: 'convoy', theme: 'au_highway',
   mapCell: [1, 0], mapFrom: 0,
   exits: { main: { to: '16-3' } },
   areas: [
-    { id: 'convoy', gen: 'room', theme: 'au_highway', stamp: 'auConvoy', camera: 'free', au: { convoy: true } },
+    { id: 'convoy', gen: 'room', theme: 'au_highway', stamp: 'auConvoy', camera: 'free', au: { convoy: true, fakeFill: [[145, 8, 149, 9]] } },
     { id: 'van', gen: 'room', role: 'secret', theme: 'au_burrow', stamp: 'auSheepVan', room: 'auMuster', auMuster: { exit: 'convoy@vanOut', prize: ['star'] } }
   ] };
 
@@ -256,7 +257,7 @@ const L3 = { n: 3, name: 'Platypus Creek', arch: 'sonar', theme: 'au_creek',
   mapCell: [2, 0], mapFrom: 1,
   exits: { main: { to: '16-4' } },
   areas: [
-    { id: 'creek', gen: 'room', theme: 'au_creek', stamp: 'auCreek', camera: 'free', au: { sonar: true } },
+    { id: 'creek', gen: 'room', theme: 'au_creek', stamp: 'auCreek', camera: 'free', au: { sonar: true, fakeFill: [[93, 13, 99, 14]] } },
     { id: 'cave', gen: 'room', role: 'secret', theme: 'au_burrow', stamp: 'auGlowCave', room: 'auOpals', auOpals: { prize: ['oneup', 'magnet'] }, au: { sonar: true } }
   ] };
 
@@ -393,7 +394,7 @@ const bigRows = (() => {
   gap(22, 31); m.put(22, 14, 'o'.replace('o', 'O')); m.put(26, 8, 'R'); m.coins(23, 30, 11);
   // the tall plinth (6 high) and the stall on top of it rolling mangoes off its left edge
   m.fill(43, 9, 60, 13, 'H'); m.put(56, 8, 'Z'); m.put(48, 6, '*'); m.put(39, 13, 'E'); m.put(45, 8, 'e'); m.put(36, 13, 'n');
-  m.fill(61, 11, 64, 13, 'H');
+  m.fill(61, 11, 64, 13, '#');
   // the hidden way in: the little plinth's far face is loose (red dust): walk back into it; a cubby (P2), the door
   m.fill(64, 12, 64, 13, 'F'); m.fill(62, 12, 63, 13, '.'); m.put(63, 12, 'V'); m.put(62, 13, 'D'); m.put(65, 13, 'P'); m.put(63, 13, 'x');
   m.put(70, 13, 'c'); m.put(74, 13, 'P'); m.put(80, 10, 'p');
@@ -442,13 +443,14 @@ const L6 = { n: 6, name: 'The Big Things', arch: 'giant', secret: true, theme: '
   mapCell: [2, 2], mapFrom: 0,
   exits: { main: { to: 'node:16-2' } },
   areas: [
-    { id: 'layby', gen: 'room', theme: 'au_big', stamp: 'auBig', camera: 'free' },
+    { id: 'layby', gen: 'room', theme: 'au_big', stamp: 'auBig', camera: 'free', au: { fakeFill: [[62, 12, 64, 13]] } },
     { id: 'pine', gen: 'room', role: 'secret', theme: 'au_burrow', stamp: 'auPineapple', room: 'auOddOne', auOddOne: { prize: ['star'] } }
   ] };
 
-// the moves the checker can't work out for itself, each one played in tools/sbw_au_shots.js: an anchor edgeA<n>
+// the hidden passages (au.fakeFill) are fake-wall tiles: they look like the rock round them and fade as Brady walks
+// in. And the moves the checker can't work out for itself, each one played in tools/sbw_au_shots.js: an anchor edgeA<n>
 // (where Brady stands) and edgeB<n> (where the move really takes him): 16-2's and 16-3's drops through a hatch / an old log (DOWN + JUMP),
 // 16-6's bounce off a tumbling mango onto the tall plinth
-{ const ed = TourBuild.generateV2; TourBuild.generateV2 = function (Cc, spec, w, i, a) { const L = ed.apply(this, arguments); if (Cc && Cc.id === 'au') for (const A of L.areas) { const an = A.anchors || {}; for (const k in an) { if (k.indexOf('edgeA') !== 0) continue; const b = an['edgeB' + k.slice(5)]; if (b) (A.edges || (A.edges = [])).push({ from: [Math.floor(an[k].x / TS), Math.floor(an[k].y / TS) - 1], to: [Math.floor(b.x / TS), Math.floor(b.y / TS)] }); } } return L; }; }
+{ const ed = TourBuild.generateV2; TourBuild.generateV2 = function (Cc, spec, w, i, a) { const L = ed.apply(this, arguments); if (Cc && Cc.id === 'au') for (const A of L.areas) { const ff = A.au && A.au.fakeFill; if (ff) for (const [x0, y0, x1, y1] of ff) for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (A.tiles[y * A.W + x] === T.EMPTY) A.tiles[y * A.W + x] = T.FAKE; const an = A.anchors || {}; for (const k in an) { if (k.indexOf('edgeA') !== 0) continue; const b = an['edgeB' + k.slice(5)]; if (b) (A.edges || (A.edges = [])).push({ from: [Math.floor(an[k].x / TS), Math.floor(an[k].y / TS) - 1], to: [Math.floor(b.x / TS), Math.floor(b.y / TS)] }); } } return L; }; }
 Tour.amend('au', { stamps, map: { fort: 'arena', start: [0, 0] }, levels: [L1, L2, L3, L4, L5, L6] });
 })();
