@@ -168,9 +168,92 @@ const L3 = { n: 3, name: 'Crystal Habit', mapLabel: 'Crystal Habit', arch: 'cube
     { id: 'cave', gen: 'room', theme: 'salt_cave', stamp: 'saltCave', camera: 'free', bottomKill: true },
     { id: 'mitts', gen: 'room', role: 'secret', theme: 'salt_room_mitts', stamp: 'saltMitts', room: 'saltMitts' }
   ] };
-//@@L4@@
 
-Tour.amend('salt', { stamps, levels: [L1, L2, L3] });
+/* ---------------- 34-4 The Shaker Test ---------------- */
+// the floor is row 14 (Brady on 13). Inside the cap the floor is its charcoal disc, the holes at Brady's feet and a
+// chamber of bowls under it; a cellar gate at the end of each disc lifts when its gold bowl sinks. ① two holes: plug
+// the other one; ② three holes, half a pour will do; a glass block whose left face is only paint (the grain on top:
+// room B44); ③ the same with a critter on the disc; ④ the narrow bowl: stand astride the two neighbouring holes
+const capRows = (() => {
+  const W = 190, H = 22, Gr = grid(W, H, '.');
+  ground(Gr, 0, W - 1, 14);
+  const chamber = (x0, x1) => { fillG(Gr, x0, 15, x1, 19, '.'); fillG(Gr, x0, 14, x1, 14, 'H'); };
+  put(Gr, 3, 13, '@'); put(Gr, 6, 13, 'k'); put(Gr, 9, 10, '?');
+  chamber(15, 28); put(Gr, 16, 13, '1'); put(Gr, 28, 13, 'U');
+  put(Gr, 32, 13, 'c'); put(Gr, 36, 9, '*'); put(Gr, 34, 11, 'o.o.o'); put(Gr, 42, 13, 'r'); put(Gr, 46, 13, 'K');
+  fillG(Gr, 50, 11, 55, 13, 'H'); fillG(Gr, 51, 12, 54, 13, '.'); fillG(Gr, 50, 12, 50, 13, 'F'); put(Gr, 53, 13, 'A'); put(Gr, 52, 10, 'u');
+  chamber(59, 74); put(Gr, 60, 13, '2'); put(Gr, 74, 13, 'V');
+  put(Gr, 78, 13, 'c'); put(Gr, 82, 13, 'a'); put(Gr, 88, 13, 'l'); put(Gr, 92, 10, '?'); put(Gr, 94, 12, '--'); put(Gr, 97, 9, '--'); put(Gr, 98, 7, 'P');
+  chamber(101, 116); put(Gr, 102, 13, '3'); put(Gr, 116, 13, 'E'); put(Gr, 108, 13, 'r'); put(Gr, 110, 7, 'f');
+  put(Gr, 120, 13, 'c'); put(Gr, 124, 13, 'Z'); put(Gr, 126, 10, '?');
+  chamber(129, 144); put(Gr, 130, 13, '4'); put(Gr, 144, 13, 'Y'); put(Gr, 136, 9, 'R');
+  put(Gr, 150, 13, 'j'); put(Gr, 156, 11, 'o.o.o'); put(Gr, 162, 13, 'r'); put(Gr, 168, 13, 'x'); put(Gr, 180, 13, 'G');
+  fillG(Gr, W - 1, 0, W - 1, 13, 'H');
+  return rowsOf(Gr);
+})();
+const CAP = Object.assign({}, ENEMY, {
+  k: SIGN('INSIDE THE SHAKER CAP! WHEN IT SHAKES IT POURS DOWN EVERY HOLE YOU ARE NOT STANDING ON. FILL THE GOLD BOWL'),
+  K: SIGN('HALF A POUR IS ENOUGH HERE: PLUG ONE OF THE OTHER HOLES'),
+  Z: SIGN('A NARROW BOWL NEEDS THE WHOLE POUR. TWO HOLES SIT SIDE BY SIDE: STAND ASTRIDE THEM'),
+  x: ['decor', 'saltCellarProp'],
+  '1': ['piece', 'salt.cap', { id: 'cap1', holes: [2, 8], gold: 1, need: 1, bowlDy: 7, lock: 'gate1', plug: [2] }], U: ['piece', 'salt.gate', { id: 'gate1', h: 4 }],
+  '2': ['piece', 'salt.cap', { id: 'cap2', holes: [2, 7, 12], gold: 2, need: 0.5, bowlDy: 7, lock: 'gate2', plug: [2, 7] }], V: ['piece', 'salt.gate', { id: 'gate2', h: 4 }],
+  '3': ['piece', 'salt.cap', { id: 'cap3', holes: [3, 8, 12], gold: 0, need: 0.5, bowlDy: 7, lock: 'gate3', plug: [8, 12] }], W: ['piece', 'salt.gate', { id: 'gate3', h: 4 }],
+  '4': ['piece', 'salt.cap', { id: 'cap4', holes: [3, 4, 10], gold: 2, need: 1, bowlDy: 7, lock: 'gate4', plug: [3, 4], narrow: true }], Y: ['piece', 'salt.gate', { id: 'gate4', h: 4 }],
+  A: DOOR('rattle@in'), u: GRAIN(), a: ['anchor', 'rattleOut']
+});
+stamps.saltCap = { floor: 14, rows: capRows, legend: CAP, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power', 'power'] };
+stamps.saltRattle = roomStamp('cap@rattleOut', 'saltHatch');
+const L4 = { n: 4, name: 'The Shaker Test', mapLabel: 'The Shaker Test', arch: 'shakercap', theme: 'salt_shaker',
+  gimmick: 'Inside the shaker\'s perforated cap: when it shakes it pours down every hole Brady isn\'t standing on, into the bowls below. Plug the right holes with a shoe so the gold bowl gets enough to sink and lift the gate',
+  hint: 'Watch the cap shake, then stand on a hole before it pours. The narrow bowl needs the whole pour: stand astride the two holes side by side. A blue grain sits on a glass block...',
+  postcard: 'Brady! I stood inside a salt shaker with one shoe on a hole and it poured exactly where I wanted. I have never been so in control of seasoning. ♥ C',
+  enemies: [['saltShrimp', 3], ['saltWeevil', 1], ['saltWren', 1], ['saltLick', 1]],
+  mapCell: [3, 0], mapFrom: 2,
+  exits: { main: { to: '34-5' } },
+  areas: [
+    { id: 'cap', gen: 'room', theme: 'salt_shaker', stamp: 'saltCap', camera: 'free', bottomKill: true },
+    { id: 'rattle', gen: 'room', role: 'secret', theme: 'salt_room_rattle', stamp: 'saltRattle', room: 'saltRattle' }
+  ] };
+
+/* ---------------- 34-5 Season to Taste (the boss) ---------------- */
+// A Pinch's kitchen counter, floor row 16 (Brady on 15): ① a weighing spoon and a pot lid across the way (stand on,
+// step off in the gold); ② shrimp, a climb of shelves to a high cellar door (the grain on its sill: room B45, which
+// lets out past the last spoon); ③ the last tasting: Brady's own weight counts (step off at the shoe); the kitchen door
+const tasteRows = (() => {
+  const W = 84, H = 20, Gr = grid(W, H, '#');
+  fillG(Gr, 1, 1, W - 2, 15, '.');
+  put(Gr, 3, 15, '@'); put(Gr, 6, 15, 'k'); put(Gr, 9, 12, '?'); put(Gr, 12, 15, '1'); put(Gr, 20, 15, 'U');
+  put(Gr, 24, 15, 'c'); put(Gr, 28, 11, '*'); put(Gr, 26, 13, 'o.o.o'); put(Gr, 32, 15, 'r');
+  put(Gr, 30, 12, '---'); put(Gr, 34, 9, '---'); fillG(Gr, 38, 6, 43, 6, 'H'); put(Gr, 40, 5, 'A'); put(Gr, 42, 5, 'u'); put(Gr, 38, 4, 'o.o'); put(Gr, 36, 7, 'R');
+  put(Gr, 44, 15, 'K'); put(Gr, 47, 15, '2'); put(Gr, 55, 15, 'V'); put(Gr, 58, 15, 'a'); put(Gr, 60, 12, '?'); put(Gr, 64, 12, '--'); put(Gr, 65, 9, 'P'); put(Gr, 68, 15, 'f');
+  put(Gr, 76, 15, 'E');
+  return rowsOf(Gr);
+})();
+const TASTE = Object.assign({}, ENEMY, {
+  k: SIGN('A WEIGHING SPOON! STAND ON IT WHILE THE SHAKER POURS. STEP OFF WHEN THE NEEDLE IS IN THE GOLD'),
+  K: SIGN('THE LAST TASTING: YOUR OWN WEIGHT COUNTS. STEP OFF WHEN THE NEEDLE REACHES THE SHOE'),
+  '1': ['piece', 'salt.weigh', { id: 'w1', w: 4, lock: 'pot1' }], U: ['piece', 'salt.gate', { id: 'pot1', h: 4 }],
+  '2': ['piece', 'salt.weigh', { id: 'w2', w: 4, lock: 'pot2', shoe: true }], V: ['piece', 'salt.gate', { id: 'pot2', h: 4 }],
+  A: DOOR('stand@in'), u: GRAIN(), a: ['anchor', 'standOut'],
+  E: DOOR('kitchen@in', 'saltCellar')
+});
+stamps.saltTaste = { floor: 16, rows: tasteRows, legend: TASTE, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power'] };
+stamps.saltStand = roomStamp('counter@standOut', 'saltHatch', ['star']);
+const L5 = { n: 5, name: 'Season to Taste', mapLabel: 'Season to Taste', arch: 'lair', theme: 'salt_kitchen', boss: 'salt_pinch',
+  gimmick: 'A Pinch, the cork who considers himself a chef, pours into his great weighing spoon. Brady\'s weight holds it level: step off when the needle is in the gold and a perfect pinch tips into the soup',
+  hint: 'He can\'t be stomped. One finger: a dusting. Two fingers: stay OFF for the coarse pour (jump the lumps), back on for the fine one. The rub: your weight counts, so step off at the shoe. Step out of the crystals\' shadows',
+  postcard: 'Brady! You seasoned the chef\'s soup to his satisfaction, which I gather has never happened. He gave the shaker the afternoon off. It went to the seaside. It is the seaside. ♥ C',
+  enemies: [['saltShrimp', 1], ['saltWren', 1]],
+  mapCell: [4, 0], mapFrom: 3,
+  exits: { main: { to: null } },
+  areas: [
+    { id: 'counter', gen: 'room', theme: 'salt_kitchen', stamp: 'saltTaste' },
+    { id: 'stand', gen: 'room', role: 'secret', theme: 'salt_room_stand', stamp: 'saltStand', room: 'saltStand' },
+    { id: 'kitchen', gen: 'arena', role: 'arena', layout: 'kitchen', arenaW: 24, H: 18, roof: false, theme: 'salt_kitchen' }
+  ] };
+
+Tour.amend('salt', { stamps, levels: [L1, L2, L3, L4, L5] });
 Tour.saltLevels = { grid, put, fillG, ground, pit, rowsOf, SIGN, GRAIN, ENEMY, roomStamp, DOOR, stamps };
 
 /* ---------------- the land's map: salt flats in a cobalt sea ---------------- */

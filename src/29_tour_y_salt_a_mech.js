@@ -339,6 +339,64 @@ class SaltCellarGate extends ENTITY_TYPES.lock {
   }
 }
 
+
+/* ======================= 34-5's lead-in: weighing spoons ======================= */
+// a weighing spoon on the floor (columns x0..x1, Brady on row fy), its dial on a post, a shaker over its bowl and a
+// pot past it with a lid (a lock). Stand on the spoon: the shaker shakes (0.8 s), then pours; the needle climbs. Step
+// off (both feet) in the gold band: the spoon tips a pinch into the pot and its lid lifts. shoe: Brady's own weight
+// counts on the needle while he stands there (step off at the shoe mark). A miss: the spoon empties, try again
+class SaltWeigh extends Ent {
+  constructor(g, s) { super(g, s, TS, TS); Object.assign(this, { id: s.id, x0: s.x0, x1: s.x1, fy: s.fy, lock: s.lock, shoe: !!s.shoe }); this.x = s.x0 * TS; this.w = (s.x1 - s.x0 + 1) * TS; this.y = (s.fy - 5) * TS; this.h = 6 * TS; this.S = 0; this.read = 0; this.state = 'wait'; this.st = 0; this.tip = 0; this.done = false; this.back = true; this.friendly = true; }
+  on() { const p = this.g.player; return !!(p && !p.dead && p.onGround && p.groundTy === this.fy + 1 && p.cx > this.x && p.cx < this.x + this.w); }
+  reading() { return this.S + (this.shoe && this.on() ? 0.4 : 0); }
+  update(dt) {
+    this.t += dt; this.tip = Math.max(0, this.tip - dt * 1.5);
+    const g = this.g, on = this.on(); this.read = approach(this.read, this.reading(), dt * 2.5);
+    if (this.done) return;
+    this.st += dt;
+    if (this.state === 'wait') { if (on && this.st > 0.3) { this.state = 'shake'; this.st = 0; } return; }
+    if (this.state === 'shake') { if (!on) { this.state = 'wait'; this.st = 0; return; } if (this.st > 0.8) { this.state = 'pour'; this.st = 0; } return; }
+    if (this.state === 'pour') {
+      if (on && this.st < 4) this.S += 0.4 * dt;
+      if (!on) { this.judge(); return; }
+      if (this.S > 1.17) { this.S = 0; this.tip = 1; say(g, this.cx, this.y, 'TOO SALTY! STEP OFF SOONER', '#ffffff'); this.state = 'rest'; this.st = 0; }
+      return;
+    }
+    if (this.state === 'rest') { if (this.st > 1.2 && !on) { this.state = 'wait'; this.st = 0; } }
+  }
+  judge() {
+    const g = this.g, S = this.S; this.S = 0; this.tip = 1; this.st = 0;
+    if (S >= 0.85 && S <= 1.15) { this.done = true; g.keys.add(this.lock); say(g, this.cx, this.y, 'A PINCH! THE LID LIFTS', SA.GOLD); TourKit.sfx('ding', 'secret', { vol: 0.5 }); this.state = 'done'; return; }
+    say(g, this.cx, this.y, S < 0.05 ? 'STAY ON TILL IT POURS' : 'BLAND! STAY ON LONGER', '#ffffff'); this.state = 'rest';
+  }
+  touchPlayer() {}
+  draw(ctx) {
+    const fyp = (this.fy + 1) * TS, on = this.on(), x0 = this.x, x1 = this.x + this.w, t = this.t;
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2.2;
+    // the spoon: level with Brady on it, tipped toward the pot when he's off
+    ctx.save(); ctx.translate((x0 + x1) / 2, fyp - 5); ctx.rotate(on ? 0 : -0.06 - this.tip * 0.25);
+    ctx.fillStyle = '#d8dce8'; rr(ctx, -this.w / 2, -4, this.w - 30, 8, 4); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.ellipse(this.w / 2 - 20, -2, 22, 9, 0, 0, TAU); ctx.fill(); ctx.stroke();
+    if (this.S > 0.02) { ctx.fillStyle = SA.CRYS; ctx.beginPath(); ctx.ellipse(this.w / 2 - 20, -7, Math.min(1.2, this.S) * 18, 4 + this.S * 4, 0, Math.PI, TAU); ctx.fill(); ctx.stroke(); }
+    ctx.restore();
+    // the shaker over the bowl
+    const sx = x1 - 20, sy = fyp - 4 * TS, sh = this.state === 'shake' ? Math.sin(t * 40) * 3 : 0;
+    ctx.fillStyle = SA.COBALT; ctx.fillRect(sx - 14 + sh, sy - 26, 28, 22); ctx.strokeRect(sx - 14 + sh, sy - 26, 28, 22); ctx.fillStyle = SA.CHAR; ctx.beginPath(); ctx.ellipse(sx + sh, sy - 3, 17, 6, 0, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.restore();
+    if (this.state === 'pour' && on && this.st < 4) SA.stream(ctx, sx, sy + 3, fyp - 12, t, 0.55);
+    // the dial on its post at the spoon's handle end
+    const dx = x0 + 20, dy = fyp - 3.3 * TS, R = 30, ang = v => Math.PI + clamp(v / 1.6, 0, 1) * Math.PI;
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2.2; ctx.fillStyle = SA.CHAR; ctx.fillRect(dx - 3, dy, 6, fyp - dy - 8);
+    ctx.fillStyle = '#f6f2e8'; ctx.beginPath(); ctx.arc(dx, dy, R, Math.PI, TAU); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.lineWidth = 9; ctx.strokeStyle = SA.GOLD; ctx.beginPath(); ctx.arc(dx, dy, R - 7, ang(0.85), ang(1.15)); ctx.stroke();
+    if (this.shoe) { const a = ang(1.4); ctx.fillStyle = '#c84a3a'; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; rr(ctx, dx + Math.cos(a) * (R - 7) - 6, dy + Math.sin(a) * (R - 7) - 4, 12, 8, 3); ctx.fill(); ctx.stroke(); }
+    const a = ang(this.read); ctx.lineWidth = 4; ctx.strokeStyle = '#c8323a'; ctx.beginPath(); ctx.moveTo(dx, dy); ctx.lineTo(dx + Math.cos(a) * (R - 4), dy + Math.sin(a) * (R - 4)); ctx.stroke();
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(dx, dy, 4, 0, TAU); ctx.fill(); ctx.restore();
+    if (!this.done && !on) SA.ring(ctx, (x0 + x1) / 2, fyp, t, false, this.w / 2);
+  }
+}
+ENTITY_TYPES.saltWeigh = SaltWeigh;
+Tour.pieces['salt.weigh'] = function (st, o) { const B = st.B, x = st.x, fy = st.gy - 1, w = o.w || 4; B.spawn('saltWeigh', x, fy, { id: o.id, x0: x, x1: x + w - 1, fy, lock: o.lock, shoe: !!o.shoe }); if (o.lock) B.vkey(o.lock, [[x + 1, fy]], 'any'); return st.x; };
+
 /* ---------------- the land's tell by every secret: one cobalt grain ---------------- */
 class SaltGrainTell extends Ent {
   constructor(g, s) { super(g, s, 10, 10); this.back = true; this.friendly = true; this.dy = s.dy || 0; }
@@ -347,6 +405,7 @@ class SaltGrainTell extends Ent {
 }
 
 Object.assign(ENTITY_TYPES, { saltNotch: SaltNotch, saltHeap: SaltHeap, saltBasin: SaltBasin, saltSpoon: SaltSpoon, saltCrystal: SaltCrystal, saltCap: SaltCap, saltCellarGate: SaltCellarGate, saltGrain: SaltGrainTell });
+Object.assign(Tour.saltKit, { SaltWeigh });
 
 /* ---------------- the pieces (the letter's cell: st.x, st.gy - 1) ---------------- */
 Object.assign(Tour.pieces, {
