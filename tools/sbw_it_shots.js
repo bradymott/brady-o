@@ -105,6 +105,7 @@ async function session(viewport, fn) {
         for (const e of A.edges) {
           const ramp = ents('ItRamp').find(q => Math.abs(Math.floor(q.x / 32) + 1 - e.from[0]) <= 1);
           if (!ramp) continue;
+          if (S().entities.some(q => q.s && q.s.look === 'itLoft' && Math.abs(q.cx / 32 - e.to[0]) < 6)) continue;   // the pigeon loft: a BOOST launch only (played under 'secrets')
           const crate = ents('ItCrates').find(c => c.x > ramp.x - 12 * 32 && c.x < ramp.x);
           place(e.from[0] - (crate ? 3 : 6), e.from[1]); const p = P(); p.vx = 7.2 * 32;
           let airborne = false;
@@ -223,7 +224,7 @@ async function session(viewport, fn) {
       check('14-4: a long note lifts Brady up the column of song to the first balcony', r.rose && r.row === 12, r);
       await shot('31-14-4-balcony.png');
       // her breath: the column stops
-      r = await ev(() => { const g = S(), d = ents('ItDiva').find(q => q.gi === 0), z = g.area.zones.find(q => q.itAria === 0); let tell = false; until(8, () => ({}), () => { if (d.phase().tell) tell = true; return tell && !d.phase().singing; }); sim(0.05); return { tell, off: !!z.off }; });
+      r = await ev(() => { place(15, 11);   /* off the secret column at x 18-20 (it rides up through the ceiling gap) */ const g = S(), d = ents('ItDiva').find(q => q.gi === 0), z = g.area.zones.find(q => q.itAria === 0); let tell = false; until(8, () => ({}), () => { if (d.phase().tell) tell = true; return tell && !d.phase().singing; }); sim(0.05); return { tell, off: !!z.off }; });
       check('14-4: she gasps for breath (the tell), then the column stops', r.tell && r.off, r);
       await ev(() => { const d = ents('ItDiva').find(q => q.gi === 0); until(8, () => ({}), () => d.phase().tell); place(11, 18); });
       await shot('32-14-4-diva-gasp.png');
