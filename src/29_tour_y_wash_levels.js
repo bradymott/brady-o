@@ -282,7 +282,7 @@ const pocketRows = (() => {
   ground(Gr, 75, 98, 21); fillG(Gr, 75, 8, 80, 8, 'H'); put(Gr, 78, 6, '6'); put(Gr, 76, 7, 'd');
   fillG(Gr, 83, 13, 88, 13, 'H'); put(Gr, 86, 11, '7'); put(Gr, 84, 12, 'e');
   put(Gr, 90, 19, 'A'); put(Gr, 94, 20, 'j'); put(Gr, 81, 20, 'j'); put(Gr, 87, 20, 'w');
-  fillG(Gr, 91, 7, 98, 7, 'H'); put(Gr, 95, 5, '8'); put(Gr, 92, 6, 'i'); put(Gr, 93, 4, 'o.o');
+  fillG(Gr, 91, 7, 98, 7, 'H'); put(Gr, 92, 5, '8'); put(Gr, 96, 6, 'i'); put(Gr, 95, 3, 'o.o');
   fillG(Gr, 99, 7, 100, 20, 'H');
   ground(Gr, 101, 150, 21); put(Gr, 104, 20, 'c'); put(Gr, 112, 20, 'r'); put(Gr, 110, 16, '?');
   // the drying room's pocket: gold lining, by the hanky
