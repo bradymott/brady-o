@@ -137,6 +137,8 @@ const brain = {
     // she hovers over the bed, drifting toward Brady's side a little
     const tx = clamp(p ? lerp((b.arenaX0 + b.arenaX1) / 2, p.cx, 0.25) : b.cx, b.arenaX0 + b.w, b.arenaX1 - b.w);
     b.x = approach(b.x, tx - b.w / 2, 1.6 * TS * dt); b.y = b.homeY + Math.sin(b.t * 1.7) * 6;
+    // never up under the boss name bar: her top stays below it on any screen
+    { const k = Game.viewH / Math.max(1, Game.gameRect ? Game.gameRect.h : Game.viewH); b.y = Math.max(b.y, b.g.camY + 76 * k); }
     if (b.act === 'walk' || b.act === 'idle') b.go('drift');
     if (b.act === 'drift') { if (b.at > (ph === 1 ? 1.4 : 1.6)) b.go(ph === 1 ? 'aim' : ph === 2 ? 'pucker' : 'balloon'); }
     else if (b.act === 'aim') {

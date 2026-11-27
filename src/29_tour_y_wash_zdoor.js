@@ -2,8 +2,8 @@
    WRONG SIDE OF THE WASH: the hidden entrance (docs/handoff/HIDDEN_LAND_BRIEF.md, SHEET_KEY A1). In France 7-1,
    Paris Morning Rounds, the bakery errand: past the delivery hatch, before the bakery's back door, the bakery's rear
    balcony stands over the street, three stone steps up. A washing line runs from the bakery wall to a pole over it:
-   a striped tea towel, a pillowcase, and a cream sheet held by ONE red peg. Every peg's shadow falls on the wall
-   behind its washing; that peg's shadow falls on the FRONT of the sheet (something is lit up on the other side).
+   a striped tea towel, a pillowcase, and a cream sheet held by ONE red peg. Ordinary pegs cast no shadow on the
+   cloth; that peg's shadow falls on the FRONT of the sheet (something is lit up on the other side).
    Climb the balcony and jump up through the sheet's low hem: Brady slips through to the wrong side of the wash. The
    land's name comes up, 7-1 clears through its exit 'wash' (to: 'land:wash'), the land opens and appears on the route
    map, and its first stage can be entered from there from then on.
@@ -91,12 +91,12 @@ class WashHem extends ENTITY_TYPES.gate {
     // the line, sagging between the wall bracket and the pole
     WA.line(ctx, x0, ly, x1, ly, 10, '#6a5a4a');
     const lineY = x => ly + 10 * (1 - Math.pow((x - (x0 + x1) / 2) / ((x1 - x0) / 2), 2));
-    // a striped tea towel and a pillowcase: their pegs' shadows fall on the wall behind them (down and to the right)
+    // a striped tea towel and a pillowcase (their pegs cast no shadow on the cloth: only the sheet's red one does)
     const item = (cx, w, h, paint) => {
       const top = lineY(cx);
       ctx.fillStyle = 'rgba(60,40,30,0.22)'; ctx.fillRect(cx - w / 2 + 7, top + 6, w, h);   // the item's own shadow on the wall
       paint(cx - w / 2, top, w, h);
-      for (const px of [cx - w / 2 + 6, cx + w / 2 - 6]) { ctx.save(); ctx.globalAlpha = 0.3; WA.peg(ctx, px + 6, top + 14, 0.75, 0.15, '#3a2a20'); ctx.restore(); WA.peg(ctx, px, top + 8, 0.75); }
+      for (const px of [cx - w / 2 + 6, cx + w / 2 - 6]) WA.peg(ctx, px, top + 8, 0.75);   // ordinary pegs: no shadow on the cloth
     };
     const towel = this.cx - 3.6 * TS, pillow = this.cx + 2.9 * TS;
     item(towel, 34, 44, (x, y, w, h) => { ctx.fillStyle = '#f4ead2'; ctx.fillRect(x, y, w, h); ctx.fillStyle = '#c83a2a'; ctx.fillRect(x, y + 8, w, 4); ctx.fillRect(x, y + h - 12, w, 4); ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, h); });
@@ -132,7 +132,6 @@ Tour.pieces['wash.balcony'] = function (st, o) {
   // the line over the slab, the sheet in the middle of it: the hem's box is the air just over Brady's head up there
   const hx = x + 9;
   B.spawn('washHem', hx, gy - 6, { exit: 'wash', lx0: (x + 4) * TS + 18, lx1: (x + 14) * TS, ly: (gy - 8) * TS });
-  st.coins(x + 4, x + 6, gy - 5);
   return x + 16;
 };
 

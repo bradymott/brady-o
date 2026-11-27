@@ -288,9 +288,9 @@ const pocketRows = (() => {
   // the drying room's pocket: gold lining, by the hanky, hung over the path: up off the crate and drop in
   put(Gr, 122, 16, '9'); fillG(Gr, 118, 18, 118, 20, 'H'); put(Gr, 126, 14, 'u'); put(Gr, 130, 20, 'a');
   // ③ the shared stripe: two mint pockets; beyond the wall a basin, and the scalloped one's shelf by the third wall's top
-  put(Gr, 136, 20, 'K'); put(Gr, 138, 20, 't'); put(Gr, 141, 22, 'M'); put(Gr, 144, 20, 'x'); put(Gr, 146, 22, 'X'); put(Gr, 149, 20, 'V'); fillG(Gr, 151, 3, 154, 20, 'H');
+  put(Gr, 136, 20, 'K'); put(Gr, 141, 22, 'M'); put(Gr, 144, 20, 'x'); put(Gr, 146, 22, 'X'); put(Gr, 149, 20, 'V'); fillG(Gr, 151, 3, 154, 20, 'H');
   ground(Gr, 155, 170, 21); fillG(Gr, 155, 10, 162, 10, 'H'); put(Gr, 156, 8, 'Y'); put(Gr, 160, 9, 'm'); put(Gr, 161, 6, 'R');
-  fillG(Gr, 157, 15, 161, 15, 'H'); put(Gr, 159, 13, 'Z'); put(Gr, 157, 14, 'n'); put(Gr, 166, 19, 'E'); put(Gr, 168, 20, 'j');
+  fillG(Gr, 157, 15, 161, 15, 'H'); put(Gr, 159, 13, 'Z'); put(Gr, 157, 14, 'n'); put(Gr, 168, 20, 'j');
   fillG(Gr, 163, 10, 164, 20, 'H');
   ground(Gr, 165, W - 1, 21); fillG(Gr, 165, 10, 166, 20, 'H'); put(Gr, 172, 20, 'c'); put(Gr, 180, 20, 'l'); fillG(Gr, 184, 18, 185, 20, 'H'); put(Gr, 184, 14, 'P'); put(Gr, 192, 20, 'G');
   fillG(Gr, W - 1, 0, W - 1, 20, 'H');
@@ -310,8 +310,7 @@ const POCK = {
   A: PK('sock', 'straight', 'pockets@pS0', '#7a6a5a'), '0': PK('sock', 'straight', 'pockets@pS', '#7a6a5a'), p: ['anchor', 'pS0'],
   '9': PK('gold', 'scallop', 'drying@in', '#c86a3a'), u: ['piece', 'wash.peep', {}], a: ['anchor', 'dryingOut'],
   M: PK('mint', 'straight', 'pockets@pZ', '#3e4f8e'), X: PK('mint', 'scallop', 'pockets@pY', '#4a7a6a'),
-  Y: PK('mint', 'scallop', 'pockets@pX', '#7a5a8a'), m: ['anchor', 'pY'], Z: PK('mint', 'straight', 'pockets@pM', '#a8784a'), n: ['anchor', 'pZ'],
-  E: PK('sock', 'straight', 'pockets@pT', '#7a6a5a'), t: ['anchor', 'pT']
+  Y: PK('mint', 'scallop', 'pockets@pX', '#7a5a8a'), m: ['anchor', 'pY'], Z: PK('mint', 'straight', 'pockets@pM', '#a8784a'), n: ['anchor', 'pZ']
 };
 stamps.washPockets = { floor: 21, rows: pocketRows, legend: POCK, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power'] };
 stamps.washDrying = roomStamp('pockets@dryingOut', 'washCupboard');
