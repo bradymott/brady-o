@@ -737,5 +737,5 @@ Tour.country({
   arrival: 'G\'day, Brady! The kangaroos have offered you a lift. Sit in the pouch, hold JUMP to wind up a hop. And shake your boots out in the mornings. ♥ C',
   levels: []
 });
-Tour.auKit = { AuArt, INK, COL, GUM };
+Tour.auKit = { AuArt, INK, COL, GUM, sets: { outback, road, creek, canopy, big } };
 })();

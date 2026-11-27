@@ -69,8 +69,9 @@ const pouchRows = (() => {
   m.fill(178, 12, 181, 12, 'C'); m.fill(186, 10, 189, 10, 'C'); m.fill(194, 12, 197, 12, 'C'); m.fill(202, 11, 205, 11, 'C');
   m.coins(186, 189, 8); m.put(183, 6, 'm'); m.put(199, 6, 'm');
   // the cliff top (the landing after the ledges), and high above the way on, the sandstone shelf with the secret gate:
-  // only a full wind-up from the cliff top (where the brown sign stands) reaches it
-  m.fill(207, 9, 211, 19, 'H'); m.put(209, 8, 'z');
+  // only a full wind-up from the cliff top reaches it. Its tells: red grit trickling on the cliff top, and a few
+  // coins in an arc where a full hop flies
+  m.fill(207, 9, 211, 19, 'H'); m.put(210, 8, 'P'); for (const [x, y] of [[210, 6], [211, 4], [212, 3], [213, 2]]) m.put(x, y, 'o');
   m.fill(214, 3, 219, 4, 'H'); m.put(218, 2, 'g'); m.coins(214, 216, 2);
   // the last flat and the gate
   m.fill(212, GY, 235, 19, '#');
@@ -113,10 +114,10 @@ const L1 = { n: 1, name: 'Pouch Express', arch: 'pouch', theme: 'au_outback',
   postcard: 'A kangaroo gave you a lift! She says you\'re heavier than her joey. ♥ C',
   enemies: [['auEmu', 2], ['auMagpie', 2]],
   mapCell: [0, 0], mapFrom: -1,
-  exits: { main: { to: '16-2' }, secret: { to: '16-6', hint: 'A brown sign points up a cliff: THE BIG THINGS...' } },
+  exits: { main: { to: '16-2' }, secret: { to: '16-6', hint: 'Red grit trickles on a cliff top, and a few coins climb into the sky...' } },
   areas: [
     { id: 'red', gen: 'room', theme: 'au_outback', stamp: 'auPouch', camera: 'free', au: { pouch: true, fakeFill: [[130, 13, 136, 14]] } },
-    { id: 'burrow', gen: 'room', role: 'secret', theme: 'au_burrow', stamp: 'auBurrow', room: 'auEcho', auEcho: { exit: 'red@burrowOut' } }
+    { id: 'burrow', gen: 'room', role: 'secret', theme: 'au_lounge', stamp: 'auBurrow', room: 'auEcho', auEcho: { exit: 'red@burrowOut' } }
   ] };
 
 
@@ -187,7 +188,7 @@ const L2 = { n: 2, name: 'Road Train', arch: 'convoy', theme: 'au_highway',
   exits: { main: { to: '16-3' } },
   areas: [
     { id: 'convoy', gen: 'room', theme: 'au_highway', stamp: 'auConvoy', camera: 'free', au: { convoy: true, fakeFill: [[145, 8, 149, 9]] } },
-    { id: 'van', gen: 'room', role: 'secret', theme: 'au_burrow', stamp: 'auSheepVan', room: 'auMuster', auMuster: { exit: 'convoy@vanOut', prize: ['star'] } }
+    { id: 'van', gen: 'room', role: 'secret', theme: 'au_shed', stamp: 'auSheepVan', room: 'auMuster', auMuster: { exit: 'convoy@vanOut', prize: ['star'] } }
   ] };
 
 
@@ -258,7 +259,7 @@ const L3 = { n: 3, name: 'Platypus Creek', arch: 'sonar', theme: 'au_creek',
   exits: { main: { to: '16-4' } },
   areas: [
     { id: 'creek', gen: 'room', theme: 'au_creek', stamp: 'auCreek', camera: 'free', au: { sonar: true, fakeFill: [[93, 13, 99, 14]] } },
-    { id: 'cave', gen: 'room', role: 'secret', theme: 'au_burrow', stamp: 'auGlowCave', room: 'auOpals', auOpals: { prize: ['oneup', 'magnet'] }, au: { sonar: true } }
+    { id: 'cave', gen: 'room', role: 'secret', theme: 'au_mine', stamp: 'auGlowCave', room: 'auOpals', auOpals: { prize: ['oneup', 'magnet'] }, au: { sonar: true } }
   ] };
 
 
@@ -347,7 +348,7 @@ const L4 = { n: 4, name: 'The Canopy', arch: 'web', theme: 'au_canopy',
   exits: { main: { to: '16-5' } },
   areas: [
     { id: 'canopy', gen: 'room', theme: 'au_canopy', stamp: 'auCanopy', camera: 'free', au: { web: true } },
-    { id: 'hollow', gen: 'room', role: 'secret', theme: 'au_burrow', stamp: 'auHollow', room: 'auShell', auShell: { exit: 'canopy@hollowDrop' } }
+    { id: 'hollow', gen: 'room', role: 'secret', theme: 'au_hollowroom', stamp: 'auHollow', room: 'auShell', auShell: { exit: 'canopy@hollowDrop' } }
   ] };
 
 /* ---------------- 16-5 The Drop Bear: the walk in under the gums, then his tree ----------------
@@ -444,7 +445,7 @@ const L6 = { n: 6, name: 'The Big Things', arch: 'giant', secret: true, theme: '
   exits: { main: { to: 'node:16-2' } },
   areas: [
     { id: 'layby', gen: 'room', theme: 'au_big', stamp: 'auBig', camera: 'free', au: { fakeFill: [[62, 12, 64, 13]] } },
-    { id: 'pine', gen: 'room', role: 'secret', theme: 'au_burrow', stamp: 'auPineapple', room: 'auOddOne', auOddOne: { prize: ['star'] } }
+    { id: 'pine', gen: 'room', role: 'secret', theme: 'au_yard', stamp: 'auPineapple', room: 'auOddOne', auOddOne: { prize: ['star'] } }
   ] };
 
 // the hidden passages (au.fakeFill) are fake-wall tiles: they look like the rock round them and fade as Brady walks

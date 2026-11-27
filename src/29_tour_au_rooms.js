@@ -18,6 +18,8 @@ const C = Tour.countries.au;
 if (!C || typeof TourRooms === 'undefined') return;
 const { INK } = Tour.auKit;
 const K = TourRoomKit;
+// every Australian room is one phone screen wide and is shown whole (AuRoomView below)
+const ROOM_W = 30;
 const ARCH = (o, keep) => K.eastW(keep, o);
 
 /* ---------- the land's tell: a puff of red dust from a crack ---------- */
@@ -32,22 +34,46 @@ class AuPuff extends Ent {
 
 /* ================= 16-1: THE KOOKABURRA CHORUS ================= */
 const KOOKA_COLS = ['#ff5a4a', '#ffd23a', '#4aa8ff', '#5ad86a'];
+// a kookaburra on its branch: a big square head, the dark stripe through the eye, a heavy two-tone beak, brown
+// wings flecked with blue, a barred tail; laughing, the head tips back and the beak opens. k: its colour band
+const drawKooka = (c, x, y, on, k, t) => {
+  c.strokeStyle = INK; c.lineWidth = 1.6; c.lineJoin = 'round';
+  c.fillStyle = '#6a4a2a'; c.fillRect(x - 26, y + 6, 52, 5); c.strokeRect(x - 26, y + 6, 52, 5);
+  // tail, body, wing
+  c.fillStyle = '#8a5a32'; c.beginPath(); c.moveTo(x - 10, y + 2); c.lineTo(x - 20, y + 20); c.lineTo(x - 12, y + 22); c.lineTo(x - 4, y + 4); c.closePath(); c.fill(); c.stroke();
+  c.strokeStyle = '#2a1a10'; c.lineWidth = 1; for (let q = 0; q < 3; q++) { c.beginPath(); c.moveTo(x - 17 + q * 2, y + 10 + q * 4); c.lineTo(x - 11 + q * 2, y + 10 + q * 4); c.stroke(); }
+  c.strokeStyle = INK; c.lineWidth = 1.6;
+  c.fillStyle = '#efe4cc'; c.beginPath(); c.ellipse(x, y - 6, 11, 14, 0, 0, TAU); c.fill(); c.stroke();
+  c.fillStyle = '#7a4a26'; c.beginPath(); c.ellipse(x - 5, y - 6, 8, 12, 0.25, 0, TAU); c.fill(); c.stroke();
+  c.fillStyle = '#4ab0e8'; for (const [dx, dy] of [[-8, -12], [-4, -9], [-7, -4], [-3, -2]]) c.fillRect(x + dx, y + dy, 3, 2);
+  c.fillStyle = KOOKA_COLS[k]; c.fillRect(x - 7, y + 4, 14, 3);
+  // the head (tipped back when laughing)
+  c.save(); c.translate(x + 2, y - 20); c.rotate(on ? -0.35 + Math.sin(t * 30) * 0.05 : 0);
+  c.fillStyle = '#efe4cc'; c.beginPath(); c.ellipse(0, -4, 12, 10, 0, 0, TAU); c.fill(); c.stroke();
+  c.fillStyle = '#7a5a3a'; c.beginPath(); c.ellipse(-2, -10, 9, 4, 0, 0, TAU); c.fill();
+  c.fillStyle = '#3a2416'; c.beginPath(); c.moveTo(-10, -5); c.lineTo(10, -6); c.lineTo(10, -2); c.lineTo(-10, -1); c.closePath(); c.fill();
+  c.fillStyle = INK; c.beginPath(); c.arc(4, -4, 1.8, 0, TAU); c.fill(); c.fillStyle = '#ffffff'; c.fillRect(4, -5.5, 1, 1);
+  c.fillStyle = '#2a2a30'; c.beginPath(); c.moveTo(9, -6); c.lineTo(26, on ? -10 : -3); c.lineTo(9, -1); c.closePath(); c.fill(); c.stroke();
+  c.fillStyle = '#e8dcc0'; c.beginPath(); c.moveTo(9, -1); c.lineTo(on ? 22 : 24, on ? 6 : -1); c.lineTo(9, 1); c.closePath(); c.fill(); c.stroke();
+  c.restore();
+};
 TourRooms.def('auEcho', {
   title: 'THE KOOKABURRA CHORUS', rule: 'LISTEN TO THE KOOKABURRAS, THEN LAND ON THEIR LOGS IN THE SAME ORDER', need: 'SING THE TUNE BACK FIRST!',
   make(o, keep, ctx, A, rng) {
-    const W = 36 + ARCH(o, keep), g = K.room(W), Y = K.Y;
-    const x0 = g.west(keep), x1 = K.east(g, keep, A, o);
-    const logs = []; for (let k = 0; k < 4; k++) { const x = x0 + 2 + k * 6; g.hline(x, x + 1, 8, '-'); logs.push(x); }
-    g.data.logs = logs;
-    g.winSpot(A.id, x1 - 3, Y);
-    if (o.exit) g.door(x1 - 1, Y, { to: o.exit, look: 'tourDoorHidden' });
-    g.coins(x0 + 4, x0 + 20, 3);
-    g.dress(keep, [x0, x1 - 5], Y);
+    // the whole room fits one phone screen (AuRoomView): the game on a raised walkway in the middle band
+    const W = ROOM_W, g = K.room(W), Y = K.Y;
+    g.west(keep); const x1 = K.east(g, keep, A, o);
+    g.hline(4, x1, 8, '-');
+    const logs = []; for (let k = 0; k < 4; k++) { const x = 6 + k * 4; g.hline(x, x + 1, 5, '-'); logs.push(x); }
+    g.data.logs = logs; g.data.logRow = 5;
+    g.winSpot(A.id, x1 - 1, Y);
+    if (o.exit) g.door(x1 - 3, Y, { to: o.exit, look: 'tourDoorHidden' });
+    g.decor(8, Y, 'auArmchair'); g.decor(16, Y, 'auRug'); g.decor(13, Y, 'auLantern');
     return g;
   },
   enter(play, A, R, kit) { if (!R.won) { R.phase = 'wait'; R.pt = 0; R.seq = null; R.at = 0; R.onLog = -1; R.sing = -1; } },
   logAt(play, kit) {
-    const p = play.player; if (!p.onGround || p.groundTy !== 8) return -1;
+    const p = play.player; if (!p.onGround || p.groundTy !== kit.data.logRow) return -1;
     const tx = Math.floor(p.cx / TS);
     return kit.data.logs.findIndex(x => tx >= x && tx <= x + 1);
   },
@@ -74,20 +100,11 @@ TourRooms.def('auEcho', {
     // the four birds on a branch over their logs, each its own colour and band; the one singing glows and laughs
     const t = play.t;
     kit.data.logs.forEach((lx, k) => {
-      const x = (lx + 1) * TS, y = 6 * TS - 6, on = R.sing === k && R.singT > 0;
-      Ink.around(ctx, x - 26, y - 34, 52, 44, c => {
-        c.fillStyle = '#6a4a2a'; c.fillRect(x - 24, y + 4, 48, 5);
-        c.fillStyle = '#f0e6d0'; c.beginPath(); c.ellipse(x, y - 8, 11, 12, 0, 0, TAU); c.fill(); c.strokeStyle = INK; c.lineWidth = 1.5; c.stroke();
-        c.fillStyle = '#6a4a2a'; c.beginPath(); c.ellipse(x - 6, y - 8, 6, 10, 0.3, 0, TAU); c.fill();
-        c.fillStyle = KOOKA_COLS[k]; c.fillRect(x - 10, y - 2, 20, 4);
-        c.fillStyle = '#f0e6d0'; c.beginPath(); c.arc(x + 3, y - 20, 7, 0, TAU); c.fill(); c.stroke();
-        c.fillStyle = '#3a3a40'; c.beginPath(); c.moveTo(x + 8, y - 22); c.lineTo(x + 20, on ? -27 + y : y - 19); c.lineTo(x + 8, y - 17); c.closePath(); c.fill();
-        if (on) { c.beginPath(); c.moveTo(x + 8, y - 17); c.lineTo(x + 18, y - 12); c.lineTo(x + 8, y - 15); c.closePath(); c.fill(); }
-        c.fillStyle = INK; c.beginPath(); c.arc(x + 4, y - 22, 1.5, 0, TAU); c.fill();
-      }, { pad: 6 });
-      if (on) { ctx.save(); ctx.fillStyle = KOOKA_COLS[k]; ctx.globalAlpha = 0.35; ctx.beginPath(); ctx.arc(x, y - 12, 26, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; ctx.font = `13px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillStyle = '#ffffff'; ctx.fillText(['KOO!', 'KA!', 'HA!', 'HOO!'][k], x, y - 40); ctx.restore(); }
+      const x = (lx + 1) * TS, y = (kit.data.logRow - 1) * TS - 4, on = R.sing === k && R.singT > 0;
+      Ink.around(ctx, x - 30, y - 50, 66, 60, c => drawKooka(c, x, y, on, k, play.t), { pad: 6 });
+      if (on) { ctx.save(); ctx.fillStyle = KOOKA_COLS[k]; ctx.globalAlpha = 0.35; ctx.beginPath(); ctx.arc(x, y - 12, 26, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; ctx.font = `13px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillStyle = '#ffffff'; ctx.fillText(['KOO!', 'KA!', 'HA!', 'HOO!'][k], x, y - 50); ctx.restore(); }
       // the log's colour band (so the logs match the birds)
-      ctx.save(); ctx.fillStyle = KOOKA_COLS[k]; ctx.fillRect(lx * TS + 6, 8 * TS + 2, 2 * TS - 12, 4); ctx.restore();
+      ctx.save(); ctx.fillStyle = KOOKA_COLS[k]; ctx.fillRect(lx * TS + 6, kit.data.logRow * TS + 2, 2 * TS - 12, 4); ctx.restore();
     });
     if (!R.won && R.phase === 'play') TourRooms.counter(play, ctx, R.at, R.seq.length, null);
   }
@@ -128,21 +145,23 @@ class AuRoomSheep extends Ent {
 TourRooms.def('auMuster', {
   title: 'MUSTER!', rule: 'WALK AT THE SHEEP AND THEY SHUFFLE AWAY: GET ALL FOUR INTO THE PEN', need: 'PEN THE SHEEP FIRST!',
   make(o, keep, ctx, A, rng) {
-    const W = 44 + ARCH(o, keep), g = K.room(W), Y = K.Y;
-    const x0 = g.west(keep), x1 = K.east(g, keep, A, o);
-    g.data.penX = x1 - 6; g.data.sheep = [x0 + 9, x0 + 14, x0 + 20, x0 + 26];
-    g.winSpot(A.id, x1 - 2, Y);
-    // the roof hatch: two hay shelves up to it (always there, a way out the other side of the van)
-    g.hline(x0 + 4, x0 + 7, 7, '-'); g.hline(x0 + 9, x0 + 13, 4, '-');
-    if (o.exit) g.door(x0 + 11, 3, { to: o.exit, look: 'tourDoorHidden' });
-    g.coins(x0 + 4, x0 + 7, 5);
-    g.dress(keep, [x0 + 2], Y);
+    // the sheep on a raised board floor across the middle of the shed, a low rail at each end, the pen on the right
+    const W = ROOM_W, g = K.room(W), Y = K.Y;
+    g.west(keep); const x1 = K.east(g, keep, A, o);
+    g.hline(6, x1, 7, '#'); g.put(6, 6, 'H'); g.put(x1, 6, 'H');
+    g.hline(2, 4, 9, '-');
+    g.data.penX = x1 - 5; g.data.sheep = [8, 10, 12, 14]; g.data.stage = 6;
+    g.winSpot(A.id, x1 - 2, 6);
+    // the roof hatch over the board floor (always there: the other way out)
+    g.hline(9, 11, 4, '-');
+    if (o.exit) g.door(10, 3, { to: o.exit, look: 'tourDoorHidden' });
+    g.decor(9, Y, 'auWoolBale'); g.decor(13, Y, 'auWoolBale'); g.decor(17, Y, 'auShears');
     return g;
   },
   enter(play, A, R, kit) {
     for (const e of play.entities) if (e instanceof AuRoomSheep) e.remove = true;
     if (R.won) return;
-    R.sheep = kit.data.sheep.map((x, k) => TourRooms.add(play, 'auRoomSheep', x, K.Y, { k, penX: kit.data.penX * TS }));
+    R.sheep = kit.data.sheep.map((x, k) => TourRooms.add(play, 'auRoomSheep', x, kit.data.stage, { k, penX: kit.data.penX * TS }));
     R.clock = null;
   },
   update(play, dt, A, R, kit) {
@@ -155,11 +174,11 @@ TourRooms.def('auMuster', {
   },
   draw(play, ctx, A, R, kit) {
     // the pen's gate posts and rails at the pen's left edge
-    const x = kit.data.penX * TS, y = (K.Y + 1) * TS;
+    const x = kit.data.penX * TS, y = (kit.data.stage + 1) * TS;
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#a87a4a';
     ctx.fillRect(x - 4, y - 40, 8, 40); ctx.strokeRect(x - 4, y - 40, 8, 40);
-    ctx.fillRect(x, y - 34, 6 * TS - 6, 5); ctx.strokeRect(x, y - 34, 6 * TS - 6, 5); ctx.fillRect(x, y - 18, 6 * TS - 6, 5); ctx.strokeRect(x, y - 18, 6 * TS - 6, 5);
-    ctx.fillStyle = '#ffffff'; ctx.font = `11px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('PEN', x + 3 * TS, y - 46);
+    ctx.fillRect(x, y - 34, 5 * TS - 6, 5); ctx.strokeRect(x, y - 34, 5 * TS - 6, 5); ctx.fillRect(x, y - 18, 5 * TS - 6, 5); ctx.strokeRect(x, y - 18, 5 * TS - 6, 5);
+    ctx.fillStyle = '#ffffff'; ctx.font = `11px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('PEN', x + 2.5 * TS, y - 46);
     ctx.restore();
     if (!R.won && R.clock != null) { TourRooms.clock(play, ctx, Math.max(0, R.clock), 45); TourRooms.counter(play, ctx, R.sheep.filter(s => s && s.penned).length, R.sheep.length, null); }
   }
@@ -186,17 +205,17 @@ class AuOpal extends Ent {
 TourRooms.def('auOpals', {
   title: 'THE OPAL SEAM', rule: 'PING TO SEE! GRAB ALL SIX OPALS BEFORE THE CLOCK RUNS OUT', need: 'FIND ALL SIX OPALS!',
   make(o, keep, ctx, A, rng) {
-    const W = 34 + ARCH(o, keep), g = K.room(W), Y = K.Y;
+    const W = ROOM_W, g = K.room(W), Y = K.Y;
     g.area = { dark: true };
-    const x0 = g.west(keep);
+    g.west(keep);
     const ids = []; for (let k = 0; k < 6; k++) ids.push('opal:' + A.id + ':' + k);
-    const x1 = K.east(g, keep, A, o, { needsAll: ids }), span = x1 - x0, at = f => x0 + Math.round(span * f);
-    g.hline(at(0.2) - 2, at(0.2) + 2, 8, '-'); g.hline(at(0.45) - 2, at(0.45) + 2, 5, '-'); g.hline(at(0.7) - 2, at(0.7) + 2, 8, '-'); g.hline(at(0.85) - 1, at(0.85) + 1, 5, '-');
-    g.fill(at(0.33), 9, at(0.33), 10, '#'); g.fill(at(0.58), 8, at(0.58), 10, '#');
-    const spots = [[at(0.1), Y], [at(0.2), 7], [at(0.45), 4], [at(0.62), Y], [at(0.7), 7], [at(0.85), 4]];
+    K.east(g, keep, A, o, { needsAll: ids });
+    // the seam: timber props, a ladder of ledges up the middle
+    g.hline(9, 11, 9, '-'); g.hline(13, 15, 6, '-'); g.hline(17, 19, 3, '-'); g.hline(20, 22, 8, '-'); g.hline(21, 23, 5, '-');
+    const spots = [[10, 8], [14, 5], [18, 2], [21, 7], [22, 4], [16, Y]];
     spots.forEach(([x, y], k) => { g.put(x, y, g.L(['vkey', ids[k]])); g.need('opal ' + k, x, y); });
     g.data.opals = spots;
-    g.dress(keep, [x0 + 1], Y);
+    g.decor(7, Y, 'auMineProp'); g.decor(12, Y, 'auMineProp'); g.decor(19, Y, 'auMineProp'); g.decor(5, Y, 'auLantern');
     return g;
   },
   enter(play, A, R, kit) {
@@ -237,9 +256,16 @@ TourRoomCritters.dealers.auPossum = (ctx, x, y, t) => {
   TourRooms.def('auShell', Object.assign({}, SH, {
     title: 'THE POSSUM\'S BILLY CANS',
     make(o, keep, ctx, A, rng) {
-      const g = SH.make(Object.assign({ cup: 'auBilly', dealer: 'auPossum', joke: ['banana', 'sock'] }, o), keep, ctx, A, rng);
-      // down the hollow's trunk: a second door on the floor, on the far side of the dealer's table
-      if (o.exit) for (let x = g.W - 2; x > 2; x--) { const cage = g.data.cage; if (cage && x >= cage.x - 1) continue; if (g.get(x, K.Y) === '.' && g.get(x, K.Y - 1) === '.' && g.get(x, K.Y + 1) === '#') { g.door(x, K.Y, { to: o.exit, look: 'tourDoorHidden' }); break; } }
+      // the possum's camp table in the middle of the hollow, raised: the three billy cans on it, the possum behind
+      const W = ROOM_W, g = K.room(W), Y = K.Y;
+      g.west(keep); const x1 = K.east(g, keep, A, o), mid = 16;
+      g.hline(mid - 6, mid + 6, 6, '-');
+      g.hline(5, 8, 8, '-');
+      g.put(mid, 5, g.L(['spawn', 'roomDealer', { look: o.dealer || 'auPossum' }]));
+      g.winSpot(A.id, mid - 3, 5);
+      g.data.slots = [mid - 4, mid, mid + 4]; g.data.row = 5; g.data.cup = o.cup || 'auBilly'; g.data.joke = o.joke || ['banana', 'sock']; g.data.swaps = o.swaps || 6;
+      if (o.exit) g.door(x1 - 1, Y, { to: o.exit, look: 'tourDoorHidden' });
+      g.decor(6, Y, 'auCampShelf'); g.decor(25, 4, 'auGumLeaves');
       return g;
     }
   }));
@@ -269,13 +295,15 @@ const drawGiant = (ctx, kind, x, y, odd, t) => {
 TourRooms.def('auOddOne', {
   title: 'SPOT THE ODD BIG THING', rule: 'FOUR GIANTS MATCH, ONE IS NOT QUITE RIGHT: STAND ON ITS PLINTH. THREE ROUNDS', need: 'SPOT ALL THREE FIRST!',
   make(o, keep, ctx, A, rng) {
-    const W = 36 + ARCH(o, keep), g = K.room(W), Y = K.Y;
-    const x0 = g.west(keep), x1 = K.east(g, keep, A, o);
-    const pl = []; for (let k = 0; k < 5; k++) { const x = x0 + 2 + k * 5; g.fill(x, 9, x + 2, 10, 'H'); pl.push(x); }
-    g.data.plinths = pl;
-    g.winSpot(A.id, x1 - 2, Y);
-    if (o.exit) g.door(x1 - 1, Y, { to: o.exit, look: 'tourDoorHidden' });
-    g.dress(keep, [x0], Y);
+    // five small plinths on a raised walkway across the middle of the souvenir yard
+    const W = ROOM_W, g = K.room(W), Y = K.Y;
+    g.west(keep); const x1 = K.east(g, keep, A, o);
+    g.hline(4, x1, 8, '-');
+    const pl = []; for (let k = 0; k < 5; k++) { const x = 5 + k * 4; g.fill(x, 6, x + 2, 7, 'H'); pl.push(x); }
+    g.data.plinths = pl; g.data.plinthRow = 6;
+    g.winSpot(A.id, x1 - 1, Y);
+    if (o.exit) g.door(x1 - 3, Y, { to: o.exit, look: 'tourDoorHidden' });
+    g.decor(8, Y, 'auSouvenirStand'); g.decor(18, Y, 'auSouvenirStand');
     return g;
   },
   enter(play, A, R, kit) { if (!R.won) { R.round = R.round || 0; this.deal(R); R.on = -1; } },
@@ -285,7 +313,7 @@ TourRooms.def('auOddOne', {
     if (R.won) return;
     const p = play.player;
     let k = -1;
-    if (p.onGround && p.groundTy === 9) { const tx = Math.floor(p.cx / TS); k = kit.data.plinths.findIndex(x => tx >= x && tx <= x + 2); }
+    if (p.onGround && p.groundTy === kit.data.plinthRow) { const tx = Math.floor(p.cx / TS); k = kit.data.plinths.findIndex(x => tx >= x && tx <= x + 2); }
     if (k < 0) { R.on = -1; return; }
     if (k === R.on) return;
     R.on = k;
@@ -294,10 +322,83 @@ TourRooms.def('auOddOne', {
   },
   draw(play, ctx, A, R, kit) {
     const kind = ODD_KINDS[Math.min(2, R.round || 0)];
-    kit.data.plinths.forEach((x, k) => drawGiant(ctx, R.won ? 'pineapple' : kind, (x + 1.5) * TS, 9 * TS - 2, !R.won && k === R.odd, play.t));
+    kit.data.plinths.forEach((x, k) => { ctx.save(); const gx = (x + 1.5) * TS, gy = kit.data.plinthRow * TS - 2; ctx.translate(gx, gy); ctx.scale(0.72, 0.72); ctx.translate(-gx, -gy); drawGiant(ctx, R.won ? 'pineapple' : kind, gx, gy, !R.won && k === R.odd, play.t); ctx.restore(); });
     if (!R.won) TourRooms.counter(play, ctx, R.round || 0, 3, null);
   }
 });
+
+
+/* ---------- each room its own place: five backdrops, their props, the one-screen view ---------- */
+{
+  const S = Tour.auKit.sets;
+  Object.assign(BGPaint, {
+    // the wombat's lounge: packed-earth walls, roots, two framed pictures (a moon, a patch of grass), a warm lamp glow
+    auLoungeWall(ctx, L, rng, H) {
+      ctx.fillStyle = L.color; ctx.fillRect(0, 0, BG_W, H);
+      ctx.strokeStyle = shade(L.color, 0.12); ctx.lineWidth = 3; for (let k = 0; k < 10; k++) { const x = rng() * BG_W; ctx.beginPath(); ctx.moveTo(x, 0); ctx.bezierCurveTo(x + 20, 40, x - 20, 70, x + 10, 110); ctx.stroke(); }
+      for (let x = 60; x < BG_W; x += 260) { ctx.fillStyle = '#5a3a20'; ctx.fillRect(x, 140, 70, 54); ctx.fillStyle = x % 520 < 260 ? '#1a2244' : '#6a9a4a'; ctx.fillRect(x + 6, 146, 58, 42); ctx.fillStyle = '#fff4d0'; if (x % 520 < 260) { ctx.beginPath(); ctx.arc(x + 35, 162, 9, 0, TAU); ctx.fill(); } else for (let k = 0; k < 6; k++) ctx.fillRect(x + 10 + k * 9, 172, 2, 10); }
+      ctx.fillStyle = 'rgba(255,210,140,0.12)'; for (let x = 180; x < BG_W; x += 340) { ctx.beginPath(); ctx.arc(x, 120, 90, 0, TAU); ctx.fill(); }
+      ctx.fillStyle = shade(L.color, -0.2); ctx.fillRect(0, L.base, BG_W, H - L.base);
+    },
+    // the shearing shed: corrugated iron walls, timber posts, a window onto the paddock, bales stacked at the back
+    auShedWall(ctx, L, rng, H) {
+      ctx.fillStyle = L.color; ctx.fillRect(0, 0, BG_W, H);
+      for (let x = 0; x < BG_W; x += 8) { ctx.fillStyle = x % 16 ? shade(L.color, 0.08) : shade(L.color, -0.1); ctx.fillRect(x, 0, 4, H); }
+      ctx.fillStyle = 'rgba(120,70,40,0.25)'; for (let k = 0; k < 8; k++) ctx.fillRect(rng() * BG_W, 30 + rng() * 200, 40 + rng() * 60, 12);
+      for (let x = 0; x < BG_W; x += 200) { ctx.fillStyle = '#8a6a48'; ctx.fillRect(x, 0, 16, H); ctx.fillStyle = '#6a4a30'; ctx.fillRect(x + 12, 0, 4, H); }
+      for (let x = 70; x < BG_W; x += 400) { ctx.fillStyle = '#6a4a30'; ctx.fillRect(x - 4, 76, 108, 68); ctx.fillStyle = '#8ac8f0'; ctx.fillRect(x, 80, 100, 60); ctx.fillStyle = '#9ac86a'; ctx.fillRect(x, 118, 100, 22); ctx.fillStyle = '#6a4a30'; ctx.fillRect(x + 48, 80, 4, 60); }
+      ctx.fillStyle = '#6a4a30'; ctx.fillRect(0, 20, BG_W, 10);
+      ctx.fillStyle = shade(L.color, -0.25); ctx.fillRect(0, L.base, BG_W, H - L.base);
+    },
+    // the opal mine: a rough rock face, timber props and beams, glints of opal colour in the rock
+    auMineWall(ctx, L, rng, H) {
+      ctx.fillStyle = L.color; ctx.fillRect(0, 0, BG_W, H);
+      ctx.fillStyle = shade(L.color, 0.1); for (let k = 0; k < 40; k++) { ctx.beginPath(); ctx.ellipse(rng() * BG_W, rng() * H, 14 + rng() * 30, 8 + rng() * 14, rng(), 0, TAU); ctx.fill(); }
+      for (let k = 0; k < 30; k++) { ctx.fillStyle = `hsl(${Math.floor(rng() * 360)},80%,65%)`; ctx.fillRect(rng() * BG_W, rng() * H, 3, 2); }
+      for (let x = 40; x < BG_W; x += 180) { ctx.fillStyle = '#7a5a34'; ctx.fillRect(x, 30, 14, H); ctx.fillRect(x - 20, 30, 54, 12); ctx.fillStyle = '#5a4024'; ctx.fillRect(x + 10, 30, 4, H); }
+    },
+    // inside the gum's hollow: curved wood-grain walls, growth rings, a knot hole with daylight
+    auHollowWall(ctx, L, rng, H) {
+      ctx.fillStyle = L.color; ctx.fillRect(0, 0, BG_W, H);
+      ctx.strokeStyle = shade(L.color, 0.14); ctx.lineWidth = 2;
+      for (let k = 0; k < 14; k++) { const y = 20 + k * 22; ctx.beginPath(); for (let x = 0; x <= BG_W; x += 32) ctx.lineTo(x, y + Math.sin(x * 0.01 + k) * 8); ctx.stroke(); }
+      for (let x = 150; x < BG_W; x += 330) { ctx.fillStyle = shade(L.color, -0.25); ctx.beginPath(); ctx.ellipse(x, 100, 30, 40, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#bfe4ff'; ctx.beginPath(); ctx.ellipse(x, 100, 18, 26, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#7a9a5a'; ctx.beginPath(); ctx.ellipse(x - 4, 112, 10, 5, 0.4, 0, TAU); ctx.fill(); }
+      ctx.fillStyle = shade(L.color, -0.18); ctx.fillRect(0, L.base, BG_W, H - L.base);
+    },
+    // the souvenir yard of the big things: blue sky, a picket fence, strings of bunting, a far giant banana
+    auSouvenirYard(ctx, L, rng, H) {
+      ctx.fillStyle = '#7ac8ff'; ctx.fillRect(0, 0, BG_W, H);
+      ctx.fillStyle = '#c8e8ff'; for (let k = 0; k < 6; k++) { const x = rng() * BG_W, y = 30 + rng() * 60; ctx.beginPath(); ctx.ellipse(x, y, 40, 14, 0, 0, TAU); ctx.fill(); }
+      ctx.fillStyle = '#e8c83a'; ctx.beginPath(); ctx.ellipse(780, 200, 30, 90, 0.5, 0, TAU); ctx.fill();
+      const cols = ['#e8423a', '#ffd23a', '#3a8ae8', '#5ac84a'];
+      for (let r = 0; r < 2; r++) { const y0 = 40 + r * 60; ctx.strokeStyle = '#5a4030'; ctx.lineWidth = 1.5; ctx.beginPath(); for (let x = 0; x <= BG_W; x += 16) ctx.lineTo(x, y0 + Math.sin(x / BG_W * TAU * 4) * 14); ctx.stroke(); for (let x = 8, k = 0; x < BG_W; x += 22, k++) { const y = y0 + Math.sin(x / BG_W * TAU * 4) * 14; ctx.fillStyle = cols[(k + r) % 4]; ctx.beginPath(); ctx.moveTo(x - 7, y); ctx.lineTo(x + 7, y); ctx.lineTo(x, y + 14); ctx.closePath(); ctx.fill(); } }
+      ctx.fillStyle = '#ffffff'; for (let x = 0; x < BG_W; x += 18) { ctx.fillRect(x, L.base - 40, 10, 40); ctx.beginPath(); ctx.moveTo(x, L.base - 40); ctx.lineTo(x + 5, L.base - 48); ctx.lineTo(x + 10, L.base - 40); ctx.fill(); }
+      ctx.fillRect(0, L.base - 30, BG_W, 5); ctx.fillStyle = '#8ad05a'; ctx.fillRect(0, L.base, BG_W, H - L.base);
+    }
+  });
+  const room = (set, name, layer, extra) => Object.assign({}, set, { name, music: 'tour_au', particles: 'none', rays: null, sky: ['#2a1a12', '#3a2418', '#4a2e1e'], horizonGlow: '#8a5a3a', celestial: { type: 'none' }, stars: 0, layers: [layer], fog: '#8a5a3a', decor: [] }, extra || {});
+  Object.assign(THEMES, {
+    au_lounge: room(S.outback, 'The Wombat\'s Lounge', { kind: 'auLoungeWall', color: '#6a4028', base: 360, f: 0.1 }, { darkness: 0.18, sky: ['#4a2c1a', '#5a3420', '#6a4028'] }),
+    au_shed: room(S.big, 'The Shearing Shed', { kind: 'auShedWall', color: '#a8acb2', base: 380, f: 0.1 }, { fog: '#d8d0c0', sky: ['#5a5048', '#6a6058', '#8a8478'] }),
+    au_mine: room(S.creek, 'The Opal Mine', { kind: 'auMineWall', color: '#4a3a34', base: 400, f: 0.1 }, { music: 'tour_au_night', sky: ['#2a201c', '#3a2c26', '#4a3a34'] }),
+    au_hollowroom: room(S.canopy, 'The Possum\'s Hollow', { kind: 'auHollowWall', color: '#8a6440', base: 380, f: 0.1 }, { music: 'tour_au_night', darkness: 0.15, sky: ['#5a3c24', '#6a4a2e', '#7a5434'] }),
+    au_yard: room(S.big, 'The Souvenir Yard', { kind: 'auSouvenirYard', color: '#9ac86a', base: 380, f: 0.1 }, { sky: ['#2a8ae8', '#7ac8ff', '#e8f8ff'], fog: '#e8f8ff', celestial: { type: 'sun', x: 0.8, y: 0.12, r: 22, color: '#fff8d8', glow: '#ffffff' } })
+  });
+  Object.assign(Decor, {
+    auArmchair(ctx, x, y) { ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#a8443a'; rr(ctx, x - 26, y - 46, 52, 46, 10); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#c85a4a'; rr(ctx, x - 18, y - 24, 36, 16, 5); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#5a3a20'; ctx.fillRect(x - 24, y - 4, 6, 4); ctx.fillRect(x + 18, y - 4, 6, 4); ctx.restore(); },
+    auRug(ctx, x, y) { ctx.save(); ctx.fillStyle = '#c8783a'; ctx.beginPath(); ctx.ellipse(x, y - 2, 60, 6, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = '#ffd23a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y - 2, 46, 4, 0, 0, TAU); ctx.stroke(); ctx.restore(); },
+    auWoolBale(ctx, x, y) { ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#efe8d8'; rr(ctx, x - 22, y - 40, 44, 40, 6); ctx.fill(); ctx.stroke(); ctx.strokeStyle = '#a89a80'; ctx.lineWidth = 2; for (const dy of [-30, -14]) { ctx.beginPath(); ctx.moveTo(x - 22, y + dy); ctx.lineTo(x + 22, y + dy); ctx.stroke(); } ctx.fillStyle = '#3a6ac8'; ctx.font = TourBackstage.F6; ctx.textAlign = 'center'; ctx.fillText('WOOL', x, y - 19); ctx.restore(); },
+    auShears(ctx, x, y) { ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#6a4a30'; ctx.fillRect(x - 2, y - 60, 4, 60); ctx.fillStyle = '#e8e0c8'; rr(ctx, x - 34, y - 78, 68, 22, 4); ctx.fill(); ctx.stroke(); ctx.fillStyle = INK; ctx.font = TourBackstage.F6; ctx.textAlign = 'center'; ctx.fillText('SHEARING', x, y - 69); ctx.fillText('SHED', x, y - 61); ctx.restore(); },
+    auMineProp(ctx, x, y) { ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#8a6a40'; ctx.fillRect(x - 5, y - 120, 10, 120); ctx.strokeRect(x - 5, y - 120, 10, 120); ctx.fillRect(x - 24, y - 128, 48, 10); ctx.strokeRect(x - 24, y - 128, 48, 10); ctx.restore(); },
+    auCampShelf(ctx, x, y) { ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#7a5a34'; ctx.fillRect(x - 36, y - 60, 72, 6); ctx.strokeRect(x - 36, y - 60, 72, 6); ctx.fillRect(x - 34, y - 54, 5, 54); ctx.fillRect(x + 29, y - 54, 5, 54); for (let k = 0; k < 3; k++) { const bx = x - 22 + k * 22; ctx.fillStyle = '#b8bcc4'; rr(ctx, bx - 8, y - 80, 16, 20, 3); ctx.fill(); ctx.stroke(); ctx.strokeStyle = '#5a5a60'; ctx.beginPath(); ctx.arc(bx, y - 80, 7, Math.PI, 0); ctx.stroke(); ctx.strokeStyle = INK; } ctx.restore(); },
+    auSouvenirStand(ctx, x, y) { ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#ffffff'; ctx.fillRect(x - 30, y - 40, 60, 40); ctx.strokeRect(x - 30, y - 40, 60, 40); ctx.fillStyle = '#e8423a'; for (let k = 0; k < 4; k++) { ctx.fillRect(x - 34 + k * 18, y - 56, 9, 14); } ctx.strokeRect(x - 34, y - 56, 68, 14); ctx.fillStyle = '#ffd23a'; ctx.beginPath(); ctx.ellipse(x - 12, y - 46 + 20, 4, 10, 0.5, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#ff8a5a'; ctx.beginPath(); ctx.arc(x + 12, y - 24, 6, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore(); }
+  });
+  // the whole room in one view: as many rows as the room is tall, the camera fixed on its middle
+  const isAu = A => !!(A && A.roomKit && /^au[A-Z]/.test(A.roomKit.kind));
+  const vr0 = Play.prototype.viewRows;
+  Play.prototype.viewRows = function () { return isAu(this.area) ? this.area.H : vr0.call(this); };
+  TourHooks.on('camera', play => { const A = play.area; if (!isAu(A)) return; play.camX = (A.W * TS - Game.viewW) / 2; play.camY = (A.H * TS - Game.viewH) / 2; });
+}
 
 Object.assign(ENTITY_TYPES, { auPuff: AuPuff, auRoomSheep: AuRoomSheep, auOpal: AuOpal });
 Tour.auKit.rooms = { AuRoomSheep, AuOpal, ODD_KINDS };
