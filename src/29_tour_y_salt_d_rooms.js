@@ -229,7 +229,7 @@ const MIT = { beat: 1.1, mark: 10 };
 TourRooms.def('saltMitts', {
   title: 'THE OTHER MITT', rule: 'JUMP FOR THE LEFT MITT, THROW FOR RIGHT', need: 'FOUR PRINTS FIRST!',
   make(o, keep, ctx, A, rng) {
-    const g = stageRoom(keep, A, o, { st: 8, cx: 17, tier: [16, 6] });
+    const g = stageRoom(keep, A, o, { st: 8, cx: 17, tier: [16, 7] });
     mk(g, MIT.mark, 7, { eatJump: true }); g.winSpot(A.id, MIT.mark, 7);
     return g;
   },
