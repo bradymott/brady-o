@@ -69,14 +69,14 @@ const makeRoom = (keep, A, o, extra) => {
 /* ================= pstKnock: KNOCK KNOCK ================= */
 const FORT_DX = [-6, 0, 6];
 TourRooms.def('pstKnock', {
-  title: 'KNOCK KNOCK', rule: 'STAND ON THE MARK, THROW TO TAKE THE POPGUN. AIM WITH THE STICK, THROW A CORK AT EACH WINDOW IN TURN AS THE LAMB PASSES IT', need: 'KNOCK AT ALL THREE FIRST!',
-  make(o, keep, ctx, A, rng) { return makeRoom(keep, A, o, (g, mid) => { g.hline(mid - 8, mid + 8, 6, '-'); g.coins(mid - 2, mid + 2, 8); }); },
+  title: 'KNOCK KNOCK', rule: 'STAND ON THE MARK, THROW TO TAKE THE POPGUN. AIM WITH THE STICK AND LOB A CORK INTO EACH WINDOW IN TURN AS THE LAMB PASSES IT', need: 'KNOCK AT ALL THREE FIRST!',
+  make(o, keep, ctx, A, rng) { return makeRoom(keep, A, o, (g, mid) => { g.hline(mid - 8, mid + 8, 8, '-'); g.coins(mid - 2, mid + 2, 6); }); },
   enter(play, A, R, kit) { R.next = 0; R.aim = -Math.PI / 2; R.cork = null; R.lambT = 0; },
   lamb(kit, t) {
-    // window 0 -> 1 -> 2 -> 1 -> 0 ...: 1.4 s at each, 1.0 s between
-    const seq = [0, 1, 2, 1], seg = 2.4, q = t % (seq.length * seg), i = Math.floor(q / seg), f = q - i * seg;
-    const a = seq[i], b = seq[(i + 1) % seq.length], k = f < 1.4 ? 0 : (f - 1.4) / 1.0;
-    return { x: (kit.data.mark + lerp(FORT_DX[a], FORT_DX[b], easeInOut(k))) * TS + TS / 2, at: f < 1.4 ? a : -1 };
+    // window 0 -> 1 -> 2 -> 1 -> 0 ...: 2.4 s at each, 1.0 s between
+    const seq = [0, 1, 2, 1], seg = 3.4, q = t % (seq.length * seg), i = Math.floor(q / seg), f = q - i * seg;
+    const a = seq[i], b = seq[(i + 1) % seq.length], k = f < 2.4 ? 0 : (f - 2.4) / 1.0;
+    return { x: (kit.data.mark + lerp(FORT_DX[a], FORT_DX[b], easeInOut(k))) * TS + TS / 2, at: f < 2.4 ? a : -1 };
   },
   update(play, dt, A, R, kit) {
     R.lambT = (R.lambT || 0) + dt;
@@ -85,14 +85,14 @@ TourRooms.def('pstKnock', {
     if (mounted) {
       if (Input.left) R.aim -= 1.3 * dt; if (Input.right) R.aim += 1.3 * dt;
       R.aim = clamp(R.aim, -Math.PI * 0.88, -Math.PI * 0.12);
-      if (Input.actionPressed && !R.cork && R.mountT > 0.1) { R.cork = { x: p.cx, y: p.y + 6, vx: Math.cos(R.aim) * 640, vy: Math.sin(R.aim) * 640 }; Sound.play('pick', { vol: 0.5, pitch: 1.6 }); }
+      if (Input.actionPressed && !R.cork && R.mountT > 0.1) { R.cork = { x: p.cx, y: p.y + 6, vx: Math.cos(R.aim) * 540, vy: Math.sin(R.aim) * 540 }; Sound.play('pick', { vol: 0.5, pitch: 1.6 }); }
     }
     if (R.cork) {
       const c = R.cork; c.vy += 760 * dt; c.x += c.vx * dt; c.y += c.vy * dt;
-      const wy = 6 * TS - 44;
+      const wy = 8 * TS - 44;
       for (let k = 0; k < 3; k++) {
         const wx = (kit.data.mark + FORT_DX[k]) * TS + TS / 2;
-        if (Math.abs(c.x - wx) < 16 && Math.abs(c.y - wy) < 16) {
+        if (c.vy > 0 && Math.abs(c.x - wx) < 16 && Math.abs(c.y - wy) < 16) {
           const L = this.lamb(kit, R.lambT);
           if (L.at === k && k === R.next) { R.next++; Sound.play('coin', { vol: 0.6, pitch: 1 + R.next * 0.2 }); play.parts.text(wx, wy - 20, 'KNOCK ' + R.next + '!', '#fff4dc'); if (R.next >= 3) TourRooms.win(play, A, R, { text: 'COME IN, COME IN!', coins: 4 }); }
           else { miss(play, L.at === k ? 'WRONG ORDER! FROM THE START' : 'NOBODY HOME! FROM THE START'); R.next = 0; }
@@ -103,7 +103,7 @@ TourRooms.def('pstKnock', {
     }
   },
   draw(play, ctx, A, R, kit) {
-    const mx = kit.data.mark, t = R.lambT || 0, wy = 6 * TS - 44;
+    const mx = kit.data.mark, t = R.lambT || 0, wy = 8 * TS - 44;
     ctx.save(); ctx.lineJoin = 'round';
     // the lamb behind the windows (drawn first: the forts are in front)
     const L = this.lamb(kit, t);
@@ -115,16 +115,16 @@ TourRooms.def('pstKnock', {
     for (let k = 0; k < 3; k++) {
       const fx = (mx + FORT_DX[k]) * TS + TS / 2, done = k < R.next;
       ctx.fillStyle = k === 1 ? PLUM_HI : HONEY; ctx.strokeStyle = INK; ctx.lineWidth = 2.2;
-      ctx.beginPath(); ctx.moveTo(fx - 50, 6 * TS); ctx.lineTo(fx - 44, wy - 26); ctx.quadraticCurveTo(fx, wy - 70, fx + 44, wy - 26); ctx.lineTo(fx + 50, 6 * TS); ctx.closePath();
+      ctx.beginPath(); ctx.moveTo(fx - 50, 8 * TS); ctx.lineTo(fx - 44, wy - 26); ctx.quadraticCurveTo(fx, wy - 70, fx + 44, wy - 26); ctx.lineTo(fx + 50, 8 * TS); ctx.closePath();
       ctx.save(); ctx.clip(); ctx.fillRect(fx - 60, wy - 80, 120, 120); ctx.globalCompositeOperation = 'destination-out'; ctx.beginPath(); ctx.arc(fx, wy, 15, 0, TAU); ctx.fill(); ctx.restore();
-      ctx.beginPath(); ctx.moveTo(fx - 50, 6 * TS); ctx.lineTo(fx - 44, wy - 26); ctx.quadraticCurveTo(fx, wy - 70, fx + 44, wy - 26); ctx.lineTo(fx + 50, 6 * TS); ctx.closePath(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(fx - 50, 8 * TS); ctx.lineTo(fx - 44, wy - 26); ctx.quadraticCurveTo(fx, wy - 70, fx + 44, wy - 26); ctx.lineTo(fx + 50, 8 * TS); ctx.closePath(); ctx.stroke();
       ctx.beginPath(); ctx.arc(fx, wy, 15, 0, TAU); ctx.lineWidth = 3; ctx.strokeStyle = done ? MINT : CREAM; ctx.stroke(); ctx.lineWidth = 2; ctx.strokeStyle = INK;
       ctx.fillStyle = INK; ctx.font = '11px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText(String(k + 1), fx, wy - 30);
     }
     // the popgun on Brady's shoulder and its aim, the cork
     const p = play.player;
     if (R.pstMount && p && !R.won) {
-      ctx.fillStyle = 'rgba(255,244,220,0.8)'; let x = p.cx, y = p.y + 6, vx = Math.cos(R.aim) * 640, vy = Math.sin(R.aim) * 640;
+      ctx.fillStyle = 'rgba(255,244,220,0.8)'; let x = p.cx, y = p.y + 6, vx = Math.cos(R.aim) * 540, vy = Math.sin(R.aim) * 540;
       for (let k = 0; k < 14; k++) { for (let s = 0; s < 4; s++) { vy += 760 / 120; x += vx / 120; y += vy / 120; } ctx.beginPath(); ctx.arc(x, y, 2.2, 0, TAU); ctx.fill(); }
       ctx.save(); ctx.translate(p.cx, p.y + 6); ctx.rotate(R.aim); ctx.fillStyle = MINT_LO; ctx.strokeStyle = INK; ctx.lineWidth = 2; rr(ctx, 0, -5, 26, 10, 4); ctx.fill(); ctx.stroke(); ctx.restore();
     }
@@ -144,9 +144,9 @@ TourRooms.kinds.pstKnock.testWin = function (g, A, R, kit, frame) {
     for (let k = 0; k < 120 * 12 && K0.lamb(kit, R.lambT).at === n; k++) frame(g, {});
     for (let k = 0; k < 120 * 12 && K0.lamb(kit, R.lambT).at !== n; k++) frame(g, {});
     for (let k = 0; k < 12; k++) frame(g, {});
-    const wx = (kit.data.mark + FORT_DX[n]) * TS + TS / 2, wy = 6 * TS - 44, sx = p.cx, sy = p.y + 6;
+    const wx = (kit.data.mark + FORT_DX[n]) * TS + TS / 2, wy = 8 * TS - 44, sx = p.cx, sy = p.y + 6;
     // the aim that drops the cork through the window (searched the way a player nudges the stick)
-    let best = null; for (let a = -Math.PI * 0.88; a <= -Math.PI * 0.12; a += 0.005) { let x = sx, y = sy, vx = Math.cos(a) * 640, vy = Math.sin(a) * 640, dmin = 1e9; for (let s = 0; s < 240; s++) { vy += 760 / 120; x += vx / 120; y += vy / 120; dmin = Math.min(dmin, Math.hypot(x - wx, y - wy)); } if (!best || dmin < best.d) best = { a, d: dmin }; }
+    let best = null; for (let a = -Math.PI * 0.88; a <= -Math.PI * 0.12; a += 0.005) { let x = sx, y = sy, vx = Math.cos(a) * 540, vy = Math.sin(a) * 540, dmin = 1e9; for (let s = 0; s < 240; s++) { vy += 760 / 120; x += vx / 120; y += vy / 120; if (vy > 0) dmin = Math.min(dmin, Math.hypot(x - wx, y - wy)); } if (!best || dmin < best.d) best = { a, d: dmin }; }
     R.aim = best.a; frame(g, { action: true, actionPressed: true });
     for (let k = 0; k < 120 && R.cork; k++) frame(g, {});
   }
@@ -155,11 +155,11 @@ TourRooms.kinds.pstKnock.testWin = function (g, A, R, kit, frame) {
 /* ================= pstCore: THE PILLOW SAMPLE ================= */
 TourRooms.def('pstCore', {
   title: 'THE PILLOW SAMPLE', rule: 'TAKE THE PUNCH ON THE MARK (THROW). STEER IT WITH THE STICK, THROW TO PUNCH: ONE CORE THROUGH ALL THREE SLEEP BUBBLES', need: 'TAKE A PERFECT CORE FIRST!',
-  make(o, keep, ctx, A, rng) { return makeRoom(keep, A, o, (g, mid) => { g.coins(mid - 3, mid + 3, 2); }); },
+  make(o, keep, ctx, A, rng) { return makeRoom(keep, A, o, (g, mid) => { g.coins(mid - 3, mid + 3, 4); }); },
   enter(play, A, R, kit) { R.px = kit.data.mark * TS + TS / 2; R.drop = null; R.st = 0; this.layout(R); },
   layout(R) { const r = Math.random; R.base = (r() - 0.5) * 4 * TS; R.d = [(r() - 0.5) * 14, (r() - 0.5) * 14, (r() - 0.5) * 14]; R.sample = null; },
   pillowX(kit, R) { return kit.data.mark * TS + TS / 2 + Math.sin((R.st || 0) * 0.5) * TS; },
-  bubbles(kit, R) { const x = this.pillowX(kit, R) + R.base; return R.d.map((d, k) => ({ x: x + d, y: 4 * TS + 22 + k * 28 })); },
+  bubbles(kit, R) { const x = this.pillowX(kit, R) + R.base; return R.d.map((d, k) => ({ x: x + d, y: 5.5 * TS + 22 + k * 28 })); },
   update(play, dt, A, R, kit) {
     if (!R.drop) R.st = (R.st || 0) + dt;
     if (R.won) return;
@@ -183,7 +183,7 @@ TourRooms.def('pstCore', {
     }
   },
   draw(play, ctx, A, R, kit) {
-    const px = this.pillowX(kit, R) + (R.base || 0), top = 4 * TS, w = 8 * TS, h = 3.4 * TS;
+    const px = this.pillowX(kit, R) + (R.base || 0), top = 5.5 * TS, w = 8 * TS, h = 3.4 * TS;
     ctx.save();
     // the cutaway pillow on its little stand: plum case, cream stuffing inside, three bubbles
     ctx.fillStyle = PLUM; ctx.strokeStyle = INK; ctx.lineWidth = 2.5; rr(ctx, px - w / 2 - 6, top - 6, w + 12, h + 12, 22); ctx.fill(); ctx.stroke();
@@ -191,8 +191,8 @@ TourRooms.def('pstCore', {
     ctx.strokeStyle = CREAM_LO; ctx.lineWidth = 1; for (let k = 0; k < 9; k++) { ctx.beginPath(); ctx.arc(px - w / 2 + 20 + k * 26, top + 20 + (k % 3) * 26, 9, 0.5, 2.5); ctx.stroke(); }
     for (const b of this.bubbles(kit, R)) { ctx.fillStyle = 'rgba(160,220,255,0.85)'; ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(b.x, b.y, 13, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(b.x - 4, b.y - 4, 3, 0, TAU); ctx.fill(); }
     // the hollow punch: a brass tube on a rail above, its core column
-    const k = R.drop ? Math.min(1, R.drop.t / 0.35) : 0, py = top - 46 + k * (h + 40);
-    ctx.strokeStyle = '#8a6a3a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(kit.data.mark * TS - 7 * TS, top - 54); ctx.lineTo(kit.data.mark * TS + 8 * TS, top - 54); ctx.stroke();
+    const k = R.drop ? Math.min(1, R.drop.t / 0.35) : 0, py = top - 26 + k * (h + 20);
+    ctx.strokeStyle = '#8a6a3a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(kit.data.mark * TS - 7 * TS, top - 34); ctx.lineTo(kit.data.mark * TS + 8 * TS, top - 34); ctx.stroke();
     ctx.fillStyle = '#d8b060'; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(R.px - 9, py - 30, 18, 40); ctx.strokeRect(R.px - 9, py - 30, 18, 40);
     ctx.fillStyle = '#1a0a14'; ctx.fillRect(R.px - 4, py + 4, 8, 6);
     if (!R.drop && R.pstMount) { ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(R.px, top); ctx.lineTo(R.px, top + h); ctx.stroke(); ctx.setLineDash([]); }
@@ -239,13 +239,13 @@ TourRooms.def('pstTray', {
     else { R.serveT += dt; if (Input.actionPressed) { TourRooms.win(play, A, R, { text: 'THREE COCOAS, NOT A DROP SPILT!', coins: 4 }); return; } if (R.serveT > 2.0) { miss(play, 'TOO LATE: THEY WENT COLD. AGAIN...'); this.reset(R); } }
   },
   draw(play, ctx, A, R, kit) {
-    const cx = kit.data.mark * TS + TS / 2, ty = 4.6 * TS, half = 2.6 * TS;
+    const cx = kit.data.mark * TS + TS / 2, ty = 6.6 * TS, half = 2.6 * TS;
     ctx.save(); ctx.lineJoin = 'round';
     // the counter at the right and the waiter's clock-hand arms reaching for it
-    const kx = cx + 8 * TS; ctx.fillStyle = '#8a5a3a'; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(kx - 30, 5 * TS, 60, 4 * TS); ctx.strokeRect(kx - 30, 5 * TS, 60, 4 * TS); ctx.fillStyle = CREAM; ctx.fillRect(kx - 34, 5 * TS - 6, 68, 8); ctx.strokeRect(kx - 34, 5 * TS - 6, 68, 8);
-    const wx = cx - 8 * TS; ctx.fillStyle = PLUM_HI; ctx.beginPath(); ctx.ellipse(wx, 6 * TS, 22, 34, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = CREAM; ctx.beginPath(); ctx.arc(wx, 4.4 * TS, 16, 0, TAU); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(wx - 8, 4.4 * TS); ctx.lineTo(wx - 3, 4.4 * TS); ctx.moveTo(wx + 3, 4.4 * TS); ctx.lineTo(wx + 8, 4.4 * TS); ctx.stroke();
+    const kx = cx + 8 * TS; ctx.fillStyle = '#8a5a3a'; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(kx - 30, 7 * TS, 60, 4 * TS); ctx.strokeRect(kx - 30, 7 * TS, 60, 4 * TS); ctx.fillStyle = CREAM; ctx.fillRect(kx - 34, 7 * TS - 6, 68, 8); ctx.strokeRect(kx - 34, 7 * TS - 6, 68, 8);
+    const wx = cx - 8 * TS; ctx.fillStyle = PLUM_HI; ctx.beginPath(); ctx.ellipse(wx, 8.2 * TS, 22, 34, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = CREAM; ctx.beginPath(); ctx.arc(wx, 6.6 * TS, 16, 0, TAU); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(wx - 8, 6.6 * TS); ctx.lineTo(wx - 3, 6.6 * TS); ctx.moveTo(wx + 3, 6.6 * TS); ctx.lineTo(wx + 8, 6.6 * TS); ctx.stroke();
     const reach = (R.prog || 0) * (kx - wx - 50);
-    PstArt.hand(ctx, wx + 16, 5.6 * TS, 30 + reach, 0, MINT, 4); PstArt.hand(ctx, wx + 16, 6.2 * TS, 26 + reach, 0.04, HONEY, 4);
+    PstArt.hand(ctx, wx + 16, 7.6 * TS, 30 + reach, 0, MINT, 4); PstArt.hand(ctx, wx + 16, 8.2 * TS, 26 + reach, 0.04, HONEY, 4);
     // the tray and its three mugs
     ctx.save(); ctx.translate(cx, ty); ctx.rotate(R.tilt || 0);
     ctx.fillStyle = '#c8c8d4'; ctx.strokeStyle = INK; ctx.lineWidth = 2.5; rr(ctx, -half - 8, 0, 2 * half + 16, 8, 4); ctx.fill(); ctx.stroke();
@@ -355,12 +355,12 @@ TourRooms.def('pstPour', {
     }
   },
   draw(play, ctx, A, R, kit) {
-    const cx = kit.data.mark * TS + TS / 2, jy = 3.2 * TS, my = 8 * TS, gap = 3 * TS;
+    const cx = kit.data.mark * TS + TS / 2, jy = 4.9 * TS, my = 8.4 * TS, gap = 3 * TS;
     ctx.save(); ctx.lineJoin = 'round'; ctx.strokeStyle = INK;
     // the shelf with the two mugs (Brady's black one, Pupo's honey one), their marked bands and milk levels
     ctx.fillStyle = '#8a5a3a'; ctx.lineWidth = 2; ctx.fillRect(cx - 5 * TS, my, 10 * TS, 10); ctx.strokeRect(cx - 5 * TS, my, 10 * TS, 10);
     [[cx - gap, R.L || 0, '#2a2a34'], [cx + gap, R.Rv || 0, HONEY]].forEach(([x, lv, col]) => {
-      const h = 3 * TS, w = 46, top = my - h;
+      const h = 2.3 * TS, w = 46, top = my - h;
       ctx.fillStyle = col; ctx.lineWidth = 2.5; rr(ctx, x - w / 2, top, w, h, 6); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.arc(x + w / 2 + 6, top + h / 2, 12, -1.3, 1.3); ctx.stroke();
       ctx.fillStyle = '#fff8ec'; const fh = (h - 8) * clamp(lv / 0.62, 0, 1); ctx.fillRect(x - w / 2 + 5, my - 4 - fh, w - 10, fh);
       const b0 = my - 4 - (h - 8) * (0.43 / 0.62), b1 = my - 4 - (h - 8) * (0.57 / 0.62); ctx.strokeStyle = MINT; ctx.lineWidth = 2; ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.moveTo(x - w / 2 - 4, b0); ctx.lineTo(x + w / 2 + 4, b0); ctx.moveTo(x - w / 2 - 4, b1); ctx.lineTo(x + w / 2 + 4, b1); ctx.stroke(); ctx.setLineDash([]); ctx.strokeStyle = INK;
@@ -373,7 +373,7 @@ TourRooms.def('pstPour', {
     for (const s of [-1, 1]) { ctx.fillStyle = CREAM; ctx.beginPath(); ctx.moveTo(s * 40, 10); ctx.lineTo(s * 58, 18); ctx.lineTo(s * 42, 22); ctx.closePath(); ctx.fill(); ctx.stroke(); }
     ctx.fillStyle = '#fff8ec'; ctx.fillRect(-30, 18 - 40 * (R.jug || 0), 60, 40 * (R.jug || 0));
     ctx.restore();
-    if ((R.jug || 0) > 0.001 && R.pstMount && R.done == null) for (const [s, w] of [[-1, 1 - share], [1, share]]) { ctx.strokeStyle = 'rgba(255,248,236,0.95)'; ctx.lineWidth = 1 + 8 * w; ctx.beginPath(); ctx.moveTo(cx + s * 56, jy + 18); ctx.quadraticCurveTo(cx + s * (gap - 10), jy + 30, cx + s * gap, my - 3 * TS); ctx.stroke(); }
+    if ((R.jug || 0) > 0.001 && R.pstMount && R.done == null) for (const [s, w] of [[-1, 1 - share], [1, share]]) { ctx.strokeStyle = 'rgba(255,248,236,0.95)'; ctx.lineWidth = 1 + 8 * w; ctx.beginPath(); ctx.moveTo(cx + s * 56, jy + 18); ctx.quadraticCurveTo(cx + s * (gap - 10), jy + 30, cx + s * gap, my - 2.3 * TS); ctx.stroke(); }
     ctx.restore();
     drawMark(play, ctx, A, R, kit, 'THROW: TAKE THE JUG');
     if (!R.won && R.pstMount) TourRooms.hudText(play, ctx, 'JUG ' + Math.round((R.jug || 0) * 100) + '%', '#ffd84a', 13);

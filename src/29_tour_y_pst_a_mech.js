@@ -149,8 +149,16 @@ class PstLashes extends Ent {
   draw(ctx) {
     const A = this.g.area, s = blinkState(A, this.gi, A.pstBlinkT || 0), x = this.x;
     ctx.save(); ctx.lineCap = 'round';
-    // the lid edge running up the ladder: a plum stalk with its two halves
-    const top = this.rungs[0][0] * TS, bot = this.rungs[this.rungs.length - 1][0] * TS;
+    // the eye the ladder belongs to: its two lid edges run up either side; open, they part over a sleepy honey
+    // iris; shut, they meet and the lashes cross into rungs
+    const ys = this.rungs.map(r => r[0] * TS), top = Math.min(...ys) - 20, bot = Math.max(...ys) + 26, cxm = x + TS, cym = (top + bot) / 2;
+    const hasIn = this.rungs.some(r => r[1] === 'in'), o = hasIn && !s.shut ? 1 : 0, tr0 = s.warn && hasIn ? Math.sin(this.t * 50) * 2 : 0;
+    if (o) { ctx.fillStyle = '#1a0a14'; ctx.beginPath(); ctx.ellipse(cxm, cym, TS * 1.1, (bot - top) / 2, 0, 0, TAU); ctx.fill(); ctx.fillStyle = HONEY; ctx.beginPath(); ctx.arc(cxm, cym + Math.sin(this.t * 0.7) * 10, 16, 0, TAU); ctx.fill(); ctx.fillStyle = '#1a0a14'; ctx.beginPath(); ctx.arc(cxm, cym + Math.sin(this.t * 0.7) * 10, 7, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.arc(cxm - 5, cym - 6 + Math.sin(this.t * 0.7) * 10, 3, 0, TAU); ctx.fill(); }
+    for (const sd of [-1, 1]) {
+      const ex = cxm + sd * (TS * 0.95 + o * 12) + tr0 * sd;
+      ctx.strokeStyle = INK; ctx.lineWidth = 15; ctx.beginPath(); ctx.moveTo(cxm, top - 10); ctx.quadraticCurveTo(ex + sd * 8, cym, cxm, bot + 10); ctx.stroke();
+      ctx.strokeStyle = PLUM; ctx.lineWidth = 11; ctx.stroke(); ctx.strokeStyle = PLUM_HI; ctx.lineWidth = 3; ctx.stroke();
+    }
     for (const r of this.rungs) {
       const y = r[0] * TS + 4, inner = r[1] === 'in', present = !inner || s.shut;
       const trem = s.warn ? Math.sin(this.t * 60) * 2 : 0;
@@ -162,9 +170,9 @@ class PstLashes extends Ent {
       }
       // two lashes from each side crossing in the middle: the rung
       const reach = inner ? 1 : 0.85;
-      ctx.strokeStyle = INK; ctx.lineWidth = 7;
+      ctx.strokeStyle = INK; ctx.lineWidth = 9;
       ctx.beginPath(); ctx.moveTo(x - 6, y - 10 + trem); ctx.quadraticCurveTo(x + TS * reach, y - 2, x + 2 * TS * reach + 2, y + 2 + trem); ctx.moveTo(x + 2 * TS + 6, y - 10 - trem); ctx.quadraticCurveTo(x + 2 * TS - TS * reach, y - 2, x + 2 * TS - 2 * TS * reach - 2, y + 2 - trem); ctx.stroke();
-      ctx.strokeStyle = inner ? PLUM : PLUM_LO; ctx.lineWidth = 4.2; ctx.stroke();
+      ctx.strokeStyle = inner ? '#c86a9a' : PLUM_LO; ctx.lineWidth = 5.5; ctx.stroke(); ctx.strokeStyle = inner ? HONEY_HI : CREAM_LO; ctx.lineWidth = 1.5; ctx.stroke();
       if (s.warn && inner) { ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.arc(x + TS, y - 6, 2, 0, TAU); ctx.fill(); }
     }
     ctx.restore();
