@@ -310,7 +310,7 @@ class ShadCutter extends Ent {
     this.bx = (s.cutter + 0.5) * TS; this.mx = (s.mark + 0.5) * TS; this.lx = this.mx + this.dir * 3 * TS;
     this.x = Math.min(this.bx, this.lx) - 7 * TS; this.w = Math.abs(this.lx - this.bx) + 14 * TS; this.y = this.fy - 5 * TS; this.h = 5 * TS + 8; this.chop = 0;
   }
-  zone(p) { return p && !p.dead && Math.abs(p.y + p.h - this.fy) < 3.5 * TS && (p.cx - this.bx) * this.dir > 8 && (this.lx - p.cx) * this.dir > 8; }
+  zone(p) { return p && !p.dead && p.y + p.h > this.fy - 6 * TS && p.y + p.h < this.fy + 8 && (p.cx - this.bx) * this.dir > 8 && (this.lx - p.cx) * this.dir > 8; }
   onMark(p) { return Math.abs(p.cx - this.mx) < 18; }
   shadClaim(p) { return this.zone(p) && (p.onGround ? p.groundTy === this.s.row : this.s.arm); }
   update(dt) {

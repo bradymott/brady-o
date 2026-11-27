@@ -270,6 +270,7 @@ async function session(viewport, fn) {
 const LEVELS = {};
 // the land's own moves with real inputs (added once per page)
 const helpers = () => {
+  { const SK = window.BRADY_TOUR.Tour.shadKit; if (!SK.__counted) { const p0 = SK.pill; SK.pill = function () { window.__pills = (window.__pills || 0) + 1; return p0.apply(this, arguments); }; SK.__counted = true; } }
   window.playP = id => { play(id); for (let k = 0; k < 60 && S().state !== 'play'; k++) sim(0.1); P().invuln = 999; return S(); };
   window.tileName = (x, y) => { const A = S().area, T = window.BRADY.T; const t = A.tiles[y * A.W + x]; return Object.keys(T).find(k => T[k] === t); };
   window.throwN = (n, gap) => { for (let k = 0; k < n; k++) { sim(1 / 120, { action: true, actionPressed: true }); sim(gap || 0.45); } };
@@ -300,7 +301,7 @@ LEVELS.lost = async (page, shot, run, pano) => {
   await run('lost', async () => {
     await page.evaluate(helpers);
     await page.evaluate(() => { fresh(); playP('35-1'); place(4, 18); sim(0.6); freeze(); }); await shot('10-35-1-start.png');
-    let r = await page.evaluate(() => { thaw(); place(12, 18); sim(0.3); const n0 = ents('ShadPill').length; claimAt(12); return { grille: tileName(18, 17), pill: ents('ShadPill').length > n0 }; });
+    let r = await page.evaluate(() => { thaw(); place(12, 18); sim(0.3); const n0 = (window.__pills || 0); claimAt(12); return { grille: tileName(18, 17), pill: (window.__pills || 0) > n0 }; });
     check('35-1: THROW on the wrong shadow\'s heels: NOT THEIRS, the grille stays down', r.grille === 'HARD' && r.pill, r);
     await shotAt(page, shot, '11-35-1-claim-teach.png', () => { walkX(9 * 32 + 16); sim(0.4); });
     r = await page.evaluate(() => { claimAt(9); sim(0.8); return { grille: tileName(18, 17) }; });
@@ -422,7 +423,7 @@ LEVELS.cust = async (page, shot, run, pano) => {
     await shotAt(page, shot, '51-35-5-split.png', () => { walkX(12 * 32 + 30); sim(0.2); });
     r = await page.evaluate(() => { walkX(13 * 32 + 16); sim(1.5); return { grille: tileName(24, 17) }; });
     check('35-5: both shadows\' feet on their claim slots for a breath: both stamped, the grille rolls up', r.grille === 'EMPTY', r);
-    r = await page.evaluate(() => { const a = AP.route([[30, 19], [40, 19], [46, 19]]); const n0 = ents('ShadPill').length; walkX(48 * 32 + 16); sim(1.5); const pill = ents('ShadPill').length > n0, g1 = tileName(60, 17); walkX(52 * 32 + 16); sim(1.5); return { a: a.ok, pill, g1, grille: tileName(60, 17) }; });
+    r = await page.evaluate(() => { const a = AP.route([[30, 19], [40, 19], [46, 19]]); const n0 = (window.__pills || 0); walkX(48 * 32 + 16); sim(1.5); const pill = (window.__pills || 0) > n0, g1 = tileName(60, 17); walkX(52 * 32 + 16); sim(1.5); return { a: a.ok, pill, g1, grille: tileName(60, 17) }; });
     check('35-5: the last desk: the hats line up first (it says so, nothing opens); the feet decide', r.pill && r.g1 === 'HARD' && r.grille === 'EMPTY', r);
     await shotAt(page, shot, '52-35-5-secret-tell.png', () => { AP.go([62, 19]); sim(0.3); });
     r = await page.evaluate(() => { const a = AP.go([66, 19]); return { ok: a.ok }; });
@@ -445,7 +446,7 @@ LEVELS.rooms = async (page, shot, run) => {
       await page.evaluate(([id, aid]) => { fresh(); playP(id); toArea(aid); sim(0.7); freeze(); }, [id, aid]); await shot(`6${n}-room-${id}-${aid}-entry.png`);
       await page.evaluate(() => { thaw(); sim(2.6); freeze(); }); await shot(`6${n}-room-${id}-${aid}-rule.png`);
       const r = await page.evaluate(() => { thaw(); return { kind: S().area.roomKit.kind }; });
-      const w = await page.evaluate(() => { const g = S(), A = g.area, R = A.roomState, kit = A.roomKit, K = window.__roomKinds[kit.kind]; let pills = 0; const frame = (g2, keys) => { const before = ents('ShadPill').length; sim(1 / 120, keys); if (ents('ShadPill').length > before) pills++; }; K.testWin(g, A, R, kit, frame); sim(0.6); const cage = g.entities.find(e => e.constructor.name === 'TourRoomCage'); return { won: R.won, pills, cage: cage ? cage.tiles.every(([x, y]) => tileName(x, y) === 'EMPTY') : null }; });
+      const w = await page.evaluate(() => { const g = S(), A = g.area, R = A.roomState, kit = A.roomKit, K = window.__roomKinds[kit.kind]; let pills = 0; const frame = (g2, keys) => { const before = (window.__pills || 0); sim(1 / 120, keys); if ((window.__pills || 0) > before) pills++; }; K.testWin(g, A, R, kit, frame); sim(0.6); const cage = g.entities.find(e => e.constructor.name === 'TourRoomCage'); return { won: R.won, pills, cage: cage ? cage.tiles.every(([x, y]) => tileName(x, y) === 'EMPTY') : null }; });
       check(`room ${id} ${aid} (${r.kind}): a miss (a pill says so, the turn resets), then won with the buttons; the cage opens`, w.won && w.pills >= 1 && w.cage !== false, w);
       await page.evaluate(() => freeze()); await shot(`6${n}-room-${id}-${aid}-won.png`);
       const o = await page.evaluate(([main, out]) => { thaw(); toDoor(); sim(0.1, { up: true, upPressed: true }); for (let k = 0; k < 300 && S().area.aid !== main; k++) sim(1 / 60); sim(0.5); const g = S(), an = g.area.anchors[out]; return { area: g.area.aid, x: Math.floor(P().cx / 32), ax: an ? Math.floor(an.x / 32) : null }; }, [main, out]);

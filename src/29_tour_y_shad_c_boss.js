@@ -27,8 +27,9 @@ const brain = {
   // the counter's furniture (pixels): the lamps, the hand and boot slots, the two foot slots, the clerk's place
   geo(b) {
     if (b.geoC) return b.geoC;
-    const x0 = b.arenaX0, x1 = b.arenaX1, L = x0 + 6.5 * TS, R = x0 + 10.5 * TS, at = x0 + 8 * TS, feet = K.splitFeet(L, R, at);
-    return (b.geoC = { x0, x1, L, R, hand: x0 + 4 * TS, boot: x0 + 13 * TS, at, feet, home: x0 + 17.2 * TS, lo: x0 + 2.5 * TS });
+    const x0 = b.arenaX0, x1 = b.arenaX1, L = x0 + 9 * TS, R = x0 + 12.5 * TS, at = x0 + 10.5 * TS, feet = K.splitFeet(L, R, at);
+    // everything Brady plays with stays clear of the stick (left) and the two buttons (right)
+    return (b.geoC = { x0, x1, L, R, hand: x0 + 6.5 * TS, boot: x0 + 15 * TS, at, feet, home: x0 + 18.4 * TS, lo: x0 + 5.5 * TS });
   },
   wake(b) {
     const G = this.geo(b); b.phase = 1; b.ext = 0; b.claimed = false;
@@ -41,10 +42,10 @@ const brain = {
     if (n === 3) { g.bannerText = 'THE SPLIT!'; g.bannerT = 2; say(b, 'TWO LAMPS? THEN THERE ARE TWO OF ME.'); b.go('split'); }
   },
   hurt(b) {},
-  hit(b, kind) { if (!(b.flatT > b.t)) { b.flatT = b.t + 1.5; say(b, 'I\'M A SHADOW. YOU CAN\'T STAND ON ME.', '#c8d8ff'); } return 'bounce'; },
+  hit(b, kind) { if (!(b.flatT > b.t)) { b.flatT = b.t + 1.5; say(b, 'I\'M A SHADOW. YOU CAN\'T STAND ON ME.', '#c8d8ff'); } return kind === 'stomp' || kind === 'spin' ? 'bounce' : false; },
   touch(b, p) { return true; },
   lastHit(b) { b.go('gone'); b.state = 'fight'; return true; },
-  claim(b, text) { b.line = null; say(b, text, '#ffe08a'); b.damage(1, { col: BUT_HI }); b.claimed = true; Sound.play('secret', { vol: 0.5 }); },
+  claim(b, text) { b.line = null; say(b, text, '#ffe08a'); b.claimed = true; const ph = b.phase; b.damage(1, { col: BUT_HI }); if (b.phase !== ph) b.claimed = false; Sound.play('secret', { vol: 0.5 }); },
   update(b, dt) {
     const g = b.g, p = g.player, ph = b.phase || 1, G = this.geo(b), A = b.act, alive = p && !p.dead;
     if (b.line) b.line.t += dt;
@@ -61,7 +62,7 @@ const brain = {
     else if (A === 'reach') { b.ext = Math.min(1, b.at / OUT); const tip = lerp(G.home - 30, b.tx, b.ext); if (!b.hitArm && band(30, tip)) { b.hitArm = true; p.hurt(b); } if (b.ext >= 1) { b.go('hold'); b.side0 = alive ? Math.sign(p.cx - G.L) : 0; b.lined = Math.abs(b.tx - G.hand) < 30; if (b.lined) say(b, 'HEY, THAT\'S A SLOT. I DON\'T LIKE SLOTS.', '#ffe08a'); } }
     else if (A === 'hold') {
       const Lx = ph === 1 ? G.L : G.R;
-      if (b.lined && !b.claimed && alive && Math.sign(p.cx - Lx) !== b.side0 && b.side0 !== 0) { this.claim(b, ph === 1 ? 'MY HAND! IT\'S BEEN CLAIMED!' : 'MY BOOT! SIGNED, SEALED, CLAIMED!'); b.pullT = 0; }
+      if (b.lined && !b.claimed && alive && Math.sign(p.cx - Lx) !== b.side0 && b.side0 !== 0) { this.claim(b, ph === 1 ? 'MY HAND! IT\'S BEEN CLAIMED!' : 'MY BOOT! SIGNED, SEALED, CLAIMED!'); b.pullT = 0; if (b.act !== 'hold') return; }
       if (b.claimed) b.pullT = (b.pullT || 0) + dt;
       if (b.at > HOLD || (b.claimed && b.pullT > 0.9)) b.go('back');
     }
@@ -78,11 +79,12 @@ const brain = {
       if (b.at > TELL) { const f = this.halves(b); b.locked = !!f && Math.abs(f[0] - G.feet[0]) < 16 && Math.abs(f[1] - G.feet[1]) < 16; b.rushFrom = f || G.feet.slice(); b.go('rush'); b.hitArm = false; if (b.locked) say(b, 'BOTH FEET IN THE SLOTS?! WAIT...', '#ffe08a'); }
     }
     else if (A === 'rush') {
-      const k = Math.min(1, b.at / 0.5), xa = lerp(b.rushFrom[0], b.rushFrom[1], k), xb = lerp(b.rushFrom[1], b.rushFrom[0], k);
-      if (!b.hitArm && (band(26, xa) || band(26, xb))) { b.hitArm = true; p.hurt(b); }
-      if (k >= 1) { if (b.locked) { this.claim(b, 'BOTH HALVES CLAIMED! THAT\'S ME SIGNED FOR!'); b.go('stamp'); } else { say(b, 'MISSED THE SLOTS. AGAIN!', '#c8d8ff'); b.go('split'); } }
+      const k = Math.min(1, Math.max(0, b.at - 0.1) / 0.5), xa = lerp(b.rushFrom[0], b.rushFrom[1], k), xb = lerp(b.rushFrom[1], b.rushFrom[0], k);
+      if (!b.hitArm && b.at > 0.14 && (band(26, xa) || band(26, xb))) { b.hitArm = true; p.hurt(b); }
+      if (k >= 1) { if (b.locked) { this.claim(b, 'BOTH HALVES CLAIMED! THAT\'S ME SIGNED FOR!'); if (b.act === 'rush') b.go('stamp'); } else { say(b, 'MISSED THE SLOTS. AGAIN!', '#c8d8ff'); b.go('split'); } }
     }
     else if (A === 'stamp') { if (b.at > 1.4) { b.claimed = false; b.go('split'); } }
+    else if (A === 'wait') { /* held still (the boss test walks Brady into place) */ }
     else b.go(ph === 1 ? 'palm' : ph === 2 ? 'heel' : 'split');
   },
   // phase 3: where the two halves' feet are (they follow Brady while he stands between the lamps), or null
@@ -179,7 +181,7 @@ TourHooks.on('afterEntities', (play, ctx) => {
     const f = brain.halves(b), on = f ? [Math.abs(f[0] - G.feet[0]) < 16, Math.abs(f[1] - G.feet[1]) < 16] : [false, false];
     G.feet.forEach((x, i) => { slot(x, 'foot', on[i] || A === 'stamp', 'FEET'); if (on[i]) K.tick(ctx, x, fy - 40, 0.75); });
     let xs = f || [G.feet[0] + 2 * TS, G.feet[1] - 2 * TS];
-    if (A === 'rush') { const q = Math.min(1, b.at / 0.5); xs = [lerp(b.rushFrom[0], b.rushFrom[1], q), lerp(b.rushFrom[1], b.rushFrom[0], q)]; }
+    if (A === 'rush') { const q = Math.min(1, Math.max(0, b.at - 0.1) / 0.5); xs = [lerp(b.rushFrom[0], b.rushFrom[1], q), lerp(b.rushFrom[1], b.rushFrom[0], q)]; }
     if (A === 'stamp') xs = G.feet.slice();
     const hat = A === 'hats' ? Math.min(1, b.at / 0.4) * 24 : 0, flat = A === 'rush';
     xs.forEach((x, i) => {

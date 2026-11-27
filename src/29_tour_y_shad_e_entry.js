@@ -57,7 +57,7 @@ class ShadKeyholeGate extends ENTITY_TYPES.gate {
     this.w = TS; this.h = TS; this.x = s.x - TS / 2; this.y = s.y - TS; this.dive = null; this.friendly = false; this.pushT = 0; this.row = Math.round(s.y / TS); this.fy = this.row * TS;
     this.lockerX = s.lockerX || (this.cx + 6 * TS);
   }
-  at(p) { return p && !p.dead && p.state === 'play' && p.onGround && p.groundTy === this.row && Math.abs(p.cx - this.cx) < 30; }
+  at(p) { return p && !p.dead && p.state === 'play' && p.onGround && p.groundTy === this.row && p.cx < this.cx + 30; }
   update(dt) {
     this.t += dt; const g = this.g, p = g.player;
     if (this.dive == null) {

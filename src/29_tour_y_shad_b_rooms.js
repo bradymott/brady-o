@@ -264,7 +264,7 @@ TourRooms.def('shadCup', {
   update(play, dt, A, R) {
     if (R.cool > 0) R.cool -= dt; if (R.won || R.cool > 0) return;
     const pot = pressed(play, 'pot'), hatch = pressed(play, 'hatch');
-    if (pot) { R.cool = 0.3; if (R.carry === pot.k) { R.carry = null; return; } R.carry = pot.k; TourKit.sfx('lift', 'pick', { vol: 0.4, pitch: 1.3 }); return; }
+    if (pot) { R.cool = 0.15; if (R.carry === pot.k) { R.carry = null; return; } R.carry = pot.k; TourKit.sfx('lift', 'pick', { vol: 0.4, pitch: 1.3 }); return; }
     if (hatch) {
       R.cool = 0.4; if (R.carry == null) { fail(play, 'BRING A TEAPOT FIRST'); return; }
       if (R.carry === R.cold) { R.round++; R.carry = null; if (R.round >= 2) TourRooms.win(play, A, R, { text: 'THE MITTEN SAYS THANK YOU', coins: 3 }); else { good(play, 'COLD ONE DELIVERED! AGAIN'); R.cold = pick(3, R.cold); } }
@@ -367,7 +367,7 @@ TourRooms.kinds.shadFoot.testWin = function (g, A, R, kit, frame) {
   for (let k = 0; k < 3 && !R.won; k++) { stand(g, CUB_X[R.map[R.odd]]); steps(g, frame, 8); press(g, frame); steps(g, frame, 40); }
 };
 TourRooms.kinds.shadCup.testWin = function (g, A, R, kit, frame) {
-  const carry = k => { stand(g, POT_X[k]); steps(g, frame, 8); press(g, frame); stand(g, HATCH_X); steps(g, frame, 8); press(g, frame); steps(g, frame, 30); };
+  const carry = k => { stand(g, POT_X[k]); steps(g, frame, 8); press(g, frame); steps(g, frame, 30); stand(g, HATCH_X); steps(g, frame, 8); press(g, frame); steps(g, frame, 60); };
   carry((R.cold + 1) % 3);
   for (let k = 0; k < 3 && !R.won; k++) carry(R.cold);
 };

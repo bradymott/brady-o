@@ -20,8 +20,9 @@ module.exports = async ({ page, check, shot }) => {
   const walkTo = x => ev(x => { const p = P(); for (let k = 0; k < 600; k++) { const d = x - p.cx, brake = p.vx * p.vx / (2 * 30 * 32) + 4; if (Math.abs(d) < 5 && Math.abs(p.vx) < 20) break; sim(1 / 120, { left: d < -brake, right: d > brake }); } sim(0.05); }, x);
   // one reach (phase 1) or kick (phase 2): stand at x during the tell, jump the limb, then cross the lamp to `cross`
   const limb = async (label, tell, move, x, cross) => {
-    await ev(t => { boss().go(t); sim(0.05); }, tell);
+    await ev(() => { boss().go('wait'); });
     await walkTo(x);
+    await ev(t => { boss().go(t); sim(0.05); }, tell);
     let q = await ev(t => { const b = boss(); for (let k = 0; k < 240 && b.act === t; k++) sim(1 / 120); return { act: b.act, tx: Math.round(b.tx) }; }, tell);
     check(label + ': the tell (a dashed line along the floor to Brady), then the ' + move, q.act === move, q);
     q = await ev(() => { const b = boss(), p = P(), hp = b.hp; p.invuln = 0; const pw = p.power; sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.4, { jump: true }); for (let k = 0; k < 240 && b.act !== 'hold'; k++) sim(1 / 120); sim(0.5); const safe = !p.dead && p.power === pw; p.invuln = 999.07; return { safe, lined: b.lined, act: b.act, hp }; });
@@ -50,8 +51,9 @@ module.exports = async ({ page, check, shot }) => {
   check('shad: phase 3 after two boots', q.hit === 1 && q.phase === 3, q);
   // PHASE 3: the split
   const split = async (label, x) => {
-    await ev(() => { boss().go('split'); sim(0.05); });
+    await ev(() => { boss().go('wait'); });
     await walkTo(x);
+    await ev(() => { boss().go('split'); sim(0.05); });
     let q = await ev(() => { const b = boss(); for (let k = 0; k < 400 && b.act !== 'hats'; k++) sim(1 / 120); sim(0.3); return { act: b.act }; });
     check(label + ': both hats rise (the tell)', q.act === 'hats', q);
     return ev(() => { const b = boss(), p = P(), hp = b.hp; p.invuln = 0; const pw = p.power; for (let k = 0; k < 240 && b.act === 'hats'; k++) sim(1 / 120); sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.4, { jump: true }); for (let k = 0; k < 240 && b.act === 'rush'; k++) sim(1 / 120); sim(0.2); const safe = !p.dead && p.power === pw; p.invuln = 999.07; return { hit: hp - b.hp, safe, act: b.act }; });
