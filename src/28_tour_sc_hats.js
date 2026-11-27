@@ -242,6 +242,10 @@ TourHats.NOT = new Set([].concat(
   // Postmark Sound (world 27, hidden land A2): floating lines, pawprints, the islands, stamps, blotters, folds, map
   // scales, torn addresses, the rooms' props, the postcard rack's way in
   'postPill postPaw postIsland postStamp postBlotter postFold postScale postAddress postRoomProp postRackGate'.split(' '),
+  // The Unflattering Gallery (world 30, hidden land A5): floating lines, portraits to pose in, viewing frames, top-coat
+  // ridges, tumbling frames, auction lots and paddles, posing marks, the cord rack (and its crawling gnat), the rooms'
+  // props, the fountain's way in
+  'galPill galSitter galViewer galRidge galTumble galLot galPaddle galSitting galRack galCrawler galRoomProp galFountainGate'.split(' '),
   // Morocco: tagines, teapots, oranges, storms, pots, mirages, gales, lanterns, slabs, lines, portcullises, hooks, chains, grilles, winds
   'maTagine maTeapot maOrange maStorm maPot maMirage maGale maKickPot maShopLantern maMirageSlab maPhaseLine maPortcullis maLidHook maChain maRoofGrille maDownWind'.split(' '),
   // Mexico: peppers, elotes, popcorn, the piñata burro, lava blobs, salsa, melon carts, swingers, cannons, rails, sunbeams, bubbles, the Casa's gates
@@ -333,7 +337,9 @@ Object.assign(TourHats.HEADS, {
   // Pupo Standard Time (hidden land A7): the pillow louse, the secondhand slug, the napkin bat, the snore pea
   pstLouse: [0.4, 0.4, -1.1, 0], pstSlug: [0.55, 0.55, -1.45, 0], pstBat: [0.02, 0.02, -1.2, 0], pstPea: [0.02, 0.02, -1.15, 0],
   // Postmark Sound (world 27): the gum gull, the margin crab, the blot pup, the crease eel
-  postGull: [0.33, 0.33, -1.05, 0], postCrab: [0, 0, -1.2, 0], postPup: [0.43, 0.43, -1.0, 0], postEel: [0.4, 0.4, -0.9, 0]
+  postGull: [0.33, 0.33, -1.05, 0], postCrab: [0, 0, -1.2, 0], postPup: [0.43, 0.43, -1.0, 0], postEel: [0.4, 0.4, -0.9, 0],
+  // The Unflattering Gallery (world 30): the gilt gnat, the profile pigeon, the varnish toad, the velvet rope
+  galGnat: [-0.2, -0.2, -0.95, 0], galPigeon: [0.3, 0.3, -1.15, 0], galVarnish: [0.3, 0.3, -1.0, 0], galVelvet: [0.2, 0.2, -1.2, 0]
 
 });
 

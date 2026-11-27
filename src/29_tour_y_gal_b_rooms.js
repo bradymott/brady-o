@@ -205,7 +205,7 @@ const critter = (ctx, who, x, y, t, dir) => {
   ctx.save();
   if (who === 0) { ctx.translate(x, y - 22); Tour.galKit.gnatArt(ctx, { dir, gst: 'fly' }, 0, 0, 'fly', t); }
   else {
-    const T0 = who === 1 ? ENTITY_TYPES.galPigeon : ENTITY_TYPES.galToad, cfg = T0 && T0.cfg;
+    const T0 = who === 1 ? ENTITY_TYPES.galPigeon : ENTITY_TYPES.galVarnish, cfg = T0 && T0.cfg;
     if (cfg) cfg.art(ctx, { dir, state: 'walk', tst: 'wait' }, x, y, 'idle', t);
   }
   ctx.restore();

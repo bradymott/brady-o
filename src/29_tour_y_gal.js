@@ -387,8 +387,8 @@ const harmlessWhen = (cls, fn) => { const tp = cls.prototype.touchPlayer; cls.pr
 const enemies = {
   galGnat: { cls: harmlessWhen(TourFlyer.make({ w: 28, h: 22, range: 3, speed: 0.8, art: gnatArt, burst: MUS_HI, think: gnatThink }), e => e.gst === 'slip'), place: 'fly' },
   galPigeon: { cls: harmlessWhen(TourEnemy.make({ w: 26, h: 34, speed: 1.0, edgeTurn: true, art: pigeonArt, burst: BLUE, think: pigeonThink }), e => e.state === 'hide'), place: 'walk' },
-  galToad: { cls: TourEnemy.make({ w: 32, h: 24, speed: 1.2, edgeTurn: true, art: toadArt, burst: '#7a3a5a', think: toadThink }), place: 'walk' },
-  galRope: { cls: TourEnemy.make({ w: 34, h: 20, speed: 0.9, edgeTurn: true, behavior: 'charge', range: 5, windup: 0.75, chargeT: 0.7, chargeSpeed: 6, art: ropeArt, burst: '#8a2a4a',
+  galVarnish: { cls: TourEnemy.make({ w: 32, h: 24, speed: 1.2, edgeTurn: true, art: toadArt, burst: '#7a3a5a', think: toadThink }), place: 'walk' },
+  galVelvet: { cls: TourEnemy.make({ w: 34, h: 20, speed: 0.9, edgeTurn: true, behavior: 'charge', range: 5, windup: 0.75, chargeT: 0.7, chargeSpeed: 6, art: ropeArt, burst: '#8a2a4a',
     onNotice: e => { if (e.g.onScreen(e)) Tour.galKit.pill(e.g, e.cx, e.y - 18, 'A V.I.P.!', '#ffc8d8'); } }), place: 'walk' }
 };
 // the flyer's own drift is replaced by the gnat's think: give it home and range on spawn

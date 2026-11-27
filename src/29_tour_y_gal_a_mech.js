@@ -13,7 +13,7 @@
                    its window; at the one right spot they meet, the joined edge glows, and after a full breath still the
                    object is real. The last frame: the painted handrail lines up one spot early (it glows), the stair
                    below it does not: one more nudge.
-   30-3 SCRAPE     thick brush ridges of top coat: RUN across one (walking only polishes it) and the shoes scrape it off,
+   30-3 SCRAPE     thick brush ridges of top coat: cross one holding RUN (without it Brady only polishes it) and his shoes scrape it off,
                    showing the older painting under it: the old painted balcony there becomes solid, but the scraped
                    ridge is gone. The last stretch: scrape only the ridges that give balcony; one ridge holds you up.
    30-4 PIVOT      a square frame hangs from a picture rail by its corner hooks; its bottom edge is a ledge. Walk to the
@@ -199,7 +199,7 @@ class GalViewer extends Ent {
   update(dt) {
     this.t += dt; carriage.update(this, dt);
     if (this.done) return;
-    const ok = this.off() === 0 && Math.abs(this.cxF - (this.s.good + 1) * TS) < 3;
+    const ok = this.off() === 0;
     this.k = ok ? this.k + dt / BREATH : 0;
     if (ok && !this.wasOk) TourKit.sfx('click', 'select', { vol: 0.3, pitch: 1.4 });
     this.wasOk = ok;
@@ -234,7 +234,7 @@ class GalViewer extends Ent {
     if (this.done) { this.paintObj(ctx, O, 0, 1, true); }
     else {
       // the live preview: the two scraps where they are now, and the joined edge
-      const meet = Math.abs(d) < 3;
+      const meet = off === 0;
       this.paintObj(ctx, O, d, meet ? 1 : 0.85, false);
       const mid = (O[0] + O[2] + 1) * TS / 2;
       if (meet) { ctx.strokeStyle = `rgba(255,240,160,${0.6 + 0.4 * Math.sin(t * 8)})`; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(mid, O[1] * TS - 10); ctx.lineTo(mid, (O[3] + 1) * TS + 4); ctx.stroke(); if (this.k > 0) breathRing(ctx, mid, O[1] * TS - 30, this.k); }
@@ -276,15 +276,16 @@ class GalRidge extends Ent {
     if (p && !p.dead && p.onGround && p.groundTy === C[2]) {
       const tx = Math.floor(p.cx / TS);
       if (tx >= C[0] && tx <= C[1]) {
-        if (Math.abs(p.vx) > PHYS.walk * 1.05) { if (!this.cols[tx]) { this.cols[tx] = true; TourKit.sfx('scrape', 'kick', { vol: 0.25, pitch: 1.4 + Math.random() * 0.4 }); g.burst(p.cx, C[2] * TS, 5, MUS_HI, 'spark'); } }
-        else if (Math.abs(p.vx) > 20 && !(this.polT > 0) && !this.cols[tx]) { this.polT = 2.5; say(g, p.cx, p.y - 20, 'POLISHED... RUN TO SCRAPE', '#c8d8ff'); }
+        if (p.inp && p.inp.action && Math.abs(p.vx) > PHYS.walk * 0.8) { if (!this.cols[tx]) { this.cols[tx] = true; TourKit.sfx('scrape', 'kick', { vol: 0.25, pitch: 1.4 + Math.random() * 0.4 }); g.burst(p.cx, C[2] * TS, 5, MUS_HI, 'spark'); } }
+        else if (Math.abs(p.vx) > 20 && !(this.polT > 0) && !this.cols[tx]) { this.polT = 2.5; say(g, p.cx, p.y - 20, 'POLISHED... HOLD RUN TO SCRAPE', '#c8d8ff'); }
       }
     }
     if (this.polT > 0) this.polT -= dt;
-    let all = true; for (let x = C[0]; x <= C[1]; x++) if (!this.cols[x]) all = false;
+    let miss = 0; for (let x = C[0]; x <= C[1]; x++) if (!this.cols[x]) miss++;
+    const all = this.s.solid ? miss === 0 : miss <= 1;
     if (all) {
       this.done = true;
-      setRect(g, [C[0], C[2], C[1], C[2]], T.EMPTY);
+      if (this.s.solid) setRect(g, [C[0], C[2], C[1], C[2]], T.EMPTY);
       for (const r of this.s.reveal) { setRect(g, r, T.HARD); hideRect(g, r, 1); }
       g.refreshPlatforms && g.refreshPlatforms();
       Sound.play('break', { vol: 0.45, pitch: 1.3 }); say(g, (C[0] + C[1] + 1) * TS / 2, C[2] * TS - 30, 'THE OLD PAINTING!', '#ffe08a');
@@ -307,10 +308,11 @@ class GalRidge extends Ent {
     // the ridge: thick glossy brush strokes of mustard top coat, one per tile; scraped ones show bare ochre
     if (!this.done) for (let x = C[0]; x <= C[1]; x++) {
       const x0 = x * TS, sc = this.cols[x];
-      if (sc) { ctx.fillStyle = '#b89a6a'; ctx.fillRect(x0, y, TS, TS); ctx.strokeStyle = '#7a5a3a'; ctx.lineWidth = 1; ctx.beginPath(); for (let q = 4; q < TS; q += 7) { ctx.moveTo(x0 + q, y + 4); ctx.lineTo(x0 + q - 3, y + TS - 4); } ctx.stroke(); continue; }
-      ctx.fillStyle = MUS_LO; ctx.fillRect(x0, y + 6, TS, TS - 6);
-      ctx.fillStyle = MUS; ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x0, y + 10); for (let q = 0; q <= 4; q++) ctx.quadraticCurveTo(x0 + q * 8 - 4, y - 2 + (q % 2) * 4, x0 + q * 8, y + 4 + (q % 2) * 3); ctx.lineTo(x0 + TS, y + TS); ctx.lineTo(x0, y + TS); ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.strokeStyle = 'rgba(255,250,210,0.85)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x0 + 6, y + 5 + Math.sin(t * 2 + x) * 0.6); ctx.quadraticCurveTo(x0 + 14, y + 2, x0 + 22, y + 6); ctx.stroke();
+      if (sc) { ctx.fillStyle = '#b89a6a'; ctx.fillRect(x0, y, TS, this.s.solid ? TS : 8); ctx.strokeStyle = '#7a5a3a'; ctx.lineWidth = 1; ctx.beginPath(); for (let q = 4; q < TS; q += 7) { ctx.moveTo(x0 + q, y + 4); ctx.lineTo(x0 + q - 3, y + TS - 4); } ctx.stroke(); continue; }
+      const bot = this.s.solid ? y + TS : y + 7, top = y - 7;
+      ctx.fillStyle = MUS_LO; ctx.fillRect(x0, top + 6, TS, bot - top - 6);
+      ctx.fillStyle = MUS; ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x0, top + 10); for (let q = 0; q <= 4; q++) ctx.quadraticCurveTo(x0 + q * 8 - 4, top - 2 + (q % 2) * 4, x0 + q * 8, top + 4 + (q % 2) * 3); ctx.lineTo(x0 + TS, bot); ctx.lineTo(x0, bot); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,250,210,0.85)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x0 + 6, y - 2 + Math.sin(t * 2 + x) * 0.6); ctx.quadraticCurveTo(x0 + 14, y - 5, x0 + 22, y - 1); ctx.stroke();
     }
     ctx.restore();
   }
@@ -318,8 +320,9 @@ class GalRidge extends Ent {
 ENTITY_TYPES.galRidge = GalRidge;
 Tour.pieces['gal.ridge'] = function (st, o) {
   const B = st.B, C = o.cells; B.spawn('galRidge', st.x, st.gy - 1, o);
-  for (let x = C[0]; x <= C[1]; x++) { B.set(x, C[2], T.HARD); B.setHide(x, C[2], 1); }
-  if (o.g != null) { B.toggle(o.g, [[C[0], C[2], C[1], C[2]]], o.reveal.map(r => r.slice(0, 4)), { kind: 'galRidge' }); B.switchAt(o.g, C[1], C[2] - 1); }
+  // a ridge on the floor is paint on the floor's top (the floor stays); a solid one (over a gap) is the top coat alone
+  if (o.solid) for (let x = C[0]; x <= C[1]; x++) { B.set(x, C[2], T.HARD); B.setHide(x, C[2], 1); }
+  if (o.g != null) { B.toggle(o.g, o.solid ? [[C[0], C[2], C[1], C[2]]] : [], o.reveal.map(r => r.slice(0, 4)), { kind: 'galRidge' }); B.switchAt(o.g, C[1], C[2] - 1); }
   return st.x;
 };
 
@@ -345,9 +348,9 @@ class GalTumble extends Ent {
     const E = this.edge(this.pos), tx = Math.floor(p.cx / TS);
     // the far end (the way it turns from here) with the stick pushing on past the hook
     const out = this.pos === 0 ? this.dir : -this.dir, endX = out > 0 ? E[2] : E[0];
-    const push = tx === endX && (out > 0 ? inp.right : inp.left) && (out > 0 ? p.cx > (endX + 0.5) * TS : p.cx < (endX + 0.5) * TS);
+    const push = tx === endX && (out > 0 ? inp.right : inp.left);
     this.creak = push ? this.creak + dt : 0;
-    if (this.creak > 0.12) {
+    if (this.creak > 0.03) {
       this.creak = 0; this.from = this.pos; this.pos = 1 - this.pos; this.anim = 0.5;
       const N = this.edge(this.pos); setRect(g, N, T.SEMI); hideRect(g, N, 1); g.refreshPlatforms && g.refreshPlatforms();
       TourKit.sfx('creak', 'bump', { vol: 0.5, pitch: 0.6 }); Sound.play('stomp', { pitch: 0.6, vol: 0.35 });
@@ -491,7 +494,7 @@ class GalSitting extends Ent {
   }
   update(dt) {
     this.t += dt; carriage.update(this, dt); if (this.done) return;
-    const ok = carriage.sx(this) === this.s.good && Math.abs(this.cxF - (this.s.good + 1) * TS) < 3;
+    const ok = carriage.sx(this) === this.s.good;
     this.k = ok ? this.k + dt / BREATH : 0; if (ok && !this.wasOk) TourKit.sfx('click', 'select', { vol: 0.3, pitch: 1.4 }); this.wasOk = ok;
     if (this.k >= 1) { this.done = true; openRopes(this.g, this.s.lock); say(this.g, this.card[0], this.card[1] - 30, 'CAPTURED: ' + (this.s.label || 'HIS BAD SIDE'), '#ffe08a'); }
   }
@@ -560,12 +563,17 @@ TourHooks.on('afterEntities', (play, ctx) => {
   for (const e of play.entities) if (e instanceof GalRack && e.nid === W.grip.nid) e.cords(ctx, e.x, e.y, e.w, e.h, 0.9);
 });
 // critters on the rack: a gilt gnat crawling the cords (lazily made from the wash critter once every file has loaded)
+// (the wash files load after this one: the real class is made from the wash critter on the first spawn; the type is
+// registered at once so every list of types knows it)
+let CrawlerReal = null;
 const crawlerType = () => {
-  if (ENTITY_TYPES.galCrawler || !ENTITY_TYPES.washCrawler) return;
-  ENTITY_TYPES.galCrawler = class extends ENTITY_TYPES.washCrawler {
+  if (CrawlerReal || !ENTITY_TYPES.washCrawler) return CrawlerReal;
+  CrawlerReal = class GalCrawler extends ENTITY_TYPES.washCrawler {
     art(c, x, y, mode) { const e = { dir: this.dir, gst: mode === 'notice' ? 'polish' : 'fly' }; c.save(); c.translate(x, y - 15); c.rotate(this.ay ? -Math.PI / 2 * Math.sign(this.dirU || 1) : 0); Tour.galKit.gnatArt(c, e, 0, 0, 'fly', this.t); c.restore(); }
   };
+  return CrawlerReal;
 };
+ENTITY_TYPES.galCrawler = class GalCrawlerShim extends Ent { constructor(g, s) { const C = crawlerType(); if (C) return new C(g, s); super(g, s, 26, 30); this.remove = true; } update() {} touchPlayer() {} draw() {} };
 Object.assign(Tour.pieces, {
   // a cord rack with its top-left cell at the letter: { w, h, holes: [[dx, dy], ...] }
   'gal.rack'(st, o) {
@@ -576,10 +584,9 @@ Object.assign(Tour.pieces, {
   },
   // { face, ax, ay, speed, phase }
   'gal.crawler'(st, o) {
-    crawlerType();
     const B = st.B, x = st.x, y = st.gy - 1;
     const z = B.zones.find(q => q.kind === 'washNet' && x * TS >= q.x && x * TS < q.x + q.w && y * TS >= q.y && y * TS < q.y + q.h);
-    B.spawn(ENTITY_TYPES.galCrawler ? 'galCrawler' : 'washCrawler', x, y, { nid: z ? z.nid : null, face: o.face || 0, kind: 'moth', ax: o.ax || 0, ay: o.ay || 0, speed: o.speed || 1.1, phase: o.phase || 0 });
+    B.spawn('galCrawler', x, y, { nid: z ? z.nid : null, face: o.face || 0, kind: 'moth', ax: o.ax || 0, ay: o.ay || 0, speed: o.speed || 1.1, phase: o.phase || 0 });
     return st.x;
   }
 });

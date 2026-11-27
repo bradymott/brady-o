@@ -27,7 +27,7 @@ const oldRoom = (to, items, look) => ({ floor: 12, rows: ['#####################
 const SIGN = text => ['spawn', 'sign', { text }];
 const ROPE = (id, h) => ['piece', 'gal.rope', { id, h: h || 5 }];
 const COMMON = { k: ['decor', 'galBust'], l: ['decor', 'galPlant'], q: ['decor', 'galBench'], i: ['decor', 'galEasel'], x: ['decor', 'galTell'], p: ['decor', 'galPost'],
-  u: ['enemy', 'galPigeon'], j: ['enemy', 'galToad'], M: ['enemy', 'galGnat'], w: ['enemy', 'galRope'] };
+  u: ['enemy', 'galPigeon'], j: ['enemy', 'galVarnish'], M: ['enemy', 'galGnat'], w: ['enemy', 'galVelvet'] };
 // a partition over a rope: the wall from the ceiling down to the rope's top (rows 0 .. top - 1)
 const partition = (Gr, x, top) => fillG(Gr, x, 0, x, top - 1, 'H');
 
@@ -74,7 +74,7 @@ const L1 = { n: 1, name: 'Hold Still, Darling', mapLabel: 'Hold Still, Darling',
   gimmick: 'Portraits with a piece missing: put Brady\'s outline into the gap (stand, crouch or hop up onto the plinth) and hold still for a full breath. The last portrait is Pupo yawning',
   hint: 'Stand still in the dashed outline until the ring fills. The ▼ ones mean crouch. A pale patch on the wall where a picture used to hang...',
   postcard: 'Brady! Piwi sat for forty portraits and opened his mouth in every one. I asked the painter. He said "it never shuts, madam". ♥ C',
-  enemies: [['galPigeon', 2], ['galToad', 1], ['galGnat', 3], ['galRope', 1]],
+  enemies: [['galPigeon', 2], ['galVarnish', 1], ['galGnat', 3], ['galVelvet', 1]],
   mapCell: [0, 0], mapFrom: -1,
   exits: { main: { to: '30-2' } },
   areas: [
@@ -118,7 +118,7 @@ const L2 = { n: 2, name: 'A Question of Perspective', mapLabel: 'A Question of P
   gimmick: 'Roll a wheeled viewing frame along its rail until two painted scraps meet in its window: hold it still for a full breath and they become one real bridge or stair. In the last frame the handrail lines up early; the stair needs one more nudge',
   hint: 'Stand at the frame and walk to roll it. Watch the dashed halves: where they meet, the edge glows. Wait for the ring. A pale patch where a picture used to hang...',
   postcard: 'Brady! A man in this gallery stood in one spot for an hour so two paintings lined up. Then he walked across them. I clapped. ♥ C',
-  enemies: [['galPigeon', 2], ['galToad', 2], ['galGnat', 4], ['galRope', 1]],
+  enemies: [['galPigeon', 2], ['galVarnish', 2], ['galGnat', 4], ['galVelvet', 1]],
   mapCell: [1, 0], mapFrom: 0,
   exits: { main: { to: '30-3' } },
   areas: [
@@ -133,36 +133,36 @@ const L2 = { n: 2, name: 'A Question of Perspective', mapLabel: 'A Question of P
 // the one on the ledge (it gives the balcony), WALK the one over the varnish (it holds you up and gives nothing).
 const studioRows = (() => {
   const W = 180, H = 24, Gr = grid(W, H, '.');
-  ground(Gr, 0, 29, 19); put(Gr, 3, 18, '@'); put(Gr, 5, 18, 'n'); put(Gr, 8, 15, '?'); put(Gr, 12, 17, '1');
+  ground(Gr, 0, 29, 19); put(Gr, 3, 18, '@'); put(Gr, 5, 18, 'n'); put(Gr, 8, 15, '?'); put(Gr, 12, 18, '1');
   ground(Gr, 30, 62, 12); put(Gr, 27, 10, '*'); put(Gr, 34, 11, 'c'); put(Gr, 40, 11, 'u'); put(Gr, 44, 8, '?'); put(Gr, 48, 8, 'o.o.o'); put(Gr, 55, 11, 'i'); put(Gr, 58, 7, 'M');
-  ground(Gr, 63, 73, 19); put(Gr, 64, 18, 'N'); put(Gr, 66, 17, '2'); put(Gr, 71, 18, 'j');
+  ground(Gr, 63, 73, 19); put(Gr, 64, 18, 'N'); put(Gr, 66, 18, '2'); put(Gr, 71, 18, 'j');
   varnish(Gr, 74, 85, 21); put(Gr, 79, 13, 'M');
   ground(Gr, 86, 110, 19); put(Gr, 88, 18, 'c'); put(Gr, 96, 18, 'w');
   // the hole in the floor by a pale patch: a short drop to a passage under the floor and the cloakroom's door
   fillG(Gr, 92, 19, 93, 19, '.'); fillG(Gr, 92, 20, 99, 22, '.'); put(Gr, 91, 18, 'x'); put(Gr, 95, 21, 'A'); put(Gr, 98, 22, 'D');
   put(Gr, 104, 18, 'a'); put(Gr, 106, 18, 'k');
   // the twist: the ledge's ridge (run it: the balcony), then the ridge over the varnish (walk it: it holds you up)
-  put(Gr, 109, 17, '3'); varnish(Gr, 111, 132, 21); put(Gr, 111, 18, 'O'); put(Gr, 113, 17, '4'); put(Gr, 116, 13, 'E'); put(Gr, 124, 11, 'M');
+  put(Gr, 109, 18, '3'); varnish(Gr, 111, 132, 21); put(Gr, 111, 18, 'O'); put(Gr, 113, 18, '4'); put(Gr, 116, 15, 'E'); put(Gr, 124, 11, 'M');
   ground(Gr, 133, W - 1, 19); put(Gr, 136, 18, 'u'); put(Gr, 142, 15, 'o.o.o'); put(Gr, 148, 18, 'j'); put(Gr, 154, 18, 'l'); put(Gr, 168, 18, 'G'); fillG(Gr, W - 1, 0, W - 1, 18, '#');
   return rowsOf(Gr);
 })();
 const RIDGE = o => ['piece', 'gal.ridge', o];
 stamps.galStudio = { floor: 19, rows: studioRows, gold: { '*': 'must', A: 'hidden', E: 'risky' }, items: ['power', 'power'], doors: [{ to: 'cloak@in', look: 'galHatch' }], legend: Object.assign({}, COMMON, {
-  n: SIGN('THICK TOP COAT. RUN ACROSS IT TO SCRAPE IT OFF'),
+  n: SIGN('THICK TOP COAT. HOLD RUN ACROSS IT TO SCRAPE'),
   N: SIGN('THE FAINT SHAPE SHOWS WHAT IS UNDERNEATH'),
-  O: SIGN('THIS RIDGE HOLDS YOU UP. WALK, DON\'T RUN'),
-  '1': RIDGE({ cells: [12, 19, 18], reveal: [[22, 16, 24, 16], [26, 13, 28, 13]], g: 0 }),
-  '2': RIDGE({ cells: [66, 72, 18], reveal: [[74, 18, 85, 18]], g: 1 }),
-  '3': RIDGE({ cells: [104, 110, 18], reveal: [[121, 17, 132, 17]], g: 2 }),
-  '4': RIDGE({ cells: [111, 120, 17], reveal: [] }),
+  O: SIGN('THIS RIDGE HOLDS YOU UP. LET GO OF RUN'),
+  '1': RIDGE({ cells: [12, 19, 19], reveal: [[22, 16, 24, 16], [26, 13, 28, 13]], g: 0 }),
+  '2': RIDGE({ cells: [66, 72, 19], reveal: [[74, 19, 85, 19]], g: 1 }),
+  '3': RIDGE({ cells: [104, 110, 19], reveal: [[121, 19, 132, 19]], g: 2 }),
+  '4': RIDGE({ cells: [111, 120, 19], reveal: [], solid: true }),
   a: ['anchor', 'cloakOut']
 }) };
 stamps.galCloakOld = oldRoom('studio@cloakOut', ['oneup']);
 const L3 = { n: 3, name: 'Underpainting', mapLabel: 'Underpainting', arch: 'scrape', theme: 'gal_studio',
-  gimmick: 'Thick brush ridges of top coat: RUN across one and Brady\'s shoes scrape it off, showing the older painting beneath: its painted balcony becomes solid, but the ridge is gone. At the last channel one ridge gives the balcony and the other is what you stand on',
-  hint: 'Hold RUN over a ridge to scrape it; walk to keep it. The faint shape beside a ridge is what it will show. A pale patch where a picture used to hang...',
+  gimmick: 'Thick brush ridges of top coat: cross one holding RUN and Brady\'s shoes scrape it off, showing the older painting beneath: its painted balcony becomes solid, but the ridge is gone. At the last channel one ridge gives the balcony and the other is what you stand on',
+  hint: 'Hold RUN over a ridge to scrape it; let go of RUN to keep it. The faint shape beside a ridge is what it will show. A pale patch where a picture used to hang...',
   postcard: 'Brady, under the portrait of Piwi there was an older portrait of Piwi. Under that, a balcony. Under the balcony, more Piwi. ♥ C',
-  enemies: [['galPigeon', 2], ['galToad', 2], ['galGnat', 3], ['galRope', 1]],
+  enemies: [['galPigeon', 2], ['galVarnish', 2], ['galGnat', 3], ['galVelvet', 1]],
   mapCell: [2, 0], mapFrom: 1,
   exits: { main: { to: '30-4' } },
   areas: [
@@ -211,7 +211,7 @@ const L4 = { n: 4, name: 'Hang It Crooked', mapLabel: 'Hang It Crooked', arch: '
   gimmick: 'Square frames hang from a low picture rail over the gaps. Walk along a frame\'s bottom edge and on past its hook: it turns a quarter over and hangs from the next hook, its edge right under your feet. Then the picture-cord rack: climb both faces',
   hint: 'Keep walking past the end of the frame: it turns under you. Walk back past it to turn it back. On the cords, push UP to grip and JUMP at a brass ring to cross. A pale patch where a picture used to hang...',
   postcard: 'Brady! Every picture in this room is crooked. I straightened one and the whole wall sighed at me. ♥ C',
-  enemies: [['galPigeon', 2], ['galToad', 1], ['galGnat', 1], ['galRope', 1]],
+  enemies: [['galPigeon', 2], ['galVarnish', 1], ['galGnat', 1], ['galVelvet', 1]],
   mapCell: [3, 0], mapFrom: 2,
   exits: { main: { to: '30-5' } },
   areas: [
@@ -256,7 +256,7 @@ const L5 = { n: 5, name: 'Going Once', mapLabel: 'Going Once', arch: 'auction', 
   gimmick: 'A portrait auction: take a paddle with a small handful of buttons and THROW at a podium to bid. A sold frame flies to the dashed gap it fits and becomes a step. Late on, a handsome decoy costs three and a wide frame costs four: it fills two steps hung sideways',
   hint: 'Count the buttons on the paddle, then the prices on the podiums. THROW at a sold podium to send it back for a refund. A pale patch where a picture used to hang...',
   postcard: 'Brady, I bid on a portrait of Piwi with his mouth open. Nobody bid against me. Nobody. Not even Piwi. ♥ C',
-  enemies: [['galPigeon', 2], ['galToad', 2], ['galGnat', 3], ['galRope', 1]],
+  enemies: [['galPigeon', 2], ['galVarnish', 2], ['galGnat', 3], ['galVelvet', 1]],
   mapCell: [4, 0], mapFrom: 3,
   exits: { main: { to: '30-6' } },
   areas: [
