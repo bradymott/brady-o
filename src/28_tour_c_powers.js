@@ -73,35 +73,58 @@ const TourItemArt = {
     gr.addColorStop(0, rgba(col, 0.45)); gr.addColorStop(1, rgba(col, 0));
     ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); ctx.restore();
   },
-  // a chunky toon mushroom (the Fiesta Toon cast: flat cel colours, one shade step, a highlight; Ink.ent adds the dark
-  // outline and the cream keyline): a tall wavy cap in three bold bands on a cream stem (no spots, no face), a soft
-  // contact shadow, and a small waddle as it walks
+  // the magic mushroom, drawn round: a plump dome lit from the upper left (a gradient, not flat bands), swirling
+  // colour bands that wrap round the dome, the gilled underside showing beneath the rim, a barrel stem with a
+  // little skirt, a rim light and a glossy highlight. No spots, no face. Ink outline as the cast.
   mushroom(ctx, x, y, t) {
-    const bob = Math.sin(t * 9) * 0.8, sq = 1 + Math.sin(t * 9) * 0.035;
-    ctx.fillStyle = 'rgba(30,14,40,0.22)'; ctx.beginPath(); ctx.ellipse(x, y - 0.5, 10, 2.6, 0, 0, TAU); ctx.fill();
+    const bob = Math.sin(t * 9) * 0.8, sq = 1 + Math.sin(t * 9) * 0.035, INKC = '#2a1630';
+    ctx.fillStyle = 'rgba(30,14,40,0.26)'; ctx.beginPath(); ctx.ellipse(x, y - 0.5, 11, 2.8, 0, 0, TAU); ctx.fill();
     ctx.save(); ctx.translate(x, y); ctx.scale(1 / sq, sq); ctx.translate(-x, -y);
-    // stem: cream, a flat shade down its right side
-    const stem = () => { ctx.beginPath(); ctx.moveTo(x - 5, y); ctx.quadraticCurveTo(x - 6.5, y - 7, x - 4, y - 13); ctx.lineTo(x + 4, y - 13); ctx.quadraticCurveTo(x + 6.5, y - 7, x + 5, y); ctx.closePath(); };
-    stem(); ctx.fillStyle = '#fff4de'; ctx.fill();
-    ctx.save(); stem(); ctx.clip(); ctx.fillStyle = '#e6c9a0'; ctx.fillRect(x + 1.5, y - 14, 6, 14); ctx.restore();
-    ctx.strokeStyle = '#2a1630'; ctx.lineWidth = 1.4; stem(); ctx.stroke();
-    // cap: a wavy dome, three flat bands, a shade under the rim, a highlight
-    const cy = y - 12 + bob, w = 12.5, top = cy - 17;
+    // stem: a barrel, light on the left, shaded on the right, a darker foot
+    const stem = () => { ctx.beginPath(); ctx.moveTo(x - 5.2, y); ctx.bezierCurveTo(x - 7.5, y - 5, x - 5.5, y - 10, x - 4, y - 14); ctx.lineTo(x + 4, y - 14); ctx.bezierCurveTo(x + 5.5, y - 10, x + 7.5, y - 5, x + 5.2, y); ctx.quadraticCurveTo(x, y + 1.8, x - 5.2, y); ctx.closePath(); };
+    let gr = ctx.createLinearGradient(x - 7, 0, x + 7, 0);
+    gr.addColorStop(0, '#fff8ea'); gr.addColorStop(0.35, '#fff1d6'); gr.addColorStop(0.75, '#e2c096'); gr.addColorStop(1, '#b98e68');
+    stem(); ctx.fillStyle = gr; ctx.fill();
+    ctx.save(); stem(); ctx.clip();
+    ctx.fillStyle = 'rgba(120,70,60,0.22)'; ctx.fillRect(x - 8, y - 2.4, 16, 4);                                   // the foot in shade
+    ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.beginPath(); ctx.ellipse(x - 3.2, y - 6.5, 1.1, 3.6, 0.12, 0, TAU); ctx.fill();
+    ctx.restore();
+    ctx.strokeStyle = INKC; ctx.lineWidth = 1.4; stem(); ctx.stroke();
+    const cy = y - 12.5 + bob, w = 13.5, top = cy - 17;
+    // the underside: a dark ellipse of gills seen from below, and the skirt where the stem meets it
+    ctx.fillStyle = '#7a2a66'; ctx.beginPath(); ctx.ellipse(x, cy + 1.4, w - 1.2, 5, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,190,220,0.55)'; ctx.lineWidth = 0.8;
+    for (let k = -4; k <= 4; k++) { ctx.beginPath(); ctx.moveTo(x + k * 1.1, cy + 1); ctx.lineTo(x + k * 2.8, cy + 5.8 - Math.abs(k) * 0.45); ctx.stroke(); }
+    ctx.strokeStyle = INKC; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.ellipse(x, cy + 1.4, w - 1.2, 5, 0, 0, Math.PI); ctx.stroke();
+    ctx.fillStyle = '#fff1d6'; ctx.beginPath(); ctx.ellipse(x, cy + 3, 5.8, 1.9, 0, 0, TAU); ctx.fill(); ctx.lineWidth = 1.1; ctx.stroke();
+    // the cap: a dome
     const cap = () => {
       ctx.beginPath(); ctx.moveTo(x - w, cy);
-      for (let k = 1; k <= 6; k++) ctx.quadraticCurveTo(x - w + (k - 0.5) * (w * 2 / 6), cy + 3.2, x - w + k * (w * 2 / 6), cy);
-      ctx.bezierCurveTo(x + w + 2, cy - 9, x + 6, top, x + 1, top);
-      ctx.bezierCurveTo(x - 4, top, x - w - 2, cy - 9, x - w, cy);
+      ctx.bezierCurveTo(x - w - 1.5, cy - 10, x - 7, top, x, top);
+      ctx.bezierCurveTo(x + 7, top, x + w + 1.5, cy - 10, x + w, cy);
+      ctx.bezierCurveTo(x + w * 0.5, cy + 2.6, x - w * 0.5, cy + 2.6, x - w, cy);
       ctx.closePath();
     };
-    cap(); ctx.fillStyle = '#ff4f9a'; ctx.fill();
+    gr = ctx.createRadialGradient(x - 5, cy - 12, 1.5, x - 1, cy - 7, 19);
+    gr.addColorStop(0, '#ff9ccb'); gr.addColorStop(0.4, '#ff4f9a'); gr.addColorStop(0.8, '#d22a86'); gr.addColorStop(1, '#8e1a78');
+    cap(); ctx.fillStyle = gr; ctx.fill();
     ctx.save(); cap(); ctx.clip();
-    ctx.fillStyle = '#ffb23a'; ctx.beginPath(); ctx.ellipse(x - 1, cy - 8, 15, 4.2, -0.35, 0, TAU); ctx.fill();
-    ctx.fillStyle = '#8a5cff'; ctx.beginPath(); ctx.ellipse(x + 2, top + 2, 7, 4.5, -0.35, 0, TAU); ctx.fill();
-    ctx.fillStyle = 'rgba(60,10,70,0.28)'; ctx.fillRect(x - w - 3, cy - 3, w * 2 + 6, 8);
-    ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.ellipse(x - 5, cy - 11, 2, 3.4, -0.5, 0, TAU); ctx.fill();
+    // bands that wrap the dome (each an arc of an ellipse, wider at the middle, so they read as going round it)
+    const band = (yy, rx, ry, lw, a, b) => { const g2 = ctx.createLinearGradient(x - w, 0, x + w, 0); g2.addColorStop(0, a); g2.addColorStop(1, b); ctx.strokeStyle = g2; ctx.lineWidth = lw; ctx.beginPath(); ctx.ellipse(x, yy, rx, ry, 0, 0.08 * Math.PI, 0.92 * Math.PI); ctx.stroke(); };
+    band(cy - 8.4, 14.5, 4.4, 3.6, '#ffd35a', '#e8892a');
+    band(cy - 14.6, 9.6, 3.2, 3.0, '#b79aff', '#6a3fe0');
+    ctx.fillStyle = '#ffd35a'; ctx.beginPath(); ctx.ellipse(x - 0.5, top + 1.6, 3.4, 1.7, 0, 0, TAU); ctx.fill();   // the crown
+    // form shadow down the right and under the rim, rim light along the left edge
+    gr = ctx.createLinearGradient(x - 2, 0, x + w + 2, 0); gr.addColorStop(0, 'rgba(70,10,90,0)'); gr.addColorStop(1, 'rgba(70,10,90,0.42)');
+    ctx.fillStyle = gr; ctx.fillRect(x - 2, top - 2, w + 6, 24);
+    gr = ctx.createLinearGradient(0, cy - 5, 0, cy + 3); gr.addColorStop(0, 'rgba(60,10,70,0)'); gr.addColorStop(1, 'rgba(60,10,70,0.38)');
+    ctx.fillStyle = gr; ctx.fillRect(x - w - 3, cy - 5, w * 2 + 6, 9);
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x - w + 1.6, cy - 2.5); ctx.bezierCurveTo(x - w + 0.6, cy - 9, x - 7.5, top + 2.6, x - 3, top + 1.6); ctx.stroke();
+    // the gloss: a soft patch and a hard little glint
+    ctx.fillStyle = 'rgba(255,255,255,0.42)'; ctx.beginPath(); ctx.ellipse(x - 5.6, cy - 11.4, 3.3, 4.6, -0.6, 0, TAU); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.95)'; ctx.beginPath(); ctx.ellipse(x - 6.4, cy - 12.8, 1.3, 2, -0.6, 0, TAU); ctx.fill();
     ctx.restore();
-    ctx.strokeStyle = '#2a1630'; ctx.lineWidth = 1.6; cap(); ctx.stroke();
+    ctx.strokeStyle = INKC; ctx.lineWidth = 1.6; cap(); ctx.stroke();
     ctx.restore();
   },
   // a hand-rolled cartoon joint: paper cone, twisted end, glowing tip and a lazy curl of smoke
