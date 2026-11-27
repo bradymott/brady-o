@@ -326,7 +326,46 @@ const L5 = { n: 5, name: 'Pocket Address', mapLabel: 'Pocket Address', arch: 'po
     { id: 'drying', gen: 'room', role: 'secret', theme: 'wash_room_drying', stamp: 'washDrying', room: 'washSeats' }
   ] };
 
-Tour.amend('wash', { stamps, levels: [L1, L2, L3, L4, L5] });
+/* ---------------- 26-6 Fitted Sheet for One (the boss) ---------------- */
+// the linen cupboard, floor row 16 under a long shelf (row 11): two loose sheets hang across the way, each with a
+// bedpost beyond it (jump its snapping corner and it hooks the post: the sheet pulls aside); a hole in the shelf by
+// the hanky lets you up onto the top shelf run (towels, snapping jaws, two postcards) to the sock drawer (Sock
+// Divorce); the drawer lets you out by the bedroom door. Then the bed.
+const cupRows = (() => {
+  const W = 76, H = 20, Gr = grid(W, H, '#');
+  fillG(Gr, 1, 12, W - 2, 15, '.'); fillG(Gr, 1, 1, 11, 15, '.'); fillG(Gr, 12, 6, W - 6, 10, '.');
+  put(Gr, 3, 15, '@'); put(Gr, 6, 15, 'k'); put(Gr, 9, 12, '?'); put(Gr, 5, 8, 'o.o.o');
+  put(Gr, 16, 15, '1'); put(Gr, 30, 14, '*'); put(Gr, 34, 15, 'l');
+  // the hole up to the top shelf run, the hanky by it
+  fillG(Gr, 26, 11, 27, 11, '.'); put(Gr, 28, 14, 'u');
+  put(Gr, 31, 10, 'BB'); put(Gr, 38, 9, 'BBB'); put(Gr, 36, 6, 'j'); put(Gr, 44, 8, 'R'); put(Gr, 48, 6, 'J'); put(Gr, 52, 10, 'BB'); put(Gr, 33, 7, 'o.o.o'); put(Gr, 60, 7, 'P'); put(Gr, 64, 10, 'A');
+  put(Gr, 42, 15, '2'); put(Gr, 56, 15, 'c'); put(Gr, 60, 12, '?'); put(Gr, 62, 15, 'a'); put(Gr, 66, 15, 'r'); put(Gr, 72, 15, 'E');
+  return rowsOf(Gr);
+})();
+const CUP = {
+  k: SIGN('LOOSE FITTED SHEETS! STAND BEFORE THE BEDPOST: THE CORNER AIMS AT YOU, THEN SNAPS. JUMP IT AND IT HOOKS THE POST'),
+  '1': ['piece', 'wash.looseSheet', { post: 6, side: 1, id: 'sheet1' }], '2': ['piece', 'wash.looseSheet', { post: 7, side: 1, id: 'sheet2' }],
+  l: ['enemy', 'washLamb'], r: ['enemy', 'washHeron'],
+  j: ['piece', 'wash.jaws', { period: 2.6, reach: 3 }], J: ['piece', 'wash.jaws', { period: 2.6, phase: 1.3, reach: 3 }],
+  u: ['piece', 'wash.peep', {}], A: ['spawn', 'portal', { kind: 'door', look: 'washCupboard', targetRef: 'drawer@in' }], a: ['anchor', 'drawerOut'],
+  E: ['spawn', 'portal', { kind: 'door', look: 'washCupboard', targetRef: 'bed@in' }]
+};
+stamps.washCupboard = { floor: 16, rows: cupRows, legend: CUP, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power'] };
+stamps.washDrawer = roomStamp('cupboard@drawerOut', 'washChute', ['star']);
+const L6 = { n: 6, name: 'Fitted Sheet for One', mapLabel: 'Fitted Sheet', arch: 'lair', theme: 'wash_bed', boss: 'wash_majesty',
+  gimmick: 'Her Fitted Majesty, a navy-checked fitted sheet with a wink, will not be made. Tuck her corners over the bedposts one by one: the arrow, the double sweep, the shake',
+  hint: 'You can\'t stomp a sheet. Jump her snapping corner in front of a free post; duck the wide ring, jump the low one; in the last act, stand in her pocket and be in the air when she shakes the bed',
+  postcard: 'Brady! You made the bed. With her in it. She says thank you, and that there is a wrinkle. There is not. ♥ C',
+  enemies: [['washLamb', 1], ['washHeron', 1]],
+  mapCell: [5, 0], mapFrom: 4,
+  exits: { main: { to: null } },
+  areas: [
+    { id: 'cupboard', gen: 'room', theme: 'wash_bed', stamp: 'washCupboard' },
+    { id: 'drawer', gen: 'room', role: 'secret', theme: 'wash_room_socks', stamp: 'washDrawer', room: 'washDivorce' },
+    { id: 'bed', gen: 'arena', role: 'arena', layout: 'bed', arenaW: 28, H: 20, roof: false, theme: 'wash_bed' }
+  ] };
+
+Tour.amend('wash', { stamps, levels: [L1, L2, L3, L4, L5, L6] });
 
 /* ---------------- the land's map: the rooftops and their washing lines ---------------- */
 if (typeof TOUR_OW_MAPS !== 'undefined') TOUR_OW_MAPS.wash = {
