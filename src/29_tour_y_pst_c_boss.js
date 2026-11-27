@@ -17,6 +17,7 @@
    The parrot, appalled by its own manners, passes the biscuits.
    ============================================================ */
 (function () {
+const PSAY = (...a) => Tour.pstKit.say(...a);
 const K = Tour.pstKit; if (!K) return;
 const { PstArt, INK, HONEY, HONEY_HI, HONEY_LO, PLUM, PLUM_HI, PLUM_LO, MINT, MINT_HI, MINT_LO, CREAM, CREAM_LO } = K;
 const KK = TourKit;
@@ -36,7 +37,7 @@ class PstStop extends Ent {
       if (!SOLID[tileAt(A, ahead, row)]) { this.rot += (nx - this.x) / 14; this.x = nx; } else this.vx = 0;
       this.vx = approach(this.vx, 0, 7 * TS * dt);
       // a slot catches it when it rolls in slowly enough
-      for (let k = 0; k < this.slots.length; k++) { const sx = this.slots[k] * TS + TS / 2; if (Math.abs(this.cx - sx) < 10 && !(this.leftT > 0)) { this.slotIn = k; this.lockT = 0.6; this.x = sx - this.w / 2; this.vx = 0; Sound.play('land', { vol: 0.5, pitch: 0.7 }); this.g.parts.text(this.cx, this.y - 10, 'FULL STOP.', '#ffffff'); break; } }
+      for (let k = 0; k < this.slots.length; k++) { const sx = this.slots[k] * TS + TS / 2; if (Math.abs(this.cx - sx) < 10 && !(this.leftT > 0)) { this.slotIn = k; this.lockT = 0.6; this.x = sx - this.w / 2; this.vx = 0; Sound.play('land', { vol: 0.5, pitch: 0.7 }); PSAY(this.g, this.cx, this.y - 10, 'FULL STOP.', '#ffffff'); break; } }
     }
   }
   touchPlayer(p) {
@@ -67,7 +68,7 @@ class PstStrip extends Ent {
     ctx.save(); ctx.fillStyle = '#fff8ec'; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.fillRect(this.x, y - 2, this.w, 8); ctx.strokeRect(this.x, y - 2, this.w, 8);
     ctx.font = '13px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.lineJoin = 'round';
     for (const [tx, wd, col] of this.words) { ctx.strokeStyle = INK; ctx.lineWidth = 3.5; ctx.strokeText(wd, tx * TS + TS / 2, y - 6); ctx.fillStyle = col === CREAM_LO ? '#b8a8c8' : col === MINT_LO ? MINT : HONEY_HI; ctx.fillText(wd, tx * TS + TS / 2, y - 6); }
-    for (const sx of this.slots) { const x = sx * TS + TS / 2; ctx.fillStyle = 'rgba(26,20,48,0.35)'; ctx.beginPath(); ctx.ellipse(x, y + 2, 13, 4, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]); }
+    for (const sx of this.slots) { const x = sx * TS + TS / 2, k = 0.5 + 0.5 * Math.sin(this.t * 4); ctx.fillStyle = `rgba(255,214,115,${0.25 + 0.3 * k})`; ctx.beginPath(); ctx.ellipse(x, y + 1, 18 + k * 5, 6 + k * 2, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#1a1430'; ctx.beginPath(); ctx.ellipse(x, y + 2, 13, 4, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = '#ffd673'; ctx.lineWidth = 2; ctx.setLineDash([4, 3]); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = '#ffd673'; ctx.beginPath(); ctx.moveTo(x, y - 30 - k * 6); ctx.lineTo(x - 7, y - 40 - k * 6); ctx.lineTo(x + 7, y - 40 - k * 6); ctx.closePath(); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.stroke(); }
     ctx.restore();
   }
 }
@@ -147,17 +148,17 @@ const SAY = ['I-', 'BUT-', 'ACTUALLY-', 'IF I MAY-', 'SORRY, BUT-', 'WELL-'];
 const brain = {
   phases: [4, 2],
   guardText: 'EXCUSE ME!',
-  wake(b) { b.phase = 1; KK.say(b.g, b, 'AND THEN HE SAID, AND THEN HE SAID-', '#c4f2d2'); b.homeX = b.x; this.restart(b); },
+  wake(b) { b.phase = 1; PSAY(b.g, b.cx, b.y - 34, 'AND THEN HE SAID, AND THEN HE SAID-', '#c4f2d2'); b.homeX = b.x; this.restart(b); },
   parts(b) { const g = b.g; return { stop: g.entities.find(e => e instanceof PstStop && !e.remove), pupo: g.entities.find(e => e instanceof PstSpeaker && !e.remove) }; },
   restart(b) { const { stop, pupo } = this.parts(b); if (stop) stop.reset(); b.word = 0; b.wordT = 0.4; b.please = false; b.quietT = 0; if (pupo) pupo.say('', 0); },
   phase(b, n) {
     const g = b.g;
-    if (n === 2) { g.bannerText = 'A WHOLE CLAUSE!'; g.bannerT = 2; KK.say(g, b, 'LET ME JUST SWEEP THAT ASIDE-', '#c4f2d2'); }
-    if (n === 3) { g.bannerText = 'THE LAST WORD'; g.bannerT = 2; KK.say(g, b, 'I SHALL HAVE THE LAST WORD!', '#c4f2d2'); }
+    if (n === 2) { g.bannerText = 'A WHOLE CLAUSE!'; g.bannerT = 2; PSAY(g, b.cx, b.y - 34, 'LET ME JUST SWEEP THAT ASIDE-', '#c4f2d2'); }
+    if (n === 3) { g.bannerText = 'THE LAST WORD'; g.bannerT = 2; PSAY(g, b.cx, b.y - 34, 'I SHALL HAVE THE LAST WORD!', '#c4f2d2'); }
     this.restart(b); b.go('recover');
   },
-  hurt(b) { KK.say(b.g, b, pick(['...!', 'I WAS INTERRUPTED!', 'HOW RUDE OF ME!', 'MMPH!']), '#c4f2d2'); this.restart(b); b.go('recover'); },
-  lastHit(b) { KK.say(b.g, b, 'OH. OH DEAR. HOW RUDE OF ME. BISCUIT?', '#fff4dc'); b.biscuit = 1; return false; },
+  hurt(b) { PSAY(b.g, b.cx, b.y - 34, pick(['...!', 'I WAS INTERRUPTED!', 'HOW RUDE OF ME!', 'MMPH!']), '#c4f2d2'); this.restart(b); b.go('recover'); },
+  lastHit(b) { PSAY(b.g, b.cx, b.y - 34, 'OH. OH DEAR. HOW RUDE OF ME. BISCUIT?', '#fff4dc'); b.biscuit = 1; return false; },
   // a stop in this phase's slot?
   inSlot(b) { const { stop } = this.parts(b); return stop && stop.slotIn === (b.phase || 1) - 1; },
   // Pupo's slow sentence: a word every 1.8 s; in phase 3 "please" comes only after a long quiet beside the blank
@@ -181,22 +182,22 @@ const brain = {
     if (b.act === 'perch' || b.act === 'recover') {
       // perched on its inkstand, bobbing, chattering over Pupo
       b.pose = 'perch'; b.face(); b.y = approach(b.y, b.floorY - b.h - 40, 120 * dt); b.x = approach(b.x, b.homeX, 120 * dt);
-      if (Math.random() < 0.006) KK.say(g, b, pick(SAY), '#c4f2d2');
+      if (Math.random() < 0.006) PSAY(g, b.cx, b.y - 34, pick(SAY), '#c4f2d2');
       if (b.at > (b.act === 'recover' ? 1.4 : ph >= 3 ? 1.6 : 2.0)) b.go(ph === 1 ? 'suck' : ph === 2 ? 'wing' : 'beak');
     } else if (b.act === 'suck') {
       // phase 1's tell: the cheeks puff up (0.8 s)
       b.pose = 'suck'; if (b.first) TourKit.sfx('inhale', 'float', { vol: 0.4, pitch: 0.6 });
       if (b.at > 0.8) {
-        if (this.inSlot(b)) { for (let k = 0; k < 5; k++) g.burst(b.cx - 30 - k * 12, b.floorY - 4, 3, '#1a1430', 'dust'); KK.say(g, b, 'PTOO- ...OH.', '#c4f2d2'); b.damage(1, { text: 'FULL STOP!' }); return; }
+        if (this.inSlot(b)) { for (let k = 0; k < 5; k++) g.burst(b.cx - 30 - k * 12, b.floorY - 4, 3, '#1a1430', 'dust'); PSAY(g, b.cx, b.y - 34, 'PTOO- ...OH.', '#c4f2d2'); b.damage(1, { text: 'FULL STOP!' }); return; }
         const dx = p ? p.cx - b.cx : -200;
         for (let k = 0; k < 5; k++) tourFire(g, b.cx - 20, b.y + 40, { vx: dx * 0.9 + (k - 2) * 60, vy: -260 - k * 20, grav: 700, w: 14, h: 14, life: 3, art: commaArt });
         TourKit.sfx('ptoo', 'bump', { vol: 0.5, pitch: 1.4 }); b.go('perch');
       }
     } else if (b.act === 'wing') {
       // phase 2's tell: a wing goes up (0.8 s), then a whole clause sweeps along the floor
-      b.pose = 'wing'; if (b.first) KK.say(g, b, 'TO SWEEP THAT ASIDE-', '#c4f2d2');
+      b.pose = 'wing'; if (b.first) PSAY(g, b.cx, b.y - 34, 'TO SWEEP THAT ASIDE-', '#c4f2d2');
       if (b.at > 0.8) {
-        if (this.inSlot(b)) { KK.say(g, b, 'TO SWEEP- ...OH.', '#c4f2d2'); g.shake(4); b.damage(1, { text: 'FULL STOP!' }); return; }
+        if (this.inSlot(b)) { PSAY(g, b.cx, b.y - 34, 'TO SWEEP- ...OH.', '#c4f2d2'); g.shake(4); b.damage(1, { text: 'FULL STOP!' }); return; }
         tourFire(g, b.arenaX1 - 20, b.floorY - 13, { vx: -4.2 * TS, vy: 0, w: 50, h: 26, life: 7, thru: true, art: clauseArt, text: 'AND ANOTHER THING' });
         TourKit.sfx('swoosh', 'float', { vol: 0.5, pitch: 0.7 }); b.go('perch');
       }
@@ -204,8 +205,8 @@ const brain = {
       // phase 3's tell: the beak opens round an empty speech bubble (1 s) before the shout
       b.pose = 'beak';
       if (b.at > 1.0) {
-        if (this.inSlot(b) && b.please) { KK.say(g, b, '...', '#c4f2d2'); b.damage(1, { text: 'THANK YOU!' }); return; }
-        if (this.inSlot(b)) { const { stop } = this.parts(b); if (stop) { stop.slotIn = -1; stop.vx = -7 * TS; stop.leftT = 0.8; } KK.say(g, b, 'NOT UNTIL HE SAYS IT!', '#c4f2d2'); }
+        if (this.inSlot(b) && b.please) { PSAY(g, b.cx, b.y - 34, '...', '#c4f2d2'); b.damage(1, { text: 'THANK YOU!' }); return; }
+        if (this.inSlot(b)) { const { stop } = this.parts(b); if (stop) { stop.slotIn = -1; stop.vx = -7 * TS; stop.leftT = 0.8; } PSAY(g, b.cx, b.y - 34, 'NOT UNTIL HE SAYS IT!', '#c4f2d2'); }
         tourFire(g, b.cx - 30, b.floorY - 40, { vx: -4.6 * TS, vy: 0, w: 26, h: 44, life: 6, thru: true, art: shoutArt });
         TourKit.sfx('squawk', 'bump', { vol: 0.6, pitch: 0.5 }); g.shake(3); b.go('perch');
       }

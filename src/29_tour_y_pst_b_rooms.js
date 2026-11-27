@@ -19,11 +19,12 @@
    JUMP lets go. While mounted Brady stands still.
    ============================================================ */
 (function () {
+const PSAY = (...a) => Tour.pstKit.say(...a);
 const K = Tour.pstKit; if (!K || typeof TourRooms === 'undefined') return;
 const { PstArt, INK, HONEY, HONEY_HI, HONEY_LO, PLUM, PLUM_HI, PLUM_LO, MINT, MINT_HI, MINT_LO, CREAM, CREAM_LO } = K;
 const RK = TourRoomKit;
 const ROW = TS;
-const say = (play, txt, col) => { const p = play.player; if (p) play.parts.text(p.cx, p.y - 24, txt, col || '#fff4dc'); };
+const say = (play, txt, col) => { const p = play.player; if (p) PSAY(play, p.cx, p.y - 24, txt, col || '#fff4dc'); };
 const miss = (play, txt) => { Sound.play('bump', { vol: 0.5, pitch: 0.7 }); play.bannerText = txt; play.bannerT = 1.2; };
 
 /* ---------- the mount: stand on the mark, THROW takes the prop, JUMP lets go ---------- */
@@ -59,7 +60,7 @@ const drawMark = (play, ctx, A, R, kit, label) => {
 const makeRoom = (keep, A, o, extra) => {
   const W = 30 + RK.eastW(keep, o), g = RK.room(W), Y = RK.Y;
   const x0 = g.west(keep), x1 = RK.east(g, keep, A, o);
-  const mid = Math.max(x0 + 6, Math.min(x1 - 4, 15));
+  const mid = Math.max(x0 + 6, Math.min(x1 - 4, o.mid || 15));
   g.winSpot(A.id, mid, Y);
   g.data.mark = mid; g.data.markRow = Y; g.data.x0 = x0; g.data.x1 = x1;
   if (extra) extra(g, mid, Y);
@@ -94,7 +95,7 @@ TourRooms.def('pstKnock', {
         const wx = (kit.data.mark + FORT_DX[k]) * TS + TS / 2;
         if (c.vy > 0 && Math.abs(c.x - wx) < 16 && Math.abs(c.y - wy) < 16) {
           const L = this.lamb(kit, R.lambT);
-          if (L.at === k && k === R.next) { R.next++; Sound.play('coin', { vol: 0.6, pitch: 1 + R.next * 0.2 }); play.parts.text(wx, wy - 20, 'KNOCK ' + R.next + '!', '#fff4dc'); if (R.next >= 3) TourRooms.win(play, A, R, { text: 'COME IN, COME IN!', coins: 4 }); }
+          if (L.at === k && k === R.next) { R.next++; Sound.play('coin', { vol: 0.6, pitch: 1 + R.next * 0.2 }); PSAY(play, wx, wy - 20, 'KNOCK ' + R.next + '!', '#fff4dc'); if (R.next >= 3) TourRooms.win(play, A, R, { text: 'COME IN, COME IN!', coins: 4 }); }
           else { miss(play, L.at === k ? 'WRONG ORDER! FROM THE START' : 'NOBODY HOME! FROM THE START'); R.next = 0; }
           R.cork = null; return;
         }
@@ -154,6 +155,7 @@ TourRooms.kinds.pstKnock.testWin = function (g, A, R, kit, frame) {
 
 /* ================= pstCore: THE PILLOW SAMPLE ================= */
 TourRooms.def('pstCore', {
+  defaults: { mid: 13 },
   title: 'THE PILLOW SAMPLE', rule: 'TAKE THE PUNCH ON THE MARK (THROW). STEER IT WITH THE STICK, THROW TO PUNCH: ONE CORE THROUGH ALL THREE SLEEP BUBBLES', need: 'TAKE A PERFECT CORE FIRST!',
   make(o, keep, ctx, A, rng) { return makeRoom(keep, A, o, (g, mid) => { g.coins(mid - 3, mid + 3, 4); }); },
   enter(play, A, R, kit) { R.px = kit.data.mark * TS + TS / 2; R.drop = null; R.st = 0; this.layout(R); },
@@ -220,6 +222,7 @@ TourRooms.kinds.pstCore.testWin = function (g, A, R, kit, frame) {
 
 /* ================= pstTray: ONE TRIP, THREE COCOAS ================= */
 TourRooms.def('pstTray', {
+  defaults: { mid: 17 },
   title: 'ONE TRIP, THREE COCOAS', rule: 'TAKE THE TRAY ON THE MARK (THROW). TILT IT AGAINST THE WOBBLE WITH THE STICK. WHEN THE WAITER\'S HANDS REACH THE COUNTER: THROW TO SERVE', need: 'SERVE ALL THREE FIRST!',
   make(o, keep, ctx, A, rng) { return makeRoom(keep, A, o, (g, mid) => { g.coins(mid - 6, mid - 4, 8); g.coins(mid + 4, mid + 6, 8); }); },
   enter(play, A, R, kit) { this.reset(R); R.st = 0; },
@@ -271,6 +274,7 @@ TourRooms.kinds.pstTray.testWin = function (g, A, R, kit, frame) {
 
 /* ================= pstCaps: NIGHTCAP STAND ================= */
 TourRooms.def('pstCaps', {
+  defaults: { mid: 16 },
   title: 'NIGHTCAP STAND', rule: 'TAKE THE BEDPOST ON THE MARK (THROW). STEER IT UNDER EACH FALLING NIGHTCAP: THEY LAND CROOKED. STACK FOUR AND HOLD THEM FOR ONE FULL WOBBLE', need: 'STACK FOUR NIGHTCAPS FIRST!',
   make(o, keep, ctx, A, rng) { return makeRoom(keep, A, o, (g, mid) => { g.coins(mid - 7, mid - 5, 4); g.coins(mid + 5, mid + 7, 4); }); },
   enter(play, A, R, kit) { R.post = kit.data.mark * TS + TS / 2; this.reset(R); R.st = 0; },
@@ -334,6 +338,7 @@ TourRooms.kinds.pstCaps.testWin = function (g, A, R, kit, frame) {
 
 /* ================= pstPour: THE EVEN POUR ================= */
 TourRooms.def('pstPour', {
+  defaults: { mid: 14 },
   title: 'THE EVEN POUR', rule: 'TAKE THE JUG ON THE MARK (THROW). TILT IT WITH THE STICK TOWARD WHICHEVER MUG IS LOWER. EMPTY IT WITH BOTH MUGS IN THE MARKED BAND', need: 'POUR IT EVENLY FIRST!',
   make(o, keep, ctx, A, rng) { return makeRoom(keep, A, o, (g, mid) => { g.coins(mid - 2, mid + 2, 2); }); },
   enter(play, A, R, kit) { this.reset(R); R.st = 0; },
@@ -391,6 +396,7 @@ TourRooms.kinds.pstPour.testWin = function (g, A, R, kit, frame) {
 
 /* ================= pstPrivacy: A LITTLE PRIVACY ================= */
 TourRooms.def('pstPrivacy', {
+  defaults: { mid: 10 },
   title: 'A LITTLE PRIVACY', rule: 'HOLD THROW ON THE QUILT\'S EDGE AND WALK IT UP OVER PUPO UNTIL ONLY HIS NOSE SHOWS. THEN STAY QUITE STILL FOR THREE SNORES', need: 'TUCK HIM IN FIRST!',
   make(o, keep, ctx, A, rng) { return makeRoom(keep, A, o, (g, mid) => { g.coins(mid - 1, mid + 1, 3); }); },
   enter(play, A, R, kit) { R.cov = 0.25; R.pstGrip = null; R.snores = 0; R.stillT = 0; R.st = 0; R.wake = 0; },
@@ -412,7 +418,7 @@ TourRooms.def('pstPrivacy', {
     // tucked in (only the nose shows) and Brady quite still: the snores come, each one embroiders a cloud
     const tucked = R.cov >= 0.8 && R.pstGrip == null;
     const moving = Input.left || Input.right || Input.jump || Input.action || Input.down || Input.up || (p && (Math.abs(p.vx) > 10 || !p.onGround));
-    if (tucked && !moving) { R.stillT += dt; if (R.stillT >= 1.7) { R.stillT = 0; R.snores++; Sound.play('float', { vol: 0.5, pitch: 0.6 + R.snores * 0.1 }); play.parts.text(x0 + span, 6 * TS, 'SNOOORE', '#fff4dc'); if (R.snores >= 3) TourRooms.win(play, A, R, { text: 'SWEET DREAMS, PUPO', coins: 4 }); } }
+    if (tucked && !moving) { R.stillT += dt; if (R.stillT >= 1.7) { R.stillT = 0; R.snores++; Sound.play('float', { vol: 0.5, pitch: 0.6 + R.snores * 0.1 }); PSAY(play, x0 + span, 6 * TS, 'SNOOORE', '#fff4dc'); if (R.snores >= 3) TourRooms.win(play, A, R, { text: 'SWEET DREAMS, PUPO', coins: 4 }); } }
     else if (moving && R.snores && tucked) { R.snores = 0; R.stillT = 0; miss(play, 'SHH! YOU MOVED. START THE SNORES AGAIN'); }
     else if (!tucked) { R.stillT = 0; }
   },

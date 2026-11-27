@@ -20,11 +20,11 @@ const SIGN = text => ['spawn', 'sign', { text }];
 const CUSH = (n, lifts) => ['piece', 'pst.cushion', { n, lifts: lifts || [] }];
 // a secret room's old stamp: the door back (or onward), the prize box; the room kit (29_tour_y_pst_b_rooms.js)
 // builds the game around them
-const roomStamp = (to, items) => ({ floor: 12, rows: [
+const roomStamp = (to, items, look) => ({ floor: 12, rows: [
   '##############################', '#............................#', '#............................#', '#............................#',
   '#............................#', '#............................#', '#............................#', '#............................#',
   '#............................#', '#............................#', '#............................#', '#.@.D........?...............#',
-  '##############################', '##############################'], items: items || ['oneup'], doors: [{ to, look: 'pstNook' }] });
+  '##############################', '##############################'], items: items || ['oneup'], doors: [{ to, look: look || 'pstNook' }] });
 // the area options the land's mechanics read (copied onto the built area: pst: { blink: [groups], borrow })
 {
   const gen0 = TourBuild.generateV2;
@@ -206,7 +206,7 @@ stamps.pstYawn = { floor: 19, rows: yawnRows, gold: { '*': 'must', A: 'high', R:
   Z: ['piece', 'pst.z', {}],
   K: ['spawn', 'portal', { kind: 'door', look: 'pstNook', targetRef: 'kitchen@in' }], a: ['anchor', 'kitchenOut']
 } };
-stamps.pstKitchenOld = roomStamp('yawn@kitchenOut', ['oneup']);
+stamps.pstKitchenOld = roomStamp('yawn@kitchenOut', ['oneup'], 'pstDoor');
 const L3 = { n: 3, name: 'Half a Yawn', mapLabel: 'Half a Yawn', arch: 'yawn', theme: 'pst_yawn',
   gimmick: 'Pupo yawns, and the yawns blow feathers. Stand on either corner of a yawning mouth to stretch it that way: the next feather settles on that side as a foothold',
   hint: 'Pick a corner, wait for the yawn, hop on the feather. One feather is caught on a tooth: stretch the other cheek first. A lone z drifts out of a cushion wall...',
@@ -364,7 +364,7 @@ stamps.pstStudy = { floor: 16, rows: studyRows, gold: { '*': 'must', A: 'high', 
   Z: ['piece', 'pst.z', {}],
   K: ['spawn', 'portal', { kind: 'door', look: 'pstNook', targetRef: 'bedroom@in' }], a: ['anchor', 'bedOut']
 } };
-stamps.pstBedroomOld = roomStamp('study@bedOut', ['oneup']);
+stamps.pstBedroomOld = roomStamp('study@bedOut', ['oneup'], 'pstDoor');
 const L6 = { n: 6, name: 'Finish My Sentence', mapLabel: 'Finish My Sentence', arch: 'lair', theme: 'pst_desk', boss: 'pst_parrot',
   gimmick: 'The great dream parrot, The Interrupter, reads Pupo\'s sentence back and will not let him finish it. Put the full stop where it belongs',
   hint: 'Walk into the full stop to push it into a slot. Commas: stop after his first word. A sweeping clause: after his second. The last word: wait quietly by the blank until Pupo says please',

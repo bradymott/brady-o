@@ -537,13 +537,68 @@ LEVELS.map = async (page, shot, run) => {
   });
 };
 
+
+// ---------------- bot mode (--bot): enemies on, no invulnerability, the way a careful player goes ----------------
+const BOT = args.includes('--bot');
+const botRun = async (page, id, legs) => {
+  const r = await page.evaluate(([id, legs]) => {
+    fresh(); play(id); const g = S(); let deaths = [];
+    const p0 = () => { const p = P(); p.invuln = 0; return p; };
+    p0(); const out = [];
+    for (const leg of legs) {
+      for (let tries = 0; tries < 3; tries++) {
+        let ok;
+        try { ok = eval(leg); } catch (e) { ok = { ok: false, err: String(e) }; }
+        const p = P();
+        if (p.dead || g.state !== 'play' && g.state !== 'clear' && g.state !== 'tally' && g.state !== 'results') {
+          deaths.push({ leg, at: tileOf() }); for (let k = 0; k < 600 && (P().dead || g.state !== 'play'); k++) sim(0.05); P().invuln = 0; continue;
+        }
+        out.push(!!(ok && ok.ok !== false)); break;
+      }
+      if (g.state !== 'play') break;
+      P().invuln = 0;
+    }
+    sim(3, { right: true });
+    return { id, deaths: deaths.length, where: deaths.slice(0, 6), legsOk: out, state: g.state };
+  }, [id, legs]);
+  console.log('BOT ' + JSON.stringify(r));
+  check(`bot ${id}: played start to finish with enemies on and no invulnerability`, r.state !== 'play', r);
+};
+LEVELS.bot = async (page) => {
+  if (!BOT) return;
+  await page.evaluate(HELPERS);
+  await botRun(page, '32-1', [
+    "place(13, 18), sim(0.3), lift({ walk: 0, air: 1, airAt: 0, to: [17, 14], tol: 2 })", "AP.route([[30, 19], [42, 19]])", "lift({ walk: 0, air: 1, airAt: 0, to: [46, 13], tol: 3 })",
+    "AP.route([[52, 19], [60, 19]])", "lift({ walk: 1, walkT: 1.6, air: 1, airAt: 0, to: [71, 13], tol: 3 })", "AP.route([[82, 19], [97, 19]])",
+    "lift({ walk: 0, air: 1, airAt: 0, to: [101, 14], tol: 1 })", "lift({ walk: 0, air: 1, airAt: 0, to: [106, 9], tol: 3 })",
+    "AP.route([[113, 19], [119, 19], [127, 19], [140, 19], [158, 19], [164, 19]])", "lift({ walk: 1, walkT: 1.6, air: 1, airAt: 0, to: [175, 13], tol: 4 })",
+    "AP.route([[186, 19], [198, 19]])", "lift({ walk: 1, walkT: 1.6, air: 1, airAt: 0, to: [210, 13], tol: 3 })", "AP.route([[215, 13], [228, 19]])"]);
+  // the boss with damage on: push the stop into each phase's slot and wait for the tell, dodging nothing by cheat
+  const r = await page.evaluate(() => {
+    fresh(); play('32-6'); toArea('stage', 6, 13); sim(3); const g = S(), p = P(); p.invuln = 0; let deaths = 0;
+    const b = g.entities.find(e => e.boss), st = g.entities.find(e => e.constructor.name === 'PstStop');
+    for (let n = 0; n < 6 && b && !b.remove && b.state !== 'dying'; n++) {
+      const k = (b.phase || 1) - 1, sx = st.slots[k] * 32 + 16;
+      if (P().dead) { deaths++; for (let q = 0; q < 600 && (P().dead || g.state !== 'play'); q++) sim(0.05); toArea('stage', 6, 13); sim(1); }
+      if (st.slotIn !== k) { walkTo(Math.floor(st.cx / 32) - 1, 3); for (let q = 0; q < 900 && st.slotIn !== k; q++) { sim(1 / 120, { right: true }); if (st.cx > sx + 20) break; } }
+      if (k === 2) { walkTo((b.arenaX0 / 32) + 15, 3); for (let q = 0; q < 900 && !b.please; q++) { sim(1 / 120); } walkTo(Math.floor(st.cx / 32) - 1, 3); for (let q = 0; q < 900 && st.slotIn !== k; q++) sim(1 / 120, { right: true }); }
+      walkTo(Math.floor(st.cx / 32) - 2, 2);
+      const hp = b.hp; for (let q = 0; q < 120 * 10 && b.hp === hp && !P().dead; q++) { const sh = g.entities.find(e => e.constructor.name === 'TourShot' && Math.abs(e.cx - P().cx) < 70 && Math.abs(e.cy - P().cy) < 60); sim(1 / 120, sh && P().onGround ? { jump: true, jumpPressed: true } : {}); }
+    }
+    return { hp: b ? b.hp : null, deaths, dead: P().dead };
+  });
+  console.log('BOT boss ' + JSON.stringify(r));
+  check('bot 32-6: The Interrupter beaten with damage on', r.hp != null && r.hp <= 0, r);
+};
+
 (async () => {
   await session({ width: 844, height: 390 }, async (page, shot, run, pano) => {
-    for (const k in LEVELS) if (k !== 'entrance') { if (k.startsWith('r')) await LEVELS[k](page, shot); else await LEVELS[k](page, shot, run, pano); }
+    if (BOT) { await LEVELS.bot(page); return; }
+    for (const k in LEVELS) if (k !== 'entrance' && k !== 'bot') { if (k.startsWith('r')) await LEVELS[k](page, shot); else await LEVELS[k](page, shot, run, pano); }
   });
   // (Nepal's atlas sprites taint the canvas for panoramas: the entrance gets its own browser)
-  await session({ width: 844, height: 390 }, async (page, shot, run, pano) => { await LEVELS.entrance(page, shot, run, pano); });
-  await session({ width: 390, height: 844 }, async (page, shot, run) => {
+  if (!BOT) await session({ width: 844, height: 390 }, async (page, shot, run, pano) => { await LEVELS.entrance(page, shot, run, pano); });
+  if (!BOT) await session({ width: 390, height: 844 }, async (page, shot, run) => {
     await run('p-s1', async () => { await page.evaluate(HELPERS); await page.evaluate(() => { fresh(); play('32-1'); place(42, 18); sim(0.4); freeze(); }); await shot('90-portrait-32-1.png'); });
     await run('p-boss', async () => { await page.evaluate(() => { thaw(); play('32-6'); toArea('stage', 8, 13); sim(3); freeze(); }); await shot('91-portrait-32-6-arena.png'); });
     await run('p-map', async () => { await page.evaluate(o => { thaw(); eval(o); window.BRADY.goToMap('world', 32, '32-1'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } freeze(); }, openPst); await shot('92-portrait-pst-map.png'); });

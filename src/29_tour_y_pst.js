@@ -172,6 +172,17 @@ const quiltHard = {
     ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.strokeRect(0.75, 0.75, TS - 1.5, TS - 1.5);
   }
 };
+// the rooms' own floors: each room is its own place (mint kitchen tiles, a nursery carpet, pantry boards, a bedroom rug)
+const floorOf = (base, line, dot, cap, capHi, piping) => ({ style: 'room', cap, capHi, dirt: base, dirt2: line, rock: line,
+  paint(ctx, rng, o) { tuftPaint(ctx, rng, base, line, dot); },
+  paintCap(ctx, x0, x1) { ctx.fillStyle = line; ctx.fillRect(x0, 0, x1 - x0, 10); ctx.fillStyle = cap; ctx.fillRect(x0, 0, x1 - x0, 7); ctx.fillStyle = piping; for (let x = x0 + 3; x < x1; x += 10) ctx.fillRect(x, 2, 5, 2); } });
+const roomFloors = {
+  kitchen: floorOf('#bfe8d0', '#8fc8a8', '#ffffff', '#e8f8ee', '#ffffff', '#4fa878'),
+  nursery: floorOf('#6a8ad0', '#4a6ab0', '#ffd673', '#8aa8e8', '#c8dcf8', '#ffffff'),
+  pantry: floorOf('#a8743a', '#7a4a20', '#e8c088', '#c8925a', '#e8c088', '#5a3418'),
+  bedroom: floorOf('#7a3a6a', '#5a2a4e', '#8fdcaa', '#c86a9a', '#e08ab4', '#ffd673'),
+  lab: floorOf('#3a2a4a', '#2a1a36', '#9ad8f0', '#5a4a6a', '#7a6a8a', '#9ad8f0')
+};
 const cushionSet = { ground: cushionGround, semi: bubbleSemi, brick: plumBrick, hard: quiltHard, pillar: { c1: MINT_HI, c2: MINT_LO, cap: HONEY, style: 'column' }, accent: HONEY, tint: {}, bloom: 0.16, liquid: null };
 const velvetSet = Object.assign({}, cushionSet, { ground: velvetGround, accent: MINT });
 const deskSet = Object.assign({}, cushionSet, { ground: deskGround, accent: '#fff4dc' });
@@ -292,6 +303,18 @@ const painters = {
     }
     const g = ctx.createRadialGradient(BG_W * 0.45, b - 40, 10, BG_W * 0.45, b - 40, 260); g.addColorStop(0, 'rgba(255,220,140,0.35)'); g.addColorStop(1, 'rgba(255,220,140,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, BG_W, H);
   },
+  // the study's near bookshelves: tall plum cases of honey, mint and cream books, a sleeping cat-shaped bookend
+  pstShelves(ctx, L, rng, H) {
+    const b = L.base;
+    for (let x = -20; x < BG_W; x += 300) {
+      ctx.fillStyle = '#4a2438'; ctx.fillRect(x, b - 300, 190, 300); ctx.fillStyle = '#3a1a2c'; ctx.fillRect(x + 8, b - 292, 174, 292);
+      for (let sy = b - 292; sy < b - 20; sy += 66) {
+        ctx.fillStyle = '#5a2e46'; ctx.fillRect(x, sy + 58, 190, 8);
+        for (let bx = x + 12; bx < x + 176;) { const w = 10 + rng() * 12, h = 34 + rng() * 20; ctx.fillStyle = [HONEY, MINT, CREAM, PLUM_HI, '#8ab8f0'][Math.floor(rng() * 5)]; ctx.fillRect(bx, sy + 58 - h, w, h); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(bx + w - 3, sy + 58 - h, 3, h); bx += w + 2; }
+      }
+    }
+    ctx.fillStyle = '#2a1424'; ctx.fillRect(0, b, BG_W, H - b);
+  },
   // the land's sky glow: honey stars and a crescent pillow moon
   pstSkyMoon(ctx, L, rng, H) {
     const x = L.x || 800, y = L.y || 80, r = L.r || 34;
@@ -388,16 +411,16 @@ const themes = {
   // 32-6 Finish My Sentence: the writing desk at night (the lead-in and the arena)
   pst_desk: Object.assign({}, deskSet, T0, {
     name: 'Finish My Sentence', music: 'tour_pst_boss', sky: ['#1a1430', '#2a2048', '#3a2a5a'], horizonGlow: '#ffd88a',
-    layers: [{ kind: 'pstStudy', base: 380, f: 0.06 }],
+    layers: [{ kind: 'pstStudy', base: 380, f: 0.06 }, { kind: 'pstWords', words: ['I', 'would', 'like', 'more...'], base: 200, f: 0.1 }, { kind: 'pstShelves', base: 440, f: 0.24 }],
     fog: '#2a2048', decor: ['pstInkpot', 'pstLamp']
   }),
   // the six rooms
   pst_room_forts: Object.assign({}, cushionSet, T0, { name: 'Knock Knock', music: 'tour_pst_clock', sky: ['#1a1440', '#2a2050', '#3a2e66'], horizonGlow: '#8a8aff', layers: [{ kind: 'roomForts', base: 380, f: 0.04 }], fog: '#2a2050', decor: [] }),
-  pst_room_lab: Object.assign({}, velvetSet, T0, { name: 'The Pillow Sample', music: 'tour_pst_blink', sky: ['#3a1030', '#4a1e3a', '#5a2646'], horizonGlow: '#ff8ac8', layers: [{ kind: 'roomPillowLab', base: 380, f: 0.04 }], fog: '#4a1e3a', decor: [] }),
-  pst_room_kitchen: Object.assign({}, cushionSet, T0, { name: 'One Trip, Three Cocoas', music: 'tour_pst_clock', sky: ['#a8d8bc', '#c8e8d4', '#d8f0e0'], horizonGlow: '#ffffff', layers: [{ kind: 'roomKitchen', base: 380, f: 0.04 }], fog: '#8ab8a0', decor: [] }),
-  pst_room_nursery: Object.assign({}, velvetSet, T0, { name: 'Nightcap Stand', music: 'tour_pst', sky: ['#88a8e0', '#a8c8f0', '#c8dcf8'], horizonGlow: '#ffffff', layers: [{ kind: 'roomNursery', base: 380, f: 0.04 }], fog: '#88a8e0', decor: [] }),
-  pst_room_pantry: Object.assign({}, cushionSet, T0, { name: 'The Even Pour', music: 'tour_pst_clock', sky: ['#e8c898', '#f2d8b0', '#f8e8c8'], horizonGlow: '#ffffff', layers: [{ kind: 'roomPantry', base: 380, f: 0.04 }], fog: '#d8b888', decor: [] }),
-  pst_room_bedroom: Object.assign({}, velvetSet, T0, { name: 'A Little Privacy', music: 'tour_pst_blink', sky: ['#3a2a4a', '#5a3a6a', '#6a4a7a'], horizonGlow: '#ffd673', layers: [{ kind: 'roomBedroom', base: 380, f: 0.04 }], fog: '#5a3a6a', decor: [] })
+  pst_room_lab: Object.assign({}, velvetSet, { ground: roomFloors.lab }, T0, { name: 'The Pillow Sample', music: 'tour_pst_blink', sky: ['#3a1030', '#4a1e3a', '#5a2646'], horizonGlow: '#ff8ac8', layers: [{ kind: 'roomPillowLab', base: 380, f: 0.04 }], fog: '#4a1e3a', decor: [] }),
+  pst_room_kitchen: Object.assign({}, cushionSet, { ground: roomFloors.kitchen }, T0, { name: 'One Trip, Three Cocoas', music: 'tour_pst_clock', sky: ['#a8d8bc', '#c8e8d4', '#d8f0e0'], horizonGlow: '#ffffff', layers: [{ kind: 'roomKitchen', base: 380, f: 0.04 }], fog: '#8ab8a0', decor: [] }),
+  pst_room_nursery: Object.assign({}, velvetSet, { ground: roomFloors.nursery }, T0, { name: 'Nightcap Stand', music: 'tour_pst', sky: ['#88a8e0', '#a8c8f0', '#c8dcf8'], horizonGlow: '#ffffff', layers: [{ kind: 'roomNursery', base: 380, f: 0.04 }], fog: '#88a8e0', decor: [] }),
+  pst_room_pantry: Object.assign({}, cushionSet, { ground: roomFloors.pantry }, T0, { name: 'The Even Pour', music: 'tour_pst_clock', sky: ['#e8c898', '#f2d8b0', '#f8e8c8'], horizonGlow: '#ffffff', layers: [{ kind: 'roomPantry', base: 380, f: 0.04 }], fog: '#d8b888', decor: [] }),
+  pst_room_bedroom: Object.assign({}, velvetSet, { ground: roomFloors.bedroom }, T0, { name: 'A Little Privacy', music: 'tour_pst_blink', sky: ['#3a2a4a', '#5a3a6a', '#6a4a7a'], horizonGlow: '#ffd673', layers: [{ kind: 'roomBedroom', base: 380, f: 0.04 }], fog: '#5a3a6a', decor: [] })
 };
 
 /* ---------------- props (Decor: drawn each frame at a ground spot) ---------------- */
@@ -557,7 +580,7 @@ const louseThink = (e, dt) => {
   }
   e.fluffK = approach(e.fluffK || 0, 0, dt * 4); e.mode = 'walk'; e.vx = e.dir * e.speed * 0.5;
   e.hopCool -= dt;
-  if (e.hopCool <= 0) { e.fluffT = 0.6; if (e.g.onScreen(e)) { e.g.parts.text(e.cx, e.y - 10, 'FLUFF FLUFF', '#fff4dc'); TourKit.sfx('fluff', 'select', { vol: 0.3, pitch: 1.6 }); } }
+  if (e.hopCool <= 0) { e.fluffT = 0.6; if (e.g.onScreen(e)) { pstSay(e.g, e.cx, e.y - 10, 'FLUFF FLUFF', '#fff4dc'); TourKit.sfx('fluff', 'select', { vol: 0.3, pitch: 1.6 }); } }
 };
 const slugThink = (e, dt) => {
   const p = e.g.player;
@@ -565,7 +588,7 @@ const slugThink = (e, dt) => {
   if (e.pointT > 0) { e.vx = 0; e.mode = 'notice'; return; }
   if (e.pcool <= 0 && p && TourKit.near(e, p, 6, 3)) {
     e.pointT = 1.4; e.pcool = 4; e.vx = 0; e.dir = sign(p.cx - e.cx) || e.dir;
-    e.g.parts.text(e.cx, e.y - 34, pick(['SHORTCUT! THAT WAY!', 'IT\'S QUICKER UP THERE!', 'I\'VE HEARD IT\'S FASTER!', 'TAKE THE LONG WAY ROUND!']), '#c4f2d2');
+    pstSay(e.g, e.cx, e.y - 34, pick(['SHORTCUT! THAT WAY!', 'IT\'S QUICKER UP THERE!', 'I\'VE HEARD IT\'S FASTER!', 'TAKE THE LONG WAY ROUND!']), '#c4f2d2');
     return;
   }
   e.mode = 'walk'; if (!e.vx) e.vx = e.dir * e.speed;
@@ -595,7 +618,7 @@ const peaThink = (e, dt) => {
   if (q < 1.6) { e.puffK = 1 + 0.55 * (q / 1.6); e.vx = 0; e.mode = 'idle'; e.rolled = false; }
   else if (q < 2.2) {
     e.puffK = approach(e.puffK, 1, dt * 3);
-    if (!e.rolled) { e.rolled = true; e.rx0 = e.x; const p = e.g.player; if (p && TourKit.near(e, p, 8, 3)) e.dir = sign(p.cx - e.cx) || e.dir; if (e.g.onScreen(e)) e.g.parts.text(e.cx, e.y - 8, 'puh', '#c4f2d2'); }
+    if (!e.rolled) { e.rolled = true; e.rx0 = e.x; const p = e.g.player; if (p && TourKit.near(e, p, 8, 3)) e.dir = sign(p.cx - e.cx) || e.dir; if (e.g.onScreen(e)) pstSay(e.g, e.cx, e.y - 8, 'puh', '#c4f2d2'); }
     const tgt = e.rx0 + e.dir * TS, k = (q - 1.6) / 0.6;
     const nx = lerp(e.rx0, tgt, Math.min(1, k * 1.3));
     // one tile, unless a wall or a ledge is in the way
@@ -617,7 +640,7 @@ const enemies = {
   const B = enemies.pstBat.cls, h0 = B.prototype.hit;
   B.prototype.hit = function (kind, src) { if ((kind === 'stomp' || kind === 'spin') && (this.foldK || 0) > 0.6) { Sound.play('spring', { vol: 0.35, pitch: 1.4 }); return 'bounce'; } return h0.call(this, kind, src); };
   const Pe = enemies.pstPea.cls, h1 = Pe.prototype.hit;
-  Pe.prototype.hit = function (kind, src) { if ((kind === 'stomp' || kind === 'spin') && (this.puffK || 1) > 1.3) { Sound.play('spring', { vol: 0.35, pitch: 1.2 }); this.g.parts.text(this.cx, this.y - 6, 'SNRK', '#c4f2d2'); return 'bounce'; } return h1.call(this, kind, src); };
+  Pe.prototype.hit = function (kind, src) { if ((kind === 'stomp' || kind === 'spin') && (this.puffK || 1) > 1.3) { Sound.play('spring', { vol: 0.35, pitch: 1.2 }); pstSay(this.g, this.cx, this.y - 6, 'SNRK', '#c4f2d2'); return 'bounce'; } return h1.call(this, kind, src); };
 }
 
 /* ---------------- the route map: a sleepy crescent pillow in the pin ---------------- */
@@ -733,5 +756,22 @@ Tour.country({
 });
 Object.assign(TourLandscape.ARCH_LABEL, { delay: 'DELAY', blink: 'BLINK', yawn: 'YAWN', borrow: 'BORROW', thought: 'THOUGHT' });
 // for the other pst files and the tests
-Tour.pstKit = { COL, INK, PstArt, HONEY, HONEY_HI, HONEY_LO, PLUM, PLUM_HI, PLUM_LO, MINT, MINT_HI, MINT_LO, CREAM, CREAM_LO };
+// every floating call-out in the land: a dark rounded pill, kept in the middle band of the view and off Brady
+class PstSay extends Ent {
+  constructor(g, x, y, text, col) { super(g, { x, y }, 10, 10); this.x = x; this.y0 = y; this.text = String(text); this.col = col || '#fff4dc'; this.t = 0; this.friendly = true; }
+  update(dt) { this.t += dt; if (this.t > 1.8) this.remove = true; }
+  touchPlayer() {}
+  draw(ctx) {
+    const g = this.g, p = g.player, W = Game.viewW, H = Game.viewH;
+    ctx.save(); ctx.font = '11px ' + FONT_DISPLAY; const w = ctx.measureText(this.text).width + 18, h = 20;
+    let x = clamp(this.x, g.camX + 150 + w / 2, g.camX + W - 150 - w / 2), y = clamp(this.y0 - Math.min(1, this.t * 2) * 14, g.camY + 84, g.camY + H - 140);
+    if (p && Math.abs(x - p.cx) < w / 2 + 14 && y + h / 2 > p.y - 6 && y - h / 2 < p.y + p.h) y = p.y - 22;
+    ctx.globalAlpha = Math.min(1, (1.8 - this.t) * 3);
+    ctx.fillStyle = 'rgba(26,12,30,0.82)'; rr(ctx, x - w / 2, y - h / 2, w, h, h / 2); ctx.fill(); ctx.strokeStyle = 'rgba(255,214,115,0.6)'; ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.fillStyle = this.col; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(this.text, x, y + 1);
+    ctx.restore();
+  }
+}
+const pstSay = (g, x, y, text, col) => { if (!g || !g.spawn) return; for (const e of g.entities) if (e instanceof PstSay && !e.remove && Math.abs(e.y0 - y) < 30 && Math.abs(e.x - x) < 200) e.remove = true; g.spawn(new PstSay(g, x, y, text, col)); };
+Tour.pstKit = { say: pstSay, COL, INK, PstArt, HONEY, HONEY_HI, HONEY_LO, PLUM, PLUM_HI, PLUM_LO, MINT, MINT_HI, MINT_LO, CREAM, CREAM_LO };
 })();

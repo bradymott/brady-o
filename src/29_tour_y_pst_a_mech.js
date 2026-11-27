@@ -19,6 +19,7 @@
      stool, a ladder) occupies the next room until another bubble is bumped. Toggle group per subject.
    ============================================================ */
 (function () {
+const PSAY = (...a) => Tour.pstKit.say(...a);
 const K = Tour.pstKit; if (!K) return;
 const { PstArt, INK, HONEY, HONEY_HI, HONEY_LO, PLUM, PLUM_HI, PLUM_LO, MINT, MINT_HI, MINT_LO, CREAM, CREAM_LO } = K;
 const PST_CUSH = SURF.PST_CUSH = 9;
@@ -57,8 +58,8 @@ class PstThought extends Ent {
       g.burst(this.cx, this.cy - 10, 14, CREAM, 'confetti');
       if (p.onGround) {
         p.vy = -LIFT_V; p.onGround = false; p.jumping = false; p.coyote = 0; p.jumpBuf = 0; p.ride = null; p.pstLifted = 0.6;
-        Sound.play('spring', { vol: 0.6, pitch: 0.8 }); g.parts.text(p.cx, p.y - 14, 'HUP!', '#fff4dc');
-      } else g.parts.text(this.cx, this.cy, '...WHERE WAS I?', '#fff4dc');
+        Sound.play('spring', { vol: 0.6, pitch: 0.8 }); PSAY(g, p.cx, p.y - 14, 'HUP!', '#fff4dc');
+      } else PSAY(g, this.cx, this.cy, '...WHERE WAS I?', '#fff4dc');
     }
   }
   touchPlayer() {}
@@ -249,8 +250,8 @@ class PstMouth extends Ent {
       if (tx === this.lx || tx === this.rx) {
         const side = tx === this.lx ? 0 : 1;
         if (this.stuck && !this.free) {
-          if (side === (this.stuckFree || 0)) { if (!this.freedT) { this.freedT = 1; this.free = true; g.parts.text(this.cx, this.y - 8, 'IT CAME LOOSE!', '#fff4dc'); Sound.play('pick', { vol: 0.5, pitch: 0.6 }); } }
-          else if (!(this.toldT > this.t)) { this.toldT = this.t + 2.5; g.parts.text(this.cx, this.y - 8, 'IT\'S CAUGHT ON A TOOTH...', '#fff4dc'); }
+          if (side === (this.stuckFree || 0)) { if (!this.freedT) { this.freedT = 1; this.free = true; PSAY(g, this.cx, this.y - 8, 'IT CAME LOOSE!', '#fff4dc'); Sound.play('pick', { vol: 0.5, pitch: 0.6 }); } }
+          else if (!(this.toldT > this.t)) { this.toldT = this.t + 2.5; PSAY(g, this.cx, this.y - 8, 'IT\'S CAUGHT ON A TOOTH...', '#fff4dc'); }
         }
         if (this.free && this.sel !== side && !(this.stuck && side === this.stuckFree)) { this.sel = side; Sound.play('select', { vol: 0.35, pitch: side ? 1.2 : 0.9 }); }
       }
@@ -262,7 +263,7 @@ class PstMouth extends Ent {
     if (this.cyc <= 0) {
       this.cyc = this.period;
       const cur = this.at();
-      if (this.free && this.sel >= 0 && cur !== this.sel) { this.fly = { from: cur == null ? null : cur, to: this.sel, t: 0 }; if (g.onScreen(this, 200)) { g.parts.text(this.cx, this.y - 4, 'HAAAWM...', '#fff4dc'); TourKit.sfx('yawn', 'float', { vol: 0.4, pitch: 0.7 }); } }
+      if (this.free && this.sel >= 0 && cur !== this.sel) { this.fly = { from: cur == null ? null : cur, to: this.sel, t: 0 }; if (g.onScreen(this, 200)) { PSAY(g, this.cx, this.y - 4, 'HAAAWM...', '#fff4dc'); TourKit.sfx('yawn', 'float', { vol: 0.4, pitch: 0.7 }); } }
     }
     if (this.fly) {
       this.fly.t += dt;
@@ -381,7 +382,7 @@ class PstRuler extends Ent {
     const g = this.g; this.t += dt;
     if (this.freeze > 0) {
       this.freeze -= dt; this.k = approach(this.k, 1, dt * 2.2);
-      if (this.k >= 1 && !g.toggleBit(this.gi)) { g.flipToggle(this.gi, true); Sound.play('land', { vol: 0.4, pitch: 1.4 }); g.parts.text(this.x + this.n * TS, this.y - 10, 'CLICK!', '#fff4dc'); }
+      if (this.k >= 1 && !g.toggleBit(this.gi)) { g.flipToggle(this.gi, true); Sound.play('land', { vol: 0.4, pitch: 1.4 }); PSAY(g, this.x + this.n * TS, this.y - 10, 'CLICK!', '#fff4dc'); }
       if (this.freeze <= 0 && g.toggleBit(this.gi)) { this.hold = 1.0; }
       return;
     }
@@ -425,7 +426,7 @@ function pstBorrowInput(p, g, inp, dt) {
   if (fl && !p.pstSecond && fl.used <= 0) {
     if (inp.action && p.onGround) {
       fl.fill = Math.min(1, fl.fill + dt / BANK_T);
-      if (fl.fill >= 1) { p.pstSecond = true; fl.fill = 0; fl.used = 1.2; Sound.play('coin', { vol: 0.6, pitch: 0.7 }); g.parts.text(p.cx, p.y - 16, 'A SECOND, BORROWED', '#fff4dc'); g.burst(fl.cx, fl.y + 10, 10, HONEY, 'spark'); }
+      if (fl.fill >= 1) { p.pstSecond = true; fl.fill = 0; fl.used = 1.2; Sound.play('coin', { vol: 0.6, pitch: 0.7 }); PSAY(g, p.cx, p.y - 16, 'A SECOND, BORROWED', '#fff4dc'); g.burst(fl.cx, fl.y + 10, 10, HONEY, 'spark'); }
     } else fl.fill = Math.max(0, fl.fill - dt * 2);
     return Object.assign({}, inp, { action: false, actionPressed: false });
   }
@@ -433,7 +434,7 @@ function pstBorrowInput(p, g, inp, dt) {
     const T0 = pstFreezeTarget(p, g);
     if (T0) {
       p.pstSecond = false; T0.freeze = FREEZE_T + (T0 instanceof PstRuler ? 0.4 : 0);
-      Sound.play('select', { vol: 0.6, pitch: 0.5 }); g.parts.text(T0.cx, T0.y - 12, 'HOLD ON...', '#fff4dc'); g.burst(T0.cx, T0.cy, 10, HONEY, 'spark');
+      Sound.play('select', { vol: 0.6, pitch: 0.5 }); PSAY(g, T0.cx, T0.y - 12, 'HOLD ON...', '#fff4dc'); g.burst(T0.cx, T0.cy, 10, HONEY, 'spark');
       return Object.assign({}, inp, { action: false, actionPressed: false });
     }
   }
@@ -516,7 +517,7 @@ class PstPic extends Ent {
       this.bumpT = 0.6;
       const g = this.g;
       for (const gi of this.set) { const want = gi === this.gi; if (g.toggleBit(gi) !== want) g.flipToggle(gi, true); }
-      Sound.play('bump', { vol: 0.5 }); Sound.play('select', { vol: 0.5, pitch: 1.3 }); g.parts.text(this.cx, this.y - 6, 'A ' + this.kind.toUpperCase() + '!', '#fff4dc');
+      Sound.play('bump', { vol: 0.5 }); Sound.play('select', { vol: 0.5, pitch: 1.3 }); PSAY(g, this.cx, this.y - 6, 'A ' + this.kind.toUpperCase() + '!', '#fff4dc');
     }
   }
   draw(ctx) {
