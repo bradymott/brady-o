@@ -203,7 +203,7 @@ async function session(browser, viewport, fn) {
         const rode = until(() => p.ride === gi, 1.2, { right: true });
         if (!rode) return { rode };
         // (the path goes on up past the cliff top, to the hidden ledge: here he stops at the cliff top)
-        const y0 = p.y; const up = until(() => (p.y + p.h) / 32 <= 8.05, 6, { up: true });
+        const y0 = p.y; const up = until(() => gi.pos >= gi.seg[0] - 1, 6, { up: true });
         const rise = Math.round((y0 - p.y) / 32 * 10) / 10;
         until(() => p.x > (cliffX + 2) * 32 && p.onGround && p.ride !== gi, 2.5, { right: true });
         return { rode, up, rise, onCliff: p.onGround && p.ride !== gi && (p.y + p.h) / 32 < 9, row: (p.y + p.h) / 32, alive: alive() };
