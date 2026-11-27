@@ -66,6 +66,12 @@ const handCue = (ctx, x, y, t, txt) => {
   ctx.fillStyle = '#ffd84a'; ctx.font = '9px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt || 'THROW', x, y - 14.5);
   ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(x - 4, y - 6); ctx.lineTo(x + 4, y - 6); ctx.lineTo(x, y - 1 + k * 2); ctx.closePath(); ctx.fill(); ctx.restore();
 };
+// a mark Brady must stand on: a pulsing gold ring on the floor (bigger and brighter when `hot`)
+const pulseRing = (ctx, x, y, t, hot, r) => {
+  const k = 0.5 + 0.5 * Math.sin(t * 5), R = (r || 18) * (hot ? 1.15 : 1) + k * 4;
+  ctx.save(); ctx.strokeStyle = hot ? `rgba(255,220,90,${0.65 + 0.35 * k})` : `rgba(255,230,150,${0.35 + 0.3 * k})`; ctx.lineWidth = hot ? 3.5 : 2.5;
+  ctx.beginPath(); ctx.ellipse(x, y - 2, R, R * 0.3, 0, 0, TAU); ctx.stroke(); ctx.restore();
+};
 // Brady's feet on the tile under (tx, floor row ty)? (standing, within 0.6 of a tile)
 const onMark = (p, tx, ty, wide) => p && !p.dead && p.onGround && p.groundTy === ty && Math.abs(p.cx - (tx * TS + TS / 2)) < TS * (wide || 0.75);
 const overlapsTile = (b, x, y) => b.x < (x + 1) * TS && b.x + b.w > x * TS && b.y < (y + 1) * TS && b.y + b.h > y * TS;
@@ -192,7 +198,7 @@ class TabNapkin extends Ent {
     for (const [x, y] of nw) g.setTile(x, y, T.HARD);
     liftOut(g, nw);
     this.prev = this.form; this.form = f; this.morph = 0;
-    if (!quiet) { TourKit.sfx('fold', 'select', { vol: 0.5, pitch: 0.8 + f * 0.2 }); g.parts.text(this.cx, this.y - 6, FORMS[f] + '!', '#fff4e0'); g.burst(this.cx, this.y + 3 * TS, 6, '#ffffff', 'dust'); }
+    if (!quiet) { TourKit.sfx('fold', 'select', { vol: 0.5, pitch: 0.8 + f * 0.2 }); TK.say(g, this.cx, this.y - 6, FORMS[f] + '!', '#fff4e0'); g.burst(this.cx, this.y + 3 * TS, 6, '#ffffff', 'dust'); }
   }
   update(dt) {
     this.t += dt; this.morph = Math.min(1, this.morph + dt * 5);
@@ -201,7 +207,7 @@ class TabNapkin extends Ent {
     if (R && this.form === 2 && p && !p.dead) {
       const rx1 = Math.max(...this.cells[R.form || 0].map(c => c[0])) + 1;
       const past = p.onGround && p.groundTy === this.fy && p.cx > (this.bx + R.dx) * TS && p.cx < rx1 * TS;
-      if (past) { this.riseT += dt; if (this.riseT > 0.3) { this.setForm(R.form || 0); this.g.parts.text(this.cx, this.y - 20, 'UP SHE GOES!', '#ffd84a'); } } else this.riseT = 0;
+      if (past) { this.riseT += dt; if (this.riseT > 0.3) { this.setForm(R.form || 0); TK.say(this.g, this.cx, this.y - 20, 'UP SHE GOES!', '#ffd84a'); } } else this.riseT = 0;
     }
   }
   touchPlayer() {}
@@ -253,6 +259,7 @@ class TabCrease extends Ent {
   touchPlayer() {}
   draw(ctx) {
     const N = this.napkin(), x = this.cx, y = this.fy * TS, cur = N && N.form === this.form;
+    pulseRing(ctx, x, y, this.t, false, 16);
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 1.5;
     ctx.fillStyle = cur ? '#fff4c8' : '#fbf5e8'; ctx.beginPath(); ctx.moveTo(x - 15, y); ctx.lineTo(x - 11, y - 5); ctx.lineTo(x + 11, y - 5); ctx.lineTo(x + 15, y); ctx.closePath(); ctx.fill(); ctx.stroke();
     // the form's little icon on the fold
@@ -277,7 +284,7 @@ class TabCloth extends Ent {
   tabTouch(p) { return this.held || (this.state === 'on' && onMark(p, this.cx0, this.fy, 0.8)); }
   tabInput(p, inp, dt) {
     if (this.state !== 'on') return;
-    if (!this.held) { if (inp.actionPressed) { this.held = true; this.x0 = p.cx; this.d = 0; TourKit.sfx('grab', 'select', { vol: 0.5, pitch: 0.7 }); this.g.parts.text(p.cx, p.y - 12, 'GOT THE CORNER!', '#fff4e0'); } return; }
+    if (!this.held) { if (inp.actionPressed) { this.held = true; this.x0 = p.cx; this.d = 0; TourKit.sfx('grab', 'select', { vol: 0.5, pitch: 0.7 }); TK.say(this.g, p.cx, p.y - 12, 'GOT THE CORNER!', '#fff4e0'); } return; }
     this.d = Math.max(0, (p.cx - this.x0) * this.pullDir / TS);
     const max = this.o.max;
     if (max && this.d > max) { this.held = false; this.fail('tip'); return; }
@@ -288,12 +295,12 @@ class TabCloth extends Ent {
     for (const [x, y] of this.cover) g.setTile(x, y, T.EMPTY);
     TourKit.sfx('whoosh', 'fly', { vol: 0.7, pitch: 1.4 }); g.shake(3);
     g.bannerText = 'VOILÀ!'; g.bannerT = 1.0;
-    g.parts.text(this.cx0 * TS + this.dir * this.span * TS / 2, (this.fy - 3) * TS, 'THE DISHES DIDN\'T MOVE!', '#ffd84a');
+    TK.say(g, this.cx0 * TS + this.dir * this.span * TS / 2, (this.fy - 3) * TS, 'THE DISHES DIDN\'T MOVE!', '#ffd84a');
   }
   fail(why) {
     const g = this.g, p = g.player;
-    if (why === 'tip') { this.tipT = 1.4; TourKit.sfx('crash', 'break', { vol: 0.6 }); g.burst((this.cx0 + this.dir * (this.o.glass || 5)) * TS, (this.fy - 2) * TS, 14, '#d8f0ff', 'spark'); if (p) g.parts.text(p.cx, p.y - 14, 'THE GLASS TIPPED! (A SHORT, CLEAN PULL)', '#ff9a9a'); }
-    else { this.rattle = 0.8; TourKit.sfx('rattle', 'bump', { vol: 0.5, pitch: 1.6 }); if (p) g.parts.text(p.cx, p.y - 14, 'TOO SHORT! RUN FURTHER BEFORE YOU LET GO', '#ff9a9a'); }
+    if (why === 'tip') { this.tipT = 1.4; TourKit.sfx('crash', 'break', { vol: 0.6 }); g.burst((this.cx0 + this.dir * (this.o.glass || 5)) * TS, (this.fy - 2) * TS, 14, '#d8f0ff', 'spark'); if (p) TK.say(g, p.cx, p.y - 14, 'THE GLASS TIPPED! (A SHORT, CLEAN PULL)', '#ff9a9a'); }
+    else { this.rattle = 0.8; TourKit.sfx('rattle', 'bump', { vol: 0.5, pitch: 1.6 }); if (p) TK.say(g, p.cx, p.y - 14, 'TOO SHORT! RUN FURTHER BEFORE YOU LET GO', '#ff9a9a'); }
     this.d = 0;
   }
   update(dt) {
@@ -326,6 +333,7 @@ class TabCloth extends Ent {
       if (this.held && p) { ctx.strokeStyle = RED; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(tabX, fy - 4); ctx.quadraticCurveTo((tabX + p.cx) / 2, fy - 4 + 10, p.cx, p.y + 24); ctx.stroke(); ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.stroke(); }
       else if (this.state === 'on') { ctx.fillStyle = RED; ctx.beginPath(); ctx.moveTo(tabX, fy - 6); ctx.lineTo(tabX - dir * 14, fy + 2); ctx.lineTo(tabX, fy + 8); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(tabX - dir * 6, fy + 1, 2, 0, TAU); ctx.fill(); }
     }
+    if (this.state === 'on' && !this.held) pulseRing(ctx, x0 + TS / 2, fy, t, p && this.tabTouch(p), 18);
     // the dishes on top (they stay put: that's the trick)
     const jig = this.rattle > 0 ? Math.sin(t * 50) * 2 : 0;
     for (const [dx, kind] of this.o.dishes || []) {
@@ -367,11 +375,11 @@ class TabRaft extends Ent {
     if (on) {
       const k = (p.cx - this.x) / this.w, side = k < 0.3 ? -1 : k > 0.7 ? 1 : 0;
       // the left crust paddles it right, the right crust paddles it left; a creamy crust just spins in the soup
-      if (side && side === this.cream) { this.spin = 1; if (!this.told) { this.told = true; this.g.parts.text(this.cx, this.y - 30, 'SPLOSH! THE CREAM SIDE WON\'T PADDLE', '#fff4e0'); } }
+      if (side && side === this.cream) { this.spin = 1; if (!this.told) { this.told = true; TK.say(this.g, this.cx, this.y - 30, 'SPLOSH! THE CREAM SIDE WON\'T PADDLE', '#fff4e0'); } }
       else if (side) want = -side * this.sp;
       // a hop off its own middle and back down onto it turns the crouton over (the cream goes round); arriving from
       // a bank does not
-      if (!this.wasOn && side === 0 && this.pvy > 2 * TS && this.cream && this.t - (this.lastOn || -9) < 1.4) { this.cream = -this.cream; this.flipT = 0; this.told = false; TourKit.sfx('flip', 'select', { vol: 0.5, pitch: 0.7 }); this.g.parts.text(this.cx, this.y - 24, 'FLIP!', '#ffd84a'); }
+      if (!this.wasOn && side === 0 && this.pvy > 2 * TS && this.cream && this.t - (this.lastOn || -9) < 1.4) { this.cream = -this.cream; this.flipT = 0; this.told = false; TourKit.sfx('flip', 'select', { vol: 0.5, pitch: 0.7 }); TK.say(this.g, this.cx, this.y - 24, 'FLIP!', '#ffd84a'); }
     }
     this.wasOn = on; if (!on && p) this.pvy = p.vy; if (on) this.lastOn = this.t;
     this.vx = approach(this.vx, want, (want ? 6 : 3) * TS * dt);
@@ -433,7 +441,7 @@ class TabGate extends ENTITY_TYPES.lock {
     if (!this.open && this.g.keys && this.g.keys.has(this.id)) { this.open = true; for (const [x, y] of this.tiles) this.g.setTile(x, y, T.EMPTY); Sound.play('door', { vol: 0.6 }); this.g.burst(this.cx, this.cy, 16, '#ffd84a', 'confetti'); }
     if (this.open) this.rise = Math.min(1, this.rise + dt * 1.5);
   }
-  touchPlayer() { if (this.open) return; if (this.msgT <= 0) { this.msgT = 2.5; this.g.parts.text(this.cx, this.y - 10, 'AFTER YOU... NO, AFTER YOU', '#ffd84a'); Sound.play('bump', { vol: 0.4 }); } }
+  touchPlayer() { if (this.open) return; if (this.msgT <= 0) { this.msgT = 2.5; TK.say(this.g, this.cx, this.y - 10, 'AFTER YOU... NO, AFTER YOU', '#ffd84a'); Sound.play('bump', { vol: 0.4 }); } }
   draw(ctx) {
     if (this.rise >= 1) return;
     const x = this.cx, y = this.y - this.rise * this.h * 1.2, h = this.h;
@@ -457,6 +465,7 @@ class TabBreadPlate extends Ent {
     const hx = H ? H.cx : x0 + 6 * TS, hy = H ? H.y + H.h - 4 : y;
     const k = this.slide, x = x0 + (hx - x0) * k, yy = y + (hy - y) * k - Math.sin(k * Math.PI) * 30;
     if (this.done && k >= 1) return;
+    if (!this.done && !this.sliding) { const H = this.hostess(); pulseRing(ctx, x0, y, this.t, H && H.st === 'offer', 22); }
     TabArt.plate(ctx, x, yy - 4, 16, 5);
     if (!this.sliding && !this.done) { ctx.save(); ctx.fillStyle = '#d8a050'; ctx.strokeStyle = INK; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.ellipse(x, yy - 9, 8, 5, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore(); }
     const p = this.g.player; if (!this.done && p && this.tabTouch(p)) handCue(ctx, x0, y - 2 * TS - 10, this.t, 'THROW');
@@ -473,21 +482,21 @@ class TabHostess extends Ent {
     const g = this.g, p = g.player, near = p && Math.abs(p.cx - this.cx) < 14 * TS && Math.abs(p.cy - this.cy) < 6 * TS;
     if (this.done) { this.st = 'eat'; return; }
     if (this.st === 'wait') { if (this.at > this.wait && near) this.go('lift'); }
-    else if (this.st === 'lift') { if (this.at > 0.65) { this.go('offer'); this.n++; const real = !this.feint || this.n % 2 === 0; this.real = real; g.parts.text(this.cx, this.y - 16, real && this.feint ? 'NO, REALLY. AFTER YOU!' : 'THE LAST BITE?', '#fff4e0'); } }
-    else if (this.st === 'offer') { if (this.at > 1.7) { this.go('wait'); this.wait = 1.0 + Math.random() * 0.8; if (this.feint && !this.real) this.wait = 0.5; else g.parts.text(this.cx, this.y - 16, '...THEN I SHALL.', '#fff4e0'); } }
+    else if (this.st === 'lift') { if (this.at > 0.65) { this.go('offer'); this.n++; const real = !this.feint || this.n % 2 === 0; this.real = real; TK.say(g, this.cx, this.y - 16, real && this.feint ? 'NO, REALLY. AFTER YOU!' : 'THE LAST BITE?', '#fff4e0'); } }
+    else if (this.st === 'offer') { if (this.at > 1.7) { this.go('wait'); this.wait = 1.0 + Math.random() * 0.8; if (this.feint && !this.real) this.wait = 0.5; else TK.say(g, this.cx, this.y - 16, '...THEN I SHALL.', '#fff4e0'); } }
     else if (this.st === 'snatch') { if (this.at > 0.9) { this.go('wait'); this.wait = 1.2; this.n = 0; } }
   }
   go(st) { this.st = st; this.at = 0; }
   offered(plate) {
     const g = this.g, p = g.player;
     if (this.done) return;
-    if (this.st !== 'offer') { if (p) g.parts.text(p.cx, p.y - 14, this.st === 'lift' ? 'WAIT FOR HER TO OFFER...' : 'SHE HASN\'T OFFERED YET', '#ffd8a0'); return; }
+    if (this.st !== 'offer') { if (p) TK.say(g, p.cx, p.y - 14, this.st === 'lift' ? 'WAIT FOR HER TO OFFER...' : 'SHE HASN\'T OFFERED YET', '#ffd8a0'); return; }
     if (this.feint && !this.real) {
       // the feint: her tines never opened; she keeps hold and the pair starts again
-      this.go('snatch'); TourKit.sfx('clink', 'bump', { vol: 0.5, pitch: 1.6 }); if (p) g.parts.text(p.cx, p.y - 14, 'SHE DIDN\'T LET GO! WAIT FOR HER SECOND OFFER', '#ff9a9a'); return;
+      this.go('snatch'); TourKit.sfx('clink', 'bump', { vol: 0.5, pitch: 1.6 }); if (p) TK.say(g, p.cx, p.y - 14, 'SHE DIDN\'T LET GO! WAIT FOR HER SECOND OFFER', '#ff9a9a'); return;
     }
     this.done = true; this.happy = 2; plate.sliding = true; plate.done = true; g.keys.add(this.id);
-    TourKit.sfx('clink', 'pick', { vol: 0.6, pitch: 1.3 }); g.parts.text(this.cx, this.y - 16, 'HOW KIND!', '#ffd84a');
+    TourKit.sfx('clink', 'pick', { vol: 0.6, pitch: 1.3 }); TK.say(g, this.cx, this.y - 16, 'HOW KIND!', '#ffd84a');
   }
   touchPlayer() {}
   draw(ctx) {
@@ -593,6 +602,6 @@ Decor.tabBigGlass = function (ctx, x, y, t, th, d) {
   ctx.restore();
 };
 Object.assign(ENTITY_TYPES, { tabBubble: TabBubble, tabPlate: TabPlate, tabNapkin: TabNapkin, tabCrease: TabCrease, tabCloth: TabCloth, tabRaft: TabRaft, tabGate: TabGate, tabBreadPlate: TabBreadPlate, tabHostess: TabHostess });
-Object.assign(Tour.tableKit, { TabPlate, TabNapkin, TabCrease, TabCloth, TabRaft, TabGate, TabBreadPlate, TabHostess, handCue, onMark, isTable, liftOut });
+Object.assign(Tour.tableKit, { pulseRing, TabPlate, TabNapkin, TabCrease, TabCloth, TabRaft, TabGate, TabBreadPlate, TabHostess, handCue, onMark, isTable, liftOut });
 try { if (typeof window !== 'undefined') window.BRADY_TABLE = { phys: (b, inp, A, dt, pl, o) => playerPhysicsFlip(b, inp, A, dt, pl, o), spikeContact: (b, A) => spikeContact(b, A), lavaContact: (b, A) => lavaContact(b, A), kit: Tour.tableKit, TourMap: typeof TourMap !== 'undefined' ? TourMap : null }; } catch (e) { /* not in a browser */ }
 })();

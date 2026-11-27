@@ -69,6 +69,20 @@ const walnutHard = {
     ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.strokeRect(0.6, 0.6, TS - 1.2, TS - 1.2);
   }
 };
+
+// the secret rooms' own floors and walls (each room is its own place): baize, parquet, slate, ship's deck, terracotta
+const roomGround = (name, body, cap, capHi, line, pat) => ({
+  style: name, cap, capHi, dirt: body, dirt2: shade(body, -0.15), rock: shade(body, -0.3),
+  paint(ctx, rng) { ctx.fillStyle = body; ctx.fillRect(0, 0, TS, TS); pat(ctx, rng); },
+  paintCap(ctx, x0, x1) { ctx.fillStyle = shade(cap, -0.25); ctx.fillRect(x0, 0, x1 - x0, 10); ctx.fillStyle = cap; ctx.fillRect(x0, 0, x1 - x0, 7); ctx.fillStyle = capHi; ctx.fillRect(x0, 0, x1 - x0, 1.6); ctx.fillStyle = line; ctx.fillRect(x0, 9, x1 - x0, 1.4); }
+});
+const MAT = {
+  baize: roomGround('baize', '#2a6a44', '#c89a4a', '#ffe8a0', INK, ctx => { ctx.fillStyle = 'rgba(255,255,255,0.06)'; for (let k = 0; k < 6; k++) ctx.fillRect((k * 11) % 30, (k * 7) % 30, 2, 2); }),
+  parquet: roomGround('parquet', '#a8703a', '#d8a868', '#fff0c8', INK, ctx => { ctx.fillStyle = '#8a5a2a'; for (let y = 0; y < TS; y += 8) ctx.fillRect(0, y, TS, 1.5); for (let y = 0; y < TS; y += 8) ctx.fillRect((y * 2) % 24 + 4, y, 1.5, 8); }),
+  slate: roomGround('slate', '#3a3a5e', '#8a8ab8', '#d8d8ff', INK, ctx => { ctx.strokeStyle = '#2a2a48'; ctx.lineWidth = 1.5; ctx.strokeRect(1, 1, TS - 2, TS - 2); ctx.fillStyle = '#ffe8a0'; ctx.fillRect(20, 9, 1.5, 1.5); }),
+  deck: roomGround('deck', '#9a6a3a', '#c8945a', '#ffe0b0', INK, ctx => { ctx.fillStyle = '#6a4220'; ctx.fillRect(0, 0, TS, 1.5); ctx.fillRect(0, 16, TS, 1.5); ctx.fillStyle = '#c8a050'; ctx.fillRect(4, 6, 2, 2); ctx.fillRect(24, 22, 2, 2); }),
+  terra: roomGround('terra', '#c8643a', '#e8946a', '#ffd8c0', INK, ctx => { ctx.strokeStyle = '#f2d8b8'; ctx.lineWidth = 2; ctx.strokeRect(1, 1, TS - 2, TS - 2); ctx.fillStyle = '#b8542a'; ctx.fillRect(6, 6, 20, 20); })
+};
 const LINEN = { ground: clothGround, semi: chinaSemi, brick: sugarBrick, hard: walnutHard, pillar: { c1: IVORY, c2: '#c8b898', cap: GOLD, style: 'column' }, accent: RED, tint: {}, bloom: 0.2, liquid: null };
 
 /* ---------------- shared drawings ---------------- */
@@ -146,6 +160,37 @@ const TabArt = {
     ctx.restore();
   }
 };
+
+
+/* ---------------- floating lines on dark pills ----------------
+   Every line the land's critters, props and boss say is drawn on a dark rounded pill, kept inside the middle band of
+   the view (clear of the HUD at the top and the stick and buttons at the bottom), moved off Brady and the boss, and
+   stacked so two never overlap. */
+const tabSay = (g, x, y, text, col) => { if (!g) return; (g.tabPills || (g.tabPills = [])).push({ x, y, text: String(text), col: col || '#ffffff', t0: g.t || 0 }); if (g.tabPills.length > 6) g.tabPills.shift(); };
+const tabSayAt = (g, e, text, col) => tabSay(g, e.cx, e.y - 12, text, col);
+TourHooks.on('afterEntities', (play, ctx) => {
+  const L = play.tabPills; if (!L || !L.length) return;
+  const now = play.t || 0, VW = Game.viewW, VH = Game.viewH, k = Game.gameRect && Game.gameRect.h ? VH / Game.gameRect.h : 1;
+  play.tabPills = L.filter(q => now - q.t0 < 2.2);
+  const boxes = [], p = play.player, b = play.boss && !play.boss.remove ? play.boss : null;
+  ctx.save(); ctx.font = '11px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (const q of play.tabPills.slice().reverse()) {
+    const age = now - q.t0, w = ctx.measureText(q.text).width + 18, h = 20;
+    let x = clamp(q.x, play.camX + w / 2 + 8, play.camX + VW - w / 2 - 8), y = q.y - Math.min(age, 0.6) * 18;
+    const top = play.camY + 70 * k + h / 2, bot = play.camY + VH * 0.6;
+    const hit = (o, pad) => o && x + w / 2 > o.x - pad && x - w / 2 < o.x + o.w + pad && y + h / 2 > o.y - pad && y - h / 2 < o.y + o.h + pad;
+    if (hit(b, 4)) y = b.y - h / 2 - 8;
+    if (hit(p, 4)) y = p.y - h / 2 - 10;
+    y = clamp(y, top, bot);
+    for (let n = 0; n < 6 && boxes.some(o => Math.abs(o.x - x) < (o.w + w) / 2 && Math.abs(o.y - y) < h + 2); n++) y = Math.max(top, y - h - 4) === top && n > 2 ? y + h + 4 : y - h - 4;
+    boxes.push({ x, y, w });
+    const a = Math.min(1, (2.2 - age) * 3);
+    ctx.globalAlpha = a; ctx.fillStyle = 'rgba(14,8,26,0.84)'; rr(ctx, x - w / 2, y - h / 2, w, h, h / 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,216,140,0.5)'; ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.fillStyle = q.col; ctx.fillText(q.text, x, y + 1);
+  }
+  ctx.restore();
+});
 
 /* ---------------- painted backdrops ---------------- */
 const painters = {
@@ -250,10 +295,10 @@ const painters = {
   // the booth (the boss): a velvet booth back, the sugar bowl with Chinka-O's live postcard against it
   tabBooth(ctx, L, rng, H) {
     const b = L.base;
-    ctx.fillStyle = '#6a1a26'; ctx.fillRect(0, 40, BG_W, b - 40);
-    ctx.fillStyle = '#7e2430'; for (let x = 0; x < BG_W; x += 80) { rr(ctx, x + 6, 60, 68, b - 90, 24); ctx.fill(); }
-    ctx.fillStyle = '#4a1018'; for (let x = 0; x < BG_W; x += 80) for (let y = 100; y < b - 40; y += 60) { ctx.beginPath(); ctx.arc(x + 40, y, 3, 0, TAU); ctx.fill(); }
-    ctx.fillStyle = '#3a1e16'; ctx.fillRect(0, 30, BG_W, 16);
+    ctx.fillStyle = '#6a1a26'; ctx.fillRect(0, 170, BG_W, b - 170);
+    ctx.fillStyle = '#7e2430'; for (let x = 0; x < BG_W; x += 80) { rr(ctx, x + 6, 186, 68, b - 210, 24); ctx.fill(); }
+    ctx.fillStyle = '#4a1018'; for (let x = 0; x < BG_W; x += 80) for (let y = 220; y < b - 30; y += 50) { ctx.beginPath(); ctx.arc(x + 40, y, 3, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = '#3a1e16'; ctx.fillRect(0, 160, BG_W, 16);
     ctx.fillStyle = L.color || '#4a1e26'; ctx.fillRect(0, b, BG_W, H - b);
   },
 
@@ -321,14 +366,14 @@ const themes = {
   }),
   table_booth: theme(null, {
     name: 'The Booth', music: 'tour_table_boss', particles: 'none', rays: null, spotlights: true, sky: ['#1a0a10', '#2a1018', '#3a1820'], horizonGlow: '#ff8a8a', celestial: { type: 'none' }, stars: 0,
-    layers: [{ kind: 'tabBooth', color: '#4a1e26', base: 410, f: 0.08 }], fog: '#2a1018', decor: ['tabCandle']
+    layers: [{ kind: 'tabWall', color: '#4a1a26', base: 300, f: 0.03 }, { kind: 'tabBooth', color: '#4a1e26', base: 410, f: 0.08 }, { kind: 'tabGiants', color: '#2a1018', base: 440, f: 0.16 }], fog: '#2a1018', decor: ['tabCandle']
   }),
   // the rooms
-  table_room_drawer: theme(null, { name: 'The Silver Drawer', music: 'tour_table_room', particles: 'none', rays: null, sky: ['#1a3a28', '#1e4a32', '#2a5a3e'], horizonGlow: '#c8e8d0', celestial: { type: 'none' }, stars: 0, layers: [{ kind: 'roomDrawer', base: 400, f: 0.04 }], fog: '#1e4a32', decor: [] }),
-  table_room_cloak: theme(null, { name: 'The Cloakroom', music: 'tour_table_room', particles: 'none', rays: null, sky: ['#a8865a', '#b8966a', '#c8a878'], horizonGlow: '#fff0c8', celestial: { type: 'none' }, stars: 0, layers: [{ kind: 'roomCloak', base: 400, f: 0.04 }], fog: '#b8966a', decor: [] }),
-  table_room_sky: theme(null, { name: 'Under the Skylight', music: 'tour_table_room', particles: 'none', rays: null, sky: ['#1a1228', '#2a1e3a', '#3a2a4e'], horizonGlow: '#a89aff', celestial: { type: 'none' }, stars: 0, layers: [{ kind: 'roomSkylight', base: 400, f: 0.04 }], fog: '#2a1e3a', decor: [] }),
-  table_room_scope: theme(null, { name: 'The Captain\'s Table', music: 'tour_table_room', particles: 'none', rays: null, sky: ['#1a4a6a', '#2a5a7a', '#3a6a8a'], horizonGlow: '#c8e8ff', celestial: { type: 'none' }, stars: 0, layers: [{ kind: 'roomScope', base: 400, f: 0.04 }], fog: '#2a5a7a', decor: [] }),
-  table_room_pantry: theme(null, { name: 'The Pantry', music: 'tour_table_room', particles: 'none', rays: null, sky: ['#d8c8a0', '#e8d8b0', '#f0e4c4'], horizonGlow: '#fff4d8', celestial: { type: 'none' }, stars: 0, layers: [{ kind: 'roomPantry', base: 400, f: 0.04 }], fog: '#e8d8b0', decor: [] })
+  table_room_drawer: theme({ ground: MAT.baize }, { name: 'The Silver Drawer', music: 'tour_table_room', particles: 'none', rays: null, sky: ['#1a3a28', '#1e4a32', '#2a5a3e'], horizonGlow: '#c8e8d0', celestial: { type: 'none' }, stars: 0, layers: [{ kind: 'roomDrawer', base: 400, f: 0.04 }], fog: '#1e4a32', decor: [] }),
+  table_room_cloak: theme({ ground: MAT.parquet }, { name: 'The Cloakroom', music: 'tour_table_room', particles: 'none', rays: null, sky: ['#a8865a', '#b8966a', '#c8a878'], horizonGlow: '#fff0c8', celestial: { type: 'none' }, stars: 0, layers: [{ kind: 'roomCloak', base: 400, f: 0.04 }], fog: '#b8966a', decor: [] }),
+  table_room_sky: theme({ ground: MAT.slate }, { name: 'Under the Skylight', music: 'tour_table_room', particles: 'none', rays: null, sky: ['#1a1228', '#2a1e3a', '#3a2a4e'], horizonGlow: '#a89aff', celestial: { type: 'none' }, stars: 0, layers: [{ kind: 'roomSkylight', base: 400, f: 0.04 }], fog: '#2a1e3a', decor: [] }),
+  table_room_scope: theme({ ground: MAT.deck }, { name: 'The Captain\'s Table', music: 'tour_table_room', particles: 'none', rays: null, sky: ['#1a4a6a', '#2a5a7a', '#3a6a8a'], horizonGlow: '#c8e8ff', celestial: { type: 'none' }, stars: 0, layers: [{ kind: 'roomScope', base: 400, f: 0.04 }], fog: '#2a5a7a', decor: [] }),
+  table_room_pantry: theme({ ground: MAT.terra }, { name: 'The Pantry', music: 'tour_table_room', particles: 'none', rays: null, sky: ['#d8c8a0', '#e8d8b0', '#f0e4c4'], horizonGlow: '#fff4d8', celestial: { type: 'none' }, stars: 0, layers: [{ kind: 'roomPantry', base: 400, f: 0.04 }], fog: '#e8d8b0', decor: [] })
 };
 // hot soup: a creamy tomato orange (the deadly liquid of 36-4)
 if (typeof LIQUIDS !== 'undefined') LIQUIDS.soup = ['#ffb870', '#e8783a', '#a8401a', 'rgba(255,220,180,0.3)', null, 'rgba(255,240,220,0.6)'];
@@ -487,7 +532,7 @@ const crumbThink = (e, dt) => {
   const p = e.g.player, c = e.cfg;
   if (e.state === 'walk') {
     e.mode = 'walk'; if (!e.vx) e.vx = e.dir * e.speed;
-    if (e.cool <= 0 && p && !p.dead && Math.abs(p.cy - e.cy) < 2 * TS && Math.abs(p.cx - e.cx) < 6 * TS) { e.state = 'notice'; e.st = 0.65; e.vx = 0; e.dir = sign(p.cx - e.cx) || e.dir; TourKit.say(e.g, e, 'ALLOW ME!', '#ffe8c8'); }
+    if (e.cool <= 0 && p && !p.dead && Math.abs(p.cy - e.cy) < 2 * TS && Math.abs(p.cx - e.cx) < 6 * TS) { e.state = 'notice'; e.st = 0.65; e.vx = 0; e.dir = sign(p.cx - e.cx) || e.dir; tabSayAt(e.g, e, 'ALLOW ME!', '#ffe8c8'); }
   } else if (e.state === 'notice') { e.mode = 'notice'; e.vx = 0; e.st -= dt; if (e.st <= 0) { e.state = 'charge'; e.st = 1.1; } }
   else {
     e.mode = 'charge'; e.vx = e.dir * 5.2 * TS; e.st -= dt;
@@ -503,22 +548,22 @@ const fleaThink = (e, dt) => {
     e.vx = 0; e.st -= dt;
     if (e.st <= 0) {
       e.state = 'walk'; e.vy = -11 * TS; e.vx = e.dir * 4.4 * TS; e.onGround = false; e.cool = 1.6;
-      if (e.g.onScreen(e)) { e.g.parts.text(e.cx, e.y - 10, 'CHOO!', '#ffe8c8'); e.g.burst(e.cx - e.dir * 10, e.cy, 8, '#3a3034', 'dust'); }
+      if (e.g.onScreen(e)) { tabSay(e.g, e.cx, e.y - 10, 'CHOO!', '#ffe8c8'); e.g.burst(e.cx - e.dir * 10, e.cy, 8, '#3a3034', 'dust'); }
     }
     return;
   }
   e.vx = e.dir * e.speed * 0.5;
-  if (e.cool <= 0) { if (TourKit.near(e, p, 8, 4)) e.dir = sign(p.cx - e.cx) || e.dir; e.state = 'notice'; e.st = 0.7; if (e.g.onScreen(e)) e.g.parts.text(e.cx, e.y - 10, 'AH... AH...', '#ffe8c8'); }
+  if (e.cool <= 0) { if (TourKit.near(e, p, 8, 4)) e.dir = sign(p.cx - e.cx) || e.dir; e.state = 'notice'; e.st = 0.7; if (e.g.onScreen(e)) tabSay(e.g, e.cx, e.y - 10, 'AH... AH...', '#ffe8c8'); }
 };
 const restThink = (e, dt) => {
   const p = e.g.player, near = p && !p.dead && Math.abs(p.cx - e.cx) < 3.2 * TS && Math.abs(p.cy - e.cy) < 3 * TS;
   if (e.state === 'sleep') { e.mode = 'sleep'; e.vx = 0; e.st -= dt; if (!near && e.st <= 0) { e.state = 'walk'; e.vx = e.dir * e.speed; } else if (near) e.st = 1.2; return; }
   e.mode = 'walk'; if (!e.vx) e.vx = e.dir * e.speed;
-  if (near && e.cool <= 0) { e.state = 'sleep'; e.st = 1.2; e.vx = 0; if (e.g.onScreen(e)) TourKit.say(e.g, e, pick(['WORK? ...ZZZ', 'DID SOMEONE SAY WORK?', 'MY DAY OFF!']), '#e8ecff'); }
+  if (near && e.cool <= 0) { e.state = 'sleep'; e.st = 1.2; e.vx = 0; if (e.g.onScreen(e)) tabSayAt(e.g, e, pick(['WORK? ...ZZZ', 'DID SOMEONE SAY WORK?', 'MY DAY OFF!']), '#e8ecff'); }
 };
 const butterThink = (e, dt) => {
   e.swag = e.swag || 1;
-  if (e.state === 'puddle') { e.mode = 'puddle'; e.vx = 0; e.st -= dt; if (e.st <= 0) { e.state = 'walk'; e.swag = Math.max(0.65, e.swag - 0.12); e.cool = 3.2; if (e.g.onScreen(e)) TourKit.say(e.g, e, pick(['STILL GOT IT.', 'ALMOST GOT IT.', 'HMPH.']), '#fff2b8'); } return; }
+  if (e.state === 'puddle') { e.mode = 'puddle'; e.vx = 0; e.st -= dt; if (e.st <= 0) { e.state = 'walk'; e.swag = Math.max(0.65, e.swag - 0.12); e.cool = 3.2; if (e.g.onScreen(e)) tabSayAt(e.g, e, pick(['STILL GOT IT.', 'ALMOST GOT IT.', 'HMPH.']), '#fff2b8'); } return; }
   if (e.state === 'notice') { e.mode = 'notice'; e.vx = 0; e.st -= dt; if (e.st <= 0) { e.state = 'puddle'; e.st = 2.2; } return; }
   e.mode = 'walk'; if (!e.vx) e.vx = e.dir * e.speed;
   if (e.cool <= 0) { e.state = 'notice'; e.st = 0.7; }
@@ -650,5 +695,5 @@ Tour.country({
   levels: []
 });
 // for the other table files and the tests
-Tour.tableKit = { COL, INK, RED, RED2, IVORY, IVORY2, OLIVE, OLIVE2, NAVY, NAVY2, WOOD, WOOD2, GOLD, TabArt, gingham };
+Tour.tableKit = { say: tabSay, sayAt: tabSayAt, COL, INK, RED, RED2, IVORY, IVORY2, OLIVE, OLIVE2, NAVY, NAVY2, WOOD, WOOD2, GOLD, TabArt, gingham };
 })();

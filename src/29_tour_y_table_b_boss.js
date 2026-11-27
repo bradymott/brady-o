@@ -74,8 +74,9 @@ class TabSaucer extends Ent {
   draw(ctx) {
     const x = this.cx, y = this.fy * TS;
     ctx.save();
-    if (this.glow > 0.02) { ctx.fillStyle = `rgba(255,230,140,${0.45 * this.glow * (0.7 + 0.3 * Math.sin(this.t * 8))})`; ctx.beginPath(); ctx.ellipse(x, y - 4, 34, 12, 0, 0, TAU); ctx.fill(); }
-    TabArt.plate(ctx, x, y - 4, 22, 6, { band: RED });
+    if (this.glow > 0.02) { ctx.fillStyle = `rgba(255,230,140,${0.5 * this.glow * (0.7 + 0.3 * Math.sin(this.t * 8))})`; ctx.beginPath(); ctx.ellipse(x, y - 4, 44, 15, 0, 0, TAU); ctx.fill(); }
+    TK.pulseRing(ctx, x, y, this.t, this.lit || !!this.item, 32);
+    TabArt.plate(ctx, x, y - 4, 30, 8, { band: RED });
     if (this.item === 'bread') { ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.fillStyle = '#d8a050'; ctx.beginPath(); ctx.ellipse(x, y - 12, 12, 8, 0, 0, TAU); ctx.fill(); ctx.stroke(); }
     ctx.restore();
     const p = this.g.player; if (p && this.tabTouch(p) && (this.lit || this.item)) TK.handCue(ctx, x, y - 2 * TS - 30, this.t, 'THROW');
@@ -99,18 +100,18 @@ const brain = {
   phases: [4, 2],
   guardText: lines.stomp,
   saucers(b) { return b.g.entities.filter(e => e instanceof TabSaucer).sort((a, c) => a.x - c.x); },
-  wake(b) { b.phase = 1; b.homeX = b.x; b.baseY = b.y; K.say(b.g, b, 'A GUEST! WITHOUT A RESERVATION!', '#fff4e0'); },
+  wake(b) { b.phase = 1; b.homeX = b.x; b.baseY = b.y; TK.sayAt(b.g, b, 'A GUEST! WITHOUT A RESERVATION!', '#fff4e0'); },
   // Brady's end of the table: the saucer nearer him
   near(b) { const p = b.g.player, S = this.saucers(b); return S.reduce((m, s) => !m || Math.abs(s.cx - p.cx) < Math.abs(m.cx - p.cx) ? s : m, null); },
   light(b, which) { for (const s of this.saucers(b)) s.lit = s === which; },
   phase(b, n) {
     const g = b.g; this.light(b, null);
     for (const s of this.saucers(b)) s.item = null;
-    if (n === 2) { g.bannerText = 'THE PICKLE!'; g.bannerT = 2; K.say(g, b, 'ONE DOES NOT REACH ACROSS THE TABLE. ONE SWEEPS.', '#fff4e0'); }
-    if (n === 3) { g.bannerText = 'THE LAST OLIVE!'; g.bannerT = 2; K.say(g, b, 'THE LAST OLIVE. AFTER YOU... OR AFTER ME?', '#fff4e0'); }
+    if (n === 2) { g.bannerText = 'THE PICKLE!'; g.bannerT = 2; TK.sayAt(g, b, 'ONE DOES NOT REACH ACROSS THE TABLE. ONE SWEEPS.', '#fff4e0'); }
+    if (n === 3) { g.bannerText = 'THE LAST OLIVE!'; g.bannerT = 2; TK.sayAt(g, b, 'THE LAST OLIVE. AFTER YOU... OR AFTER ME?', '#fff4e0'); }
     b.go('recover');
   },
-  hurt(b) { K.say(b.g, b, pick(lines.thanks), '#ffd84a'); b.go('recover'); },
+  hurt(b) { TK.sayAt(b.g, b, pick(lines.thanks), '#ffd84a'); b.go('recover'); },
   // a courtesy offered from a saucer (THROW on its mark)
   offer(b, saucer, p) {
     const g = b.g, ph = b.phase || 1;
@@ -121,8 +122,8 @@ const brain = {
     }
     if (ph === 2 && b.act === 'open' && saucer.lit) { this.light(b, null); g.spawn(new TabToss(g, saucer.cx, saucer.y - 6, b, 'saucer')); b.damage(1); return; }
     if (ph === 3 && b.act === 'spread') { this.light(b, null); b.damage(1); return; }
-    if (ph === 3 && b.act === 'feint') { K.say(g, b, 'TOO EAGER!', '#ff9a9a'); b.go('snatch'); return; }
-    g.parts.text(p.cx, p.y - 14, ph === 1 ? 'NOTHING TO OFFER YET' : ph === 2 ? 'NOT FROM THAT SIDE: HER OPEN SIDE' : 'WAIT FOR THE TINES TO SPREAD', '#ffd8a0');
+    if (ph === 3 && b.act === 'feint') { TK.sayAt(g, b, 'TOO EAGER!', '#ff9a9a'); b.go('snatch'); return; }
+    TK.say(g, p.cx, p.y - 14, ph === 1 ? 'NOTHING TO OFFER YET' : ph === 2 ? 'NOT FROM THAT SIDE: HER OPEN SIDE' : 'WAIT FOR THE TINES TO SPREAD', '#ffd8a0');
   },
   update(b, dt) {
     const g = b.g, p = g.player, ph = b.phase || 1;
@@ -137,7 +138,7 @@ const brain = {
     if (b.act === 'walk' || b.act === 'recover') { if (b.at > (b.act === 'recover' ? 1.2 : 0.9)) b.go(ph === 1 ? 'curl' : ph === 2 ? 'tap' : 'dip'); }
     // ---- 1: the bread ----
     else if (b.act === 'curl') {
-      b.pose = 'curl'; if (b.first) { K.say(g, b, 'A LITTLE BREAD?', '#fff4e0'); TourKit.sfx('ting', 'select', { vol: 0.4, pitch: 1.8 }); }
+      b.pose = 'curl'; if (b.first) { TK.sayAt(g, b, 'A LITTLE BREAD?', '#fff4e0'); TourKit.sfx('ting', 'select', { vol: 0.4, pitch: 1.8 }); }
       if (b.at > 0.9) {
         b.go('jab'); const d = p && p.cx < b.cx ? -1 : 1;
         tourFire(g, b.cx + d * 30, b.floorY - 10, { vx: d * 8 * TS, w: 26, h: 18, life: 2.4, ground: true, col: '#d8a050', art: breadArt });
@@ -145,13 +146,13 @@ const brain = {
       }
     } else if (b.act === 'jab') {
       b.pose = 'jab';
-      if (b.at > 1.1) { if (b.breadTo) { b.breadTo.item = 'bread'; this.light(b, b.breadTo); } b.go('wait'); K.say(g, b, 'WELL? AREN\'T YOU GOING TO OFFER IT BACK?', '#fff4e0'); }
+      if (b.at > 1.1) { if (b.breadTo) { b.breadTo.item = 'bread'; this.light(b, b.breadTo); } b.go('wait'); TK.sayAt(g, b, 'WELL? AREN\'T YOU GOING TO OFFER IT BACK?', '#fff4e0'); }
     } else if (b.act === 'wait') {
-      b.pose = 'idle'; if (b.at > 3.0) { for (const s of S) s.item = null; this.light(b, null); K.say(g, b, 'HMPH. I SHALL KEEP IT.', '#fff4e0'); b.go('walk'); }
+      b.pose = 'idle'; if (b.at > 3.0) { for (const s of S) s.item = null; this.light(b, null); TK.sayAt(g, b, 'HMPH. I SHALL KEEP IT.', '#fff4e0'); b.go('walk'); }
     }
     // ---- 2: the pickle ----
     else if (b.act === 'tap') {
-      b.pose = 'tap'; if (b.first) K.say(g, b, 'CLINK-CLINK!', '#e8ecff');
+      b.pose = 'tap'; if (b.first) TK.sayAt(g, b, 'CLINK-CLINK!', '#e8ecff');
       if (Math.random() < 0.2) g.burst(b.cx + (Math.random() - 0.5) * 30, b.y + 4, 1, '#ffffff', 'spark');
       if (b.at > 0.9) { b.go('sweep'); const d = p && p.cx < b.cx ? -1 : 1; b.sweepDir = d; b.dir = d; tourFire(g, b.cx + d * 20, b.floorY - 9, { vx: d * 7 * TS, w: 30, h: 16, life: 3.2, ground: true, col: '#6a8a2a', art: pickleArt }); }
     } else if (b.act === 'sweep') {
@@ -162,8 +163,8 @@ const brain = {
       b.pose = 'idle'; b.dir = b.sweepDir; if (b.at > 3.2) { this.light(b, null); b.go('walk'); }
     }
     // ---- 3: the olive ----
-    else if (b.act === 'dip') { b.pose = 'dip'; if (b.first) K.say(g, b, 'THE LAST OLIVE...', '#fff4e0'); if (b.at > 0.8) { b.go('feint'); K.say(g, b, 'AFTER YOU!', '#fff4e0'); } }
-    else if (b.act === 'feint') { b.pose = 'feint'; if (b.at > 1.0) { b.go('spread'); K.say(g, b, 'NO, REALLY. AFTER YOU.', '#ffd84a'); this.light(b, this.near(b)); } }
+    else if (b.act === 'dip') { b.pose = 'dip'; if (b.first) TK.sayAt(g, b, 'THE LAST OLIVE...', '#fff4e0'); if (b.at > 0.8) { b.go('feint'); TK.sayAt(g, b, 'AFTER YOU!', '#fff4e0'); } }
+    else if (b.act === 'feint') { b.pose = 'feint'; if (b.at > 1.0) { b.go('spread'); TK.sayAt(g, b, 'NO, REALLY. AFTER YOU.', '#ffd84a'); this.light(b, this.near(b)); } }
     else if (b.act === 'spread') { b.pose = 'spread'; if (b.at > 1.8) { this.light(b, null); b.go('walk'); } }
     else if (b.act === 'snatch') {
       b.pose = 'snatch';
@@ -173,7 +174,7 @@ const brain = {
     } else b.go('walk');
     if (ph !== 1 && b.act !== 'open') for (const s of S) if (!(ph === 3 && b.act === 'spread')) s.lit = false;
   },
-  lastHit(b) { for (const s of this.saucers(b)) { s.lit = false; s.item = null; } K.say(b.g, b, 'OH... VERY WELL. *NOM*', '#ffd84a'); return false; },
+  lastHit(b) { for (const s of this.saucers(b)) { s.lit = false; s.item = null; } TK.sayAt(b.g, b, 'OH... VERY WELL. *NOM*', '#ffd84a'); return false; },
   draw(b, ctx, t) {
     const pose = b.state === 'dying' ? 'eat' : b.hurtT > 0.4 ? 'hurt' : b.pose || 'idle';
     drawManners(ctx, b.cx, b.y + b.h, 0.88, pose, t, b.dir || -1);
@@ -204,9 +205,9 @@ class TabPostcardLive extends Ent {
     if (this.endT < 0 && b && b.style === 'table_manners' && (b.state === 'dying' || b.remove) && !this.spoke) { this.spoke = true; this.endT = 0; }
     if (this.endT >= 0) {
       this.endT += dt;
-      if (this.endT > 0.4 && !this.said1) { this.said1 = true; g.parts.text(this.cx, this.y - 30, 'THE BOOTH IS OURS, DARLING.', '#ffd8f0'); }
-      if (this.endT > 1.8 && !this.said2) { this.said2 = true; g.parts.text(this.cx, this.y - 30, 'AND YOU\'RE PAYING. ♥ C', '#ffd8f0'); }
-      if (this.endT > 1.2 && !this.bill) { this.bill = true; const p = g.player; if (p) { g.burst(p.cx, p.y - 30, 10, '#ffffff', 'confetti'); g.parts.text(p.cx, p.y - 44, 'THE BILL', '#ffffff'); } }
+      if (this.endT > 0.4 && !this.said1) { this.said1 = true; TK.say(g, this.cx, this.y - 30, 'THE BOOTH IS OURS, DARLING.', '#ffd8f0'); }
+      if (this.endT > 1.8 && !this.said2) { this.said2 = true; TK.say(g, this.cx, this.y - 30, 'AND YOU\'RE PAYING. ♥ C', '#ffd8f0'); }
+      if (this.endT > 1.2 && !this.bill) { this.bill = true; const p = g.player; if (p) { g.burst(p.cx, p.y - 30, 10, '#ffffff', 'confetti'); TK.say(g, p.cx, p.y - 44, 'THE BILL', '#ffffff'); } }
     }
   }
   touchPlayer() {}

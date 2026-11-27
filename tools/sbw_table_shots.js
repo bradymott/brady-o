@@ -282,7 +282,8 @@ const tableInit = () => {
     // press UP at a door; wait for the fade
     door() { const g = S(), a0 = g.area.aid; sim(1 / 120, { up: true, upPressed: true }); for (let k = 0; k < 40 && (g.area.aid === a0 || g.fade.a > 0.05); k++) sim(0.1); sim(0.4); return g.area.aid; },
     // in a table room: walk to a stage mark (tile x) and press THROW there
-    markThrow(x) { const r = AP.go([x, 8]); sim(0.2); sim(1 / 120, { action: true, actionPressed: true }); sim(0.3); return r.ok; },
+    markThrow(x) { const m = ents('TabRoomMark').find(e => e.tx === x), r = AP.go([x, m ? m.fy : 8]); sim(0.2); sim(1 / 120, { action: true, actionPressed: true }); sim(0.3); return r.ok; },
+    exitHatch() { return ents('Portal').find(e => /Out$/.test(e.s.targetRef || '')); },
     room() { const A = S().area; return { aid: A.aid, kind: A.roomKit && A.roomKit.kind, R: A.roomState || {} }; },
     cageOpen() { return ents('TourRoomCage').every(c => c.open); },
     // a hop on the spot (to land on a crease)
@@ -514,7 +515,7 @@ LEVELS.rooms = async (page, shot, run) => {
     });
     check('B51: a normal spoon is a raspberry; the spoon still grinning after Piwi shuts his mouth, twice: won, the cage opens', b.failed && b.won && b.cage, b);
     await page.evaluate(() => freeze()); await shot('61-B51-won.png');
-    const c = await page.evaluate(() => { thaw(); const d = ents('Portal').find(e => e.s.look === 'tabHatch' && e.target && e.target.area !== S().area.idx && e.s.targetRef === 'dining@b51Out') || ents('Portal').filter(e => e.s.look === 'tabHatch').sort((x, y) => y.x - x.x)[0]; AP.go([Math.floor(d.cx / 32), 8]); const aid = TB.door(); return { aid, x: Math.floor(P().cx / 32) }; });
+    const c = await page.evaluate(() => { thaw(); const d = TB.exitHatch(); AP.go([Math.floor(d.cx / 32), Math.round((d.y + d.h) / 32)]); const aid = TB.door(); return { aid, x: Math.floor(P().cx / 32) }; });
     check('B51: its hatch lets Brady out further along the table (before the meshed plates)', c.aid === 'dining' && c.x > 110, c);
   });
   // B52 MATCH THE TEAR (36-2): only N4's sail reaches the high ledge (steam, the hatch)
@@ -548,7 +549,7 @@ LEVELS.rooms = async (page, shot, run) => {
     });
     check('B53: a star that is in the sky is a raspberry; the spare star twice: won, the cage opens', b.failed && b.won && b.cage, b);
     await page.evaluate(() => freeze()); await shot('65-B53-won.png');
-    const c = await page.evaluate(() => { thaw(); const d = ents('Portal').filter(e => e.s.look === 'tabHatch').sort((x, y) => y.x - x.x)[0]; AP.go([Math.floor(d.cx / 32), 8]); const aid = TB.door(); return { aid, x: Math.floor(P().cx / 32), row: P().groundTy }; });
+    const c = await page.evaluate(() => { thaw(); const d = TB.exitHatch(); AP.go([Math.floor(d.cx / 32), Math.round((d.y + d.h) / 32)]); const aid = TB.door(); return { aid, x: Math.floor(P().cx / 32), row: P().groundTy }; });
     check('B53: its hatch lets Brady out on the second tier (past the second table)', c.aid === 'service' && c.x >= 50 && c.row === 9, c);
   });
   // B54 WRONG END (36-4): a sugar ledge over the long bowl that only the raft passes under (steam, the hatch)
@@ -569,7 +570,7 @@ LEVELS.rooms = async (page, shot, run) => {
     });
     check('B54: the giant prize in the lens is only the lens; round the tripod to the tiny real prize: won, the cage opens', b.fooled && b.won && b.cage, b);
     await page.evaluate(() => freeze()); await shot('67-B54-won.png');
-    const c = await page.evaluate(() => { thaw(); const d = ents('Portal').filter(e => e.s.look === 'tabHatch').sort((x, y) => y.x - x.x)[0]; AP.go([Math.floor(d.cx / 32), 8]); const aid = TB.door(); return { aid, x: Math.floor(P().cx / 32), row: P().groundTy }; });
+    const c = await page.evaluate(() => { thaw(); const d = TB.exitHatch(); AP.go([Math.floor(d.cx / 32), Math.round((d.y + d.h) / 32)]); const aid = TB.door(); return { aid, x: Math.floor(P().cx / 32), row: P().groundTy }; });
     check('B54: its hatch lets Brady out on the high bank past the third bowl', c.aid === 'bowls' && c.x >= 96 && c.row === 9, c);
   });
   // B55 PULL TO ENTER (36-5): past the booth's door, a gap in the cloth with steam rising; the pantry under the table
