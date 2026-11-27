@@ -394,9 +394,9 @@ class GalTumble extends Ent {
     if (piv) { ctx.translate(piv[0], piv[1]); ctx.rotate(ang); ctx.translate(-piv[0], -piv[1]); }
     // the cords up to the hooks
     ctx.strokeStyle = BLUE_LO; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(px + 6, top + 4); ctx.lineTo(px, top); ctx.moveTo(px + S - 6, top + 4); ctx.lineTo(px + S, top); ctx.stroke();
-    GA.frame(ctx, px, top, S, S, pic, { b: 9 });
-    // the bottom edge (the ledge): a mustard moulding, bright
-    ctx.fillStyle = MUS_HI; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(px - 2, top + S - 10, S + 4, 10); ctx.strokeRect(px - 2, top + S - 10, S + 4, 10);
+    // the picture fills the frame down to its bottom edge, which is the ledge Brady stands on (the top of its last row)
+    GA.frame(ctx, px, top, S, S - TS + 4, pic, { b: 9 });
+    ctx.fillStyle = MUS_HI; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(px - 2, top + S - TS, S + 4, 11); ctx.strokeRect(px - 2, top + S - TS, S + 4, 11);
     ctx.restore();
     // at rest: the far end's hook glows when Brady stands on the ledge's end
     ctx.restore();
