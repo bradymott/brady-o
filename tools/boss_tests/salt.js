@@ -27,17 +27,19 @@ module.exports = async ({ page, check, shot }) => {
       if (b.act === 'pour') { target = spoonX; const want = ph === 3 ? 1.0 : 0.95; if (br.on(b) && b.S >= want) jump = true; }
       // dodge: a shadow on Brady (move out of it), a lump rolling at him (jump it)
       const sh = b.crystals.find(c => c.t < 1.0 && Math.abs(c.x - p.cx) < 1.3 * TS);
-      if (sh) target = sh.x + (p.cx <= sh.x ? -1.9 : 1.9) * TS;
+      if (sh) { const room = x => Math.min(...b.crystals.filter(c => c.t < 1.0).map(c => Math.abs(c.x - x))) - (x < b.arenaX0 + TS || x > b.potX - 1.2 * TS ? 99 : 0); const a = sh.x - 1.9 * TS, z = sh.x + 1.9 * TS; target = room(a) >= room(z) ? a : z; }
       if (b.lumps.some(L => (p.cx - L.x) * L.d > 0 && Math.abs(p.cx - L.x) < 2.0 * TS) && p.onGround) jump = true;
       const inp = {};
       if (target != null && Math.abs(p.cx - target) > 8) { inp.right = p.cx < target; inp.left = p.cx > target; }
-      if (jump && p.onGround) { inp.jump = true; inp.jumpPressed = true; }
+      if (jump && p.onGround) { inp.jump = true; inp.jumpPressed = true; window.__jh = 0.4; }
+      else if (window.__jh > 0) { window.__jh -= 1 / 120; inp.jump = true; }
       sim(1 / 120, inp);
     };
+    window.__hurts = []; { const p = P(), h0 = p.hurt; p.hurt = function (src) { const b = boss(); window.__hurts.push({ act: b.act, ph: b.phase, x: Math.round(p.cx), src: src && Math.round(src.x), lumps: b.lumps.map(L => Math.round(L.x)), cr: b.crystals.map(c => [Math.round(c.x), +c.t.toFixed(2)]) }); return h0.apply(this, arguments); }; }
     window.fightUntil = (cond, sec) => { const b = boss(); let tell = 0; for (let k = 0; k < (sec || 40) * 120 && !cond(b); k++) { if (b.act === 'tell') tell = Math.max(tell, b.at); saltStep(); } return tell; };
   });
   // ① ONE FINGER
-  r = await ev(() => { const b = boss(), p = P(), pw = p.power; const tell = fightUntil(b => b.act === 'pour'); return { tell: +tell.toFixed(2), act: b.act, hurt: p.power !== pw }; });
+  r = await ev(() => { const b = boss(), p = P(), pw = p.power; fightUntil(b => b.act === 'idle'); const tell = fightUntil(b => b.act === 'pour'); return { tell: +tell.toFixed(2), act: b.act, hurt: p.power !== pw }; });
   check('salt: one finger held up (a 1.0 s tell), then a dusting into the spoon', r.tell >= 0.95 && r.act === 'pour' && !r.hurt, r);
   await ev(() => { for (let k = 0; k < 120 * 1.6; k++) saltStep(); }); await snap('salt_pinch_pouring.png');
   r = await ev(() => { const b = boss(), p = P(), pw = p.power; fightUntil(b => b.act === 'season'); return { hp: b.hp, hurt: p.power !== pw }; });
@@ -53,12 +55,12 @@ module.exports = async ({ page, check, shot }) => {
   r = await ev(() => { const b = boss(), p = P(), pw = p.power; fightUntil(b => b.act === 'coarse'); let lumps = 0; for (let k = 0; k < 120 * 1.6; k++) { lumps = Math.max(lumps, b.lumps.length); saltStep(); } return { lumps, hurt: p.power !== pw }; });
   check('salt phase 2: off the spoon, the coarse pour bounces off and two lumps roll away; Brady jumps them', r.lumps === 2 && !r.hurt, r);
   await snap('salt_pinch_lumps.png');
-  r = await ev(() => { const b = boss(), p = P(), pw = p.power; fightUntil(b => b.hp <= 2, 60); sim(0.5); return { hp: b.hp, phase: b.phase, hurt: p.power !== pw }; });
+  r = await ev(() => { const b = boss(), p = P(), pw = p.power; fightUntil(b => b.hp <= 2, 60); sim(0.5); return { hp: b.hp, phase: b.phase, hurt: p.power !== pw, hurts: window.__hurts }; });
   check('salt hits 3-4: back on for the fine pour, off in the gold twice: PHASE 3 (the rub)', r.hp === 2 && r.phase === 3 && !r.hurt, r);
   // ③ off after the second trickle: BLAND
   r = await ev(() => { const b = boss(), p = P(), hp = b.hp, pw = p.power, br = window.BRADY_TOUR.saltKit.pinch; fightUntil(b => b.act === 'pour'); let tr = 0; for (let k = 0; k < 120 * 6 && b.act === 'pour'; k++) { const jump = br.on(b) && b.S >= 0.65 && p.onGround; const x = b.sp0 + 1.5 * 32; sim(1 / 120, Object.assign(Math.abs(p.cx - x) > 8 ? { right: p.cx < x, left: p.cx > x } : {}, jump ? { jump: true, jumpPressed: true } : {})); } return { act: b.act, hp0: hp, hp: b.hp, hurt: p.power !== pw }; });
   check('salt phase 3: off after the second trickle (his weight gone, the needle falls short): BLAND, no hit', r.hp === r.hp0 && !r.hurt, r);
-  r = await ev(() => { const b = boss(), p = P(), pw = p.power; fightUntil(b => b.act === 'pour'); for (let k = 0; k < 120 * 3.4; k++) saltStep(); return { read: +b.read.toFixed(2), S: +b.S.toFixed(2), hurt: p.power !== pw }; });
+  r = await ev(() => { const b = boss(), p = P(), pw = p.power; fightUntil(b => b.act === 'pour'); for (let k = 0; k < 120 * 3.4 && b.S < 1.0; k++) saltStep(); sim(0.4); return { read: +b.read.toFixed(2), S: +b.S.toFixed(2), hurt: p.power !== pw }; });
   check('salt phase 3: after the third trickle the needle sits on the shoe mark with Brady on the spoon', r.read > 1.3 && r.S > 1.0 && !r.hurt, r);
   await snap('salt_pinch_shoe.png');
   r = await ev(() => { const b = boss(), p = P(), pw = p.power; fightUntil(b => b.state === 'dying' || b.remove, 60); return { gone: b.state === 'dying' || b.remove, hurt: p.power !== pw }; });

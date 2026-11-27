@@ -79,7 +79,7 @@ const brain = {
     // phase 2's first pour: coarse rock salt. On a level spoon (Brady on it) it lands in the bowl: far too much.
     // On the tipped spoon it bounces off and two lumps roll away along the floor, both ways
     if (b.act === 'coarse') {
-      if (b.first) { b.coarseOn = false; }
+      if (b.first) { b.coarseOn = false; b.coarseDone = false; }
       if (b.at > 0.5 && !b.coarseDone) { b.coarseDone = true; if (on) { b.S += 1.3; b.coarseOn = true; this.judge(b); return; } else { const cx = (b.sp0 + b.sp1) / 2; b.lumps.push({ x: cx - TS, d: -1, t: 0 }, { x: cx + TS, d: 1, t: 0 }); TourKit.sfx('thud', 'bump', { vol: 0.6, pitch: 0.6 }); } }
       if (b.at > 1.2) { b.coarseDone = false; b.go('gap'); }
       return;
