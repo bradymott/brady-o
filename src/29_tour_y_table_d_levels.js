@@ -192,10 +192,10 @@ const cloth = (() => {
   G.put(58, 8, '3');                                     // T3: corner x58 (floor row 9), cloth x59-64, mat x60-62
   G.put(53, 8, 'f'); G.put(61, 1, 'R');
   G.ground(65, 92, 4); G.put(68, 3, 'f'); G.put(76, 0, '?'); G.coins(70, 76, 2); G.put(80, 3, 'm'); G.put(88, 3, 'P'); G.put(84, 3, 'w');
-  G.ground(93, 96, 9); G.ground(97, 128, F); G.put(100, 14, 'c'); G.put(106, 14, 'r'); G.put(112, 14, 'm'); G.put(103, 14, 'O');
+  G.ground(93, 96, 9); G.ground(97, 128, F); G.put(100, 14, 'c'); G.put(106, 14, 'r'); G.put(103, 14, 'O');
   // ③ the last table, the tall glass on it
   G.put(118, 14, '4');                                   // T4: corner x118, cloth x119-127, mat x120-122, glass at x124
-  G.ground(129, 175, 9); G.put(134, 8, 't'); G.put(144, 8, 'k'); G.put(156, 8, 'G'); G.put(162, 8, 'u'); G.put(168, 8, 'j');
+  G.ground(129, 175, 9); G.put(134, 8, 't'); G.put(166, 8, 'k'); G.put(156, 8, 'G'); G.put(162, 8, 'u'); G.put(168, 8, 'j');
   G.fill(175, 0, 175, 19, 'H');
   return G.rows();
 })();

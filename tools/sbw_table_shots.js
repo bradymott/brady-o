@@ -282,7 +282,7 @@ const tableInit = () => {
     // press UP at a door; wait for the fade
     door() { const g = S(), a0 = g.area.aid; sim(1 / 120, { up: true, upPressed: true }); for (let k = 0; k < 40 && (g.area.aid === a0 || g.fade.a > 0.05); k++) sim(0.1); sim(0.4); return g.area.aid; },
     // in a table room: walk to a stage mark (tile x) and press THROW there
-    markThrow(x) { const m = ents('TabRoomMark').find(e => e.tx === x), r = AP.go([x, m ? m.fy : 8]); sim(0.2); sim(1 / 120, { action: true, actionPressed: true }); sim(0.3); return r.ok; },
+    markThrow(x) { const m = ents('TabRoomMark').find(e => e.tx === x); if (m && P().groundTy > m.fy + 2) AP.route([[5, 9]]); const r = AP.go([x, m ? m.fy : 8]); sim(0.2); sim(1 / 120, { action: true, actionPressed: true }); sim(0.3); return r.ok; },
     exitHatch() { return ents('Portal').find(e => /Out$/.test(e.s.targetRef || '')); },
     room() { const A = S().area; return { aid: A.aid, kind: A.roomKit && A.roomKit.kind, R: A.roomState || {} }; },
     cageOpen() { return ents('TourRoomCage').every(c => c.open); },
@@ -543,9 +543,9 @@ LEVELS.rooms = async (page, shot, run) => {
     await page.evaluate(() => { sim(0.8); freeze(); }); await shot('62-B52-match-the-tear-entry.png');
     const b = await page.evaluate(() => {
       thaw(); const A = S().area, R = A.roomState, D = A.roomKit.data; const xs = D.xs;
-      TB.markThrow(xs[(D.rounds[0].at + 1) % 3]); sim(1.2); const failed = !R.won && R.round === 0;
-      for (let q = 0; q < 2 && !R.won; q++) { TB.markThrow(xs[D.rounds[R.round].at]); sim(1.2); }
-      return { failed, won: R.won, cage: TB.cageOpen() };
+      const m0 = TB.markThrow(xs[(D.rounds[0].at + 1) % 3]); sim(1.2); const failed = !R.won && R.round === 0; const log = [m0];
+      for (let q = 0; q < 2 && !R.won; q++) { log.push(TB.markThrow(xs[D.rounds[R.round].at]), Math.floor(P().cx / 32), P().groundTy, R.round); sim(1.2); }
+      return { failed, won: R.won, cage: TB.cageOpen(), log };
     });
     check('B52: a scrap with the wrong bite falls off; the right scrap twice (the card, then the menu): won, the cage opens', b.failed && b.won && b.cage, b);
     await page.evaluate(() => freeze()); await shot('63-B52-won.png');
@@ -587,7 +587,7 @@ LEVELS.rooms = async (page, shot, run) => {
     });
     check('B54: the giant prize in the lens is only the lens; round the tripod to the tiny real prize: won, the cage opens', b.fooled && b.won && b.cage, b);
     await page.evaluate(() => freeze()); await shot('67-B54-won.png');
-    const c = await page.evaluate(() => { thaw(); const d = TB.exitHatch(); AP.go([Math.floor(d.cx / 32), Math.round((d.y + d.h) / 32)]); const aid = TB.door(); return { aid, x: Math.floor(P().cx / 32), row: P().groundTy }; });
+    const c = await page.evaluate(() => { thaw(); const d = TB.exitHatch(); AP.route([[17, 5], [14, 4], [12, 5]]); AP.go([Math.floor(d.cx / 32), Math.round((d.y + d.h) / 32)]); const aid = TB.door(); return { aid, x: Math.floor(P().cx / 32), row: P().groundTy }; });
     check('B54: its hatch lets Brady out on the high bank past the third bowl', c.aid === 'bowls' && c.x >= 96 && c.row === 9, c);
   });
   // B55 PULL TO ENTER (36-5): past the booth's door, a gap in the cloth with steam rising; the pantry under the table
