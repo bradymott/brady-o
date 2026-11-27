@@ -434,6 +434,26 @@ const BoxArt = (() => {
       L(c, [[px, py], [tx, ty]], '#3a2a1a', 0.8);
       rot(c, tx, ty, -a * 0.25 + (q > 0.9 ? 0.1 : 0), () => { R(c, tx - 3.5, ty - 1, 7, 9, 1.5, Cr, 1.2); O(c, tx, ty + 0.8, 0.8, '#3a2a1a', 0); });
     } }
+    ,
+    // ---- Wrong Side of the Wash (26, hidden land): a folded cream handkerchief parcel clamped by one red clothes
+    //      peg; the hit pops the peg sideways and the cloth springs open into a bow, the peg lying across it ----
+    wash: { name: 'Wrong Side of the Wash', draw(c, p) {
+      const Cr = '#f4ead2', Cr2 = '#e2d4b0', Nv = '#3e4f8e', Rd = '#e8442e', Rd2 = '#b8301e';
+      const q = io(seg(p, 0.15, 0.85)), pop = Math.sin(seg(p, 0, 0.6) * PI);
+      const pts = [[4 - 3 * q, 7 - 4 * q], [16, 7 + 5 * q], [28 + 3 * q, 7 - 4 * q], [28 - 3 * q, 18], [28 + 3 * q, 29 + 2 * q], [16, 29 - 5 * q], [4 - 3 * q, 29 + 2 * q], [4 + 3 * q, 18]];
+      G(c, pts, Cr);
+      // the stitched hem a little inside the edge, the soft folds toward the middle
+      c.save(); c.setLineDash([1.6, 1.4]); c.beginPath(); pts.forEach((v, i) => { const x = 16 + (v[0] - 16) * 0.8, y = 18 + (v[1] - 18) * 0.8; i ? c.lineTo(x, y) : c.moveTo(x, y); }); c.closePath(); c.strokeStyle = Nv; c.lineWidth = 0.8; c.stroke(); c.restore();
+      c.strokeStyle = Cr2; c.lineWidth = 0.9; for (const [x, y] of [[8, 10], [24, 10], [8, 26], [24, 26]]) { c.beginPath(); c.moveTo(16, 18); c.lineTo(16 + (x - 16) * (0.6 + 0.3 * q), 18 + (y - 18) * 0.6); c.stroke(); }
+      // the peg: upright and clamping (closed), popping up and turning (the hit), lying across the open cloth (empty)
+      const a = -q * PI / 2, py = 17 - pop * 6;
+      rot(c, 16, py, a, () => {
+        G(c, [[12.8, py + 13], [13.6, py - 13], [15.6, py - 13], [15.4, py + 13]], Rd);
+        G(c, [[19.2, py + 13], [18.4, py - 13], [16.4, py - 13], [16.6, py + 13]], Rd);
+        c.fillStyle = Rd2; c.fillRect(13.8, py - 2, 4.4, 1);
+        O(c, 16, py, 2, '#e8e2d4', 1);
+      });
+    } }
   };
 
   // ---- painting the states ----

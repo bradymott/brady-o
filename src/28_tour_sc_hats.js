@@ -257,7 +257,10 @@ TourHats.NOT = new Set([].concat(
   // Table for Two (36, a hidden land): the crouton butler (bread), the plates, napkins, creases, cloths, rafts, gates, the
   // bread plate, the hostess and Madame Manners' saucers (cutlery), soup bubbles, room marks, the live postcard, the shadow
   'tabCrumb tabBubble tabPlate tabNapkin tabCrease tabCloth tabRaft tabGate tabBreadPlate tabHostess tabSaucer tabPostcardLive tabRoomMark tabShadowDoor'.split(' '),
-  'w22Alarm w22Envelope w22Hourglass w22Echo w22Loop w22Mirror w22Pane w22Strike w22Pendulum w22Copy w22Slab w22Lake w22ReflectDoor w22Key w22Ink w22TimeFall w22NumDoorE rbPage rbStamp rbTornPage'.split(' ')
+  'w22Alarm w22Envelope w22Hourglass w22Echo w22Loop w22Mirror w22Pane w22Strike w22Pendulum w22Copy w22Slab w22Lake w22ReflectDoor w22Key w22Ink w22TimeFall w22NumDoorE rbPage rbStamp rbTornPage'.split(' '),
+  // Wrong Side of the Wash (26): the drying nets and their critters (drawn behind the cloth on the far face), the
+  // beetle's trouser wall, the peephole tell, sweaters, seams, felt, pockets, peg jaws, loose sheets, the bakery hem
+  'washNet washCrawler washBeetleGate washPeep washSweater washSeam washFeltArt washPocket washJaws washLooseSheet washHem'.split(' ')
 ));
 
 /* ---------- the animals: [fx, fxFlip, fy, size] (see the header) ---------- */
@@ -318,7 +321,9 @@ Object.assign(TourHats.HEADS, {
   // The Spare Bone Quarry (world 37): the socket mouse, the plaster newt (and its rib-climbing cousin), the replica rook
   boneMouse: [0.15, 0.15, -1.0, 0], boneNewt: [0.43, 0.43, -0.9, 0], boneClimber: [0, 0, -1.1, 0], boneRook: [0.3, 0.3, -1.05, 0],
   // Table for Two (36): the pepper flea, the knife-rest dachshund, the butter-curl snail
-  tabPepper: [0.15, 0.15, -1.55, 0], tabRest: [0.62, 0.62, -1.3, 0], tabButter: [0.45, 0.45, -1.0, 0]
+  tabPepper: [0.15, 0.15, -1.55, 0], tabRest: [0.62, 0.62, -1.3, 0], tabButter: [0.45, 0.45, -1.0, 0],
+  // Wrong Side of the Wash (26): the peg beetle, the lint lamb, the hanger heron, the sock moth
+  washBeetle: [0.45, 0.45, -1.3, 0], washLamb: [0.55, 0.55, -1.1, 0], washHeron: [0.4, 0.4, -1.42, 0], washMoth: [0.08, 0.08, -1.2, 0]
 
 });
 
