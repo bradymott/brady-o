@@ -594,5 +594,5 @@ Decor.tabBigGlass = function (ctx, x, y, t, th, d) {
 };
 Object.assign(ENTITY_TYPES, { tabBubble: TabBubble, tabPlate: TabPlate, tabNapkin: TabNapkin, tabCrease: TabCrease, tabCloth: TabCloth, tabRaft: TabRaft, tabGate: TabGate, tabBreadPlate: TabBreadPlate, tabHostess: TabHostess });
 Object.assign(Tour.tableKit, { TabPlate, TabNapkin, TabCrease, TabCloth, TabRaft, TabGate, TabBreadPlate, TabHostess, handCue, onMark, isTable, liftOut });
-try { if (typeof window !== 'undefined') window.BRADY_TABLE = { phys: (b, inp, A, dt, pl, o) => playerPhysicsFlip(b, inp, A, dt, pl, o), spikeContact: (b, A) => spikeContact(b, A), lavaContact: (b, A) => lavaContact(b, A), kit: Tour.tableKit }; } catch (e) { /* not in a browser */ }
+try { if (typeof window !== 'undefined') window.BRADY_TABLE = { phys: (b, inp, A, dt, pl, o) => playerPhysicsFlip(b, inp, A, dt, pl, o), spikeContact: (b, A) => spikeContact(b, A), lavaContact: (b, A) => lavaContact(b, A), kit: Tour.tableKit, TourMap: typeof TourMap !== 'undefined' ? TourMap : null }; } catch (e) { /* not in a browser */ }
 })();

@@ -165,7 +165,7 @@ TourRooms.def('tabStar', {
     xs.forEach((x, k) => { g.spawn(x, ST - 1, 'tabRoomMark', { k, cue: 'COVER' }); g.need('star pad ' + k, x, ST - 1); });
     g.winSpot(A.id, 13, ST - 1);
     // two skies: 4 stars each (positions in a unit box); the coaster prints 5, the extra one at a random number
-    g.data.rounds = [0, 1].map(() => { const pts = []; for (let k = 0; k < 5; k++) pts.push([0.12 + rng() * 0.76, 0.15 + rng() * 0.7]); return { pts, spare: Math.floor(rng() * 5) }; });
+    g.data.rounds = [0, 1].map(() => { const pts = []; for (let k = 0, n = 0; k < 5 && n < 400; n++) { const q = [0.18 + rng() * 0.64, 0.2 + rng() * 0.6]; if (pts.every(o => Math.hypot(o[0] - q[0], o[1] - q[1]) > 0.3)) { pts.push(q); k++; } } return { pts, spare: Math.floor(rng() * 5) }; });
     g.data.xs = xs;
     return g;
   },
@@ -190,9 +190,9 @@ TourRooms.def('tabStar', {
       });
       ctx.restore();
     };
-    box(4.2 * TS, 2.4 * TS, 3.4 * TS, 3.4 * TS, true);
-    box(17.2 * TS, 2.4 * TS, 3.4 * TS, 3.4 * TS, false);
-    ctx.save(); ctx.fillStyle = '#ffe8c8'; ctx.font = '9px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('THE SKY', 5.9 * TS, 6.5 * TS); ctx.fillText('THE COASTER', 18.9 * TS, 6.5 * TS); ctx.restore();
+    box(4.4 * TS, 3.5 * TS, 3.1 * TS, 3.1 * TS, true);
+    box(12.4 * TS, 3.5 * TS, 3.1 * TS, 3.1 * TS, false);
+    ctx.save(); ctx.fillStyle = '#ffe8c8'; ctx.font = '9px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('THE SKY', 5.95 * TS, 3.2 * TS); ctx.fillText('THE COASTER', 13.95 * TS, 3.2 * TS); ctx.restore();
     // the numbered star pads on the stage
     kit.data.xs.forEach((x, k) => { const cx = x * TS + TS / 2, cy = ST * TS - 3; ctx.save(); ctx.fillStyle = '#1e2a5a'; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(cx, cy, 14, 4, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#ffe28a'; ctx.font = '10px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText(String(k + 1), cx, cy - 6); ctx.restore(); });
     if (!R.won && !(play.bannerT > 0)) hud(play, ctx, 'SKY ' + ((R.round || 0) + 1) + ' / 2');
@@ -295,7 +295,12 @@ TourRooms.def('tabPull', {
   }
 });
 
-// the camera in a table room: the whole room's width in view, the stage band in the middle
+// the camera in a table room: the whole room's width in view (when the screen is wide enough), the stage band in the
+// middle
+TourHooks.on('camera', (play, dt) => {
+  const A = play.area; if (!(A && A.roomKit && /^tab/.test(A.roomKit.kind))) return;
+  if (Game.viewW >= (R1 + 1) * TS - 8) play.camX = clamp(((R1 + 1) * TS - Game.viewW) / 2, 0, Math.max(0, A.W * TS - Game.viewW));
+});
 {
   const ct0 = Play.prototype.camTargetY;
   Play.prototype.camTargetY = function (snap) { const A = this.area; if (A && A.roomKit && /^tab/.test(A.roomKit.kind)) return clamp(TS, 0, Math.max(0, A.H * TS - Game.viewH)); return ct0.call(this, snap); };

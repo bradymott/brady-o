@@ -591,6 +591,56 @@ LEVELS.rooms = async (page, shot, run) => {
   });
 };
 
+// ---------------- 36-5 After You: the lead-in (the hostess offers the last bite at every place) ----------------
+LEVELS.course = async (page, shot, run, pano) => {
+  await run('course', async () => {
+    await page.evaluate(() => { fresh(); play('36-5'); place(5, 13); sim(0.6); freeze(); });
+    await shot('50-36-5-start.png');
+    const a = await page.evaluate(() => {
+      thaw(); play('36-5'); place(4, 13); sim(0.3); const H = ents('tabHostess').sort((x, y) => x.x - y.x), out = [];
+      const early = (() => { AP.go([10, 14]); for (let k = 0; k < 600 && H[0].st !== 'lift'; k++) sim(1 / 120); sim(1 / 120, { action: true, actionPressed: true }); sim(0.2); return !H[0].done; })();
+      const marks = [10, 31, 50, 70];
+      for (let i = 0; i < 4; i++) {
+        const r = AP.go([marks[i], 14]); if (!r.ok) return { i, r, early };
+        let feinted = null;
+        if (H[i].feint) {
+          // at dessert: THROW on her first offer: she does not let go
+          for (let k = 0; k < 900 && !(H[i].st === 'offer' && !H[i].real); k++) sim(1 / 120);
+          sim(0.3); sim(1 / 120, { action: true, actionPressed: true }); sim(0.2); feinted = H[i].st === 'snatch' && !H[i].done;
+          for (let k = 0; k < 900 && !(H[i].st === 'offer' && H[i].real); k++) sim(1 / 120);
+        } else for (let k = 0; k < 900 && H[i].st !== 'offer'; k++) sim(1 / 120);
+        sim(0.3); sim(1 / 120, { action: true, actionPressed: true }); sim(1.0);
+        out.push({ i, done: H[i].done, open: S().keys.has(H[i].id), feinted });
+        if (i < 3 && !AP.go([marks[i] + 6, 14]).ok) return { stuck: i, out, early };
+      }
+      return { early, out };
+    });
+    check('36-5: played: THROW before the hostess offers does nothing', a.early === true, a);
+    check('36-5: played: at each place the bread plate goes to the hostess on her offer, and the ring lifts', a.out && a.out.length === 4 && a.out.every(o => o.done && o.open), a);
+    check('36-5: played: at dessert her first offer is for show (she keeps hold); the second lets go', a.out && a.out[3] && a.out[3].feinted === true, a.out && a.out[3]);
+    await page.evaluate(() => { play('36-5'); place(66, 13); sim(0.2); const H = ents('tabHostess').sort((x, y) => x.x - y.x)[3]; for (let k = 0; k < 900 && H.st !== 'offer'; k++) sim(1 / 120); sim(0.3); freeze(); }); await shot('51-36-5-the-hostess-offers.png');
+    const b = await page.evaluate(() => { thaw(); play('36-5'); place(86, 13); sim(0.3); for (const id of ['p1', 'p2', 'p3', 'p4']) S().keys.add('tab:place:' + id); sim(0.5); const r = AP.go([92, 14]); const aid = TB.door(); return { r: r.ok, aid }; });
+    check('36-5: the door at the end of the table is the booth (the arena)', b.aid === 'booth', b);
+    await page.evaluate(() => { sim(2.5); freeze(); }); await shot('52-36-5-the-booth.png');
+    await page.evaluate(() => { thaw(); play('36-5'); sim(0.3); }); await pano('59-36-5-panorama.png', 0.35);
+  });
+};
+
+// ---------------- the land's map and its pin on the route map ----------------
+const openTable = `(() => { fresh(); const B = window.BRADY, T = window.BRADY_TOUR; B.Save.data.seenEncoreIntro = true; for (const w of B.WORLD_ORDER) { const C = T.Tour.byWorld[w]; if (!C || C.id === 'table') continue; for (const id of T.Tour.levelIds(C)) B.Save.data.done[id] = true; } const Tp = T.TourProgress; try { Tp.exit('6-1', 'table'); } catch (e) {} for (const id of ['36-1', '36-2']) B.Save.data.done[id] = true; try { Tp.exit('36-1', 'main'); Tp.exit('36-2', 'main'); } catch (e) {} })()`;
+LEVELS.map = async (page, shot, run) => {
+  await run('map', async () => {
+    const r0 = await page.evaluate(() => { fresh(); const T = window.BRADY_TOUR, M = window.BRADY_TABLE.TourMap; return { hidden: M.stopState(T.Tour.stops.table) === 'hidden', unlocked: T.TourProgress.countryUnlocked(T.Tour.countries.table) }; });
+    check('map: before its entrance is used the land is hidden on the route map', r0.hidden && !r0.unlocked, r0);
+    const r = await page.evaluate(o => { eval(o); window.BRADY.goToMap('world', 1, '36-1'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } const s = S(); return { mode: s.mode, cc: s.ow && s.ow.cc }; }, openTable);
+    check('map: once found, Table for Two has its own walkable map', r.cc === 'table', r);
+    await page.evaluate(() => freeze()); await shot('70-table-overworld-map.png');
+    const r2 = await page.evaluate(() => { thaw(); const s = S(); if (s.openRoute) s.openRoute({ dest: 'table' }); for (let k = 0; k < 40 && (s.rRevealQ == null || s.rReveal || (s.rRevealQ && s.rRevealQ.length)); k++) sim(0.25); s.dest = 'table'; sim(0.8); const T = window.BRADY_TOUR; return { mode: s.mode, state: window.BRADY_TABLE.TourMap.stopState(T.Tour.stops.table) }; });
+    check('map: the route map shows its pin once the land is open', r2.state !== 'hidden', r2);
+    await page.evaluate(() => freeze()); await shot('71-route-map-table-pin.png');
+  });
+};
+
 // ---------------- the hidden entrance: Spain 6-1, the café after the third plaza ----------------
 LEVELS.entry = async (page, shot, run) => {
   await run('entry', async () => {
@@ -636,6 +686,8 @@ LEVELS.entry = async (page, shot, run) => {
   if (!want.length || want.some(w => w.startsWith('p-'))) await session({ width: 390, height: 844 }, async (page, shot, run) => {
     await page.evaluate(tableInit);
     await run('p-china', async () => { await page.evaluate(() => { fresh(); play('36-1'); place(24, 13); sim(0.4); freeze(); }); await shot('90-portrait-36-1.png'); });
+    await run('p-boss', async () => { await page.evaluate(() => { thaw(); play('36-5'); toArea('booth', 6, 13); sim(3); freeze(); }); await shot('91-portrait-36-5-booth.png'); });
+    await run('p-map', async () => { await page.evaluate(o => { thaw(); eval(o); window.BRADY.goToMap('world', 1, '36-1'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } freeze(); }, openTable); await shot('92-portrait-table-map.png'); });
   });
   console.log(failures ? `${failures} TABLE CHECK(S) FAILED` : 'ALL TABLE CHECKS PASSED');
   process.exit(failures ? 1 : 0);
