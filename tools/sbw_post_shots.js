@@ -277,6 +277,37 @@ const helpers = () => {
 const shotAt = async (page, shot, name, fn, arg) => { await page.evaluate(fn, arg); await page.evaluate(() => freeze()); await shot(name); await page.evaluate(() => thaw()); };
 
 LEVELS.dbg = async (page, shot, run) => { await run('dbg', async () => { await page.evaluate(helpers); const r = await page.evaluate(() => { fresh(); playP('27-1'); place(145, 16); const p = P(); const r1 = AP.exec({ walkTo: 151 * 32 + 16, dir: 0 }, 3); const a = [tileOf(), isl(148).st, p.dead, S().state]; playP('27-1'); place(160, 16); sim(0.2); const b = AP.go([180, 17]); return { r1, a, b, t: tileOf() }; }); console.log(JSON.stringify(r)); }); };
+// ---------------- the hidden entrance: Vietnam 10-3, the river steps under the night market ----------------
+LEVELS.entry = async (page, shot, run, pano) => {
+  await run('entry', async () => {
+    await page.evaluate(helpers);
+    let r = await page.evaluate(() => { fresh(); const T = window.BRADY_TOUR; return { stop: T.TourMap ? T.TourMap.stopState(T.Tour.stops.post) : null, open: T.TourProgress.countryUnlocked(T.Tour.countries.post) }; });
+    check('entrance: on a fresh save the harbour is hidden (no pin, not open)', r.stop === 'hidden' && !r.open, r);
+    // the market street at the start: the gap in the floor by the first stair stools, at game scale
+    await page.evaluate(() => { playP('10-3'); place(8, 18); sim(0.6); freeze(); }); await shot('01-entrance-10-3-market-start.png');
+    r = await page.evaluate(() => { thaw(); const a = AP.route([[4, 16], [2, 22]]); const b = AP.go([9, 24]); return { a: a.ok, b: b.ok, at: tileOf(), fail: a.fail }; });
+    check('entrance: up the first stair stools, then down through the gap in the street floor behind them to the river steps under the market', r.a && r.b, r);
+    // BEFORE: the three racks on the landing; the last rack's lowest card has a wave running across its border
+    await page.evaluate(() => { sim(0.4); freeze(); }); await shot('02-entrance-before-the-racks.png');
+    r = await page.evaluate(() => { thaw(); const a = AP.go([12, 24]); sim(0.7, { left: true }); const s1 = S().state, ps = P().state; AP.go([12, 24]); sim(0.5, { down: true }); return { a: a.ok, walk: s1 === 'play' && ps === 'play', crouch: S().state === 'play' && P().state === 'play' }; });
+    check('entrance: walking into the rack or crouching alone does nothing (no accident)', r.a && r.walk && r.crouch, r);
+    await page.evaluate(() => { AP.go([12, 24]); sim(0.2); freeze(); }); await shot('03-entrance-reverse-side.png');
+    r = await page.evaluate(() => { thaw(); sim(0.5, { down: true, left: true }); return { state: P().state }; });
+    check('entrance: on the rack\'s reverse side, crouch and push into the lowest card: Brady slips into it', r.state === 'portal', r);
+    await page.evaluate(() => { sim(0.5); freeze(); }); await shot('04-entrance-slipping-into-the-card.png');
+    r = await page.evaluate(() => { thaw(); sim(1.6); const g = S(); return { state: g.state, key: g.exitKey, banner: g.bannerText }; });
+    check('entrance: the land\'s name shows and 10-3 clears through its hidden exit', r.state !== 'play' && r.key === 'post', r);
+    r = await page.evaluate(() => { const T = window.BRADY_TOUR, d = window.BRADY.Save.data; return { land: !!T.TourProgress.data().lands.post, open: T.TourProgress.countryUnlocked(T.Tour.countries.post), first: !!d.unlocked['27-1'], done: !!d.done['10-3'] }; });
+    check('entrance: the harbour is open, 27-1 unlocked; 10-3 itself is not marked done by the secret way', r.land && r.open && r.first && !r.done, r);
+    r = await page.evaluate(() => { const T = window.BRADY_TOUR.TourProgress.data(); T.seen.vn = true; window.BRADY.goToMap('world', 10, '10-3'); const out = []; for (let k = 0; k < 40; k++) { sim(0.1); const s = S(); if (s.card) s.card = null; out.push(s.mode + (s.rReveal ? ':' + s.rReveal.r.kind : '')); if (s.rReveal && s.rReveal.r.kind === 'land' && s.rReveal.t > 0.6) break; } return { seq: [...new Set(out)] }; });
+    await page.evaluate(() => freeze()); await shot('05-entrance-arrival-new-land.png'); await page.evaluate(() => thaw());
+    check('entrance: back on the map the route map plays the NEW LAND reveal', r.seq.some(q => /land/.test(q)), r);
+    r = await page.evaluate(() => { for (let k = 0; k < 60; k++) { const s = S(); if (s.card) s.card = null; sim(0.25); if (s.mode === 'land' && s.ow && s.ow.cc === 'post') break; } const s = S(); return { mode: s.mode, cc: s.ow && s.ow.cc, stop: window.BRADY_TOUR.TourMap.stopState(window.BRADY_TOUR.Tour.stops.post) }; });
+    check('entrance: the route map reveals the new land and flies Brady to the harbour\'s own map', r.cc === 'post', r);
+    await page.evaluate(() => { sim(1.5); freeze(); }); await shot('06-entrance-arrival-harbour-map.png'); await page.evaluate(() => thaw());
+  });
+};
+
 // ---------------- 27-1 Perforation Walk ----------------
 LEVELS.perf = async (page, shot, run, pano) => {
   await run('perf', async () => {
