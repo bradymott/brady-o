@@ -274,6 +274,8 @@ const helpers = () => {
   // ride the pad under the swelling bead until it drinks one (the pad rolls along with Brady)
   window.catchBead = (maxT) => { const e = ents('PostBlotter').sort((a, b) => Math.abs(a.cxF - P().cx) - Math.abs(b.cxF - P().cx))[0]; AP.exec({ walkTo: e.cxF, dir: 0 }, 4); const p = P(); for (let k = 0; k < 60 * (maxT || 14) && e.pad !== 'inky'; k++) { const tx = e.bead ? e.bead.x : e.nibX(); sim(1 / 60, { left: tx < p.cx - 5, right: tx > p.cx + 5 }); } return e.pad; };
   window.pushSurf = () => { const e = ents('PostBlotter').sort((a, b) => Math.abs(a.cxF - P().cx) - Math.abs(b.cxF - P().cx))[0]; rollTo('PostBlotter', e.s.rail[1]); sim(0.3, { right: true }); sim(0.3); return { pad: e.pad, drunk: e.drunk, done: e.done }; };
+  // stand on a crease mark, hold THROW and walk back until the flap meets (or, the last one, then step onto it and let go)
+  window.foldAt = (mx, o) => { o = o || {}; AP.go([mx, 19]); AP.exec({ walkTo: mx * 32 + 16, dir: 0 }, 2); const e = ents('PostFold').find(q => q.s.mark[0] === mx); for (let k = 0; k < 60 * 4 && e.st !== 'down' && !e.temp; k++) sim(1 / 60, { action: true, left: !o.stop || e.ang < o.stop }); if (o.stop) { sim(0.3); return { st: e.st, ang: e.ang }; } if (e.temp && !o.release) { for (let k = 0; k < 60 * 4 && !(P().cx > e.Bt[0] * 32 + 40 && P().onGround); k++) sim(1 / 60, { action: true, right: true }); } sim(0.2); return { st: e.st, temp: e.temp, tuck: e.tuck }; };
   window.throwN = (n, gap) => { for (let k = 0; k < n; k++) { sim(1 / 120, { action: true, actionPressed: true }); sim(gap || 0.45); } };
   window.isl = x => ents('PostIsland').find(e => e.r[0] <= x && e.r[2] >= x);
   window.tileName = (x, y) => { const A = S().area, T = window.BRADY.T; const t = A.tiles[y * A.W + x]; return Object.keys(T).find(k => T[k] === t); };
@@ -412,6 +414,36 @@ LEVELS.blot = async (page, shot, run, pano) => {
     r = await page.evaluate(() => { const a = AP.route([[150, 19], [170, 19]]); sim(3, { right: true }); return { a: a.ok, state: S().state }; });
     check('27-3: on to the gate', r.a && r.state !== 'play', r);
     await page.evaluate(() => { playP('27-3'); }); await pano('39-27-3-panorama.png', 0.35);
+  });
+};
+
+// ---------------- 27-4 Forwarding Fold ----------------
+LEVELS.fold = async (page, shot, run, pano) => {
+  await run('fold', async () => {
+    await page.evaluate(helpers);
+    await page.evaluate(() => { fresh(); playP('27-4'); place(15, 18); sim(0.6); freeze(); }); await shot('40-27-4-crease-teach.png');
+    let r = await page.evaluate(() => { thaw(); const a = foldAt(19, { stop: 0.5 }); sim(0.8); const e = ents('PostFold')[0]; return { a, after: e.ang, st: e.st }; });
+    check('27-4: letting go half way: the flap springs back up', r.a.st === 'up' && r.after < 0.1, r);
+    r = await page.evaluate(() => { AP.go([19, 19]); const e = ents('PostFold')[0]; for (let k = 0; k < 60 && e.ang < 0.5; k++) sim(1 / 60, { action: true, left: true }); freeze(); return { ang: e.ang }; });
+    await shot('41-27-4-folding.png');
+    r = await page.evaluate(() => { thaw(); const a = foldAt(19); return { a, bridge: tileName(23, 19), flap: tileName(26, 16) }; });
+    check('27-4: hold THROW and walk back: the far bank\'s flap folds over and locks as a bridge', r.a.st === 'down' && r.bridge === 'SEMI' && r.flap === 'EMPTY', r);
+    await shotAt(page, shot, '42-27-4-folded.png', () => { place(20, 18); sim(0.2); });
+    r = await page.evaluate(() => { const a = AP.route([[24, 19], [30, 19], [44, 19]]); const b = foldAt(46); const c = AP.route([[52, 19], [60, 19], [76, 19]]); return { a: a.ok, b, c: c.ok }; });
+    check('27-4: the second, wider fold, past the crease eels', r.a && r.b.st === 'down' && r.c, r);
+    await shotAt(page, shot, '43-27-4-secret-tell.png', () => { place(77, 18); sim(0.3); });
+    r = await page.evaluate(() => { const a = foldAt(79); const b = AP.route([[84, 19], [90, 19]]); return { a, b: b.ok }; });
+    check('27-4: the optional crease by the curling corner folds a flap over to the letterbox ledge', r.a.st === 'down' && r.b, r);
+    r = await page.evaluate(() => { place(80, 18); const a = AP.route([[84, 25], [100, 25], [117, 23], [121, 19], [133, 19]]); return { a: a.ok, fail: a.fail }; });
+    check('27-4: the way on drops under the ledge and climbs back up to the last crease', r.a, r);
+    r = await page.evaluate(() => { const a = foldAt(134, { release: true }); sim(0, {}); sim(0.3); const e = ents('PostFold').find(q => q.s.last); return { a, st: e.st, tuck: e.tuck > 0, bridge: tileName(138, 19) }; });
+    check('27-4: twist: letting go off the last flap tucks the exit away and it springs back', r.st === 'up' && r.tuck && r.bridge === 'EMPTY', r);
+    await shotAt(page, shot, '44-27-4-twist-tucked.png', () => { sim(0.1); });
+    r = await page.evaluate(() => { sim(1.5); const a = foldAt(134); freeze(); return { a, bridge: tileName(138, 19) }; });
+    await shot('45-27-4-twist-on-printed-side.png');
+    r = await page.evaluate(o => { thaw(); const a = AP.route([[144, 19], [150, 19]]); sim(3, { right: true }); return { a: a.ok, state: S().state, bridge: o }; }, r);
+    check('27-4: twist: still holding, onto the printed side, then let go: it stays; on to the gate', r.a && r.state !== 'play' && r.bridge.a.st === 'down', r);
+    await page.evaluate(() => { playP('27-4'); }); await pano('49-27-4-panorama.png', 0.35);
   });
 };
 

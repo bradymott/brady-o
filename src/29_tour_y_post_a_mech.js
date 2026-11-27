@@ -462,7 +462,7 @@ class PostFold extends Ent {
     const a = (this.st === 'down' ? 1 : this.ang) * Math.PI / 2, wob = this.st === 'up' && this.ang === 0 ? Math.sin(t * 2) * 0.03 : 0;
     const tuckA = this.tuck > 0 ? -Math.sin(Math.min(1, (1.6 - this.tuck) / 0.5) * Math.PI / 2) * Math.PI / 2 * Math.min(1, this.tuck * 2) : 0;
     ctx.save(); ctx.translate(hx, hy); ctx.rotate(-Math.PI / 2 - a - wob - tuckA);
-    const len = L * TS, th = 12;
+    const len = L * TS, th = 18;
     // the rotated card: along +x from the hinge; its printed face is the side at -y (facing Brady while it stands)
     const printedUp = tuckA === 0;
     ctx.fillStyle = printedUp ? PAPER : '#e8e0d0'; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(0, -th, len, th); ctx.strokeRect(0, -th, len, th);

@@ -5,6 +5,7 @@
    27-1 PERFORATION WALK (perforate)  tear paper islands free so they fall and plug the ink; the last two share a tooth
    27-2 STAMP DUTY (stampduty)        roll a loose stamp, THROW prints a mirrored foothold; the last is an L
    27-3 BLOTTER BAY (blotter)         a pad drinks a bead, then a gap in the surf; the last needs two and a slap
+   27-4 FORWARDING FOLD (fold)        hold THROW and walk back: the far bank folds over; the last needs you on it
    ============================================================ */
 (function () {
 const C = Tour.countries.post;
@@ -181,7 +182,52 @@ const L3 = { n: 3, name: 'Blotter Bay', mapLabel: 'Blotter Bay', arch: 'blotter'
     { id: 'cellar', gen: 'room', role: 'secret', theme: 'post_room_cellar', stamp: 'postCellarOld', post: { room: true } }
   ] };
 
-Tour.amend('post', { stamps, levels: [L1, L2, L3] });
+/* ---------------- 27-4 Forwarding Fold ---------------- */
+// ① the teach: a crease mark by an ink channel, the far bank's flap standing up beyond it: hold THROW and walk back,
+// the flap folds down over the ink until the edges meet; ② the test: a wider channel, crease eels that only turn at
+// folds; an optional crease at the end of a bank folds a flap over to a ledge with a letterbox (a corner curls by the
+// mark); the way on drops under it; ③ the twist: the last flap tucks the exit away unless Brady, still holding THROW,
+// steps onto its printed side before he lets go.
+const foldRows = (() => {
+  const W = 176, H = 27, Gr = grid(W, H, '.');
+  ground(Gr, 0, 20, 19); put(Gr, 3, 18, '@'); put(Gr, 5, 18, 'n'); put(Gr, 8, 15, '?'); put(Gr, 19, 18, '1'); put(Gr, 13, 18, 'l');
+  ink(Gr, 21, 25, 20); put(Gr, 23, 15, '*');
+  ground(Gr, 26, 48, 19); put(Gr, 30, 18, 'c'); put(Gr, 33, 18, 'N'); put(Gr, 35, 18, 'f'); put(Gr, 38, 18, 'w'); put(Gr, 44, 18, 'f'); put(Gr, 40, 15, '?'); put(Gr, 46, 18, '2');
+  ink(Gr, 49, 54, 20); put(Gr, 52, 9, 'M');
+  ground(Gr, 55, 80, 19); put(Gr, 62, 18, 'c'); put(Gr, 58, 18, 'f'); put(Gr, 66, 18, 'w'); put(Gr, 74, 18, 'f'); put(Gr, 79, 18, '3'); put(Gr, 80, 18, 'x');
+  // the letterbox ledge: a block in the air over the way on, reached only by folding its flap over
+  pit(Gr, 81, 85); fillG(Gr, 86, 19, 92, 20, '#'); put(Gr, 88, 17, 'A'); put(Gr, 91, 18, 'D');
+  ground(Gr, 81, 115, 25); put(Gr, 84, 24, 'f'); put(Gr, 90, 24, 'w'); put(Gr, 101, 24, 'f'); put(Gr, 100, 24, 'c'); put(Gr, 106, 24, 'a'); put(Gr, 110, 24, 'u'); put(Gr, 96, 21, 'o.o.o');
+  ground(Gr, 116, 117, 23); ground(Gr, 118, 119, 21); ground(Gr, 120, 135, 19); put(Gr, 122, 18, 'c'); put(Gr, 124, 18, 'O'); put(Gr, 134, 18, '4');
+  ink(Gr, 136, 141, 20); put(Gr, 138, 14, 'R');
+  ground(Gr, 142, W - 1, 19); put(Gr, 146, 18, 'k'); put(Gr, 158, 18, 'G'); put(Gr, 165, 18, 'l'); fillG(Gr, W - 1, 0, W - 1, 18, '#');
+  return rowsOf(Gr);
+})();
+const FOLD = o => ['piece', 'post.fold', o];
+stamps.postFoldLand = { floor: 19, rows: foldRows, gold: { '*': 'must', A: 'hidden', R: 'risky' }, items: ['power', 'power'], doors: [{ to: 'pens@in', look: 'postFlap' }], legend: Object.assign({}, COMMON, {
+  n: SIGN('A CREASE! STAND ON THE MARK, HOLD THROW AND WALK BACK: THE FAR BANK FOLDS OVER TOWARD YOU. KEEP HOLDING TILL THE EDGES MEET'),
+  N: SIGN('CREASE EELS ONLY TURN AT A FOLD LINE. THEY REAR UP FIRST'),
+  O: SIGN('THE LAST FLAP: KEEP HOLDING, STEP ONTO ITS PRINTED SIDE, THEN LET GO. OR IT TUCKS THE EXIT AWAY'),
+  '1': FOLD({ mark: [19, 19], hinge: 26, y: 19, len: 5, g: 0 }),
+  '2': FOLD({ mark: [46, 19], hinge: 55, y: 19, len: 6, g: 1 }),
+  '3': FOLD({ mark: [79, 19], hinge: 86, y: 19, len: 5, g: 2 }),
+  '4': FOLD({ mark: [134, 19], hinge: 142, y: 19, len: 6, last: true, cover: [152, 13, 162, 18], g: 3 }),
+  x: ['decor', 'postTell'], a: ['anchor', 'pensOut']
+}) };
+stamps.postPensOld = oldRoom('fold@pensOut', ['oneup']);
+const L4 = { n: 4, name: 'Forwarding Fold', mapLabel: 'Forwarding Fold', arch: 'fold', theme: 'post_fold',
+  gimmick: 'At a crease, hold THROW and walk back: the far bank\'s flap folds over until the edges meet. Crease eels only turn at folds. The last flap only stays if you step onto its printed side before you let go',
+  hint: 'Hold THROW all the way: let go early and it springs back. On the last one, still holding, walk onto the flap, then let go. A corner curls by a crease at the end of a bank...',
+  postcard: 'Brady! I folded the far bank over to meet you, like a letter. You stepped across and said "forwarding address". I laughed for a whole page. ♥ C',
+  enemies: [['postEel', 3], ['postPup', 1], ['postGull', 1]],
+  mapCell: [3, 0], mapFrom: 2,
+  exits: { main: { to: '27-5' } },
+  areas: [
+    { id: 'fold', gen: 'room', theme: 'post_fold', stamp: 'postFoldLand', post: { fold: true }, bottomKill: true },
+    { id: 'pens', gen: 'room', role: 'secret', theme: 'post_room_pens', stamp: 'postPensOld', post: { room: true } }
+  ] };
+
+Tour.amend('post', { stamps, levels: [L1, L2, L3, L4] });
 
 /* ---------------- the land's map: the postcard's printed harbour ---------------- */
 if (typeof TOUR_OW_MAPS !== 'undefined') TOUR_OW_MAPS.post = {
