@@ -321,6 +321,7 @@ class WashPeep extends Ent {
   }
 }
 Object.assign(ENTITY_TYPES, { washNet: WashNet, washCrawler: WashCrawler, washBeetleGate: WashBeetleGate, washPeep: WashPeep });
+if (typeof TourSeams !== 'undefined' && TourSeams.TELLS) TourSeams.TELLS.washPeep = true;   // the land's tell counts as a seam's tell
 
 /* ---------------- the pieces ---------------- */
 let netN = 0;

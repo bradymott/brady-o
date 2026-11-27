@@ -103,7 +103,230 @@ const L1 = { n: 1, name: 'Peg Legwork', mapLabel: 'Peg Legwork', arch: 'netclimb
     { id: 'basket', gen: 'room', role: 'secret', theme: 'wash_room_wicker', stamp: 'washBasket', room: 'washCups' }
   ] };
 
-Tour.amend('wash', { stamps, levels: [L1] });
+/* ---------------- the shared room stand-in ---------------- */
+// a secret room's stand-in stamp (the room kind builds its own place from it): its door out, its prize
+const roomStamp = (out, look, items) => ({ floor: 12, rows: [
+  '############################', '#..........................#', '#..........................#', '#..........................#',
+  '#..........................#', '#..........................#', '#..........................#', '#..........................#',
+  '#..........................#', '#..........................#', '#..........................#', '#.@..D..................?..#',
+  '############################', '############################'], items: items || ['oneup'], doors: [{ to: out, look: look || 'washChute' }] });
+
+/* ---------------- 26-2 Cold Wash Only ---------------- */
+// roof tops on row 21 (then 19, then 15). ① the teach: a sweater straight off the first roof, a soft heap under it;
+// ② a sweater a hop up over a real gap, the safe drop by the hanky (room B2, the launderette), two sweaters in a
+// row; ③ the twist: down through a hole in the slab onto the RIGHT shoulder of the last sweater, whose right sleeve is
+// short: walk back to the left shoulder and run the whole body to make it reach
+const coldRows = (() => {
+  const W = 220, H = 26, Gr = grid(W, H, '.');
+  ground(Gr, 0, 20, 21); put(Gr, 3, 20, '@'); put(Gr, 6, 20, 'k'); put(Gr, 12, 17, '?'); put(Gr, 16, 20, 'x');
+  put(Gr, 21, 21, '1'); ground(Gr, 21, 34, 25); ground(Gr, 21, 22, 23); put(Gr, 27, 19, 'o.o.o'); put(Gr, 31, 17, '*');
+  ground(Gr, 35, 60, 21); put(Gr, 38, 20, 'c'); put(Gr, 48, 20, 'l'); put(Gr, 54, 20, 'x');
+  pit(Gr, 61, 76); put(Gr, 62, 19, '2'); put(Gr, 68, 17, 'o.o.o.o');
+  ground(Gr, 77, 95, 19); put(Gr, 88, 18, 'r'); put(Gr, 84, 15, '?');
+  // the safe drop: a gap with a hanky by it; down at the bottom, the launderette
+  pit(Gr, 96, 98); fillG(Gr, 96, 25, 98, 25, 'z'); put(Gr, 95, 16, 'u');
+  ground(Gr, 99, 115, 19); put(Gr, 102, 18, 'c'); put(Gr, 108, 18, 'a'); put(Gr, 112, 18, 'l');
+  pit(Gr, 116, 146); put(Gr, 117, 17, '3'); put(Gr, 132, 15, '4'); put(Gr, 140, 9, 'f'); put(Gr, 140, 12, 'R'); put(Gr, 124, 14, 'o.o.o');
+  ground(Gr, 147, 160, 15); put(Gr, 150, 14, 'c'); put(Gr, 156, 14, 'l');
+  // ③ up the steps onto the slab; the hole; the last sweater under it; the wall at the slab's end (no way round)
+  ground(Gr, 161, 162, 13); pit(Gr, 163, 177); fillG(Gr, 163, 11, 169, 12, 'H'); fillG(Gr, 172, 11, 178, 12, 'H'); fillG(Gr, 179, 2, 180, 12, 'H');
+  put(Gr, 164, 10, 'K'); put(Gr, 167, 15, '5');
+  ground(Gr, 178, W - 1, 15); fillG(Gr, 178, 11, 178, 12, 'H'); put(Gr, 184, 14, 'c'); put(Gr, 196, 14, 'r'); fillG(Gr, 204, 13, 205, 14, 'H'); put(Gr, 204, 10, 'P'); put(Gr, 214, 14, 'G');
+  fillG(Gr, W - 1, 0, W - 1, 14, 'H');
+  return rowsOf(Gr);
+})();
+const COLD = {
+  k: SIGN('A WET SWEATER! WALK ALONG IT AND THE SLEEVE ON THAT SIDE STRETCHES OUT. WALK ON TO THE CUFF, THEN JUMP'),
+  K: SIGN('THE LAST SWEATER\'S RIGHT SLEEVE IS SHORT: IT ONLY REACHES IF YOU RUN THE WHOLE BODY FROM THE OTHER SHOULDER'),
+  x: ['decor', 'washChimney'], l: ['enemy', 'washLamb'], r: ['enemy', 'washHeron'], f: ['enemy', 'washMoth'],
+  '1': ['piece', 'wash.sweater', { w: 5, maxR: 9, kR: 2, col: '#5ab08a' }],
+  '2': ['piece', 'wash.sweater', { w: 5, maxR: 10, kR: 2, col: '#e8744a' }],
+  '3': ['piece', 'wash.sweater', { w: 5, maxR: 8, kR: 2, col: '#6a8ad8' }],
+  '4': ['piece', 'wash.sweater', { w: 5, maxR: 9, kR: 2, col: '#d86a9a' }],
+  '5': ['piece', 'wash.sweater', { w: 5, maxL: 2, kL: 1, maxR: 7, kR: 1.6, col: '#e8442e' }],
+  z: ['seam', 'bottom', 'launder@in'], u: ['piece', 'wash.peep', {}], a: ['anchor', 'launderOut']
+};
+stamps.washCold = { floor: 21, rows: coldRows, legend: COLD, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power'] };
+stamps.washLaunder = roomStamp('tub@launderOut', 'washCupboard');
+const L2 = { n: 2, name: 'Cold Wash Only', mapLabel: 'Cold Wash Only', arch: 'sweater', theme: 'wash_tub',
+  gimmick: 'Wet sweaters pegged up by the shoulders: walk along one and your weight stretches the sleeve on that side out flat, far enough to reach the next roof. Jump off the cuff',
+  hint: 'The sleeve stretches two tiles for every tile you walk across the body. A short sleeve needs the whole run, from the other shoulder. One gap has a hanky by it...',
+  postcard: 'Brady! A sweater on the line stretched all the way to the next roof. It was yours. It fits Pupo now. ♥ C',
+  enemies: [['washLamb', 3], ['washHeron', 2], ['washMoth', 1]],
+  mapCell: [1, 0], mapFrom: 0,
+  exits: { main: { to: '26-3' } },
+  areas: [
+    { id: 'tub', gen: 'room', theme: 'wash_tub', stamp: 'washCold', camera: 'free', bottomKill: true },
+    { id: 'launder', gen: 'room', role: 'secret', theme: 'wash_room_launderette', stamp: 'washLaunder', room: 'washWindows' }
+  ] };
+
+/* ---------------- 26-3 Loose End ---------------- */
+// floors on row 21 (then 18). ① the teach: a seam over a soft heap; ② a seam under snapping peg jaws, a seam whose
+// hem steps up (jump while holding the thread); the chimney with the hanky: its left face is only a painted cloth
+// (room B3, the peg loft, inside); ③ a long seam with a lamb coming the other way under the jaws; the last hem with
+// two threads: the navy one under his feet drops him to a ledge to try again, the red one runs along the bridge
+const looseRows = (() => {
+  const W = 214, H = 26, Gr = grid(W, H, '.');
+  ground(Gr, 0, 18, 21); put(Gr, 3, 20, '@'); put(Gr, 6, 20, 'k'); put(Gr, 12, 17, '?');
+  put(Gr, 18, 20, '1'); ground(Gr, 19, 28, 25); ground(Gr, 19, 20, 23); put(Gr, 22, 17, 'o.o.o');
+  ground(Gr, 29, 55, 21); put(Gr, 32, 20, 'c'); put(Gr, 40, 17, '?'); put(Gr, 46, 20, 'l');
+  put(Gr, 55, 20, '2'); pit(Gr, 56, 67); put(Gr, 59, 15, 'j'); put(Gr, 64, 15, 'J'); put(Gr, 61, 17, '*');
+  ground(Gr, 68, 95, 21); put(Gr, 72, 20, 'c'); put(Gr, 84, 20, 'r'); put(Gr, 78, 17, 'o.o.o');
+  put(Gr, 95, 20, '3'); pit(Gr, 96, 107); put(Gr, 101, 13, 'o.o.o');
+  ground(Gr, 108, 140, 18); put(Gr, 111, 17, 'c');
+  // the chimney: a hollow with its left face only a painted cloth; the cupboard door inside; a crate to climb it
+  fillG(Gr, 119, 13, 123, 17, 'H'); fillG(Gr, 120, 14, 122, 17, '.'); fillG(Gr, 119, 14, 119, 17, 'F'); put(Gr, 121, 17, 'A'); fillG(Gr, 116, 16, 116, 17, 'B'); put(Gr, 119, 15, 'u');
+  put(Gr, 128, 17, 'a'); put(Gr, 133, 17, 'r');
+  // ③ the long seam with a lamb on the far side and jaws over it
+  put(Gr, 140, 17, '4'); pit(Gr, 141, 154); put(Gr, 145, 12, 'n'); put(Gr, 151, 12, 'N'); put(Gr, 147, 14, 'R');
+  ground(Gr, 155, 175, 18); put(Gr, 158, 17, 'c'); put(Gr, 156, 17, 'l'); put(Gr, 165, 14, '?'); put(Gr, 170, 17, 'K');
+  // the last hem: the post on a thin floor; under it the retry ledge, steps back up to the post
+  fillG(Gr, 173, 19, 175, 25, '.'); fillG(Gr, 174, 18, 175, 18, 'H'); put(Gr, 175, 17, '5'); pit(Gr, 176, 187); ground(Gr, 172, 179, 23); ground(Gr, 178, 179, 21);
+  ground(Gr, 188, W - 1, 18); put(Gr, 192, 17, 'c'); fillG(Gr, 198, 15, 199, 17, 'H'); put(Gr, 198, 12, 'P'); put(Gr, 207, 17, 'G');
+  fillG(Gr, W - 1, 0, W - 1, 17, 'H');
+  return rowsOf(Gr);
+})();
+const LOOSE = {
+  k: SIGN('A LOOSE THREAD! STAND BY IT, HOLD THROW AND WALK: THE SEAM UNZIPS INTO A STRIP OF FLOOR. LET GO AND THE FLOOR STAYS'),
+  K: SIGN('THE LAST HEM HAS TWO THREADS. THE RED ONE RUNS ALONG THE BRIDGE. THE NAVY ONE RUNS UNDER YOUR OWN FEET...'),
+  l: ['enemy', 'washLamb'], r: ['enemy', 'washHeron'],
+  '1': ['piece', 'wash.seam', { len: 10 }], '2': ['piece', 'wash.seam', { len: 12 }], '3': ['piece', 'wash.seam', { len: 12, rise: 4 }],
+  '4': ['piece', 'wash.seam', { len: 14 }], '5': ['piece', 'wash.seam', { len: 12, trap: 2 }],
+  j: ['piece', 'wash.jaws', { period: 2.8, reach: 4 }], J: ['piece', 'wash.jaws', { period: 2.8, phase: 1.4, reach: 4 }],
+  n: ['piece', 'wash.jaws', { period: 3.0, reach: 5 }], N: ['piece', 'wash.jaws', { period: 3.0, phase: 1.5, reach: 5 }],
+  A: ['spawn', 'portal', { kind: 'door', look: 'washCupboard', targetRef: 'loft@in' }], u: ['piece', 'wash.peep', { hanky: false }], a: ['anchor', 'loftOut']
+};
+stamps.washLoose = { floor: 21, rows: looseRows, legend: LOOSE, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power'] };
+stamps.washLoft = roomStamp('hem@loftOut', 'washChute');
+const L3 = { n: 3, name: 'Loose End', mapLabel: 'Loose End', arch: 'unzip', theme: 'wash_hem',
+  gimmick: 'Loose threads at the edge of every gap: hold THROW on one and walk, and the seam unzips into a strip of floor ahead of you. Snapping peg jaws hang over the long ones',
+  hint: 'Hold THROW and keep walking; let go and the floor stays. The last hem has two threads: follow each one with your eye. One chimney\'s side is only painted cloth...',
+  postcard: 'Brady! I pulled one loose thread and walked across a whole street on it. Piwi\'s curtains are now a bridge. ♥ C',
+  enemies: [['washLamb', 2], ['washHeron', 2]],
+  mapCell: [2, 0], mapFrom: 1,
+  exits: { main: { to: '26-4' } },
+  areas: [
+    { id: 'hem', gen: 'room', theme: 'wash_hem', stamp: 'washLoose', camera: 'free', bottomKill: true },
+    { id: 'loft', gen: 'room', role: 'secret', theme: 'wash_room_loft', stamp: 'washLoft', room: 'washPegs' }
+  ] };
+
+/* ---------------- 26-4 The Cling Section ---------------- */
+// floors on row 23. ① the teach: a rug, a tall wall with a felt patch (two sticks get you up); ② a pit and a wall:
+// stick on the far side, two up; a wall whose felt is cut in two by a bare washing label; the high felt by the
+// hanky reaches a window (room B4, lost property); ③ the last climb: felt, then labels too tall to cross, the wool
+// sill on the other wall for a fresh charge, the last felt, the top
+const clingRows = (() => {
+  const W = 190, H = 28, Gr = grid(W, H, '.');
+  ground(Gr, 0, 24, 23); put(Gr, 3, 22, '@'); put(Gr, 7, 22, 'k'); put(Gr, 16, 22, 'w'); put(Gr, 16, 19, '?');
+  fillG(Gr, 25, 13, 27, 22, 'H'); put(Gr, 25, 14, '1'); put(Gr, 26, 10, 'o.o');
+  ground(Gr, 28, 50, 23); put(Gr, 31, 22, 'c'); put(Gr, 36, 19, '?'); put(Gr, 38, 22, 'l'); put(Gr, 44, 22, 'Y');
+  pit(Gr, 51, 53); fillG(Gr, 54, 12, 56, 22, 'H'); ground(Gr, 54, 56, 23); put(Gr, 54, 13, '2'); put(Gr, 55, 9, '*');
+  ground(Gr, 57, 92, 23); put(Gr, 60, 22, 'c'); put(Gr, 74, 22, 'O'); put(Gr, 66, 22, 'l');
+  // the wall with a label between two felts; on its top a rug, and over there a felt block hung from above: stick on
+  // it and hop up to the window ledge (only the felt reaches it: the hanky's peephole is by the window)
+  fillG(Gr, 80, 11, 82, 22, 'H'); put(Gr, 80, 19, '3'); put(Gr, 80, 16, 'E'); put(Gr, 80, 12, '4'); put(Gr, 80, 10, 'V');
+  fillG(Gr, 86, 0, 88, 9, 'H'); put(Gr, 86, 5, '7');
+  fillG(Gr, 81, 6, 84, 6, 'H'); put(Gr, 82, 5, 'A'); put(Gr, 84, 4, 'u'); put(Gr, 81, 3, 'o.o');
+  ground(Gr, 93, 118, 23); put(Gr, 96, 22, 'c'); put(Gr, 102, 22, 'a'); put(Gr, 106, 18, '?'); put(Gr, 110, 22, 'r'); put(Gr, 100, 15, 'f');
+  // ③ the last climb: two walls facing; the wool sill on the left wall
+  fillG(Gr, 119, 6, 120, 19, 'H'); ground(Gr, 119, 127, 23); put(Gr, 122, 22, 'K'); put(Gr, 121, 22, 'Z');
+  fillG(Gr, 121, 16, 124, 16, 'H'); put(Gr, 121, 15, 'U');
+  fillG(Gr, 128, 6, 130, 22, 'H'); put(Gr, 128, 18, '5'); put(Gr, 128, 12, 'N'); put(Gr, 128, 7, '6'); put(Gr, 125, 11, 'R');
+  ground(Gr, 131, W - 1, 23); fillG(Gr, 128, 6, 135, 6, 'H'); put(Gr, 134, 5, 'o.o');
+  put(Gr, 140, 22, 'c'); put(Gr, 150, 22, 'l'); fillG(Gr, 160, 20, 161, 22, 'H'); put(Gr, 160, 16, 'P'); put(Gr, 172, 22, 'r'); put(Gr, 182, 22, 'G');
+  fillG(Gr, W - 1, 0, W - 1, 22, 'H');
+  return rowsOf(Gr);
+})();
+const CLINGL = {
+  k: SIGN('SCUFF UP AND DOWN THE WOOL RUG TILL YOUR SOCKS CRACKLE, THEN LEAP AT A FELT PATCH: YOU STICK! JUMP TO SPRING OFF. TWO SPARKS A CHARGE'),
+  K: SIGN('WHITE LABELS DON\'T HOLD. RUN OUT OF SPARKS? LAND ON THE WOOL SILL FOR A FRESH CHARGE'),
+  w: ['piece', 'wash.wool', { w: 9 }], O: ['piece', 'wash.wool', { w: 6 }], Y: ['piece', 'wash.wool', { w: 7 }], Z: ['piece', 'wash.wool', { w: 7 }], V: ['piece', 'wash.wool', { w: 3 }],
+  '1': ['piece', 'wash.felt', { w: 1, h: 8, col: '#4a9a6a' }], '2': ['piece', 'wash.felt', { w: 1, h: 9, col: '#c8643a' }],
+  '3': ['piece', 'wash.felt', { w: 1, h: 4, col: '#6a7ad8' }], E: ['piece', 'wash.label', { w: 1, h: 3 }], '4': ['piece', 'wash.felt', { w: 1, h: 4, col: '#6a7ad8' }],
+  U: ['piece', 'wash.wool', { w: 4 }],
+  '7': ['piece', 'wash.felt', { w: 1, h: 5, col: '#e8a83a' }],
+  '5': ['piece', 'wash.felt', { w: 1, h: 5, col: '#4a9a6a' }], N: ['piece', 'wash.label', { w: 1, h: 5 }], '6': ['piece', 'wash.felt', { w: 1, h: 5, col: '#c8643a' }],
+  l: ['enemy', 'washLamb'], r: ['enemy', 'washHeron'], f: ['enemy', 'washMoth'],
+  A: ['spawn', 'portal', { kind: 'door', look: 'washCupboard', targetRef: 'lost@in' }], u: ['piece', 'wash.peep', {}], a: ['anchor', 'lostOut']
+};
+stamps.washCling = { floor: 23, rows: clingRows, legend: CLINGL, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power'] };
+stamps.washLost = roomStamp('lint@lostOut', 'washChute');
+const L4 = { n: 4, name: 'The Cling Section', mapLabel: 'The Cling Section', arch: 'cling', theme: 'wash_lint',
+  gimmick: 'Inside the tumble dryer\'s lint trap: scuff along a wool rug until your socks crackle, then leap at a felt patch and stick where you land. Two sparks a charge; the white labels don\'t hold',
+  hint: 'Scuff back and forth on the wool, jump at the felt, jump again to spring off. Out of sparks halfway up? A wool sill gives a fresh charge. A high felt patch by a hanky leads to a window...',
+  postcard: 'Brady! You came out of the dryer stuck to a sock. Piwi says it suits you. I say it\'s the sock that looks lucky. ♥ C',
+  enemies: [['washLamb', 3], ['washHeron', 2], ['washMoth', 1]],
+  mapCell: [3, 0], mapFrom: 2,
+  exits: { main: { to: '26-5' } },
+  areas: [
+    { id: 'lint', gen: 'room', theme: 'wash_lint', stamp: 'washCling', camera: 'free', bottomKill: true },
+    { id: 'lost', gen: 'room', role: 'secret', theme: 'wash_room_counter', stamp: 'washLost', room: 'washBag' }
+  ] };
+
+/* ---------------- 26-5 Pocket Address ---------------- */
+// floors on row 21. Every pocket's lining matches exactly one other: in one, out of its twin. ① the teach: one
+// pocket, its twin up on the high shelf; ② three pockets by the wall, three shelves beyond it (a wrong pocket drops
+// you on a heap of Piwi's socks in sight of the right lining); the gold-lined pocket by the hanky (room B5, the drying
+// room); ③ two pockets that share a mint stripe: only one has the scalloped hem of the twin on the far side
+const pocketRows = (() => {
+  const W = 200, H = 26, Gr = grid(W, H, '.');
+  ground(Gr, 0, 30, 21); put(Gr, 3, 20, '@'); put(Gr, 6, 20, 'k'); put(Gr, 10, 17, '?');
+  put(Gr, 16, 19, '1'); put(Gr, 20, 20, 'q'); fillG(Gr, 26, 4, 30, 20, 'H');
+  // the high shelf behind the wall: the teach pocket's twin
+  fillG(Gr, 31, 9, 44, 9, 'H'); put(Gr, 38, 7, '2'); put(Gr, 41, 8, 'f'); put(Gr, 34, 7, '*');
+  ground(Gr, 31, 70, 21); put(Gr, 46, 20, 'c'); put(Gr, 40, 20, 'l');
+  // ② three pockets before the tall wall (and the sock heap's twin), beyond it the basin of socks with three shelves:
+  // only the check shelf is level with the second wall's top (the way on); the others drop you in the basin
+  put(Gr, 50, 19, '0'); put(Gr, 49, 20, 'p'); put(Gr, 56, 19, '3'); put(Gr, 61, 19, '4'); put(Gr, 66, 19, '5'); put(Gr, 59, 20, 'N'); put(Gr, 64, 20, 'O'); put(Gr, 69, 20, 'U'); fillG(Gr, 71, 3, 74, 20, 'H');
+  ground(Gr, 75, 98, 21); fillG(Gr, 75, 8, 80, 8, 'H'); put(Gr, 78, 6, '6'); put(Gr, 76, 7, 'd');
+  fillG(Gr, 83, 13, 88, 13, 'H'); put(Gr, 86, 11, '7'); put(Gr, 84, 12, 'e');
+  put(Gr, 90, 19, 'A'); put(Gr, 94, 20, 'j'); put(Gr, 81, 20, 'j'); put(Gr, 87, 20, 'w');
+  fillG(Gr, 91, 7, 98, 7, 'H'); put(Gr, 95, 5, '8'); put(Gr, 92, 6, 'i'); put(Gr, 93, 4, 'o.o');
+  fillG(Gr, 99, 7, 100, 20, 'H');
+  ground(Gr, 101, 136, 21); put(Gr, 104, 20, 'c'); put(Gr, 112, 20, 'r'); put(Gr, 110, 16, '?');
+  // the drying room's pocket: gold lining, by the hanky
+  put(Gr, 122, 19, '9'); put(Gr, 120, 17, 'u'); put(Gr, 130, 20, 'a');
+  // ③ the shared stripe: two mint pockets; beyond the wall a basin, and the scalloped one's shelf by the third wall's top
+  put(Gr, 136, 20, 'K'); put(Gr, 138, 20, 't'); put(Gr, 141, 19, 'M'); put(Gr, 144, 20, 'x'); put(Gr, 146, 19, 'X'); put(Gr, 149, 20, 'V'); fillG(Gr, 151, 3, 154, 20, 'H');
+  ground(Gr, 155, 170, 21); fillG(Gr, 155, 10, 162, 10, 'H'); put(Gr, 158, 8, 'Y'); put(Gr, 156, 9, 'm'); put(Gr, 160, 7, 'R');
+  fillG(Gr, 157, 15, 161, 15, 'H'); put(Gr, 159, 13, 'Z'); put(Gr, 157, 14, 'n'); put(Gr, 166, 19, 'E'); put(Gr, 168, 20, 'j');
+  fillG(Gr, 163, 10, 164, 20, 'H');
+  ground(Gr, 165, W - 1, 21); fillG(Gr, 165, 10, 166, 20, 'H'); put(Gr, 172, 20, 'c'); put(Gr, 180, 20, 'l'); fillG(Gr, 184, 18, 185, 20, 'H'); put(Gr, 184, 14, 'P'); put(Gr, 192, 20, 'G');
+  fillG(Gr, W - 1, 0, W - 1, 20, 'H');
+  return rowsOf(Gr);
+})();
+const PK = (lining, hem, to, col) => ['piece', 'wash.pocket', { lining, hem: hem || 'straight', to, col }];
+const POCK = {
+  k: SIGN('JUMP DOWN INTO A POCKET AND YOU POP OUT OF THE POCKET WITH THE SAME LINING. WATCH THE LIPS FLOP OPEN TO SHOW IT'),
+  K: SIGN('TWO POCKETS HERE SHARE A MINT STRIPE. LOOK AT THE HEMS TOO...'),
+  l: ['enemy', 'washLamb'], r: ['enemy', 'washHeron'], j: ['decor', 'washBasket'], w: ['anchor', 'pS'], x: ['anchor', 'pM'], N: ['anchor', 'p3'], O: ['anchor', 'p4'], U: ['anchor', 'p5'], V: ['anchor', 'pX'],
+  '1': PK('dots', 'straight', 'pockets@p2', '#3e4f8e'), q: ['anchor', 'p1'], '2': PK('dots', 'straight', 'pockets@p1', '#7a5a8a'), f: ['anchor', 'p2'], 
+  '3': PK('mint', 'straight', 'pockets@p6', '#4a7a6a'), '4': PK('check', 'straight', 'pockets@p8', '#a8784a'), '5': PK('sun', 'straight', 'pockets@p7', '#3e4f8e'),
+  '6': PK('mint', 'straight', 'pockets@p3', '#7a5a8a'), d: ['anchor', 'p6'],
+  '7': PK('sun', 'straight', 'pockets@p5', '#4a7a6a'), e: ['anchor', 'p7'],
+  '8': PK('check', 'straight', 'pockets@p4', '#a8784a'), i: ['anchor', 'p8'],
+  // the sock heap's way back: a pocket in the basin and its twin by the three
+  A: PK('sock', 'straight', 'pockets@pS0', '#7a6a5a'), '0': PK('sock', 'straight', 'pockets@pS', '#7a6a5a'), p: ['anchor', 'pS0'],
+  '9': PK('gold', 'scallop', 'drying@in', '#c86a3a'), u: ['piece', 'wash.peep', {}], a: ['anchor', 'dryingOut'],
+  M: PK('mint', 'straight', 'pockets@pZ', '#3e4f8e'), X: PK('mint', 'scallop', 'pockets@pY', '#4a7a6a'),
+  Y: PK('mint', 'scallop', 'pockets@pX', '#7a5a8a'), m: ['anchor', 'pY'], Z: PK('mint', 'straight', 'pockets@pM', '#a8784a'), n: ['anchor', 'pZ'],
+  E: PK('sock', 'straight', 'pockets@pT', '#7a6a5a'), t: ['anchor', 'pT']
+};
+stamps.washPockets = { floor: 21, rows: pocketRows, legend: POCK, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power'] };
+stamps.washDrying = roomStamp('pockets@dryingOut', 'washCupboard');
+const L5 = { n: 5, name: 'Pocket Address', mapLabel: 'Pocket Address', arch: 'pockets', theme: 'wash_pockets',
+  gimmick: 'Trousers and aprons on the evening lines, all pockets: jump into one and you pop out of the pocket with the matching lining. Their lips flop open now and then to show it',
+  hint: 'Watch the lips: the lining tells you where a pocket goes. A wrong pocket only drops you on Piwi\'s socks. Two pockets late on share a stripe: check the hems. One pocket is lined with gold...',
+  postcard: 'Brady! I jumped into a pocket in Piwi\'s trousers and came out of his apron. He has been looking for that thimble for years. ♥ C',
+  enemies: [['washLamb', 2], ['washHeron', 1]],
+  mapCell: [4, 0], mapFrom: 3,
+  exits: { main: { to: '26-6' } },
+  areas: [
+    { id: 'pockets', gen: 'room', theme: 'wash_pockets', stamp: 'washPockets', camera: 'free', bottomKill: true },
+    { id: 'drying', gen: 'room', role: 'secret', theme: 'wash_room_drying', stamp: 'washDrying', room: 'washSeats' }
+  ] };
+
+Tour.amend('wash', { stamps, levels: [L1, L2, L3, L4, L5] });
 
 /* ---------------- the land's map: the rooftops and their washing lines ---------------- */
 if (typeof TOUR_OW_MAPS !== 'undefined') TOUR_OW_MAPS.wash = {

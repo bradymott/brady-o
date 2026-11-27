@@ -341,7 +341,7 @@ const themes = {
   wash_hem: base({ name: 'Loose End', music: 'tour_wash', particles: 'none', rays: null, sky: ['#e8c8b8', '#f2dccc', '#fff0e4'], horizonGlow: '#fff4e8', celestial: { type: 'none' }, stars: 0,
     layers: [{ kind: 'washFolds', color: '#e8b8a0', base: 420, f: 0.12 }], fog: '#f2d8c8', decor: ['washSpool'] }, linen),
   wash_lint: base({ name: 'The Cling Section', music: 'tour_wash_cling', particles: 'none', rays: null, sky: ['#c8b0c0', '#dcc4d0', '#ecdce4'], horizonGlow: '#fff0f8', celestial: { type: 'none' }, stars: 0,
-    layers: [{ kind: 'washLint', color: '#c8a8b8', base: 420, f: 0.1 }], fog: '#e8d0dc', decor: [] }, woolly),
+    layers: [{ kind: 'washLint', color: '#c8a8b8', base: 420, f: 0.1 }], fog: '#e8d0dc', decor: [] }, linen),
   wash_pockets: base({ name: 'Pocket Address', music: 'tour_wash_cold', particles: 'none', rays: null, sky: ['#6a5a8a', '#c88aa0', '#f2c0a0'], horizonGlow: '#ffd8b0', celestial: { type: 'sun', x: 0.2, y: 0.55, r: 30, color: '#ffe0b0', glow: '#ffb88a' }, stars: 0.3,
     layers: [{ kind: 'washFarRoofs', color: '#7a6a8a', base: 360, f: 0.08 }, { kind: 'washTrousers', color: '#5a4a6a', base: 420, f: 0.2 }], fog: '#b88aa0', decor: ['washBasket'] }, linen),
   wash_bed: base({ name: 'Fitted Sheet for One', music: 'tour_wash_boss', particles: 'none', rays: null, sky: ['#2a3466', '#3a4a7a', '#4a5a8a'], horizonGlow: '#c8c8ff', celestial: { type: 'none' }, stars: 0,
