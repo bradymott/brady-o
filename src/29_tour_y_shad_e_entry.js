@@ -14,7 +14,7 @@
 const MOON = Tour.countries.moon, K = Tour.shadKit;
 if (!MOON || !K || !MOON.levels[0]) return;
 const INK = '#1a1426', STEEL = '#b8bcc8', STEEL_HI = '#dfe2ea', STEEL_LO = '#7e8292', DUST_LO = '#8e889c', PIWI = '#d6307a';
-const LOCKER_TX = 8, TIP_TX = 4, KEY_TX = 5;   // the locker's column, the shadow's far end, the keyhole's column (18-1's own tiles)
+const LOCKER_TX = 9, TIP_TX = 5, KEY_TX = 6;   // the locker's column, the shadow's far end, the keyhole's column (18-1's own tiles)
 
 /* ---------------- the locker and its long black shadow ---------------- */
 Object.assign(Decor, {

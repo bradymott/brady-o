@@ -475,9 +475,9 @@ LEVELS.entry = async (page, shot, run, pano) => {
     r = await page.evaluate(() => { playP('18-1'); P().setPower(0, true); sim(1.2); const g = S(), gate = g.entities.find(e => e.constructor.name === 'ShadKeyholeGate'); window.__gate = gate; return { gate: !!gate, start: tileOf() }; });
     check('entrance: 18-1 starts as before (same start tile), the locker a few steps to the right', r.gate && r.start[0] === 3, r);
     await page.evaluate(() => { freeze(); }); await shot('01-entrance-18-1-start.png');
-    r = await page.evaluate(() => { thaw(); walkX(10 * 32 + 16, 3); sim(0.5); return { at: tileOf() }; });
+    r = await page.evaluate(() => { thaw(); walkX(11 * 32 + 16, 3); sim(0.5); return { at: tileOf() }; });
     await page.evaluate(() => { freeze(); }); await shot('02-entrance-locker-shadow.png');
-    r = await page.evaluate(() => { thaw(); walkX(2 * 32, 4); walkX(5 * 32 + 20, 3); sim(1.5); return { state: P().state, at: tileOf() }; });
+    r = await page.evaluate(() => { thaw(); walkX(2 * 32, 4); walkX(6 * 32 + 20, 3); sim(1.5); return { state: P().state, at: tileOf() }; });
     check('entrance: walking through the shadow and standing on the keyhole, shoes gone dark, does nothing by itself', r.state === 'play', r);
     await page.evaluate(() => { freeze(); }); await shot('03-entrance-shoes-gone.png');
     r = await page.evaluate(() => { thaw(); for (let k = 0; k < 120 * 2 && P().state === 'play'; k++) sim(1 / 120, { down: true }); return { state: P().state, at: tileOf() }; });
