@@ -215,7 +215,7 @@ TourHats.NOT = new Set([].concat(
   // The Red-Eye: meal trays, carry-ons, bin drops, the lurching clock, sliders, exhaust, tells
   'eyeTray eyeBag eyeBinDrop eyeLurch eyeSlider eyeExhaust eyeSlideTell'.split(' '),
   // Australia (16): the ping, webs, the road and its wheels, giant fruit and its stall, the bear's shadow, the creek mud
-  'auPing auWeb auRoad auWheels auFruit auFruitStall auShadow auMud'.split(' '),
+  'auPing auWeb auRoad auWheels auFruit auFruitStall auShadow auMud auPuff auOpal'.split(' '),
   // Italy (14): meatballs, moka pots, tomatoes, sour notes (food and objects), the tenor's graters, ramps, crates, oil,
   // dough, ovens, the tilt clock, sliders, racks, barrels, bells' songs, the blackbird diva (in her tiara), cups, washing lines
   'itMeatball itMoka itTomato itNote itGrater itRamp itCrates itOil itDough itOven itTilt itSlider itRack itBarrel itDiva itSong itCup itLine itFacade'.split(' '),
@@ -299,7 +299,7 @@ Object.assign(TourHats.HEADS, {
   lostCrab: [0.12, 0.12, -1.45, 0], lostMoth: [0.1, 0.11, -1.55, 0], lostBeagle: [0.4, 0.4, -1.12, 0],
   // Australia (16)
   auEmu: [0.4, 0.42, -1.45, 0], auMagpie: [0.37, 0.39, -1.1, 0], auKooka: [0.33, 0.35, -1.15, 0], auYabby: [0.3, 0.3, -1.2, 0],
-  auCocky: [0.18, 0.2, -1.35, 0], auWombat: [0.55, 0.55, -1.3, 0], auHuntsman: [0.22, 0.22, -1.14, 0],
+  auCocky: [0.18, 0.2, -1.35, 0], auWombat: [0.55, 0.55, -1.3, 0], auHuntsman: [0.22, 0.22, -1.14, 0], auRoomSheep: [0.47, 0.47, -1.0, 0],
   // Kenya (15)
   keBeetle: [-0.05, -0.05, -0.8, 0], keWarthog: [0.38, 0.38, -0.95, 0], keVulture: [0.47, 0.47, -0.9, 0], keWeaver: [0.27, 0.27, -0.75, 0], keSentry: [0.1, 0.1, -1.15, 0],
   // Iceland (17)

@@ -271,6 +271,115 @@ async function session(viewport, fn) {
       await pano('69-16-6-panorama.png');
     });
     // the land's walkable map
+
+    // ---------- the secret rooms: each hidden entrance (its tell, then inside), each mini-game failed once and won
+    // once, each exit used. Helpers: the room's doors, press UP at a door, jump onto something from under it
+    await page.evaluate(() => {
+      window.doorsOut = () => { const g = S(); return g.entities.filter(e => e.constructor.name === 'Portal' && e.target && e.target.area !== g.area.idx).sort((a, b) => a.x - b.x); };
+      window.useDoor = e => { const p = P(); p.x = e.cx - p.w / 2; p.y = e.y + e.h - p.h; p.vx = p.vy = 0; sim(0.2); const a0 = S().area.idx; sim(0.05, { up: true, upPressed: true }); for (let k = 0; k < 400 && (S().area.idx === a0 || S().fade.a > 0.05); k++) sim(1 / 120); sim(0.3); return S().area.aid; };
+      window.hopOnto = (tx, hold) => { place(tx - 2, 10); sim(0.15); sim(0.02, { jump: true, jumpPressed: true, right: true }); sim(hold || 0.25, { jump: true, right: true }); for (let k = 0; k < 240 && !(P().onGround && P().vy >= 0 && k > 10); k++) sim(1 / 120, P().cx < (tx + 0.3) * 32 ? { right: true } : null); sim(0.1); return tile(); };
+      window.upOnto = (tx, row, hold) => { place(tx, 10); sim(0.15); sim(0.02, { jump: true, jumpPressed: true }); sim(hold || 0.3, { jump: true }); for (let k = 0; k < 240 && !(P().onGround && P().vy >= 0 && k > 10); k++) sim(1 / 120); sim(0.1); return tile(); };
+      window.room = () => S().area.roomState;
+    });
+    // 16-1: the mesa's loose face -> the tunnel -> the Kookaburra Chorus -> out by the wombat's back tunnel
+    await run('rooms1', async () => {
+      await page.evaluate(() => { thaw(); fresh(); play('16-1'); P().invuln = 999; place(129, 14); sim(1.5); freeze(); });
+      await shot('70-16-1-tell-red-dust-at-the-mesa.png');
+      let r = await page.evaluate(() => { thaw(); for (let k = 0; k < 400 && P().cx < 135.5 * 32; k++) sim(1 / 120, { right: true }); const inTunnel = tile(); const d = doorsOut().find(e => Math.abs(e.cx / 32 - 136.5) < 2); const aid = d ? useDoor(d) : 'no door'; return { inTunnel, aid }; });
+      check('16-1: walking the kangaroo into the mesa\'s dusty face finds the tunnel and the burrow door', r.inTunnel.tx >= 133 && r.inTunnel.ty === 15 && r.aid === 'burrow', r);
+      await page.evaluate(() => { const k = S().area.roomKit; place(k.data.logs[0] - 2, 10); sim(4); freeze(); });
+      await shot('71-16-1-kookaburra-chorus.png');
+      r = await page.evaluate(() => {
+        thaw(); const R = room(), L = S().area.roomKit.data.logs; for (let k = 0; k < 2400 && R.phase !== 'play'; k++) sim(1 / 120);
+        const seq = R.seq.slice(); upOnto(L[(seq[0] + 1) % 4], 7); const failed = R.phase === 'show' && !R.won;
+        for (let k = 0; k < 2400 && R.phase !== 'play'; k++) sim(1 / 120);
+        for (const k of seq) { upOnto(L[k], 7); place(L[0] - 2, 10); sim(0.1); }
+        sim(0.5); return { failed, won: R.won, n: seq.length };
+      });
+      check('16-1 room: a wrong log makes the birds sing again; landing on the logs in their order wins', r.failed && r.won, r);
+      await page.evaluate(() => { sim(0.6); freeze(); }); await shot('72-16-1-chorus-won.png');
+      r = await page.evaluate(() => { thaw(); const ds = doorsOut(); const aid = useDoor(ds[ds.length - 1]); return { aid, tx: tile().tx }; });
+      check('16-1 room: its second door is the wombat\'s back tunnel, further along the red centre', r.aid === 'red' && r.tx >= 145, r);
+    });
+    // 16-2: the loose roof hatch (DOWN + JUMP) -> the cubby -> MUSTER! -> out by the roof hatch
+    await run('rooms2', async () => {
+      await page.evaluate(() => { thaw(); fresh(); play('16-2'); P().invuln = 999; place(144, 6); sim(1.2); freeze(); });
+      await shot('73-16-2-tell-red-dust-on-the-van.png');
+      let r = await page.evaluate(() => { thaw(); place(147, 6); sim(0.3); sim(0.05, { down: true, jump: true, jumpPressed: true }); sim(0.6); const cub = tile(); const d = doorsOut().find(e => Math.abs(e.cx / 32 - 149.5) < 2); const aid = d ? useDoor(d) : 'no door'; return { cub, aid }; });
+      check('16-2: DOWN + JUMP on the loose roof hatch drops into the cubby and the sheep van', r.cub.tx >= 145 && r.cub.tx <= 149 && r.cub.ty === 10 && r.aid === 'van', r);
+      await page.evaluate(() => { sim(1.5); freeze(); }); await shot('74-16-2-muster.png');
+      r = await page.evaluate(() => {
+        thaw(); const R = room(); sim(1.5); const c0 = R.clock; sim(46); const reset = R.clock == null || R.clock > 40;
+        const p = P(); place(2, 10); sim(1.5);
+        for (let k = 0; k < 120 * 60 && !R.won; k++) { const left = R.sheep.filter(s => !s.penned); if (!left.length) break; const m = Math.min(...left.map(s => s.cx)); sim(1 / 120, p.cx < m - 2.2 * 32 ? { right: true } : p.cx > m - 1.2 * 32 ? { left: true } : null); }
+        sim(0.5); return { c0: c0 != null, reset, won: R.won };
+      });
+      check('16-2 room: let the clock run out and the sheep wander back; walk them right into the pen and it is won', r.c0 && r.reset && r.won, r);
+      await page.evaluate(() => { freeze(); }); await shot('75-16-2-muster-won.png');
+      r = await page.evaluate(() => { thaw(); const ds = doorsOut(); const hatch = ds.find(e => e.y < 6 * 32); const aid = hatch ? useDoor(hatch) : 'no hatch'; return { aid, at: tile() }; });
+      check('16-2 room: the roof hatch comes out on the next van\'s roof', r.aid === 'convoy' && r.at.tx >= 150 && r.at.ty === 7, r);
+    });
+    // 16-3: the old log in the bank (DOWN + JUMP) -> the tunnel -> the Opal Seam
+    await run('rooms3', async () => {
+      await page.evaluate(() => { thaw(); fresh(); play('16-3'); P().invuln = 999; place(91, 11); sim(1.5); freeze(); });
+      await shot('76-16-3-tell-red-dust-at-the-log.png');
+      let r = await page.evaluate(() => { thaw(); place(94, 11); sim(0.3); sim(0.05, { down: true, jump: true, jumpPressed: true }); sim(0.6); const t = tile(); const d = doorsOut().find(e => Math.abs(e.cx / 32 - 99.5) < 2); const aid = d ? useDoor(d) : 'no door'; return { t, aid }; });
+      check('16-3: DOWN + JUMP on the old log drops into the tunnel under the bank and the glow-worm cave', r.t.ty === 15 && !r.t.dead && r.aid === 'cave', r);
+      await page.evaluate(() => { sim(1.0); sim(0.05, { action: true, actionPressed: true }); sim(0.5); freeze(); }); await shot('77-16-3-opal-seam-ping.png');
+      r = await page.evaluate(() => {
+        thaw(); const R = room(); sim(2); const started = R.clock != null; sim(31); const reset = R.opals.every(o => !o.got);
+        const k = S().area.roomKit; for (const [x, y] of k.data.opals) { sim(0.05, { action: true, actionPressed: true }); place(x, y); sim(0.3); }
+        sim(0.5); return { started, reset, won: R.won };
+      });
+      check('16-3 room: ping, run the clock out (the opals sink back), then grab all six and win', r.started && r.reset && r.won, r);
+      await page.evaluate(() => { freeze(); }); await shot('78-16-3-opals-won.png');
+      r = await page.evaluate(() => { thaw(); const aid = useDoor(doorsOut()[0]); return { aid, t: tile() }; });
+      check('16-3 room: its door comes back out in the tunnel, safe from the mud', r.aid === 'creek' && !r.t.dead, r);
+    });
+    // 16-4: the gap in the crown over the first web (a big bounce) -> the crown run -> the possum's billy cans -> down the trunk
+    await run('rooms4', async () => {
+      await page.evaluate(() => { thaw(); fresh(); play('16-4'); P().invuln = 999; place(46, 11); sim(1.5); freeze(); });
+      await shot('80-16-4-tell-dust-from-the-crown-gap.png');
+      let r = await page.evaluate(() => {
+        thaw(); const p = P(); place(51, 9); p.vy = 3 * 32; let up = 99;
+        for (let k = 0; k < 300; k++) { sim(1 / 120, { jump: true, right: p.vy > 0 && p.y + p.h < 7 * 32 }); up = Math.min(up, (p.y + p.h) / 32); if (p.onGround && k > 30) break; }
+        const t = tile(); return Object.assign({ up: Math.round(up * 10) / 10 }, t);
+      });
+      check('16-4: a big bounce on the web goes up through the gap in the crown onto the run above', r.ty === 7 && r.tx >= 50 && !r.dead, r);
+      await page.evaluate(() => { place(62, 6); sim(0.4); freeze(); }); await shot('81-16-4-crown-run.png');
+      r = await page.evaluate(() => { thaw(); const d = doorsOut().find(e => e.y < 8 * 32); return { aid: d ? useDoor(d) : 'no door' }; });
+      check('16-4: the crown run ends at the possum\'s hollow', r.aid === 'hollow', r);
+      await page.evaluate(() => { sim(2.5); freeze(); }); await shot('82-16-4-billy-cans.png');
+      r = await page.evaluate(() => {
+        thaw(); const R = room(), D = S().area.roomKit.data; place(D.slots[1] - 2, D.row); for (let k = 0; k < 120 * 25 && R.phase !== 'pick'; k++) sim(1 / 120);
+        const stomp = c => { const p = P(); p.x = c.x - p.w / 2; p.y = (D.row + 1) * 32 - 120 - p.h; p.vy = 2 * 32; for (let k = 0; k < 120 && !(p.onGround && k > 5); k++) sim(1 / 120); };
+        stomp(R.cups.find(c => c.k !== R.prizeCup)); const failed = !R.won && !!R.joke;
+        place(D.slots[1] - 2, D.row); for (let k = 0; k < 120 * 30 && R.phase !== 'pick'; k++) sim(1 / 120);
+        stomp(R.cups.find(c => c.k === R.prizeCup)); sim(0.5); return { failed, won: R.won };
+      });
+      check('16-4 room: a wrong billy can holds a joke; the right one wins', r.failed && r.won, r);
+      await page.evaluate(() => freeze()); await shot('83-16-4-billy-cans-won.png');
+      r = await page.evaluate(() => { thaw(); const ds = doorsOut(); const aid = useDoor(ds[ds.length - 1]); return { aid, t: tile() }; });
+      check('16-4 room: its second door goes down the trunk onto a limb further on', r.aid === 'canopy' && r.t.tx >= 110 && r.t.ty === 13, r);
+    });
+    // 16-6: the little plinth's loose far face (walk back into it) -> the cubby -> Spot the Odd Big Thing
+    await run('rooms6', async () => {
+      await page.evaluate(() => { thaw(); fresh(); play('16-6'); P().invuln = 999; place(68, 13); sim(1.5); freeze(); });
+      await shot('84-16-6-tell-red-dust-at-the-plinth.png');
+      let r = await page.evaluate(() => { thaw(); for (let k = 0; k < 300 && P().cx > 62.6 * 32; k++) sim(1 / 120, { left: true }); const t = tile(); const d = doorsOut().find(e => Math.abs(e.cx / 32 - 62.5) < 2); return { t, aid: d ? useDoor(d) : 'no door' }; });
+      check('16-6: walking back into the little plinth\'s dusty face finds the cubby and the door into the pineapple', r.t.tx <= 63 && r.aid === 'pine', r);
+      await page.evaluate(() => { sim(1.5); freeze(); }); await shot('85-16-6-odd-big-thing.png');
+      r = await page.evaluate(() => {
+        thaw(); const R = room(), Pl = S().area.roomKit.data.plinths; sim(1);
+        hopOnto(Pl[(R.odd + 1) % 5] + 1); const failed = (R.round || 0) === 0 && !R.won;
+        for (let k = 0; k < 3 && !R.won; k++) { place(Pl[0] - 2, 10); sim(0.2); hopOnto(Pl[R.odd] + 1); }
+        sim(0.5); return { failed, won: R.won, round: R.round };
+      });
+      check('16-6 room: a wrong giant is a raspberry; spotting the odd one three times wins', r.failed && r.won, r);
+      await page.evaluate(() => freeze()); await shot('86-16-6-odd-big-thing-won.png');
+      r = await page.evaluate(() => { thaw(); const aid = useDoor(doorsOut()[0]); return { aid }; });
+      check('16-6 room: its door goes back to the lay-by', r.aid === 'layby', r);
+    });
     await run('owmap', async () => {
       const r = await page.evaluate(() => { thaw(); fresh(); const d = window.BRADY.Save.data; for (const id of ['16-1', '16-2', '16-3', '16-4', '16-5', '16-6']) d.unlocked[id] = true; window.BRADY.goToMap('world', 1, '16-1'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } const s = S(); return { mode: s.mode, cc: s.ow && s.ow.cc }; });
       check('Australia has its own walkable map', r.cc === 'au', r);

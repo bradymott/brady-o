@@ -138,9 +138,9 @@ const convoyRows = (() => {
   trailer(102, 16, 10); m.fill(110, 8, 111, 9, 'B'); m.coins(104, 108, 7); m.put(108, 4, 'm');
   trailer(122, 18, 10); m.fill(126, 8, 127, 9, 'B'); m.coins(124, 130, 6);
   trailer(144, 17, 7); m.put(150, 6, 'a'); m.put(158, 6, 'c');
-  // the hidden way in: the van's back panel is loose (red dust puffs off its roof edge): jump the gap LOW, into the
-  // back of the van; a cubby (P2) and the sheep van's door
-  m.fill(144, 8, 144, 9, 'F'); m.fill(145, 8, 149, 9, '.'); m.put(146, 8, 'V'); m.put(149, 9, 'D'); m.put(144, 6, 'P'); m.put(147, 9, 'x'); m.put(155, 6, 'X');
+  // the hidden way in: one roof panel of the box van is a loose hatch (a different tile; red dust puffs up beside it):
+  // DOWN + JUMP on it drops into a cubby in the van (P2) and the sheep van's door
+  m.put(147, 7, '-'); m.fill(145, 8, 149, 9, '.'); m.put(146, 8, 'V'); m.put(149, 9, 'D'); m.put(148, 6, 'P'); m.put(145, 9, 'x'); m.put(155, 6, 'X'); m.put(147, 6, 'A'); m.put(147, 9, 'J');
   trailer(165, 26, 10); m.fill(172, 8, 173, 9, 'B'); m.coins(176, 186, 8);
   m.put(191, 11, 'u'); m.put(196, 5, 'm'); m.coins(193, 199, 10);
   trailer(202, 13, 10);
@@ -151,7 +151,7 @@ const CONVOY = {
   k: ['spawn', 'sign', { text: 'ROAD TRAIN! HOLD RIGHT INTO THE HEADWIND. LOW BRIDGE? GET DOWN: HOLD DOWN (OR BE SMALL). THE UTES OVERTAKE: RIDE THEIR TRAYS OVER THE WIDE GAPS' }],
   Z: ['piece', 'convoy', { road: 13, wind: 1.8, bridges: [[33, 53], [165, 215]], bridgeY: 8.875, every: 5 }],
   p: ['piece', 'box', { item: 'power' }], w: ['piece', 'wheels', { n: 2 }], u: ['piece', 'ute', { ax: 6, w: 4, speed: 1.5 }],
-  a: ['enemy', 'auCocky'], m: ['enemy', 'auMagpie'], q: ['decor', 'auSheep'], f: ['decor', 'auCab'], x: ['anchor', 'vanBack'], X: ['anchor', 'vanOut'], P: ['spawn', 'auPuff', {}]
+  a: ['enemy', 'auCocky'], m: ['enemy', 'auMagpie'], q: ['decor', 'auSheep'], f: ['decor', 'auCab'], x: ['anchor', 'vanBack'], X: ['anchor', 'vanOut'], P: ['spawn', 'auPuff', {}], A: ['anchor', 'edgeA2'], J: ['anchor', 'edgeB2']
 };
 stamps.auConvoy = { floor: 10, rows: convoyRows, legend: CONVOY, gold: { '*': 'must', R: 'risky', V: 'hidden' }, doors: [{ to: 'van@in', look: 'tourDoorHidden' }] };
 // inside the sheep van: a woolly crowd, P2 on the top rail, a hidden water bottle
@@ -447,7 +447,7 @@ const L6 = { n: 6, name: 'The Big Things', arch: 'giant', secret: true, theme: '
   ] };
 
 // the moves the checker can't work out for itself, each one played in tools/sbw_au_shots.js: an anchor edgeA<n>
-// (where Brady stands) and edgeB<n> (where the move really takes him): 16-3's drop through the log (DOWN + JUMP),
+// (where Brady stands) and edgeB<n> (where the move really takes him): 16-2's and 16-3's drops through a hatch / an old log (DOWN + JUMP),
 // 16-6's bounce off a tumbling mango onto the tall plinth
 { const ed = TourBuild.generateV2; TourBuild.generateV2 = function (Cc, spec, w, i, a) { const L = ed.apply(this, arguments); if (Cc && Cc.id === 'au') for (const A of L.areas) { const an = A.anchors || {}; for (const k in an) { if (k.indexOf('edgeA') !== 0) continue; const b = an['edgeB' + k.slice(5)]; if (b) (A.edges || (A.edges = [])).push({ from: [Math.floor(an[k].x / TS), Math.floor(an[k].y / TS) - 1], to: [Math.floor(b.x / TS), Math.floor(b.y / TS)] }); } } return L; }; }
 Tour.amend('au', { stamps, map: { fort: 'arena', start: [0, 0] }, levels: [L1, L2, L3, L4, L5, L6] });
