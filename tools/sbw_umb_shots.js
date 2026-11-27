@@ -503,8 +503,8 @@ const BOT_UMB = () => {
 // Brady had passed)
 const BOT_ROUTES = {
   '31-1': [['walk', 19 * 32], ['grip', 1], ['climb', 31, 17], ['letGo', 1], 'cp', ['walk', 53 * 32 + 8], ['grip', 1], ['climb', 55, 15], ['climb', 57, 15], ['cross'], ['climb', 57, 12], ['climb', 66, 12], ['climb', 66, 15], ['cross'], ['climb', 68, 15], ['letGo', 1], 'cp',
-    ['walk', 84 * 32 + 16], ['grip', 1], ['climb', 86, 12], ['climb', 100, 12], ['letGo', 1], 'cp', ['walk', 139 * 32 + 8], ['grip', 1], ['climb', 143, 14], ['climb', 147, 14], ['cross'], ['climb', 152, 9], ['press', 'action'], ['wait', 0.6],
-    ['climb', 167, 12], ['letGo', 1], 'cp', ['walk', 185 * 32 + 8], ['grip', 1], ['climb', 189, 12], ['climb', 192, 12], ['cross'], ['climb', 197, 14], ['press', 'action'], ['wait', 0.6], ['climb', 214, 13], ['letGo', 1], 'cp', ['walk', 231 * 32], ['gate']],
+    ['walk', 84 * 32 + 16], ['grip', 1], ['climb', 86, 12], ['climb', 100, 12], ['letGo', 1], 'cp', ['walk', 129 * 32], 'cp', ['to', 138], ['grip', 1], ['climb', 143, 14], ['climb', 147, 14], ['cross'], ['climb', 152, 9], ['press', 'action'], ['wait', 0.6],
+    ['climb', 167, 12], ['letGo', 1], ['walk', 173 * 32], 'cp', ['to', 184], ['grip', 1], ['climb', 189, 12], ['climb', 192, 12], ['cross'], ['climb', 197, 14], ['press', 'action'], ['wait', 0.6], ['climb', 214, 13], ['letGo', 1], 'cp', ['walk', 231 * 32], ['gate']],
   '31-2': [['fill', 14, 2], ['stamp', 15], ['walk', 27 * 32], 'cp', ['fill', 48, 3], ['stamp', 50], ['to', 63], ['hopTo', 69, 0.55], ['walk', 72 * 32], ['walk', 77 * 32], 'cp',
     ['walk', 110 * 32], ['fill', 112, 2], ['stamp', 113], ['walk', 126 * 32], 'cp', ['walk', 138 * 32], ['fill', 140, 2], ['stamp', 141], ['fill', 140, 2], ['stamp', 141], ['walk', 171 * 32], 'cp', ['walk', 190 * 32], ['gate']],
   '31-3': [['hook', 25], ['walk', 40 * 32], 'cp', ['hook', 62], ['walk', 80 * 32], 'cp', ['hook', 96], ['walk', 114 * 32], ['walk', 137 * 32], 'cp', ['hook', 150], ['walk', 170 * 32], 'cp', ['hook', 182], ['walk', 200 * 32], 'cp', ['walk', 210 * 32], ['gate']],
