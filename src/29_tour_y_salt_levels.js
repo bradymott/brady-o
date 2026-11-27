@@ -187,7 +187,7 @@ const capRows = (() => {
   chamber(101, 116); put(Gr, 102, 13, '3'); put(Gr, 116, 13, 'E'); put(Gr, 108, 13, 'r'); put(Gr, 110, 7, 'f');
   put(Gr, 120, 13, 'c'); put(Gr, 124, 13, 'Z'); put(Gr, 126, 10, '?');
   chamber(129, 144); put(Gr, 130, 13, '4'); put(Gr, 144, 13, 'Y'); put(Gr, 136, 9, 'R');
-  put(Gr, 152, 13, 'r'); put(Gr, 156, 11, 'o.o.o'); put(Gr, 166, 13, 'r'); put(Gr, 168, 13, 'x'); put(Gr, 180, 13, 'G');
+  put(Gr, 156, 11, 'o.o.o'); put(Gr, 166, 13, 'r'); put(Gr, 175, 13, 'r'); put(Gr, 168, 13, 'x'); put(Gr, 180, 13, 'G');
   fillG(Gr, W - 1, 0, W - 1, 13, 'H');
   return rowsOf(Gr);
 })();
