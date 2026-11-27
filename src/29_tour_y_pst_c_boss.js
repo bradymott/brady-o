@@ -252,11 +252,25 @@ const brain = {
     // the head: cheeks puff for the commas, the beak opens round an empty bubble for the shout
     const k = P === 'suck' ? Math.min(1, b.at / 0.8) : 0, beak = P === 'beak' ? Math.min(1, b.at / 0.5) : 0;
     parrotHead(ctx, x - 6, y - 52, 0.95, k, t, beak);
-    if (P === 'hush') { ctx.fillStyle = PLUM; ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(x - 4, y - 72, 22, 9, -0.3, 0, TAU); ctx.fill(); ctx.stroke(); PstArt.bubble(ctx, x - 70, y - 150, 50, 30); ctx.fillStyle = PLUM; ctx.font = '12px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('...', x - 45, y - 135); }
+    if (P === 'hush') { ctx.fillStyle = PLUM; ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(x - 4, y - 72, 22, 9, -0.3, 0, TAU); ctx.fill(); ctx.stroke(); }
     if (P === 'beak') { PstArt.bubble(ctx, x - 90, y - 150, 70, 34); PstArt.tail(ctx, x - 30, y - 114, x - 14, y - 90, 3, 4); }
+    if (b.biscuit) { ctx.fillStyle = '#d8a050'; ctx.beginPath(); ctx.arc(x - 40, y - 60, 10, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#7a4a2a'; for (let q = 0; q < 4; q++) { ctx.beginPath(); ctx.arc(x - 44 + (q % 2) * 7, y - 64 + Math.floor(q / 2) * 7, 1.4, 0, TAU); ctx.fill(); } }
+    ctx.restore();
+  }
+};
+const g0 = b => b.g.entities.find(e => e instanceof PstStop && !e.remove);
+const clauseArt = (c, s) => { c.save(); c.fillStyle = '#fff8ec'; c.strokeStyle = INK; c.lineWidth = 2; rr(c, s.x, s.y, s.w, s.h, 6); c.fill(); c.stroke(); c.fillStyle = PLUM; c.font = '8px ' + FONT_DISPLAY; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('AND', s.x + s.w / 2, s.y + 8); c.fillText('ANOTHER', s.x + s.w / 2, s.y + 18); c.restore(); };
+const shoutArt = (c, s) => { c.save(); c.strokeStyle = 'rgba(255,240,200,0.95)'; c.lineWidth = 4; for (let k = 0; k < 3; k++) { c.beginPath(); c.arc(s.x + s.w / 2 + k * 6, s.y + s.h / 2, 14 + k * 6, Math.PI * 0.65, Math.PI * 1.35); c.stroke(); } c.fillStyle = '#fff4dc'; c.font = '9px ' + FONT_DISPLAY; c.textAlign = 'center'; c.fillText('!!', s.x + s.w / 2, s.y - 2); c.restore(); };
+// phase 3's cues, drawn over the scene (the boss's own drawing is clipped to its body): a hush ring on the floor
+// by the blank fills while Brady waits; then PLEASE over the blank, NOW! and an arrow over the stop, the slot ringed
+TourHooks.on('afterEntities', (play, ctx) => {
+  const b = play.entities && play.entities.find(e => e.boss && e.style === 'pst_parrot' && !e.remove); if (!b || (b.phase || 1) < 3 || b.state !== 'fight') return;
+  const t = play.t || 0, x = b.cx, y = b.y + b.h, P = b.pose;
+  ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  if (P === 'hush') { PstArt.bubble(ctx, x - 70, y - 150, 50, 30); ctx.fillStyle = PLUM; ctx.font = '12px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('...', x - 45, y - 135); }
     // phase 3's cues: a hush ring on the floor at the blank filling while Brady waits; then NOW! over the stop
-    if ((b.phase || 1) >= 3 && !b.biscuit && b.state !== 'dying') {
-      const bx = this.blankX(b), fy = b.floorY, st = g0(b);
+    if (!b.biscuit) {
+      const bx = brain.blankX(b), fy = b.floorY, st = g0(b);
       if (!b.please) {
         const k = Math.min(1, (b.quietT || 0) / 1.5);
         ctx.fillStyle = 'rgba(26,20,48,0.55)'; ctx.beginPath(); ctx.ellipse(bx - TS, fy - 3, 3.1 * TS, 9, 0, 0, TAU); ctx.fill();
@@ -269,13 +283,9 @@ const brain = {
         ctx.strokeStyle = '#5ee08a'; ctx.lineWidth = 3; ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.ellipse(tx, fy - 2, 20 + j, 7, 0, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
       }
     }
-    if (b.biscuit) { ctx.fillStyle = '#d8a050'; ctx.beginPath(); ctx.arc(x - 40, y - 60, 10, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#7a4a2a'; for (let q = 0; q < 4; q++) { ctx.beginPath(); ctx.arc(x - 44 + (q % 2) * 7, y - 64 + Math.floor(q / 2) * 7, 1.4, 0, TAU); ctx.fill(); } }
-    ctx.restore();
-  }
-};
-const g0 = b => b.g.entities.find(e => e instanceof PstStop && !e.remove);
-const clauseArt = (c, s) => { c.save(); c.fillStyle = '#fff8ec'; c.strokeStyle = INK; c.lineWidth = 2; rr(c, s.x, s.y, s.w, s.h, 6); c.fill(); c.stroke(); c.fillStyle = PLUM; c.font = '8px ' + FONT_DISPLAY; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('AND', s.x + s.w / 2, s.y + 8); c.fillText('ANOTHER', s.x + s.w / 2, s.y + 18); c.restore(); };
-const shoutArt = (c, s) => { c.save(); c.strokeStyle = 'rgba(255,240,200,0.95)'; c.lineWidth = 4; for (let k = 0; k < 3; k++) { c.beginPath(); c.arc(s.x + s.w / 2 + k * 6, s.y + s.h / 2, 14 + k * 6, Math.PI * 0.65, Math.PI * 1.35); c.stroke(); } c.fillStyle = '#fff4dc'; c.font = '9px ' + FONT_DISPLAY; c.textAlign = 'center'; c.fillText('!!', s.x + s.w / 2, s.y - 2); c.restore(); };
+  if (b.please && !b.biscuit) { const bx = brain.blankX(b), by = b.floorY - 150; PstArt.bubble(ctx, bx - 46, by - 22, 92, 30); ctx.fillStyle = '#3a8a5a'; ctx.font = '13px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('PLEASE', bx, by - 7); }
+  ctx.restore();
+});
 Tour.boss({ id: 'pst_parrot', name: 'The Interrupter', hp: 6, dims: [64, 96], music: 'tour_pst_boss', country: 'pst', brain });
 if (typeof BOSS_INK_REACH !== 'undefined') BOSS_INK_REACH.pst_parrot = [60, 60, 80, 48];
 Tour.pstKit.boss = { brain, PstStop, PstSpeaker, WORDS };

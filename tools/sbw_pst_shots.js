@@ -599,6 +599,13 @@ LEVELS.s6 = async (page, shot, run, pano) => {
     const d = await page.evaluate(() => { thaw(); const st = ents('PstStop')[0]; walkTo(Math.floor(st.cx / 32) - 2, 3); sim(1 / 120, { jump: true, jumpPressed: true, right: true }); sim(0.7, { jump: true, right: true }); sim(2.5, { right: true }); walkTo(92, 3); const aid = door(); return { aid, at: tileOf() }; });
     check('32-6: through the unlocked door into the arena', d.aid === 'stage', d);
     await page.evaluate(() => { sim(3); freeze(); }); await shot('61-32-6-arena.png');
+    // phase 3 by its cues: the hush ring fills while Brady waits behind the stop by the blank; PLEASE: NOW!
+    const h = await page.evaluate(() => { thaw(); const g = S(), b = g.entities.find(e => e.boss), br = window.BRADY_TOUR.Tour.pstKit.boss.brain; if (!b) return { none: true };
+      const X1 = Math.round(b.arenaX0 / 32); place(X1 + 12, 13); for (let q = 0; q < 1200 && b.state !== 'fight'; q++) sim(1 / 120); b.hp = 2; b.phase = 3; br.restart(b); b.go('perch'); const X0 = Math.round(b.arenaX0 / 32); place(X0 + 12, 13); sim(0.9); return { q: +(b.quietT || 0).toFixed(2), state: b.state }; });
+    await page.evaluate(() => freeze()); await shot('63-32-6-boss-hush.png');
+    const n = await page.evaluate(() => { thaw(); const b = S().entities.find(e => e.boss); for (let q = 0; q < 1200 && !b.please; q++) sim(1 / 120); sim(0.5); return { please: b.please, pose: b.pose }; });
+    check('32-6 boss phase 3: standing quietly behind the stop by the blank, the hush ring fills, Pupo says PLEASE and the parrot hushes', h.q > 0.3 && n.please && n.pose === 'hush', { h, n });
+    await page.evaluate(() => freeze()); await shot('64-32-6-boss-now.png');
     await page.evaluate(() => { thaw(); play('32-6'); }); await pano('62-32-6-panorama.png', 0.4);
   });
 };
