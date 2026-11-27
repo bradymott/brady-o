@@ -244,7 +244,7 @@ class SaltCrystal extends SaltMark {
     if (this.k > 0) this.k = Math.max(0, this.k - dt * 3);
     if (this.live() && this.holding()) {
       this.hold += dt;
-      if (this.hold >= 0.6) { const c = this.plan[this.n++]; showTiles(g, [c], T.HARD); liftOut(g, [c]); this.hold = 0; this.k = 1; g.burst((c[0] + 0.5) * TS, (c[1] + 0.5) * TS, 10, '#ffffff', 'spark'); TourKit.sfx('grow', 'select', { vol: 0.5, pitch: 1 + this.n * 0.12 }); if (this.brine && this.n === 1) say(g, this.cx, this.y - 2 * TS, 'THE BRINE IS RISING!', '#ff9a8a'); }
+      if (this.hold >= 0.45) { const c = this.plan[this.n++]; showTiles(g, [c], T.HARD); liftOut(g, [c]); this.hold = 0; this.k = 1; g.burst((c[0] + 0.5) * TS, (c[1] + 0.5) * TS, 10, '#ffffff', 'spark'); TourKit.sfx('grow', 'select', { vol: 0.5, pitch: 1 + this.n * 0.12 }); if (this.brine && this.n === 1) say(g, this.cx, this.y - 2 * TS, 'THE BRINE IS RISING!', '#ff9a8a'); }
     } else this.hold = 0;
     // the brine rising in the trough under the last crystal: once it touches the stem's foot, the new cubes dissolve
     const B = this.brine;
@@ -271,7 +271,7 @@ class SaltCrystal extends SaltMark {
     if (this.live()) {
       const [x, y] = this.plan[this.n], p = g.player, hot = p && this.saltTouch(p), k = 0.5 + 0.5 * Math.sin(t * 5);
       ctx.save(); ctx.globalAlpha = hot ? 0.75 + 0.25 * k : 0.45; SA.cube(ctx, x * TS, (y + 1) * TS, TS, 1, true);
-      if (this.hold > 0) { ctx.fillStyle = 'rgba(255,255,255,0.6)'; const s = TS * this.hold / 0.6; ctx.fillRect(x * TS + (TS - s) / 2, y * TS + (TS - s) / 2, s, s); }
+      if (this.hold > 0) { ctx.fillStyle = 'rgba(255,255,255,0.6)'; const s = TS * this.hold / 0.45; ctx.fillRect(x * TS + (TS - s) / 2, y * TS + (TS - s) / 2, s, s); }
       ctx.restore();
       if (hot && !this.holding()) SA.cue(ctx, p.cx, p.y - 0.6 * TS, t, this.cue);
     }
@@ -369,7 +369,10 @@ Object.assign(Tour.pieces, {
   'salt.crystal'(st, o) {
     const B = st.B, x = st.x, y = st.gy - 1, stem = [];
     for (let k = 0; k < (o.h || 1); k++) { B.set(x, y + k, T.HARD); stem.push([x, y + k]); }
-    const plan = (o.plan || []).map(([dx, dy]) => [x + dx, y + dy]); for (const [px, py] of plan) B.set(px, py, T.HARD);
+    const plan = (o.plan || []).map(([dx, dy]) => [x + dx, y + dy]);
+    // the checker: a cube that grows sideways or down is floor from the start; one that grows UP (lifting Brady) is a
+    // one-way step (a column of hard cells would be a wall to it)
+    plan.forEach(([px, py], i) => { const prev = i ? plan[i - 1] : [x, y]; if (py < prev[1]) B.ghosts.push([px, py]); else B.set(px, py, T.HARD); });
     const brine = o.brine ? { x0: x + o.brine.dx0, x1: x + o.brine.dx1, y1: y + o.brine.dy, time: o.brine.time || 9 } : null;
     B.spawn('saltCrystal', x, y - 1, { id: o.id, stem, plan, brine });
     return st.x;

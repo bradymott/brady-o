@@ -33,22 +33,22 @@ const DOOR = (to, look) => ['spawn', 'portal', { kind: 'door', look: look || 'sa
 const flatRows = (() => {
   const W = 200, H = 22, Gr = grid(W, H, '.');
   ground(Gr, 0, 20, 18); put(Gr, 3, 17, '@'); put(Gr, 6, 17, 'k'); put(Gr, 10, 14, '?'); put(Gr, 16, 17, '1'); put(Gr, 21, 18, 'n');
-  ground(Gr, 28, 52, 18); put(Gr, 30, 17, 'c'); put(Gr, 34, 13, '*'); put(Gr, 31, 15, 'o.o.o'); put(Gr, 44, 17, 'r'); put(Gr, 38, 17, 'x');
+  ground(Gr, 30, 52, 18); put(Gr, 31, 17, 'c'); put(Gr, 34, 13, '*'); put(Gr, 31, 15, 'o.o.o'); put(Gr, 44, 17, 'r'); put(Gr, 38, 17, 'x');
   // crystal stair-steps up to the plateau (row 13)
-  put(Gr, 48, 16, '--'); put(Gr, 51, 14, '--'); ground(Gr, 53, 74, 13); ground(Gr, 82, 92, 13);
-  put(Gr, 60, 9, '?'); put(Gr, 58, 12, 'f'); put(Gr, 69, 12, '2'); put(Gr, 75, 13, 'm'); put(Gr, 84, 12, 'r');
+  put(Gr, 48, 16, '--'); put(Gr, 51, 14, '--'); ground(Gr, 53, 74, 13); ground(Gr, 84, 92, 13);
+  put(Gr, 60, 9, '?'); put(Gr, 58, 12, 'f'); put(Gr, 69, 12, '2'); put(Gr, 75, 13, 'm'); put(Gr, 87, 12, 'r');
   // the climb to the high door (B41) from the plateau's left end
   put(Gr, 55, 10, '--'); put(Gr, 58, 7, '--'); fillG(Gr, 61, 4, 66, 4, 'H'); put(Gr, 63, 3, 'A'); put(Gr, 65, 3, 'u'); put(Gr, 61, 2, 'o.o');
   put(Gr, 86, 9, 'o.o.o');
   // down to the tread, ③
   put(Gr, 92, 12, '.'); ground(Gr, 93, 120, 18); put(Gr, 94, 16, '-'); put(Gr, 100, 17, 'c'); put(Gr, 104, 17, 'a'); put(Gr, 108, 17, 'j'); put(Gr, 112, 14, '?');
-  put(Gr, 118, 17, '3'); put(Gr, 123, 18, 'p'); ground(Gr, 129, 133, 18); put(Gr, 134, 18, 'q'); ground(Gr, 141, W - 1, 18);
-  put(Gr, 115, 17, 'K'); put(Gr, 137, 13, 'R'); put(Gr, 130, 15, 'o.o');
+  put(Gr, 118, 17, '3'); put(Gr, 123, 18, 'p'); ground(Gr, 129, 133, 18); put(Gr, 134, 18, 'q'); ground(Gr, 143, W - 1, 18);
+  put(Gr, 115, 17, 'K'); put(Gr, 138, 13, 'R'); put(Gr, 130, 15, 'o.o');
   put(Gr, 146, 17, 'l'); put(Gr, 152, 17, 'c'); put(Gr, 158, 16, 'HH'); put(Gr, 158, 15, 'HH'); put(Gr, 161, 13, '--'); put(Gr, 164, 10, '--'); put(Gr, 165, 8, 'P');
   put(Gr, 170, 17, 'r'); put(Gr, 176, 17, 'j'); put(Gr, 172, 14, 'o.o.o'); put(Gr, 182, 17, 'x'); put(Gr, 190, 17, 'G');
   fillG(Gr, W - 1, 0, W - 1, 17, 'H');
   // the notches' pits (the pieces lay their hidden floors)
-  pit(Gr, 21, 27); fillG(Gr, 75, 13, 81, H - 1, '.'); pit(Gr, 123, 128); pit(Gr, 134, 140);
+  pit(Gr, 21, 29); fillG(Gr, 75, 13, 83, H - 1, '.'); pit(Gr, 123, 128); pit(Gr, 134, 142);
   put(Gr, 21, 18, 'n'); put(Gr, 75, 13, 'm'); put(Gr, 123, 18, 'p'); put(Gr, 134, 18, 'q');
   return rowsOf(Gr);
 })();
@@ -56,9 +56,9 @@ const FLAT = Object.assign({}, ENEMY, {
   k: SIGN('A SALT HEAP! STAND ON ITS GOLD RING AND HOLD RUN: THE TOP LAYER SLIDES DOWN INTO THE NOTCH'),
   K: SIGN('THIS HEAP FEEDS TWO NOTCHES. LET GO OF RUN WHEN THE FIRST ONE IS FULL, THEN SCUFF AGAIN'),
   x: ['decor', 'saltCellarProp'],
-  '1': ['piece', 'salt.heap', { notches: ['n1'], cap: 1.6 }], n: ['piece', 'salt.notch', { w: 7, id: 'n1' }],
-  '2': ['piece', 'salt.heap', { notches: ['n2'], cap: 1.6 }], m: ['piece', 'salt.notch', { w: 7, id: 'n2' }],
-  '3': ['piece', 'salt.heap', { notches: ['n3', 'n4'], cap: 2.6 }], p: ['piece', 'salt.notch', { w: 6, id: 'n3' }], q: ['piece', 'salt.notch', { w: 7, id: 'n4' }],
+  '1': ['piece', 'salt.heap', { notches: ['n1'], cap: 1.6 }], n: ['piece', 'salt.notch', { w: 9, id: 'n1' }],
+  '2': ['piece', 'salt.heap', { notches: ['n2'], cap: 1.6 }], m: ['piece', 'salt.notch', { w: 9, id: 'n2' }],
+  '3': ['piece', 'salt.heap', { notches: ['n3', 'n4'], cap: 2.6 }], p: ['piece', 'salt.notch', { w: 6, id: 'n3' }], q: ['piece', 'salt.notch', { w: 9, id: 'n4' }],
   A: DOOR('kettle@in'), u: GRAIN(), a: ['anchor', 'kettleOut']
 });
 stamps.saltFlat = { floor: 18, rows: flatRows, legend: FLAT, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power', 'power'] };
@@ -120,9 +120,57 @@ const L2 = { n: 2, name: 'Grain Elevator', mapLabel: 'Grain Elevator', arch: 'br
     { id: 'sea', gen: 'room', theme: 'salt_sea', stamp: 'saltSea', camera: 'free', bottomKill: true },
     { id: 'lamps', gen: 'room', role: 'secret', theme: 'salt_room_lamps', stamp: 'saltLamps', room: 'saltLamps' }
   ] };
-//@@L3@@
 
-Tour.amend('salt', { stamps, levels: [L1, L2] });
+/* ---------------- 34-3 Crystal Habit ---------------- */
+// floors on row 18. ① the teach: a little crystal at a cliff's edge grows a bridge across; ② a crystal that grows
+// straight up (an elevator: each cube lifts Brady) to a high shelf, a bridge from a crystal on a pillar; ③ an
+// optional crystal elevator to a high sill (the grain on it: room B43's cellar door); ④ the corner: a glass beam
+// overhead stops the bridge, so it grows down from the tip and on, lower; the brine rises in the trough below
+const caveRows = (() => {
+  const W = 200, H = 22, Gr = grid(W, H, '.');
+  ground(Gr, 0, 19, 18); put(Gr, 3, 17, '@'); put(Gr, 6, 17, 'k'); put(Gr, 10, 14, '?'); put(Gr, 19, 17, '1'); pit(Gr, 20, 28);
+  ground(Gr, 29, 52, 18); put(Gr, 30, 17, 'c'); put(Gr, 34, 13, '*'); put(Gr, 31, 15, 'o.o.o'); put(Gr, 40, 17, 'r'); put(Gr, 46, 17, 'K');
+  // ② the elevator crystal up to the shelf (row 12), the shelf, a pillar crystal bridging down the far side
+  put(Gr, 50, 17, '2'); ground(Gr, 51, 64, 12); put(Gr, 56, 11, 'f'); put(Gr, 58, 8, '?'); put(Gr, 64, 11, '3'); pit(Gr, 65, 73); ground(Gr, 74, 96, 12);
+  put(Gr, 78, 11, 'j'); put(Gr, 81, 11, 'c');
+  // ③ the optional elevator to the high sill (B43)
+  put(Gr, 88, 11, '4'); fillG(Gr, 89, 5, 94, 5, 'H'); put(Gr, 92, 4, 'A'); put(Gr, 94, 4, 'u'); put(Gr, 90, 3, 'o.o');
+  put(Gr, 96, 11, '.'); ground(Gr, 97, 140, 18); put(Gr, 99, 17, 'a'); put(Gr, 104, 17, 'l'); put(Gr, 110, 14, '?'); put(Gr, 114, 17, 'r'); put(Gr, 120, 17, 'c');
+  put(Gr, 126, 16, '--'); put(Gr, 129, 14, '--'); put(Gr, 132, 11, '--'); put(Gr, 133, 9, 'P'); put(Gr, 136, 17, 'Z'); put(Gr, 138, 15, '---');
+  // ④ the corner: the cliff (row 13) from 141, the stem at its edge, the beam overhead past the tip, the trough below
+  ground(Gr, 141, 150, 13); put(Gr, 144, 12, 'j'); put(Gr, 150, 12, '5'); fillG(Gr, 155, 8, 163, 12, 'H'); pit(Gr, 151, 160); put(Gr, 157, 13, 'R');
+  ground(Gr, 161, W - 1, 16); put(Gr, 166, 15, 'o.o.o'); put(Gr, 172, 15, 'r'); put(Gr, 178, 15, 'c'); put(Gr, 184, 15, 'x'); put(Gr, 190, 15, 'G');
+  fillG(Gr, W - 1, 0, W - 1, 15, 'H');
+  return rowsOf(Gr);
+})();
+const CAVE = Object.assign({}, ENEMY, {
+  k: SIGN('A SALT CRYSTAL! STAND ON IT AND HOLD THROW: A NEW CUBE GROWS WHERE THE DASHED SQUARE IS'),
+  K: SIGN('SOME CRYSTALS GROW UP. A CUBE GROWING UNDER YOU LIFTS YOU WITH IT'),
+  Z: SIGN('THE LAST ONE TURNS A CORNER UNDER THE BEAM. THE BRINE RISES ONCE IT STARTS: KEEP GROWING'),
+  x: ['decor', 'saltCellarProp'],
+  '1': ['piece', 'salt.crystal', { id: 'c1', h: 1, plan: [[1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0]] }],
+  '2': ['piece', 'salt.crystal', { id: 'c2', h: 1, plan: [[0, -1], [0, -2], [0, -3], [0, -4], [0, -5]] }],
+  '3': ['piece', 'salt.crystal', { id: 'c3', h: 1, plan: [[1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0]] }],
+  '4': ['piece', 'salt.crystal', { id: 'c4', h: 1, plan: [[0, -1], [0, -2], [0, -3], [0, -4], [0, -5], [0, -6]] }],
+  '5': ['piece', 'salt.crystal', { id: 'c5', h: 1, plan: [[1, 0], [2, 0], [3, 0], [3, 1], [3, 2], [3, 3], [4, 3], [5, 3], [6, 3], [7, 3], [8, 3], [9, 3], [10, 3]], brine: { dx0: 1, dx1: 10, dy: 4, time: 16 } }],
+  A: DOOR('mitts@in'), u: GRAIN(), a: ['anchor', 'mittsOut']
+});
+stamps.saltCave = { floor: 18, rows: caveRows, legend: CAVE, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power', 'power'] };
+stamps.saltMitts = roomStamp('cave@mittsOut', 'saltHatch');
+const L3 = { n: 3, name: 'Crystal Habit', mapLabel: 'Crystal Habit', arch: 'cubegrow', theme: 'salt_cave',
+  gimmick: 'Salt crystals that grow while you hold THROW on them: a new cube comes out of the flat face, where the dashed square shows. Bridges, lifts, and late on a corner under a glass beam while the brine rises',
+  hint: 'Stand on any cube of a crystal and hold THROW. A cube growing under Brady lifts him. On the last one keep growing: the brine dissolves it if it reaches the stem. A blue grain sits on a high sill...',
+  postcard: 'Brady! I held a salt crystal until it grew me a staircase. Then it grew me a bit more staircase than I needed. Crystals are like that. ♥ C',
+  enemies: [['saltShrimp', 3], ['saltWeevil', 2], ['saltWren', 1], ['saltLick', 1]],
+  mapCell: [2, 0], mapFrom: 1,
+  exits: { main: { to: '34-4' } },
+  areas: [
+    { id: 'cave', gen: 'room', theme: 'salt_cave', stamp: 'saltCave', camera: 'free', bottomKill: true },
+    { id: 'mitts', gen: 'room', role: 'secret', theme: 'salt_room_mitts', stamp: 'saltMitts', room: 'saltMitts' }
+  ] };
+//@@L4@@
+
+Tour.amend('salt', { stamps, levels: [L1, L2, L3] });
 Tour.saltLevels = { grid, put, fillG, ground, pit, rowsOf, SIGN, GRAIN, ENEMY, roomStamp, DOOR, stamps };
 
 /* ---------------- the land's map: salt flats in a cobalt sea ---------------- */
