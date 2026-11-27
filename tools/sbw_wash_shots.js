@@ -455,7 +455,7 @@ const BOT_PAGE = () => {
   T.walk = (x, o) => {
     o = o || {};
     for (let k = 0; k < 120 * 25; k++) {
-      const q = p(); if (Math.abs(q.cx - x) < (o.tol || 8) && q.onGround) return true;
+      const q = p(); if (T.finished() || (Math.abs(q.cx - x) < (o.tol || 8) && q.onGround)) return true;
       const dir = q.cx < x ? 1 : -1, tx = Math.floor((q.cx + dir * 20) / 32), fy = Math.floor((q.y + q.h + 4) / 32);
       let jump = false;
       if (q.onGround) {
