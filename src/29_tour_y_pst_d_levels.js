@@ -47,7 +47,7 @@ const dreamRows = (() => {
   // ① the teach
   ground(Gr, 0, 15, 19); put(Gr, 3, 18, '@'); put(Gr, 6, 18, 'n'); put(Gr, 9, 14, '?');
   put(Gr, 12, 18, '1'); ground(Gr, 16, 24, 14); put(Gr, 17, 12, 'o.o.o.o');
-  ground(Gr, 25, 40, 19); put(Gr, 29, 15, 'o.o.o'); put(Gr, 34, 18, 'l');
+  ground(Gr, 25, 40, 19); put(Gr, 29, 15, 'o.o.o'); put(Gr, 34, 18, 'u');
   ground(Gr, 41, 58, 19); put(Gr, 41, 18, '2'); fillG(Gr, 44, 13, 49, 14, '#'); put(Gr, 47, 10, '*'); put(Gr, 45, 12, 'o.o');
   put(Gr, 52, 18, 'c'); put(Gr, 55, 14, '?');
   // ② think, then walk: the cushion under ceiling spikes; the wall in the open
@@ -60,7 +60,7 @@ const dreamRows = (() => {
   ground(Gr, 110, 160, 19); put(Gr, 112, 18, 'c');
   // the cushion fort: a ceiling slab with one gap (the tell), cushions under it; its roof is the run to the forts
   fillG(Gr, 114, 14, 136, 15, 'H'); fillG(Gr, 123, 14, 124, 15, '.');
-  put(Gr, 116, 18, '6'); put(Gr, 123, 18, '7'); put(Gr, 129, 18, '8'); put(Gr, 124, 16, 'Z'); put(Gr, 133, 18, 'p');
+  put(Gr, 116, 18, '6'); put(Gr, 123, 18, '7'); put(Gr, 129, 18, '8'); put(Gr, 124, 16, 'Z');
   put(Gr, 115, 12, 'o.o.o.o'); put(Gr, 127, 12, 'o.o.o.o'); put(Gr, 131, 13, 'm');
   fillG(Gr, 137, 14, 152, 15, 'H'); put(Gr, 140, 11, 'A'); put(Gr, 142, 13, 'e'); put(Gr, 146, 12, 'o.o.o'); put(Gr, 150, 13, 'K');
   put(Gr, 154, 18, 'a'); put(Gr, 158, 18, 'c'); put(Gr, 156, 18, 'k');
@@ -71,7 +71,7 @@ const dreamRows = (() => {
   // again, harder: the tunnel's ceiling has spikes in it (a lift inside it hurts), the far floor is short, the wall
   // taller; P3 over the wall
   fillG(Gr, 197, 9, 203, 15, 'H'); fillG(Gr, 197, 16, 203, 16, 'v'); put(Gr, 197, 18, 'E'); put(Gr, 195, 18, 'V');
-  ground(Gr, 208, 216, 13); put(Gr, 212, 9, 'R'); put(Gr, 209, 11, 'o.o.o'); put(Gr, 214, 12, 'l');
+  ground(Gr, 208, 216, 13); put(Gr, 212, 9, 'R'); put(Gr, 209, 11, 'o.o.o');
   ground(Gr, 217, 243, 19); put(Gr, 224, 18, 'c'); put(Gr, 227, 14, '?'); put(Gr, 230, 18, 'p'); put(Gr, 236, 18, 'G'); fillG(Gr, 243, 0, 243, 18, 'H');
   return rowsOf(Gr);
 })();
@@ -94,7 +94,7 @@ const L1 = { n: 1, name: 'Hold That Thought', mapLabel: 'Hold That Thought', arc
   gimmick: 'On a dream cushion JUMP plants a thought, and one full breath later it lifts Brady sky-high from wherever he is standing then',
   hint: 'Press jump on a cushion, then move: the lift fires wherever you are when the bubble pops. Watch it stretch up first. A lone z drifts out of a gap in the cushion fort...',
   postcard: 'Brady, Pupo has been thinking about a biscuit since Tuesday. I can see the thought from here. It has a little tail. ♥ C',
-  enemies: [['pstLouse', 4], ['pstPea', 3], ['pstSlug', 1], ['pstBat', 2]],
+  enemies: [['pstLouse', 2], ['pstPea', 2], ['pstSlug', 2], ['pstBat', 2]],
   mapCell: [0, 0], mapFrom: -1,
   exits: { main: { to: '32-2' } },
   areas: [

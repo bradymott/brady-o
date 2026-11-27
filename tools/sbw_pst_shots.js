@@ -257,6 +257,28 @@ const HELPERS = `(() => {
     const at = tileOf(); return { ok: !o.to || (at[0] === o.to[0] && at[1] === o.to[1]) || (o.tol && Math.abs(at[0] - o.to[0]) <= o.tol && at[1] === o.to[1]), at, rise: +((y0 - top) / 32).toFixed(2), t: +t.toFixed(2) };
   };
   window.walkTo = (tx, maxT) => AP.exec({ walkTo: tx * 32 + 16, dir: 0 }, maxT || 4);
+  // a careful walk along a floor: hold the stick; a critter (or a shot) ahead on Brady's level gets a full jump over
+  // it (or a stomp); stops on tile tx (or at the gate's results)
+  window.safeWalk = (tx, maxT) => {
+    const g = S(); let t = 0, jt = 0;
+    while (t < (maxT || 14)) {
+      const p = P(); if (S() !== g || !p || p.dead) return { ok: false, why: 'died', at: p ? tileOf() : null };
+      if (g.state !== 'play') return { ok: true, state: g.state };
+      const dx = tx * 32 + 16 - p.cx, d = Math.sign(dx);
+      if (Math.abs(dx) < 12 && p.onGround) { sim(0.15); return { ok: true, at: tileOf() }; }
+      const en = g.entities.find(e => e.enemy && !e.dead && !e.remove && (e.cx - p.cx) * d > -4 && (e.cx - p.cx) * d < 3.2 * 32 && Math.abs(e.cy - p.cy) < 1.6 * 32);
+      let inp = { left: d < 0, right: d > 0 };
+      if (en && p.onGround && jt <= 0) { inp.jump = true; inp.jumpPressed = true; jt = 0.35; }
+      else if (jt > 0) inp.jump = true;
+      jt -= 1 / 120; sim(1 / 120, inp); t += 1 / 120;
+    }
+    return { ok: false, why: 'slow', at: tileOf() };
+  };
+  window.yawnAt = (tx, side, maxT) => {
+    walkTo(tx, 4); const m = ents('PstMouth').sort((a, b) => Math.abs(a.cx - tx * 32) - Math.abs(b.cx - tx * 32))[0]; let t = 0;
+    while (t < (maxT || 10) && m.own !== side && !P().dead) { sim(1 / 120); t += 1 / 120; }
+    return { ok: m.own === side, at: tileOf(), t: +t.toFixed(1) };
+  };
   window.door = () => { const a0 = S().area.aid; for (let k = 0; k < 20 && S().area.aid === a0; k++) sim(0.1, { up: true, upPressed: true }); sim(1.2); return S().area.aid; };
 })()`;
 const LEVELS = {};
@@ -543,37 +565,49 @@ const BOT = args.includes('--bot');
 const botRun = async (page, id, legs) => {
   if (want.length && !want.includes(id)) return;
   const r = await page.evaluate(([id, legs]) => {
-    fresh(); play(id); const g = S(); let deaths = [];
+    fresh(); play(id); let g = S(); let deaths = [];
     const p0 = () => { const p = P(); p.invuln = 0; return p; };
     p0(); const out = [];
-    for (const leg of legs) {
-      for (let tries = 0; tries < 3; tries++) {
-        let ok;
-        try { ok = eval(leg); } catch (e) { ok = { ok: false, err: String(e) }; }
-        const p = P();
-        if (p.dead || g.state !== 'play' && g.state !== 'clear' && g.state !== 'tally' && g.state !== 'results') {
-          deaths.push({ leg, at: tileOf() }); for (let k = 0; k < 600 && (P().dead || g.state !== 'play'); k++) sim(0.05); P().invuln = 0; continue;
-        }
-        out.push(!!(ok && ok.ok !== false)); break;
+    // a leg is [startX, code]: after a death Brady goes back to the last checkpoint, and the bot goes back to the
+    // last leg that starts at or behind where he respawned (and plays on from there)
+    let i = 0, guard = 0;
+    while (i < legs.length && guard++ < 80) {
+      const [lx, leg] = legs[i];
+      let ok;
+      try { ok = eval(leg); } catch (e) { ok = { ok: false, err: String(e) }; }
+      if (S() !== g || !P() || P().dead || g.state !== 'play' && g.state !== 'clear' && g.state !== 'tally' && g.state !== 'results') {
+        const died = S() !== g || !P() || P().dead || /dead|over/.test(g.state);
+        if (died) deaths.push({ leg: i, at: P() ? tileOf() : null, state: g.state });
+        for (let k = 0; k < 600 && (!S().player || S().player.dead || S().state !== 'play'); k++) sim(0.05);
+        g = S(); if (!g.player || deaths.length > 8) break;
+        sim(0.5); P().invuln = 0; const rx = tileOf()[0]; let j = i; while (j > 0 && legs[j][0] > rx + 1) j--; i = j; continue;
       }
+      out.push(!!(ok && ok.ok !== false)); if (!(ok && ok.ok !== false)) { out.push({ leg: i, fail: ok }); break; }
       if (g.state !== 'play') break;
-      P().invuln = 0;
+      P().invuln = 0; i++;
     }
-    sim(3, { right: true });
+    sim(2);
     return { id, deaths: deaths.length, where: deaths.slice(0, 6), legsOk: out, state: g.state };
   }, [id, legs]);
   console.log('BOT ' + JSON.stringify(r));
-  check(`bot ${id}: played start to finish with enemies on and no invulnerability`, r.state !== 'play', r);
+  check(`bot ${id}: played start to finish with enemies on and no invulnerability (at most one death)`, /clear|tally|results/.test(r.state) && r.deaths <= 1, r);
 };
 LEVELS.bot = async (page) => {
   if (!BOT) return;
   await page.evaluate(HELPERS);
   await botRun(page, '32-1', [
-    "place(13, 18), sim(0.3), lift({ walk: 0, air: 1, airAt: 0, to: [17, 14], tol: 2 })", "AP.route([[30, 19], [42, 19]])", "lift({ walk: 0, air: 1, airAt: 0, to: [46, 13], tol: 3 })",
-    "AP.route([[52, 19], [60, 19]])", "lift({ walk: 1, walkT: 1.6, air: 1, airAt: 0, to: [71, 13], tol: 3 })", "AP.route([[82, 19], [97, 19]])",
-    "lift({ walk: 0, air: 1, airAt: 0, to: [101, 14], tol: 1 })", "lift({ walk: 0, air: 1, airAt: 0, to: [106, 9], tol: 3 })",
-    "AP.route([[113, 19], [119, 19], [127, 19], [140, 19], [158, 19], [164, 19]])", "lift({ walk: 1, walkT: 1.6, air: 1, airAt: 0, to: [175, 13], tol: 4 })",
-    "AP.route([[186, 19], [198, 19]])", "lift({ walk: 1, walkT: 1.6, air: 1, airAt: 0, to: [210, 13], tol: 3 })", "AP.route([[215, 13], [228, 19]])"]);
+    [3, "AP.route([[13, 19]])"], [13, "lift({ walk: 0, air: 1, airAt: 0, to: [17, 14], tol: 2 })"], [17, "AP.route([[30, 19], [42, 19]])"], [41, "lift({ walk: 0, air: 1, airAt: 0, to: [46, 13], tol: 3 })"],
+    [46, "AP.route([[52, 19], [60, 19]])"], [59, "lift({ walk: 1, walkT: 1.6, air: 1, airAt: 0, to: [71, 13], tol: 3 })"], [71, "AP.route([[82, 19], [97, 19]])"],
+    [96, "lift({ walk: 0, air: 1, airAt: 0, to: [101, 14], tol: 1 })"], [100, "lift({ walk: 0, air: 1, airAt: 0, to: [106, 9], tol: 3 })"],
+    [106, "AP.route([[113, 19], [119, 19], [127, 19], [140, 19]])"], [140, "AP.route([[158, 19], [164, 19]])"], [163, "lift({ walk: 1, walkT: 1.6, air: 1, airAt: 0, to: [175, 13], tol: 4 })"],
+    [175, "AP.route([[186, 19], [198, 19]])"], [197, "lift({ walk: 1, walkT: 1.6, air: 1, airAt: 0, to: [210, 13], tol: 3 })"], [210, "AP.route([[215, 13], [228, 19]])"], [224, "safeWalk(240)"]]);
+  await botRun(page, '32-3', [
+    [3, "safeWalk(18)"], [18, "yawnAt(18, 1)"], [18, "AP.route([[23, 16], [27, 13], [35, 19]])"], [34, "safeWalk(68)"], [68, "yawnAt(68, 1)"],
+    [68, "AP.route([[74, 19], [84, 19]])"], [84, "safeWalk(92)"], [92, "yawnAt(92, 1)"], [92, "AP.route([[95, 15], [98, 12]])"], [98, "safeWalk(104)"],
+    [104, "AP.route([[107, 19]])"], [106, "safeWalk(114)"], [110, "AP.route([[118, 16], [123, 19]])"], [122, "safeWalk(134)"], [134, "yawnAt(134, 1)"],
+    [134, "AP.route([[137, 16], [141, 13]])"], [141, "safeWalk(147)"], [147, "AP.route([[150, 19]])"],
+    [150, "(() => { walkTo(150); const m = ents('PstMouth').find(e => e.stuck); for (let q = 0; q < 1200 && !m.free; q++) sim(1 / 120); return { ok: !!m.free }; })()"],
+    [150, "yawnAt(154, 1)"], [154, "AP.route([[161, 17], [168, 19]])"], [168, "safeWalk(200)"]]);
   // the boss with damage on, three runs in a row from a fresh start: push the stop into each phase's slot and wait
   // for the tell, jumping whatever flies at Brady; phase 3: stand behind the stop beside the blank, wait for PLEASE,
   // then walk the stop into the last slot
