@@ -257,7 +257,7 @@ for (const [id, A] of Object.entries(APPS)) {
   fs.writeFileSync(path.join(dir, 'index.html'), html);
   fs.writeFileSync(path.join(dir, 'manifest.webmanifest'), JSON.stringify(manifestFor(A.name, A.short, A.desc, A.color, icons), null, 2));
   const vh = crypto.createHash('sha1').update(html);
-  if (A.iconDir) for (const f of icons) vh.update(fs.readFileSync(iconSrc(f)));   // new icon art -> new offline cache, so phones fetch it
+  if (A.iconDir || id === 'world') for (const f of icons) vh.update(fs.readFileSync(iconSrc(f)));   // new icon art -> new offline cache, so phones fetch it
   const v = vh.digest('hex').slice(0, 10);
   // Blender-made models (assets/models/<app>/*.glb) ship beside the page as models/*.glb and are cached offline
   const models = copyModels(A.dir, path.join(dir, 'models'), id !== 'world', A.models);   // the 2D app needs no 3D characters
