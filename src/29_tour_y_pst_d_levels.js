@@ -30,7 +30,7 @@ const roomStamp = (to, items) => ({ floor: 12, rows: [
   const gen0 = TourBuild.generateV2;
   TourBuild.generateV2 = function (C0, spec, w, i, attempt) {
     const L = gen0.call(this, C0, spec, w, i, attempt);
-    if (C0 && C0.id === 'pst') spec.areas.forEach((A, k) => { const o = A.pst; if (!o || !L.areas[k]) return; const a = L.areas[k]; if (o.blink) { a.pstBlinkGroups = o.blink; a.pstBlinkDef = o.blinkDef || null; } if (o.borrow) a.pstBorrow = true; if (o.room) a.pstRoom = true; });
+    if (C0 && C0.id === 'pst') spec.areas.forEach((A, k) => { const o = A.pst; if (!o || !L.areas[k]) return; const a = L.areas[k]; if (o.blink) { a.pstBlinkGroups = o.blink; a.pstBlinkDef = o.blinkDef || null; } if (o.borrow) a.pstBorrow = true; if (o.room) a.pstRoom = true; if (o.lead) a.pstLead = true; });
     return L;
   };
 }
@@ -333,6 +333,69 @@ const L5 = { n: 5, name: 'One Thought at a Time', mapLabel: 'One Thought at a Ti
     { id: 'pantry', gen: 'room', role: 'secret', room: 'pstPour', theme: 'pst_room_pantry', stamp: 'pstPantryOld', pst: { room: true } }
   ] };
 
-Tour.amend('pst', { stamps, levels: [L1, L2, L3, L4, L5] });
+/* ---------------- 32-6 Finish My Sentence (the boss) ---------------- */
+// the study, on the desk (the floor is row 16): a cushion lift up the books, parrot echoes on the shelves spitting
+// comma seeds, a soft patch in the floor (a lone z: Pupo's bedroom, A LITTLE PRIVACY, entered before the boss); then
+// the sentence on its paper strip: push the full stop to the slot after "MORE", the end of the part worth keeping, and
+// the door to the arena unlocks
+const CREAM_LO = Tour.pstKit.CREAM_LO;
+const studyRows = (() => {
+  const W = 100, H = 20, Gr = grid(W, H, '.');
+  ground(Gr, 0, 99, 16); put(Gr, 3, 15, '@'); put(Gr, 6, 15, 'n'); put(Gr, 9, 11, '?');
+  fillG(Gr, 12, 12, 16, 15, '#'); put(Gr, 13, 11, 'o.o.o'); fillG(Gr, 20, 10, 25, 15, '#'); put(Gr, 22, 6, '*'); put(Gr, 17, 15, '1');
+  fillG(Gr, 10, 3, 44, 4, 'H'); put(Gr, 28, 5, 'e'); put(Gr, 38, 5, 'f');
+  // the soft patch in the floor: drop through to Pupo's bedroom
+  fillG(Gr, 30, 16, 31, 16, 'F'); fillG(Gr, 30, 17, 31, 18, '.'); put(Gr, 30, 18, 'K'); put(Gr, 31, 15, 'Z');
+  put(Gr, 36, 15, 'l'); put(Gr, 42, 15, 'p'); put(Gr, 46, 15, 'c'); put(Gr, 48, 11, '?'); put(Gr, 50, 15, 'a');
+  fillG(Gr, 52, 12, 54, 15, '#'); put(Gr, 53, 9, 'A');
+  // the sentence strip and its full stop; echoes over it
+  put(Gr, 55, 15, 'N'); put(Gr, 56, 15, 'q'); fillG(Gr, 58, 3, 84, 4, 'H'); put(Gr, 64, 5, 'i'); put(Gr, 76, 5, 'j'); put(Gr, 70, 10, 'R');
+  fillG(Gr, 86, 12, 86, 15, 'Y'); fillG(Gr, 86, 3, 86, 11, 'H'); put(Gr, 92, 15, 'D'); put(Gr, 89, 15, 'k'); fillG(Gr, 99, 0, 99, 15, 'H');
+  return rowsOf(Gr);
+})();
+stamps.pstStudy = { floor: 16, rows: studyRows, gold: { '*': 'must', A: 'high', R: 'risky' }, items: ['power', 'power'], doors: [{ to: 'stage@in', look: 'pstDoor' }], legend: {
+  n: SIGN('THE GREAT DREAM PARROT KEEPS INTERRUPTING PUPO. HELP HIM FINISH HIS SENTENCE: WALK INTO THE FULL STOP TO PUSH IT'),
+  N: SIGN('PUSH THE FULL STOP TO THE END OF THE PART WORTH KEEPING: THE SLOT AFTER "MORE"'),
+  l: ['enemy', 'pstLouse'], p: ['enemy', 'pstPea'], k: ['decor', 'pstInkpot'],
+  '1': CUSH(3, [[5, -6]]),
+  e: ['piece', 'pst.echo', { period: 3.4 }], f: ['piece', 'pst.echo', { period: 3.4, phase: 1.7 }], i: ['piece', 'pst.echo', { period: 3.0 }], j: ['piece', 'pst.echo', { period: 3.0, phase: 1.5 }],
+  q: ['piece', 'pst.sentence', { n: 28, stop: 1, slot: 18, words: [[2, 'I'], [6, 'WOULD'], [10, 'LIKE'], [15, 'MORE...'], [21, 'UM...', CREAM_LO], [24, 'ER...', CREAM_LO], [27, 'TRIP', CREAM_LO]] }],
+  Y: ['lock', 'pst:stop'],
+  Z: ['piece', 'pst.z', {}],
+  K: ['spawn', 'portal', { kind: 'door', look: 'pstNook', targetRef: 'bedroom@in' }], a: ['anchor', 'bedOut']
+} };
+stamps.pstBedroomOld = roomStamp('study@bedOut', ['oneup']);
+const L6 = { n: 6, name: 'Finish My Sentence', mapLabel: 'Finish My Sentence', arch: 'lair', theme: 'pst_desk', boss: 'pst_parrot',
+  gimmick: 'The great dream parrot, The Interrupter, reads Pupo\'s sentence back and will not let him finish it. Put the full stop where it belongs',
+  hint: 'Walk into the full stop to push it into a slot. Commas: stop after his first word. A sweeping clause: after his second. The last word: wait quietly by the blank until Pupo says please',
+  postcard: 'Pupo finished his sentence: "I would like more... trip." The parrot passed the biscuits. We are staying another week. ♥ C',
+  enemies: [['pstLouse', 1], ['pstPea', 1]],
+  mapCell: [2, 1], mapFrom: 4,
+  areas: [
+    { id: 'study', gen: 'room', theme: 'pst_desk', stamp: 'pstStudy', pst: { lead: true } },
+    { id: 'bedroom', gen: 'room', role: 'secret', room: 'pstPrivacy', theme: 'pst_room_bedroom', stamp: 'pstBedroomOld', pst: { room: true } },
+    { id: 'stage', gen: 'arena', role: 'arena', layout: 'desk', arenaW: 28, H: 18, roof: false, theme: 'pst_desk' }
+  ] };
+
+Tour.amend('pst', { stamps, levels: [L1, L2, L3, L4, L5, L6] });
+
+/* ---------------- the land's map: a patchwork quilt of a dream ---------------- */
+// the way in (the hollow from Nepal) at the left; the cushions, the eyelids, the yawn, the hourglass garden and the
+// gallery round the quilt; the desk at the top right (the port: the way home)
+if (typeof TOUR_OW_MAPS !== 'undefined') TOUR_OW_MAPS.pst = {
+  labels: { '32-1': 'Hold That Thought', '32-2': 'The Long Blink', '32-3': 'Half a Yawn', '32-4': 'Borrow a Second', '32-5': 'One Thought at a Time', '32-6': 'Finish My Sentence' },
+  w: 1520, h: 760,
+  pal: { sea: '#3a1a4a', deep: '#24102e', land: '#f2b632', light: '#ffd673', path: '#fbefd2', beach: '#e8c070', cliff: '#7a2f5a', roof: '#8a3462', wall: '#fbefd2' },
+  sea: 'stars', coast: 'pstQuilt', tufts: 'none', trail: 'sparkle', bridge: 'steps', meadow: false, woods: false, foam: false, birds: false,
+  land: [[[160, 380], [220, 220], [400, 150], [640, 120], [880, 150], [1100, 130], [1300, 200], [1390, 340], [1360, 520], [1240, 640], [980, 690], [700, 660], [440, 680], [250, 600]]],
+  nodes: { start: [250, 450], '32-1': [430, 330, 'n'], '32-2': [700, 230, 'n'], '32-3': [990, 250, 'n'], '32-4': [1180, 400, 'e'], '32-5': [960, 560, 's'], '32-6': [640, 540, 's'], port: [470, 560] },
+  paths: { 'start>32-1': [[330, 400]], '32-1>32-2': [[560, 260]], '32-2>32-3': [[850, 220]], '32-3>32-4': [[1110, 310]], '32-4>32-5': [[1100, 500]], '32-5>32-6': [[800, 580]], '32-6>port': [[540, 570]] },
+  feat: [
+    ['sprite', 'pstCushion', 240, 470, 30], ['sprite', 'pstEye', 700, 180, 34], ['sprite', 'pstBubble', 1000, 200, 26],
+    ['sprite', 'pstGlass', 1240, 430, 22], ['sprite', 'pstBubble', 900, 620, 22], ['sprite', 'pstDesk', 650, 600, 30]
+  ],
+  flora: ['rock'], density: 0,
+  live: [['blink', 700, 160, '#fbefd2'], ['circle', 1000, 170, 40, 0.5]]
+};
 Tour.pstLevels = { grid, put, fillG, ground, pit, rowsOf, roomStamp, SIGN, CUSH, stamps };
 })();

@@ -500,7 +500,7 @@ class PstThing extends Ent {
 ENTITY_TYPES.pstThing = PstThing;
 // a picture bubble: bump it from below and its subject is the one Pupo is thinking of
 class PstPic extends Ent {
-  constructor(g, s) { super(g, s, 40, 30); this.y = s.y - 4 * TS; this.kind = s.kind; this.gi = s.g; this.set = s.set || [s.g]; this.friendly = true; this.bumpT = 0; }
+  constructor(g, s) { super(g, s, 40, 30); this.y = s.y - 4 * TS; this.kind = s.kind; this.gi = s.g; this.set = s.set || [s.g]; this.friendly = false; this.bumpT = 0; }
   update(dt) { this.t += dt; if (this.bumpT > 0) this.bumpT -= dt; }
   touchPlayer(p) {
     if (p.dead || this.bumpT > 0) return;
