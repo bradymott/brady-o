@@ -285,7 +285,7 @@ const helpers = () => {
 };
 const shotAt = async (page, shot, name, fn, arg) => { await page.evaluate(fn, arg); await page.evaluate(() => freeze()); await shot(name); await page.evaluate(() => thaw()); };
 
-LEVELS.dbg = async (page, shot, run) => { await run('dbg', async () => { await page.evaluate(helpers); const r = await page.evaluate(() => { fresh(); playP('27-5'); place(40, 18); sim(0.3); const a = scaleEnd(43, 48, 'small'); const p = P(); const rows = []; for (let y = 15; y <= 19; y++) { let l = ''; for (let x = 38; x <= 58; x++) l += (tileName(x, y) || '?')[0]; rows.push(l); } return { a, rows, cx: p.cx / 32, y: p.y / 32, on: p.onGround, gt: p.groundTy, st: p.state, dead: p.dead, plan: AP.plan([50, 19]) ? 1 : 0, w: P().w, h: P().h }; }); console.log(JSON.stringify(r)); }); };
+LEVELS.dbg = async (page, shot, run) => { await run('dbg', async () => { await page.evaluate(helpers); const r = await page.evaluate(() => { fresh(); playP('27-5'); place(41, 18); sim(0.3); P().invuln = 0; const a = scaleEnd(43, 48, 'small'); const rows = []; for (let y = 14; y <= 19; y++) { let l = ''; for (let x = 40; x <= 58; x++) l += (tileName(x, y) || '?')[0]; rows.push(l); } const t = tileOf(); const pl = AP.plan([52, 19]); const en = S().entities.filter(e => e.enemy && Math.abs(e.cx / 32 - 50) < 10).map(e => [e.constructor.name, Math.round(e.cx / 32)]); let out = []; for (let k = 0; k < 120 * 3; k++) { sim(1 / 120, { right: true }); if (k % 30 === 0) out.push([Math.round(P().cx / 32 * 10) / 10, P().dead, P().state]); } const A = S().area, B = window.BRADY; const info = [51,52,53].map(x => [x, A.tiles[18 * A.W + x], A.hide ? A.hide[18 * A.W + x] : null, B.SOLID[A.tiles[18 * A.W + x]]]); const ents2 = S().entities.filter(e => !e.remove && e.cx > 49 * 32 && e.cx < 55 * 32).map(e => [e.constructor.name, e.solid, e.platform, Math.round(e.x), Math.round(e.w)]); const plats = (S().platforms || []).filter(q => q.x < 55 * 32 && q.x + q.w > 49 * 32).map(q => [q.constructor.name, q.x, q.y, q.w, q.h]); return { a, info, ents2, plats, out: out.slice(-2) }; }); console.log(JSON.stringify(r)); }); };
 // ---------------- the hidden entrance: Vietnam 10-3, the river steps under the night market ----------------
 LEVELS.entry = async (page, shot, run, pano) => {
   await run('entry', async () => {
@@ -513,7 +513,7 @@ LEVELS.ret = async (page, shot, run, pano) => {
     r = await page.evaluate(() => { const a = AP.route([[30, 19], [52, 19]]); const e = ents('PostAddress')[1]; AP.go([54, 19]); for (let k = 0; k < 120 * 10 && !e.done; k++) sim(1 / 120); sim(0.8); return { a: a.ok, done: e.done }; });
     check('27-6: the second address too', r.a && r.done, r);
     await shotAt(page, shot, '82-27-6-secret-tell.png', () => { place(66, 18); sim(0.3); });
-    r = await page.evaluate(() => { const a = AP.go([74, 19]); return { ok: a.ok, at: tileOf() }; });
+    r = await page.evaluate(() => { const a = AP.go([72, 19]); return { ok: a.ok, at: tileOf() }; });
     check('27-6: the pillar\'s foot where the corner curls is paper: through to the den\'s door (before the boss)', r.ok, r);
     r = await page.evaluate(() => { place(88, 18); sim(0.2); toDoor(); return {}; });
     r = await page.evaluate(() => { const g = S(); const d = g.entities.filter(e => e.constructor.name === 'Portal' && e.target && e.target.area !== g.area.idx).sort((a, b) => b.cx - a.cx)[0]; const p = P(); p.x = d.cx - p.w / 2; p.y = d.y + d.h - p.h; sim(0.2); sim(0.1, { up: true, upPressed: true }); for (let k = 0; k < 200 && S().area.aid !== 'desk'; k++) sim(1 / 60); sim(3); freeze(); return { area: S().area.aid }; });
@@ -548,17 +548,17 @@ const BOT = {
     [120, [[125, 14], [137, 16], [146, 19], [158, 19], 'finish']]],
   '27-3': [[0, [{ bump: [7, 19] }, { blot: 1 }, [16, 19], [21, 19], [27, 19]]],
     [30, [[40, 19], [49, 19], { blot: 1 }, [54, 19], [60, 19], [66, 19], [78, 19]]],
-    [80, [{ bump: [85, 19] }, [100, 19], { blot: 2 }, [114, 19], [120, 19], [128, 19]]],
+    [80, [{ bump: [86, 19] }, [100, 19], { blot: 2 }, [114, 19], [120, 19], [128, 19]]],
     [130, [[150, 19], [170, 19], 'finish']]],
   '27-4': [[0, [{ bump: [8, 19] }, { fold: 19 }, [24, 19], [29, 19]]],
-    [30, [{ bump: [40, 19] }, { fold: 46 }, [52, 19], [60, 19]]],
+    [30, [{ bump: [31, 19] }, { fold: 46 }, [52, 19], [60, 19]]],
     [62, [[76, 19], [84, 25], [100, 25]]], [100, [[117, 23], [121, 19]]],
     [122, [{ fold: 134 }, [144, 19], [150, 19], 'finish']]],
   '27-5': [[0, [{ bump: [7, 19] }, { scale: [9, 14, 'big'] }, [16, 19], [22, 19], [31, 19], [38, 19]]],
     [40, [{ bump: [50, 19] }, { scale: [43, 48, 'small'] }, [52, 19], [57, 19], [70, 19]]],
     [72, [{ scale: [78, 84, 'big'] }, [88, 19], [93, 19], { scale: [94, 99, 'small'] }, [100, 19], [102, 16], [108, 13]]],
     [110, [[125, 13], [135, 13], 'finish']]],
-  '27-6': [[0, [{ bump: [7, 19] }, { addr: 23 }, [28, 19]]], [30, [{ bump: [35, 19] }, { addr: 54 }, [60, 19]]], [63, [[88, 19], 'boss']]]
+  '27-6': [[0, [{ bump: [7, 19] }, { addr: 23 }, [28, 19]]], [30, [{ bump: [35, 19] }, { addr: 54 }, [60, 19]]], [63, [[68, 19], [71, 16], [76, 19], [88, 19], 'boss']]]
 };
 LEVELS.bot = async (page, shot, run) => {
   if (!want.includes('bot')) return;

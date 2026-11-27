@@ -517,6 +517,9 @@ class PostScale extends Ent {
     if (!this.set) { this.set = []; for (const r0 of s.pieces) for (let y = Math.max(0, r0[1]); y <= r0[3]; y++) for (let x = r0[0]; x <= r0[2]; x++) this.set.push([x, y]); }
     if (!p || p.dead) return;
     const k = p.onGround ? this.onBar(p) : (this.live ? this.bar : -1);
+    // the ruler wakes when Brady stops on it for a moment (running straight over it changes nothing)
+    if (k >= 0 && !this.live) { this.pause = Math.abs(p.vx) < 40 ? (this.pause || 0) + dt : 0; if (this.pause < 0.35) return; }
+    if (k < 0) this.pause = 0;
     if (k >= 0) {
       if (!this.live) { this.live = true; this.bar = k; this.sc = this.lockS; TourKit.sfx('ruler', 'select', { vol: 0.3, pitch: 1.2 }); }
       if (p.onGround) { this.bar = k; const tg = this.target(p, k); const d = tg - this.sc; this.sc += clamp(d, -0.55 * dt, 0.55 * dt); }

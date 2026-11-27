@@ -51,7 +51,7 @@ const perfRows = (() => {
   fillG(Gr, 121, 15, 122, 15, '.'); put(Gr, 120, 16, 'x');
   put(Gr, 115, 17, 'o.o.o'); put(Gr, 125, 17, 'o.o');
   // the run on top of the ceiling: coins, a gull, the hidden 1UP, P2, the press's letterbox
-  put(Gr, 114, 13, 'o.o.o'); put(Gr, 117, 10, 'h'); put(Gr, 124, 10, 'M'); put(Gr, 126, 12, 'A'); put(Gr, 129, 14, 'D');
+  put(Gr, 114, 13, 'o.o.o'); put(Gr, 117, 10, 'h'); put(Gr, 124, 14, 'e'); put(Gr, 126, 12, 'A'); put(Gr, 129, 14, 'D');
   put(Gr, 134, 17, 'a'); put(Gr, 136, 17, 'c'); put(Gr, 133, 17, 'l');
   // ③ the twist: the two islands that share a tooth over one long ink channel
   ground(Gr, 141, 142, 18); ground(Gr, 143, 146, 17); put(Gr, 143, 16, 'O'); put(Gr, 145, 16, '4');
@@ -150,7 +150,7 @@ const blotRows = (() => {
   ink(Gr, 17, 24, 20); put(Gr, 21, 15, '*');
   ground(Gr, 25, 54, 19); put(Gr, 30, 18, 'c'); put(Gr, 33, 18, 'q'); put(Gr, 38, 18, 'e'); put(Gr, 43, 18, 'q'); put(Gr, 41, 18, 'u'); put(Gr, 47, 18, 'N'); put(Gr, 49, 18, '2');
   ink(Gr, 55, 64, 20); put(Gr, 59, 9, 'M');
-  ground(Gr, 65, 103, 19); put(Gr, 68, 18, 'l'); put(Gr, 85, 15, '?'); put(Gr, 80, 18, 'c'); put(Gr, 90, 18, 'u'); put(Gr, 96, 18, 'a'); put(Gr, 99, 13, 'o.o.o');
+  ground(Gr, 65, 103, 19); put(Gr, 68, 18, 'l'); put(Gr, 86, 15, '?'); put(Gr, 80, 18, 'c'); put(Gr, 97, 18, 'u'); put(Gr, 96, 18, 'a'); put(Gr, 99, 13, 'o.o.o');
   // the ink cellar: a stamp-edge lid in the quay floor (a corner curls up beside it), a passage under the quay, a door
   fillG(Gr, 72, 19, 73, 19, '-'); fillG(Gr, 72, 20, 80, 21, '.'); put(Gr, 74, 18, 'x'); put(Gr, 76, 21, 'A'); put(Gr, 79, 21, 'D'); put(Gr, 71, 18, 'z');
   ground(Gr, 104, 114, 19); put(Gr, 102, 18, 'O'); put(Gr, 109, 18, '3');
@@ -194,12 +194,12 @@ const foldRows = (() => {
   const W = 176, H = 27, Gr = grid(W, H, '.');
   ground(Gr, 0, 20, 19); put(Gr, 3, 18, '@'); put(Gr, 5, 18, 'n'); put(Gr, 8, 15, '?'); put(Gr, 19, 18, '1'); put(Gr, 13, 18, 'l');
   ink(Gr, 21, 25, 20); put(Gr, 23, 15, '*');
-  ground(Gr, 26, 48, 19); put(Gr, 30, 18, 'c'); put(Gr, 33, 18, 'N'); put(Gr, 35, 18, 'f'); put(Gr, 38, 18, 'w'); put(Gr, 44, 18, 'f'); put(Gr, 40, 15, '?'); put(Gr, 46, 18, '2');
+  ground(Gr, 26, 48, 19); put(Gr, 30, 18, 'c'); put(Gr, 28, 18, 'N'); put(Gr, 35, 18, 'f'); put(Gr, 38, 18, 'w'); put(Gr, 44, 18, 'f'); put(Gr, 31, 15, '?'); put(Gr, 46, 18, '2');
   ink(Gr, 49, 54, 20); put(Gr, 52, 9, 'M');
   ground(Gr, 55, 80, 19); put(Gr, 62, 18, 'c'); put(Gr, 58, 18, 'f'); put(Gr, 66, 18, 'w'); put(Gr, 74, 18, 'f'); put(Gr, 79, 18, '3'); put(Gr, 80, 18, 'x');
   // the letterbox ledge: a block in the air over the way on, reached only by folding its flap over
   pit(Gr, 81, 85); fillG(Gr, 86, 19, 92, 20, '#'); put(Gr, 88, 17, 'A'); put(Gr, 91, 18, 'D');
-  ground(Gr, 81, 115, 25); put(Gr, 84, 24, 'f'); put(Gr, 90, 24, 'w'); put(Gr, 101, 24, 'f'); put(Gr, 100, 24, 'c'); put(Gr, 106, 24, 'a'); put(Gr, 110, 24, 'u'); put(Gr, 96, 21, 'o.o.o');
+  ground(Gr, 81, 115, 25); put(Gr, 84, 24, 'f'); put(Gr, 90, 24, 'w'); put(Gr, 96, 24, 'f'); put(Gr, 100, 24, 'c'); put(Gr, 106, 24, 'a'); put(Gr, 96, 21, 'o.o.o');
   ground(Gr, 116, 117, 23); ground(Gr, 118, 119, 21); ground(Gr, 120, 135, 19); put(Gr, 122, 18, 'c'); put(Gr, 124, 18, 'O'); put(Gr, 134, 18, '4');
   ink(Gr, 136, 141, 20); put(Gr, 138, 14, 'R');
   ground(Gr, 142, W - 1, 19); put(Gr, 146, 18, 'k'); put(Gr, 158, 18, 'G'); put(Gr, 165, 18, 'l'); fillG(Gr, W - 1, 0, W - 1, 18, '#');
@@ -239,11 +239,11 @@ const coastRows = (() => {
   const W = 150, H = 24, Gr = grid(W, H, '.');
   ground(Gr, 0, 16, 19); put(Gr, 3, 18, '@'); put(Gr, 5, 18, 'n'); put(Gr, 7, 15, '?'); put(Gr, 11, 18, '1');
   ink(Gr, 17, 36, 20); put(Gr, 27, 14, '*');
-  ground(Gr, 37, 101, 19); put(Gr, 40, 18, 'c'); put(Gr, 42, 18, 'N'); put(Gr, 46, 18, '2'); put(Gr, 50, 15, '?');
+  ground(Gr, 37, 101, 19); put(Gr, 40, 18, 'c'); put(Gr, 38, 18, 'N'); put(Gr, 46, 18, '2'); put(Gr, 50, 15, '?');
   // the chute room: a low tunnel roof with a gap (a corner curls down), the run on top, the letterbox
   fillG(Gr, 60, 16, 68, 16, 'H'); fillG(Gr, 59, 8, 59, 16, 'H'); fillG(Gr, 69, 8, 69, 16, 'H'); fillG(Gr, 63, 16, 64, 16, '.'); put(Gr, 62, 17, 'x');
   put(Gr, 61, 14, 'o.o'); put(Gr, 65, 13, 'A'); put(Gr, 67, 15, 'D'); put(Gr, 61, 18, 'o.o.o');
-  put(Gr, 72, 18, 'c'); put(Gr, 74, 18, 'a'); put(Gr, 70, 18, 'q'); put(Gr, 66, 18, 'e'); put(Gr, 56, 18, 'q'); put(Gr, 54, 18, 'u');
+  put(Gr, 72, 18, 'c'); put(Gr, 74, 18, 'a'); put(Gr, 70, 18, 'q'); put(Gr, 66, 18, 'e'); put(Gr, 56, 18, 'q');
   put(Gr, 77, 18, 'O'); put(Gr, 78, 18, '3'); put(Gr, 97, 18, '4');
   ink(Gr, 101, 105, 20); put(Gr, 103, 11, 'R');
   ground(Gr, 106, W - 1, 13); put(Gr, 110, 12, 'c'); put(Gr, 116, 12, 'u'); put(Gr, 124, 12, 'k'); put(Gr, 120, 9, 'o.o.o'); put(Gr, 128, 6, 'M'); put(Gr, 140, 12, 'G'); fillG(Gr, W - 1, 0, W - 1, 12, '#');
@@ -251,7 +251,7 @@ const coastRows = (() => {
 })();
 const SCALE = o => ['piece', 'post.scale', Object.assign({ smin: 0.5, smax: 2 }, o)];
 stamps.postCoast = { floor: 19, rows: coastRows, gold: { '*': 'must', A: 'hidden', R: 'risky' }, items: ['power', 'power'], doors: [{ to: 'chutes@in', look: 'postFlap' }], legend: Object.assign({}, COMMON, {
-  n: SIGN('A MAP SCALE! WALK RIGHT ON THE RULER TO ENLARGE THE HARBOUR AROUND ITS BRASS PIN, LEFT TO SHRINK IT. STEP OFF THE END TO LOCK IT'),
+  n: SIGN('A MAP SCALE! STOP ON THE RULER, THEN WALK RIGHT TO ENLARGE THE HARBOUR AROUND ITS BRASS PIN, LEFT TO SHRINK IT. STEP OFF THE END TO LOCK IT. RUN STRAIGHT OVER IT AND NOTHING CHANGES'),
   N: SIGN('SHRINKING PULLS EVERYTHING IN TOWARD THE PIN. BIG THINGS GET SMALL'),
   O: SIGN('THE LAST PIN HAS TWO RULERS: ONE BEFORE THE HANGING WALL, ONE AFTER IT'),
   '1': SCALE({ bars: [[9, 14, 19]], pin: [27, 19], pieces: [[24, 19, 29, 20]], checks: [{ bar: 0, end: 'big', idx: [0], g: 0 }] }),
@@ -284,7 +284,7 @@ const returnRows = (() => {
   put(Gr, 30, 18, 'c'); put(Gr, 33, 18, 'N'); put(Gr, 35, 15, '?'); put(Gr, 38, 18, 'q'); put(Gr, 43, 18, 'e'); put(Gr, 48, 18, 'q'); put(Gr, 40, 18, '2'); put(Gr, 46, 12, 'R'); put(Gr, 44, 8, 'M');
   put(Gr, 63, 18, 'c'); put(Gr, 66, 18, 'i');
   // the collector's den: a fake wall in a pillar (a corner curls out of it), a passage, the door
-  fillG(Gr, 70, 10, 76, 18, 'H'); fillG(Gr, 70, 17, 70, 18, 'F'); fillG(Gr, 71, 17, 75, 18, '.'); put(Gr, 69, 17, 'x'); put(Gr, 72, 17, 'A'); put(Gr, 75, 18, 'D');
+  fillG(Gr, 70, 16, 72, 18, 'H'); fillG(Gr, 70, 17, 70, 18, 'F'); fillG(Gr, 71, 17, 72, 18, '.'); put(Gr, 69, 17, 'x'); put(Gr, 71, 17, 'A'); put(Gr, 72, 18, 'D');
   put(Gr, 80, 18, 'a'); put(Gr, 84, 18, 'k'); put(Gr, 90, 18, 'D'); put(Gr, 93, 18, 'l');
   fillG(Gr, W - 1, 0, W - 1, 18, '#');
   return rowsOf(Gr);

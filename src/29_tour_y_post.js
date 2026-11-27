@@ -165,7 +165,7 @@ const painters = {
       const k = Math.floor(rng() * 3);
       wrapDraw(x - 70, 140, X => {
         const cx = X + 70;
-        if (k === 0) { ctx.save(); ctx.globalAlpha = 0.9; PostArt.boat(ctx, cx, b - 2, 1.1, shade(c, 0.35)); ctx.restore(); }
+        if (k === 0 && !L.noBoats) { ctx.save(); ctx.globalAlpha = 0.9; PostArt.boat(ctx, cx, b - 2, 1.1, shade(c, 0.35)); ctx.restore(); }
         else if (k === 1) { ctx.fillStyle = shade(c, -0.2); for (const dx of [-30, 0, 30]) ctx.fillRect(cx + dx - 4, b - 26, 8, 26); ctx.fillStyle = shade(c, 0.2); for (const dx of [-30, 0, 30]) ctx.fillRect(cx + dx - 5, b - 28, 10, 4); }
         else { ctx.fillStyle = shade(c, 0.1); ctx.fillRect(cx - 40, b - 44, 80, 44); ctx.fillStyle = shade(c, -0.15); ctx.fillRect(cx - 40, b - 44, 80, 6); ctx.fillStyle = shade(c, 0.3); for (let q = 0; q < 3; q++) ctx.fillRect(cx - 30 + q * 22, b - 30, 12, 14); }
       });
@@ -312,7 +312,7 @@ const themes = {
   post_blot: Object.assign({}, sound, {
     name: 'Blotter Bay', music: 'tour_post', particles: 'none', rays: '#ffd8a0',
     sky: ['#2a2a5a', '#7a5a8a', '#f2b088'], horizonGlow: '#ffb888', celestial: { type: 'sun', x: 0.3, y: 0.38, r: 30, color: '#ffe0b0', glow: '#ff9a7a' }, stars: 0.2,
-    layers: [{ kind: 'postCardSky', color: '#2a2440', base: 200, f: 0.02 }, { kind: 'postBlotSea', color: '#2a2a58', base: 320, f: 0.07 }, { kind: 'postHarbour', color: '#5a4a78', base: 390, f: 0.18 }],
+    layers: [{ kind: 'postCardSky', color: '#2a2440', base: 200, f: 0.02 }, { kind: 'postBlotSea', color: '#2a2a58', base: 320, f: 0.07 }, { kind: 'postHarbour', color: '#5a4a78', noBoats: true, base: 390, f: 0.18 }],
     fog: '#a87a8a', decor: ['postBollard', 'postInkwell']
   }),
   post_fold: Object.assign({}, sound, {
@@ -495,7 +495,7 @@ const enemies = {
     think: null, onSwoop: e => { if (e.g.onScreen(e)) Tour.postKit.pill(e.g, e.cx, e.y - 10, 'PECK!', '#ffd8c8'); } }), place: 'fly' },
   postCrab: { cls: TourEnemy.make({ w: 30, h: 24, speed: 1.1, edgeTurn: true, art: crabArt, burst: '#2f4fc8', think: crabThink }), place: 'walk' },
   postPup: { cls: TourEnemy.make({ w: 30, h: 22, speed: 1.4, edgeTurn: true, art: pupArt, burst: '#16141e', think: pupThink }), place: 'walk' },
-  postEel: { cls: TourEnemy.make({ w: 40, h: 16, speed: 2.2, edgeTurn: true, art: eelArt, burst: '#fbe6a2', think: eelThink }), place: 'walk' }
+  postEel: { cls: TourEnemy.make({ w: 40, h: 16, speed: 1.5, edgeTurn: true, art: eelArt, burst: '#fbe6a2', think: eelThink }), place: 'walk' }
 };
 // the gull: after every swoop (a peck) its beak gums shut for 1.6 s: it hangs where it is, flapping, harmless
 {
