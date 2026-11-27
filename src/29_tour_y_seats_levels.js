@@ -212,7 +212,7 @@ const dockRows = (() => {
   const W = 206, H = 22, Gr = grid(W, H, '.');
   ground(Gr, 0, W - 1, 17);
   put(Gr, 3, 16, '@'); put(Gr, 6, 16, 'k'); put(Gr, 10, 13, '?'); put(Gr, 2, 12, 'o.o.o');
-  put(Gr, 16, 16, 'v'); put(Gr, 16, 15, '1');
+  put(Gr, 16, 16, 'Q'); put(Gr, 16, 15, '1');
   put(Gr, 38, 16, 'c'); fillG(Gr, 39, 13, 42, 13, '-'); put(Gr, 40, 10, '*'); put(Gr, 41, 16, 'K');
   put(Gr, 45, 16, 'i'); put(Gr, 46, 15, '2'); put(Gr, 44, 16, 'u'); put(Gr, 48, 16, 'A'); put(Gr, 62, 16, 'r');
   put(Gr, 76, 16, 'c'); put(Gr, 78, 13, '?'); fillG(Gr, 79, 11, 82, 11, '-'); put(Gr, 80, 8, 'R'); put(Gr, 81, 16, 'a'); put(Gr, 83, 16, 'l');
@@ -228,7 +228,7 @@ const DK = {
   K: SIGN('THE EYES OUT FRONT GLINT BEFORE THE HOUSE LOOKS. GET IN A DOORWAY'),
   O: SIGN('TWIN FLATS ON ONE ROPE: PUSH THE FRONT ONE AND THE BACK ONE SLIDES THE OTHER WAY. THEIR DOORWAYS MEET ONCE'),
   l: ['enemy', 'seatsCrab'], r: ['enemy', 'seatsStoat'], j: ['enemy', 'seatsHen'], d: ['enemy', 'seatsShrew'],
-  v: ['piece', 'seats.house', { w: 20, period: 4.6, phase: 0 }],
+  Q: ['piece', 'seats.house', { w: 20, period: 4.6, phase: 0 }],
   '1': ['piece', 'seats.backdrop', { w: 6, h: 5, dl: 2, dw: 2, track: 14, art: 0 }],
   i: ['piece', 'seats.house', { w: 28, period: 4.6, phase: 1.2 }],
   '2': ['piece', 'seats.backdrop', { w: 6, h: 5, dl: 3, dw: 2, track: 20, art: 1 }],
@@ -297,9 +297,51 @@ const L5 = { n: 5, time: 380, name: 'House Left', mapLabel: 'House Left', arch: 
     { id: 'pit', gen: 'room', role: 'secret', theme: 'seats_room_pit', stamp: 'seatsPit', room: 'seatsRest' }
   ] };
 
-//NEXT
-Tour.amend('seats', { stamps, levels: [L1, L2, L3, L4, L5] });
-Tour.seatsKit.L = { L1, L2, L3, L4, L5 };
+/* ---------------- 33-6 Just One More Bow (the boss) ---------------- */
+// the stage, ground tops row 17. The lead-in teaches the boss's trick: an empty tailcoat struts about taking bows;
+// THROW at the applause paddle and it bows where it stands: over the open prop basket it bows straight in, and the
+// curtain beyond flies out. The second struts faster. The last bows so deep it only hears clapping from below: drop
+// through the trap to the understage and clap straight under the basket. Down there, by the wrong-way seat, the
+// curtain-call door (Curtain Call Sheet), which lets Brady out beyond the last curtain; then the stage door to the coat
+const bowRows = (() => {
+  const W = 100, H = 22, Gr = grid(W, H, '.');
+  ground(Gr, 0, W - 1, 17);
+  put(Gr, 3, 16, '@'); put(Gr, 5, 16, 'k'); put(Gr, 7, 13, '?'); fillG(Gr, 2, 12, 5, 12, '-'); put(Gr, 3, 9, '*');
+  put(Gr, 16, 16, '1'); put(Gr, 26, 16, 'c');
+  put(Gr, 38, 16, '2'); fillG(Gr, 31, 14, 33, 14, '-'); fillG(Gr, 36, 11, 39, 11, '-'); put(Gr, 37, 8, 'R'); put(Gr, 49, 16, 'c'); put(Gr, 46, 16, 'K');
+  // the understage under the third scene: a trap down at 52-53, a corridor 52-70, a hole up at 69-70
+  fillG(Gr, 52, 18, 70, 19, '.'); fillG(Gr, 52, 17, 53, 17, '.'); fillG(Gr, 69, 17, 70, 17, '.');
+  put(Gr, 61, 16, '3'); put(Gr, 65, 19, 'u'); put(Gr, 67, 19, 'A'); put(Gr, 56, 19, 'o.o');
+  put(Gr, 76, 16, 'a'); put(Gr, 78, 16, 'c'); fillG(Gr, 81, 13, 84, 13, '-'); fillG(Gr, 85, 10, 88, 10, '-'); put(Gr, 86, 7, 'P'); put(Gr, 80, 13, '?');
+  put(Gr, 93, 16, 'E'); fillG(Gr, W - 1, 0, W - 1, 16, 'H');
+  return rowsOf(Gr);
+})();
+const BOW = {
+  k: SIGN('AN ACTOR WHO WON\'T GET OFF! STAND ON THE PADDLE\'S MARK AND THROW TO APPLAUD: HE BOWS WHERE HE STANDS'),
+  K: SIGN('THE LAST BOW IS SO DEEP HE ONLY HEARS CLAPPING FROM BELOW THE STAGE'),
+  '1': ['piece', 'seats.encore', { strut: [-5, 5], sp: 1.2, paddle: -8, gate: 8 }],
+  '2': ['piece', 'seats.encore', { strut: [-6, 6], sp: 2.0, paddle: -8, gate: 9 }],
+  '3': ['piece', 'seats.encore', { strut: [-5, 4], sp: 1.4, below: [0, 3], gate: 10 }],
+  A: ['spawn', 'portal', { kind: 'door', look: 'seatsTrap', targetRef: 'call@in' }], u: TELL(), a: ['anchor', 'callOut'],
+  E: ['spawn', 'portal', { kind: 'door', look: 'seatsDoor', targetRef: 'arena@in' }]
+};
+stamps.seatsBow = { floor: 17, rows: bowRows, legend: BOW, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power'] };
+stamps.seatsCall = roomStamp('stage@callOut', 'seatsDoor', ['star']);
+const L6 = { n: 6, name: 'Just One More Bow', mapLabel: 'Just One More Bow', arch: 'lair', theme: 'seats_stage', boss: 'seats_encore',
+  gimmick: 'The Encore Coat, a tailcoat with nobody inside, will not get off the stage. Applaud from the paddles and it bows: over an open prop basket, it bows straight in. Rising tails, a pointing sleeve, arms spread wide',
+  hint: 'Rising tails: it sweeps to where you stood, so lure it to the basket and hop up on the riser. A pointing sleeve: cartwheel that way. Arms spread: get below the stage and clap under the basket',
+  postcard: 'Brady! The coat took eleven bows. I clapped for every one, from underneath the stage in the end. He folded himself into a basket. I put a flower on it. ♥ C',
+  enemies: [],
+  mapCell: [5, 0], mapFrom: 4,
+  exits: { main: { to: null } },
+  areas: [
+    { id: 'stage', gen: 'room', theme: 'seats_stage', stamp: 'seatsBow' },
+    { id: 'call', gen: 'room', role: 'secret', theme: 'seats_room_call', stamp: 'seatsCall', room: 'seatsCall' },
+    { id: 'arena', gen: 'arena', role: 'arena', layout: 'encore', arenaW: 28, H: 22, roof: false, theme: 'seats_stage' }
+  ] };
+
+Tour.amend('seats', { stamps, levels: [L1, L2, L3, L4, L5, L6] });
+Tour.seatsKit.L = { L1, L2, L3, L4, L5, L6 };
 
 /* ---------------- the land's map: a stage seen from the wings, the route a loop round the trap room ---------------- */
 if (typeof TOUR_OW_MAPS !== 'undefined') TOUR_OW_MAPS.seats = {
