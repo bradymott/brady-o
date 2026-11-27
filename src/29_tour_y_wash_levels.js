@@ -375,11 +375,12 @@ if (typeof TOUR_OW_MAPS !== 'undefined') TOUR_OW_MAPS.wash = {
   pal: { sea: '#9fdcc4', deep: '#7ab8a4', land: '#e8c8a8', light: '#f4dcc0', path: '#f4ead2', beach: '#d8b090', cliff: '#8a4434', roof: '#e8442e', wall: '#f4ead2' },
   sea: 'clouds', coast: 'washRoof', tufts: 'none', trail: 'stones', bridge: 'rope', meadow: false, woods: false, foam: false, birds: true,
   land: [[[160, 360], [230, 230], [420, 170], [640, 190], [840, 150], [1080, 170], [1300, 230], [1390, 360], [1360, 520], [1220, 640], [980, 670], [720, 640], [480, 660], [270, 590]]],
-  nodes: { start: [270, 440], '26-1': [430, 300, 'n'], '26-2': [680, 250, 'n'], '26-3': [930, 250, 'n'], '26-4': [1160, 330, 'e'], '26-5': [1060, 540, 's'], '26-6': [760, 560, 's'], port: [520, 560] },
-  paths: { 'start>26-1': [[340, 380]], '26-1>26-2': [[560, 250]], '26-2>26-3': [[800, 230]], '26-3>26-4': [[1060, 270]], '26-4>26-5': [[1140, 450]], '26-5>26-6': [[900, 580]], '26-6>port': [[640, 580]] },
+  // the route sags and lifts like a washing line between posts
+  nodes: { start: [250, 440], '26-1': [420, 260, 'n'], '26-2': [620, 500, 's'], '26-3': [820, 250, 'n'], '26-4': [1020, 500, 's'], '26-5': [1230, 300, 'n'], '26-6': [1180, 560, 's'], port: [960, 620] },
+  paths: { 'start>26-1': [[320, 330]], '26-1>26-2': [[520, 380]], '26-2>26-3': [[720, 370]], '26-3>26-4': [[920, 380]], '26-4>26-5': [[1130, 400]], '26-5>26-6': [[1240, 430]], '26-6>port': [[1070, 600]] },
   feat: [
-    ['sprite', 'washBasketSprite', 250, 470, 26], ['sprite', 'washLine', 560, 300, 40], ['sprite', 'washLine', 1050, 230, 40], ['sprite', 'washLine', 1250, 450, 34],
-    ['sprite', 'washStack', 820, 330, 16], ['sprite', 'washStack', 980, 420, 18], ['sprite', 'washBedSprite', 760, 600, 34], ['sprite', 'washLine', 600, 480, 30]
+    ['sprite', 'washBasketSprite', 220, 520, 26], ['sprite', 'washLine', 620, 320, 40], ['sprite', 'washLine', 1020, 320, 40], ['sprite', 'washLine', 1320, 360, 28],
+    ['sprite', 'washStack', 820, 460, 16], ['sprite', 'washStack', 420, 480, 18], ['sprite', 'washBedSprite', 760, 600, 34]
   ],
   flora: ['rock'], density: 0,
   live: [['circle', 700, 120, 60, 0.6]]
