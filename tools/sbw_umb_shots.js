@@ -92,50 +92,14 @@ async function session(viewport, fn) {
 }
 
 const STAGES = {};
-
-/* ---------------- 31-1 Rib Inspector: grip, crawl, flip at a rivet, the fabric side, the seated tick ---------------- */
-STAGES.rib = async ({ ev, shot, run, pano }) => {
-  await run('rib', async () => {
-    await ev(() => { fresh(); play('31-1'); place(4, 22); sim(0.4); freeze(); });
-    await shot('10-31-1-start.png');
-    let r = await ev(() => { thaw(); place(13, 22); sim(0.2); sim(0.35, { jump: true, jumpPressed: true, up: true }); const g1 = grip(); const y0 = P().y; sim(0.5, { up: true }); const y1 = P().y; sim(0.6, { right: true }); return { g1, climbedUp: Math.round((y0 - y1) / 32 * 10) / 10, g2: grip() }; });
-    check('31-1: a jump while pushing UP grips the canopy\'s ribs; the stick crawls (up, then right)', r.g1 && r.climbedUp >= 1 && r.g2 && r.g2.x > r.g1.x, r);
-    await ev(() => freeze()); await shot('11-31-1-gripping-the-ribs.png');
-    r = await ev(() => { thaw(); press('jump'); const gone = !grip(); sim(1.2); return { gone, onGround: P().onGround, at: at() }; });
-    check('31-1: JUMP away from a rivet lets go (a real jump back onto the street)', r.gone && r.onGround && r.at.y === 22, r);
-    r = await ev(() => { place(19, 22); sim(0.1); sim(0.4, { jump: true, jumpPressed: true, up: true, right: true }); const g1 = grip(); sim(3.2, { right: true }); const g2 = grip(); sim(0.4, { down: true }); sim(1.0, { right: true }); return { g1, g2, at: at() }; });
-    check('31-1: across the first gap hand over hand, then down onto the next street', r.g1 && r.g2 && r.g2.x >= 30 && !r.at.dead && r.at.y === 22 && r.at.x >= 30, r);
-    r = await ev(() => {
-      place(54, 22); sim(0.1); sim(0.4, { jump: true, jumpPressed: true, up: true, right: true }); sim(0.6, { up: true });
-      const p = P(); for (let k = 0; k < 240 && Math.abs(p.cx - (57 * 32 + 16)) > 6; k++) sim(1 / 120, { right: p.cx < 57 * 32 + 16, left: p.cx > 57 * 32 + 16 });
-      for (let k = 0; k < 240 && Math.abs(p.y + 8 - (15 * 32 + 16)) > 6; k++) sim(1 / 120, { down: p.y + 8 < 15 * 32 + 16, up: p.y + 8 > 15 * 32 + 16 });
-      const before = grip(); press('jump'); sim(0.45); const after = grip();
-      return { before, after };
-    });
-    check('31-1: JUMP on a rivet flips Brady through to the fabric side', r.before && r.before.face === 0 && r.after && r.after.face === 1, r);
-    await ev(() => { sim(0.3, { right: true }); freeze(); }); await shot('12-31-1-fabric-side.png');
-    r = await ev(() => {
-      thaw(); const p = P(), m = ents('UmbCrawler').find(e => e.face === 0 && Math.abs(e.cx - p.cx) < 12 * 32);
-      p.invuln = 0; const hp = p.power; m.u = 0.5; m.place(); p.x = m.cx - p.w / 2; p.y = m.y; sim(0.2); const hurt = p.power !== hp || p.invuln > 0 || p.dead; p.invuln = 999;
-      return { face: grip() && grip().face, hurt };
-    });
-    check('31-1: on the fabric side an underside tick passes Brady by (only a critter on your side can touch you)', r.face === 1 && !r.hurt, r);
-    r = await ev(() => {
-      const g = S(), seat = ents('UmbTickSeat')[0], p = P(); const tx = seat.tx, mx = seat.markX(), my = seat.markY;
-      place(140, 22); sim(0.1); sim(0.4, { jump: true, jumpPressed: true, up: true, right: true });
-      const goTo = (x, y) => { for (let k = 0; k < 900 && (Math.abs(p.cx - (x * 32 + 16)) > 6 || Math.abs(p.y + 8 - (y * 32 + 16)) > 6); k++) sim(1 / 120, { right: p.cx < x * 32 + 10, left: p.cx > x * 32 + 22, down: p.y + 8 < y * 32 + 10, up: p.y + 8 > y * 32 + 22 }); };
-      goTo(tx - 1, my); const shut0 = tile(tx, my) !== 0; press('action'); sim(0.2); const stillShut = tile(tx, my) !== 0;
-      goTo(mx, my); press('action'); sim(0.3);
-      return { shut0, stillShut, open: tile(tx, my) === 0, seatOpen: seat.open };
-    });
-    check('31-1: the seated tick walls off both faces; THROW beside it does nothing', r.shut0 && r.stillShut, r);
-    check('31-1: at the far end of its rib, THROW flexes it: the tick pops out, the way is open', r.open && r.seatOpen, r);
-    await ev(() => { sim(0.25); freeze(); }); await shot('13-31-1-tick-popped.png');
-    await ev(() => { thaw(); play('31-1'); place(150, 22); P().x = 150 * 32; P().y = 12 * 32; P().umb = null; sim(0.05); place(137, 22); sim(0.2); freeze(); }); await shot('14-31-1-seated-tick.png');
-    await ev(() => { thaw(); place(84, 22); sim(0.2); freeze(); }); await shot('15-31-1-tall-canopy.png');
-    await ev(() => { thaw(); place(80, 4); sim(0.3); freeze(); }); await shot('16-31-1-ticket-ledge.png');
-    await ev(() => { thaw(); play('31-1'); }); await pano('pano-31-1.png', 0.3);
-  });
+/* ---------------- shared moves in the page ---------------- */
+const ROOM_HELPERS = () => {
+  window.walkTo = (px, tol) => { const p = P(); tol = tol || 5; for (let k = 0; k < 900 && Math.abs(p.cx - px) > 24; k++) { const hop = p.onGround && p.hitWall; sim(hop ? 0.3 : 1 / 120, { right: p.cx < px, left: p.cx > px, jump: hop, jumpPressed: hop }); } sim(0.3); for (let k = 0; k < 80 && Math.abs(p.cx - px) > tol; k++) { sim(Math.abs(p.cx - px) > 14 ? 1 / 30 : 1 / 60, { right: p.cx < px, left: p.cx > px }); sim(0.1); } };
+  window.room = () => S().area.roomState;
+  window.kit = () => S().area.roomKit;
+  window.cageOpen = () => { const c = S().entities.find(e => e.constructor.name === 'TourRoomCage'); return !!(c && c.open); };
+  window.outDoor = () => S().entities.filter(e => e.constructor.name === 'Portal' && e.target && e.target.area !== S().area.idx)[0];
+  window.leave = () => { const d = outDoor(); if (!d) return null; walkTo(d.cx, 6); sim(0.1, { up: true, upPressed: true }); for (let k = 0; k < 600 && (S().fade.a > 0.05 || P().state !== 'play'); k++) sim(1 / 120); sim(0.3); return at(); };
 };
 
 /* ---------------- the hidden entrance: Amsterdam 8-1, the umbrella stand on the canal bench ---------------- */
@@ -187,6 +151,53 @@ STAGES.door = async ({ ev, shot, run }) => {
   });
 };
 
+
+
+/* ---------------- 31-1 Rib Inspector: grip, crawl, flip at a rivet, the fabric side, the seated tick ---------------- */
+STAGES.rib = async ({ ev, shot, run, pano }) => {
+  await run('rib', async () => {
+    await ev(() => { fresh(); play('31-1'); place(4, 22); sim(0.4); freeze(); });
+    await shot('10-31-1-start.png');
+    let r = await ev(() => { thaw(); place(13, 22); sim(0.2); sim(0.35, { jump: true, jumpPressed: true, up: true }); const g1 = grip(); const y0 = P().y; sim(0.5, { up: true }); const y1 = P().y; sim(0.6, { right: true }); return { g1, climbedUp: Math.round((y0 - y1) / 32 * 10) / 10, g2: grip() }; });
+    check('31-1: a jump while pushing UP grips the canopy\'s ribs; the stick crawls (up, then right)', r.g1 && r.climbedUp >= 1 && r.g2 && r.g2.x > r.g1.x, r);
+    await ev(() => freeze()); await shot('11-31-1-gripping-the-ribs.png');
+    r = await ev(() => { thaw(); press('jump'); const gone = !grip(); sim(1.2); return { gone, onGround: P().onGround, at: at() }; });
+    check('31-1: JUMP away from a rivet lets go (a real jump back onto the street)', r.gone && r.onGround && r.at.y === 22, r);
+    r = await ev(() => { place(19, 22); sim(0.1); sim(0.4, { jump: true, jumpPressed: true, up: true, right: true }); const g1 = grip(); sim(3.2, { right: true }); const g2 = grip(); sim(0.4, { down: true }); sim(1.0, { right: true }); return { g1, g2, at: at() }; });
+    check('31-1: across the first gap hand over hand, then down onto the next street', r.g1 && r.g2 && r.g2.x >= 30 && !r.at.dead && r.at.y === 22 && r.at.x >= 30, r);
+    r = await ev(() => {
+      place(54, 22); sim(0.1); sim(0.4, { jump: true, jumpPressed: true, up: true, right: true }); sim(0.6, { up: true });
+      const p = P(); for (let k = 0; k < 240 && Math.abs(p.cx - (57 * 32 + 16)) > 6; k++) sim(1 / 120, { right: p.cx < 57 * 32 + 16, left: p.cx > 57 * 32 + 16 });
+      for (let k = 0; k < 240 && Math.abs(p.y + 8 - (15 * 32 + 16)) > 6; k++) sim(1 / 120, { down: p.y + 8 < 15 * 32 + 16, up: p.y + 8 > 15 * 32 + 16 });
+      const before = grip(); press('jump'); sim(0.45); const after = grip();
+      return { before, after };
+    });
+    check('31-1: JUMP on a rivet flips Brady through to the fabric side', r.before && r.before.face === 0 && r.after && r.after.face === 1, r);
+    await ev(() => { sim(0.3, { right: true }); freeze(); }); await shot('12-31-1-fabric-side.png');
+    r = await ev(() => {
+      thaw(); const p = P(), m = ents('UmbCrawler').find(e => e.face === 0 && Math.abs(e.cx - p.cx) < 12 * 32);
+      p.invuln = 0; const hp = p.power; m.u = 0.5; m.place(); p.x = m.cx - p.w / 2; p.y = m.y; sim(0.2); const hurt = p.power !== hp || p.invuln > 0 || p.dead; p.invuln = 999;
+      return { face: grip() && grip().face, hurt };
+    });
+    check('31-1: on the fabric side an underside tick passes Brady by (only a critter on your side can touch you)', r.face === 1 && !r.hurt, r);
+    r = await ev(() => {
+      const g = S(), seat = ents('UmbTickSeat')[0], p = P(); const tx = seat.tx, mx = seat.markX(), my = seat.markY;
+      place(140, 22); sim(0.1); sim(0.4, { jump: true, jumpPressed: true, up: true, right: true });
+      const goTo = (x, y) => { for (let k = 0; k < 900 && (Math.abs(p.cx - (x * 32 + 16)) > 6 || Math.abs(p.y + 8 - (y * 32 + 16)) > 6); k++) sim(1 / 120, { right: p.cx < x * 32 + 10, left: p.cx > x * 32 + 22, down: p.y + 8 < y * 32 + 10, up: p.y + 8 > y * 32 + 22 }); };
+      goTo(tx - 1, my); const shut0 = tile(tx, my) !== 0; press('action'); sim(0.2); const stillShut = tile(tx, my) !== 0;
+      goTo(mx, my); press('action'); sim(0.3);
+      return { shut0, stillShut, open: tile(tx, my) === 0, seatOpen: seat.open };
+    });
+    check('31-1: the seated tick walls off both faces; THROW beside it does nothing', r.shut0 && r.stillShut, r);
+    check('31-1: at the far end of its rib, THROW flexes it: the tick pops out, the way is open', r.open && r.seatOpen, r);
+    await ev(() => { sim(0.25); freeze(); }); await shot('13-31-1-tick-popped.png');
+    await ev(() => { thaw(); play('31-1'); place(150, 22); P().x = 150 * 32; P().y = 12 * 32; P().umb = null; sim(0.05); place(137, 22); sim(0.2); freeze(); }); await shot('14-31-1-seated-tick.png');
+    await ev(() => { thaw(); place(84, 22); sim(0.2); freeze(); }); await shot('15-31-1-tall-canopy.png');
+    await ev(() => { thaw(); place(80, 4); sim(0.3); freeze(); }); await shot('16-31-1-ticket-ledge.png');
+    await ev(() => { thaw(); play('31-1'); }); await pano('pano-31-1.png', 0.3);
+  });
+};
+
 /* ---------------- 31-2 Every Drop Accounted For: catch drops, stamp the plate, fill the cistern ---------------- */
 STAGES.drips = async ({ ev, shot, run, pano }) => {
   await run('drips', async () => {
@@ -233,13 +244,12 @@ STAGES.hooks = async ({ ev, shot, run, pano }) => {
     r = await ev(() => { thaw(); const h = ents('UmbHook').find(e => e.tx === 25); sim(0.2); const rigid = h.rigid; sim(1.4, { right: true }); return { rigid, at: at() }; });
     check('31-3: let go after it nests: the chain is rigid, Brady walks across it', r.rigid && r.at.y === 20 && r.at.x >= 32, r);
     r = await ev(() => {
-      const h = ents('UmbHook').find(e => e.corner); place(h.tx, 20); sim(0.2); sim(0.1, { action: true, actionPressed: true }); sim(1.6, { action: true }); const n1 = h.n;
-      return { n1, need: h.need };
+      const h = ents('UmbHook').find(e => e.corner); place(h.tx, 20); sim(0.2); sim(1 / 120, { action: true, actionPressed: true }); sim(1.6, { action: true }); const n1 = h.n;
+      sim(5.5, { action: true }); sim(0.2); return { n1, need: h.need, rigid: h.rigid };
     });
-    await ev(() => freeze()); await shot('32-31-3-corner-sister.png');
-    r = await ev(r0 => { thaw(); const h = ents('UmbHook').find(e => e.corner); sim(4.5, { action: true }); sim(0.2); return Object.assign(r0, { rigid: h.rigid }); }, r);
     check('31-3: on the corner hook the sister rides round the far pulley before nesting (a longer hold), then it\'s rigid', r.n1 === 1 && r.rigid, r);
-    await ev(() => { place(119, 14); sim(0.2); freeze(); }); await shot('33-31-3-side-hook-ticket.png');
+    await ev(() => { const h = ents('UmbHook').find(e => e.corner); h.rigid = false; h.n = 0; h.hold = false; place(h.tx, 20); sim(0.1); sim(1 / 120, { action: true, actionPressed: true }); sim(2.0, { action: true }); freeze(); }); await shot('32-31-3-corner-sister.png');
+    await ev(() => { thaw(); place(119, 14); sim(0.2); freeze(); }); await shot('33-31-3-side-hook-ticket.png');
     await ev(() => { thaw(); play('31-3'); }); await pano('pano-31-3.png', 0.3);
   });
 };
@@ -248,7 +258,7 @@ STAGES.hooks = async ({ ev, shot, run, pano }) => {
 STAGES.panels = async ({ ev, shot, run, pano }) => {
   await run('panels', async () => {
     await ev(() => { fresh(); play('31-4'); place(8, 20); sim(0.4); freeze(); }); await shot('40-31-4-rain-sheet.png');
-    let r = await ev(() => { thaw(); const pn = ents('UmbPanel')[0]; const shut = tile(pn.cur, 19) !== 0; place(14, 20); sim(0.2); sim(0.5, { jump: true, jumpPressed: true }); sim(0.8); return { shut, dent: pn.dent, open: tile(pn.cur, 19) === 0 }; });
+    let r = await ev(() => { thaw(); const pn = ents('UmbPanel').sort((a, b) => a.tx0 - b.tx0)[0]; const shut = tile(pn.cur, 19) !== 0; place(14, 20); sim(0.2); sim(0.5, { jump: true, jumpPressed: true }); sim(0.8); return { shut, dent: pn.dent, open: tile(pn.cur, 19) === 0 }; });
     check('31-4: the rain sheet walls the way; a jump into the dent from underneath pops it: the way is open', r.shut && !r.dent && r.open, r);
     await ev(() => { sim(0.1); freeze(); }); await shot('41-31-4-popped.png');
     r = await ev(() => {
@@ -256,7 +266,7 @@ STAGES.panels = async ({ ev, shot, run, pano }) => {
       const bump = e => { place(e.tx0 + 1, 20); sim(0.2); sim(0.5, { jump: true, jumpPressed: true }); sim(0.8); };
       bump(L[0]); bump(L[1]); const back = L[0].dent;
       bump(L[2]); bump(L[1]); bump(L[0]);
-      return { back, all: L.every(e => !e.dent), open: S().keys.has('umb:row') };
+      return { back, all: L.every(e => !e.dent), open: ents('UmbShutter')[0].open };
     });
     check('31-4: in the row of three, popping one pops its left neighbour back in; from the far end all three come out and the shutter lifts', r.back && r.all && r.open, r);
     await ev(() => { place(160, 20); sim(0.6); freeze(); }); await shot('42-31-4-row-of-three.png');
@@ -273,11 +283,11 @@ STAGES.shake = async ({ ev, shot, run, pano }) => {
       const sh = ents('UmbShake').sort((a, b) => a.x - b.x)[i], p = P();
       place(sh.tx0, 20); sim(0.2); for (let k = 0; k < 600 && p.cx < (sh.tx1 + 0.3) * 32; k++) sim(1 / 120, { right: true });
       sim(0.2); const inN = sh.pud.filter(q => sh.inScoop(q)).length;
-      for (let k = 0; k < 600 && p.cx > sh.dryX(); k++) sim(1 / 120, { left: true });
+      for (let k = 0; k < 600 && p.cx > sh.dryX() + 10; k++) sim(1 / 120, { left: true }); sim(0.3);
       sim(0.15); sim(0.45, { jump: true, jumpPressed: true }); sim(2.0);
       return { inN, done: sh.done, need: sh.need };
     }, i);
-    let r = await ev(() => { const sh = ents('UmbShake').sort((a, b) => a.x - b.x)[0]; place(sh.tx0, 20); sim(0.2); sim(0.45, { jump: true, jumpPressed: true }); sim(1.2); return { done: sh.done }; });
+    let r = await ev(() => { thaw(); const sh = ents('UmbShake').sort((a, b) => a.x - b.x)[0]; place(sh.tx0, 20); sim(0.2); sim(0.45, { jump: true, jumpPressed: true }); sim(1.2); return { done: sh.done }; });
     check('31-5: a stamp on the dry end with the scallop empty flings nothing', !r.done, r);
     r = await herd(0);
     check('31-5: walked along, the water is herded into the scallop; a stamp on the dry end flings it into the cup', r.inN >= 1 && r.done, r);
@@ -299,6 +309,37 @@ STAGES.corridor = async ({ ev, shot, run, pano }) => {
     check('31-6: at the runner, hold THROW and walk back: the umbrella snaps the right way out and the way opens', r.open && r.tile === 0, r);
     await ev(() => freeze()); await shot('61-31-6-runner-home.png');
     await ev(() => { thaw(); play('31-6'); }); await pano('pano-31-6.png', 0.4);
+  });
+};
+
+/* ---------------- the six secret rooms: found, entered (title, then rule), failed once, won, left ---------------- */
+const ROOMS = [
+  ['31-1', 'lunch', '70-room-B26-long-lunch', "const R = room(); R.ang = R.ang; press('action'); sim(1.4);"],
+  ['31-2', 'sew', '71-room-B27-threadbare', "sim(2.4, { right: true }); sim(0.3);"],
+  ['31-3', 'tray', '72-room-B28-finders-keepers', "const R = room(), f = R.items.find(i => !i.key); for (let k = 0; k < 900 && Math.abs(R.mx - f.x) > 0.04; k++) sim(1 / 120, { right: R.mx < f.x, left: R.mx > f.x }); for (let k = 0; k < 600 && !(R.fails > 0); k++) sim(1 / 120, { down: true }); sim(0.3);"],
+  ['31-4', 'booth', '73-room-B29-viewfinder', "press('action'); sim(0.4);"],
+  ['31-5', 'slice', '74-room-B30-seed-the-slice', "const R = room(); const ok = [[1,0],[1,1],[0,1],[-1,1],[-1,0],[-1,-1],[0,-1],[1,-1]].find(d => R.bare.indexOf(S().area.roomKit && window.BRADY_TOUR.TourRooms.kinds.umbSlice.wedgeAt({ rot: R.rot + Math.PI * 2 / 11 * 0.36 }, Math.atan2(d[1], d[0]))) < 0); sim(0.05, { right: ok[0] > 0, left: ok[0] < 0, down: ok[1] > 0, up: ok[1] < 0 }); sim(1 / 120, { right: ok[0] > 0, left: ok[0] < 0, down: ok[1] > 0, up: ok[1] < 0, action: true, actionPressed: true }); sim(0.6);"],
+  ['31-6', 'shower', '75-room-missing-rib', "press('action'); sim(0.4);"]
+];
+STAGES.rooms = async ({ ev, shot, run }) => {
+  await ev(ROOM_HELPERS);
+  for (const [lv, aid, tag, miss] of ROOMS) await run('rooms-' + aid, async () => {
+    let r = await ev(([lv, aid]) => { fresh(); play(lv); toArea(aid); sim(0.5); return { title: S().bannerText, kind: kit() && kit().kind, toast: S().toastT > 0 }; }, [lv, aid]);
+    check(tag + ': entering shows the title alone first (no rule toast yet)', !!r.kind && !r.toast && !!r.title, r);
+    await ev(() => freeze()); await shot(tag + '-0-title.png');
+    r = await ev(() => { thaw(); sim(1.6); return { toast: S().toastText }; });
+    await ev(() => freeze()); await shot(tag + '-1-rule.png');
+    // up to the station and take the prop: THROW
+    r = await ev(() => { thaw(); const st = ents('UmbStation')[0]; walkTo(st.tx * 32 + 16, 4); press('action'); sim(0.3); return { mounted: room().mounted }; });
+    check(tag + ': THROW on the station takes the prop', r.mounted, r);
+    await ev(() => { sim(0.6); freeze(); }); await shot(tag + '-2-playing.png');
+    r = await ev(m => { thaw(); const R = room(), f0 = R.fails || 0; (new Function(m))(); return { fails: R.fails || 0, f0, won: R.won }; }, miss);
+    check(tag + ': a miss costs nothing: that turn starts again', r.fails > r.f0 && !r.won, r);
+    r = await ev(() => { const g = S(), A = g.area, R = room(), K = window.BRADY_TOUR.TourRooms.kinds[kit().kind]; if (!R.mounted) { const st = ents('UmbStation')[0]; walkTo(st.tx * 32 + 16, 4); press('action'); sim(0.2); } K.testWin(g, A, R, kit(), (gg, inp) => sim(1 / 120, inp || {})); sim(1.5); return { won: R.won, cage: cageOpen() }; });
+    check(tag + ': won with the stick and the buttons; the prize cage opens at the win', r.won && r.cage, r);
+    await ev(() => freeze()); await shot(tag + '-3-won.png');
+    r = await ev(aid => { thaw(); const out = leave(); return { out, area: S().area.aid }; }, aid);
+    check(tag + ': its door lets Brady out elsewhere in the level', r.area !== aid, r);
   });
 };
 

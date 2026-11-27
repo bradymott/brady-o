@@ -122,7 +122,7 @@ const LUNCH = { beak: [20.5, 7.0], plate: [14.2, 6.0, 14.2, 9.0], tray: [11, 4.7
 TourRooms.def('umbLunch', {
   title: 'LONG LUNCH', rule: 'TILT WITH THE STICK, THROW TO FLICK A PEA INTO THE TOY FINCH\'S BEAK. THEN BANK ONE OFF THE TRAY', need: 'FEED THE FINCH FIRST!',
   make(o, keep, ctx, A, rng) { return shell(keep, A, o, { ledge: 6, stage: [6, 21, 9], station: [7, 8], cage: [21, 10, 3] }); },
-  enter(play, A, R, kit) { if (!R.won) { R.round = R.round || 0; R.ang = R.ang == null ? -0.12 : R.ang; R.pea = null; } },
+  enter(play, A, R, kit) { if (!R.won) { R.round = R.round || 0; R.ang = R.ang == null ? -0.3 : R.ang; R.pea = null; } },
   origin(kit) { const [sx, sy] = kit.data.station; return [sx + 0.9, sy - 0.4]; },
   update(play, dt, A, R, kit) {
     if (R.won) return;
@@ -178,7 +178,7 @@ TourRooms.def('umbLunch', {
     if (!R.round) return Math.atan2(LUNCH.beak[1] - oy, LUNCH.beak[0] - ox);
     const my = 2 * LUNCH.tray[1] - LUNCH.beak[1]; return Math.atan2(my - oy, LUNCH.beak[0] - ox);
   },
-  testWin(g, A, R, kit, frame) { R.mounted = true; for (let n = 0; n < 2 && !R.won; n++) { R.ang = this.aim(kit, R); frame(g, { action: true, actionPressed: true }); for (let k = 0; k < 400 && R.pea; k++) frame(g, {}); } }
+  testWin(g, A, R, kit, frame) { R.mounted = true; for (let n = 0; n < 2 && !R.won; n++) { const tg = this.aim(kit, R); for (let k = 0; k < 900 && Math.abs(R.ang - tg) > 0.006; k++) frame(g, { up: R.ang > tg, down: R.ang < tg }); frame(g, { action: true, actionPressed: true }); for (let k = 0; k < 400 && R.pea; k++) frame(g, {}); } }
 });
 
 /* ======================= B27 THREADBARE (31-2): the stiff thread and the two-hole patch ======================= */
@@ -288,7 +288,7 @@ TourRooms.def('umbMagnet', {
 const CAM = { box: [10, 4.6, 22, 8.9], bun: [13.6, 6.0], pivot: [16.5, 4.4], len: 2.6, fw: 3.4, fh: 2.8 };
 TourRooms.def('umbCamera', {
   title: 'BUN IN THE VIEWFINDER', rule: 'PAN THE VIEWFINDER WITH THE STICK. THROW TAKES THE PICTURE: YOUR BUN IN THE MIRROR AND PUPO\'S WHOLE SMILE, BOTH', need: 'TAKE THE PICTURE FIRST!',
-  make(o, keep, ctx, A, rng) { return shell(keep, A, o, { ledge: 6, stage: [7, 22, 9], shelf: true, station: [9, 8], cage: [19, 8, 3] }); },
+  make(o, keep, ctx, A, rng) { return shell(keep, A, o, { ledge: 6, stage: [7, 22, 9], shelf: true, station: [9, 8], cage: [19, 8, 3], step: [6, 8, 0] }); },
   enter(play, A, R, kit) { if (!R.won) { R.fx = R.fx || 18; R.fy = R.fy || 6; R.flash = 0; } },
   // Pupo's smile at time t (he swings on the crook, back and forth past the mirror)
   smile(t) { const a = Math.sin(t * 1.25) * 0.85; return [CAM.pivot[0] + Math.sin(a) * CAM.len, CAM.pivot[1] + Math.cos(a) * CAM.len + 0.55]; },
@@ -366,7 +366,7 @@ TourRooms.def('umbSlice', {
       R.flies.splice(i, 1);
       const w = this.wedgeAt(R, f.a), k = R.bare.indexOf(w);
       if (k >= 0) { R.bare.splice(k, 1); chime(3 - R.bare.length, true); if (!R.bare.length) { R.mounted = false; TourRooms.win(play, A, R, { text: 'GOOD AS NEW!', coins: 5 }); return; } }
-      else { RKit.raspberry(play, 'THAT WEDGE WAS FINE: IT BOUNCES OFF'); }
+      else { R.fails = (R.fails || 0) + 1; RKit.raspberry(play, 'THAT WEDGE WAS FINE: IT BOUNCES OFF'); }
     }
   },
   draw(play, ctx, A, R, kit) {
@@ -406,7 +406,7 @@ TourRooms.def('umbSlice', {
 const RIBR = { c: [13, 5.9], r: 1.9, n: 8 };
 TourRooms.def('umbRib', {
   title: 'MISSING RIB', rule: 'THE RAIN COMES THROUGH ONE WEDGE. TURN THE UMBRELLA WITH THE STICK UNTIL IT\'S AT THE TOP, THEN THROW TO TUCK THE PATCH ON. TWICE', need: 'MEND THE UMBRELLA FIRST!',
-  make(o, keep, ctx, A, rng) { return shell(keep, A, o, { ledge: 6, stage: [9, 17, 9], shelf: true, station: [13, 8], cage: [20, 10, 3] }); },
+  make(o, keep, ctx, A, rng) { return shell(keep, A, o, { ledge: 6, stage: [9, 17, 9], shelf: true, station: [13, 8], cage: [20, 10, 3], step: [6, 8, 2] }); },
   enter(play, A, R, kit) { if (!R.won) { R.round = R.round || 0; this.start(play, A, R); } },
   start(play, A, R) { const rng = ROOM_SEED(play, A); R.turn = 0; R.show = 0; R.leak = 1 + Math.floor(rng() * 7); R.cool = 0; },
   // which wedge is at the top (under the patch) now

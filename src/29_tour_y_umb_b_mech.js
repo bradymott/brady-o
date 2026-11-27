@@ -403,16 +403,17 @@ class UmbShake extends Ent {
     }
     if (!p || p.dead) return;
     const onIt = p.onGround && p.groundTy === this.fy && p.cx > this.x && p.cx < this.x + this.w;
-    // herd: water just ahead of his feet, the way he walks, slides on in front of him
+    // herd: water just ahead of his feet, the way he walks, slides on in front of him (water in the scallop stays put)
     if (onIt && Math.abs(p.vx) > 10) {
       const d = Math.sign(p.vx);
-      for (const q of this.pud) { const ahead = (q.x - p.cx) * d; if (ahead > -4 && ahead < 22) q.x = p.cx + d * 22; }
+      for (const q of this.pud) { if (this.inScoop(q)) continue; const ahead = (q.x - p.cx) * d; if (ahead > -4 && ahead < 22) q.x = p.cx + d * 22; }
     }
     // water outside the scallop rolls back toward the dip in the middle; the scallop holds what's in it
     const mid = this.x + this.w / 2;
     for (const q of this.pud) { q.x = clamp(q.x, this.x + 0.5 * TS, this.x + this.w - 0.5 * TS); if (!this.inScoop(q)) q.x = approach(q.x, mid, 0.7 * TS * dt); }
     // a stamp on the dry end flings the scallop's water up at the cup
-    const landed = onIt && !this.wasG && this.lastVy > 3 * TS && Math.abs(p.cx - this.dryX()) < 1.1 * TS;
+    const onEnd = p.onGround && p.groundTy === this.fy && p.cx > this.x - 0.7 * TS && p.cx < this.x + this.w + 0.7 * TS;
+    const landed = onEnd && !this.wasG && this.lastVy > 3 * TS && (this.wet > 0 ? p.cx < this.x + 2.4 * TS : p.cx > this.x + this.w - 2.4 * TS);
     this.wasG = onIt || p.onGround; this.lastVy = p.vy;
     if (landed && !this.done && !this.flung) {
       const go = this.pud.filter(q => this.inScoop(q)); this.pud = this.pud.filter(q => !this.inScoop(q));

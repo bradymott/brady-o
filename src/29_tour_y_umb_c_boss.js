@@ -88,10 +88,10 @@ const brain = {
         return;
       }
       if (p && !p.dead && overlap(p, box)) p.hurt({ x: box.x, w: box.w });
-      if (b.x < b.arenaX0 - 10 || b.x + b.w > b.arenaX1 + 10) { b.x = clamp(b.x, b.arenaX0, b.arenaX1 - b.w); b.go('back'); }
+      if (b.dir > 0 ? b.head >= b.arenaX1 - 6 : b.head <= b.arenaX0 + 6) { b.x = clamp(b.x, b.arenaX0, b.arenaX1 - b.w); b.go('back'); }
     } else if (b.act === 'caught') {
       // the runner: hold THROW at the mark on Brady's side of the collar and walk back, away from him
-      const C = this.collar(b), side = -b.dir, mx = C.x + side * 1.6 * TS, I = (p && p.inp) || {};
+      const C = this.collar(b), side = b.dir, mx = C.x + side * 1.6 * TS, I = (p && p.inp) || {};
       b.markX = mx;
       if (p && !p.dead) {
         const at = p.onGround && Math.abs(p.cx - mx) < 0.9 * TS && Math.abs(p.y + p.h - fy) < 8;
@@ -151,7 +151,7 @@ TourHooks.on('afterEntities', (play, ctx) => {
   });
   // caught: his shaft through the collar, the coral runner and its notch, the mark on Brady's side
   if (b.act === 'caught' && b.markX != null) {
-    const C = brain.collar(b), side = -b.dir, sy = fy - 1.2 * TS, end = C.x + side * 3.4 * TS, nx = C.x + side * 2.6 * TS;
+    const C = brain.collar(b), side = b.dir, sy = fy - 1.2 * TS, end = C.x + side * 3.4 * TS, nx = C.x + side * 2.6 * TS;
     ctx.strokeStyle = INK; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(C.x - side * 20, sy); ctx.lineTo(end, sy); ctx.stroke();
     ctx.strokeStyle = '#a0a8c0'; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.moveTo(C.x - side * 20, sy); ctx.lineTo(end, sy); ctx.stroke();
     ctx.strokeStyle = UA.GOLD_L; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(nx, sy - 12); ctx.lineTo(nx, sy + 12); ctx.stroke();
