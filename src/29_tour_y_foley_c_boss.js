@@ -100,8 +100,9 @@ const brain = {
   wake(b) { b.sounding = () => b.act === 'quiet' && b.at > 0.5 && b.state === 'fight'; b.phase = 1; b.baseY = b.y; b.lid = 0; b.crank = 0; b.cloud = 0; TourKit.sfx('thunder', 'thunder', { vol: 0.5 }); K.bossLine(b.g, 'A STORM! FOR ME! WITH NO THANK-YOU? UNTHINKABLE!', '#e8f0ff'); },
   phase(b, n) {
     this.quiet(b); b.cloud = 0;
-    if (n === 2) { b.g.bannerText = 'THE HAIL!'; b.g.bannerT = 2; K.bossLine(b.g, 'HAIL! THE CROWD ADORES HAIL.', '#e8f0ff'); }
-    if (n === 3) { b.g.bannerText = 'THE GUST!'; b.g.bannerT = 2; K.bossLine(b.g, 'AND NOW... MY GUST. HUSH, EVERYONE.', '#e8f0ff'); }
+    // (the phase is announced by his own line alone, on its pill under the boss bar: no banner over it)
+    if (n === 2) K.bossLine(b.g, 'THE HAIL! THE CROWD ADORES HAIL.', '#e8f0ff');
+    if (n === 3) K.bossLine(b.g, 'THE GUST! HUSH, EVERYONE.', '#e8f0ff');
     b.go('recover');
   },
   hurt(b) { K.bossLine(b.g, pick(lines.bow), '#ffd84a'); b.bowT = 1.4; this.quiet(b); b.go('recover'); },
@@ -181,7 +182,7 @@ TourHooks.on('afterEntities', (play, ctx) => {
   const t = play.t, rice = brain.mach(b, 'rice');
   // the painted cloud on its rail, wheeling in over the rice tray
   if (b.cloud > 0 && rice) {
-    const cx = rice.cx + (1 - b.cloud) * 8 * TS, cy = b.floorY - 4.4 * TS;
+    const cx = rice.cx + (1 - b.cloud) * 8 * TS, cy = b.floorY - 3.3 * TS;   // (low enough that his line's pill under the boss bar stays clear of the rail)
     ctx.save(); ctx.strokeStyle = '#5a5a64'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(rice.cx - 3 * TS, cy - 30); ctx.lineTo(rice.cx + 9 * TS, cy - 30); ctx.stroke();
     ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx, cy - 30); ctx.lineTo(cx, cy - 16); ctx.stroke();
     ctx.fillStyle = '#c8c8d8'; ctx.beginPath(); ctx.ellipse(cx, cy, 48, 18, 0, 0, TAU); ctx.ellipse(cx - 22, cy - 10, 20, 14, 0, 0, TAU); ctx.ellipse(cx + 20, cy - 12, 24, 16, 0, 0, TAU); ctx.fill(); ctx.stroke();

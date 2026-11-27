@@ -82,7 +82,7 @@ const pressAt = (g, m, frame, keys) => { const p = g.player; p.x = m.cx - p.w / 
 /* ================= foleyTrim: A LITTLE OFF THE TOP ================= */
 const TRIM = { speed: 1 / 7, lift: 0.8, ears: [0.38, 0.72], earW: 0.03, far: 0.17 };
 TourRooms.def('foleyTrim', {
-  title: 'A LITTLE OFF THE TOP', rule: 'THE CLIPPERS RUN ALONG THE MIC\'S FUR. TAP THROW AS AN EAR GLOWS TO LIFT THEM OVER IT', need: 'TRIM IT FIRST!',
+  title: 'A LITTLE OFF THE TOP', rule: 'TAP THROW AS AN EAR GLOWS', need: 'TRIM IT FIRST!',
   make(o, keep, ctx, A, rng) {
     const g = stageRoom(keep, A, o, prizeOf(o, keep), { st: 7, s0: 6, cx: 18 });
     g.spawn(7, 6, 'foleyRoomMark', { k: 0, cue: 'THROW: LIFT' }); g.need('the lever', 7, 6);
@@ -160,7 +160,7 @@ const shapePath = (ctx, sh, x, y, r) => {
   ctx.closePath();
 };
 TourRooms.def('foleyLids', {
-  title: 'ONLY ONE LID', rule: 'THROW AT THE CRANK TURNS THE LID RACK. FIT EACH LID TO ITS TIN, THEN THROW AT THE LEVER TO DROP THEM', need: 'FIT THE LIDS FIRST!',
+  title: 'ONLY ONE LID', rule: 'FIT EACH LID: CRANK TURNS, LEVER DROPS', need: 'FIT THE LIDS FIRST!',
   make(o, keep, ctx, A, rng) {
     const g = stageRoom(keep, A, o, prizeOf(o, keep), { st: 7, s0: 6, cx: 18, hatch: null, ledge: 6 });
     // (here the cage sits on a shelf high over the way in, the game takes the whole stage)
@@ -220,7 +220,7 @@ TourRooms.def('foleyLids', {
 /* ================= foleyPerch: VACANT PERCH ================= */
 const GULL_COL = ['#e0403a', '#3a6ad8', '#f2c23a'];
 TourRooms.def('foleyPerch', {
-  title: 'VACANT PERCH', rule: 'STAND UNDER A GULL AND THROW: IT HOPS TO THE EMPTY PERCH BESIDE IT. SEAT EACH GULL OVER ITS OWN FISH', need: 'SEAT THE GULLS FIRST!',
+  title: 'VACANT PERCH', rule: 'THROW UNDER A GULL: SEAT IT OVER ITS FISH', need: 'SEAT THE GULLS FIRST!',
   make(o, keep, ctx, A, rng) {
     const g = stageRoom(keep, A, o, prizeOf(o, keep), { st: 7, s0: 7, cx: 18, hatch: [17, 6], ledge: 5 });
     const xs = [8, 11, 14, 17].slice(0, 4);
@@ -281,7 +281,7 @@ TourRooms.def('foleyPerch', {
 /* ================= foleyTicket: TWO-SIDED TICKET ================= */
 // the cue sheet is 10 cells along the stage (columns 7-16); a crease between cells c-1 and c folds cell i onto 2c-1-i
 TourRooms.def('foleyTicket', {
-  title: 'TWO-SIDED TICKET', rule: 'THROW AT THE LEVER FOLDS THE CUE SHEET ON A CREASE. THROW UNDER THE SHEET PUNCHES BOTH LAYERS: HIT BOTH DOTS AT ONCE', need: 'PUNCH THE DOTS FIRST!',
+  title: 'TWO-SIDED TICKET', rule: 'FOLD THE SHEET, THEN PUNCH BOTH DOTS', need: 'PUNCH THE DOTS FIRST!',
   make(o, keep, ctx, A, rng) {
     const g = stageRoom(keep, A, o, prizeOf(o, keep), { st: 7, s0: 6, cx: 19, hatch: null, ledge: 6 });
     for (let i = 0; i < 10; i++) { g.spawn(7 + i, 6, 'foleyRoomMark', { k: i, cue: 'THROW: PUNCH' }); g.need('punch ' + i, 7 + i, 6); }
@@ -345,7 +345,7 @@ const patFill = (ctx, pat, x, y, r, a0, a1, col) => {
 };
 const REC_COL = { stripes: '#d85a70', dots: '#3a8ab0', waves: '#5a9a4a', checks: '#8a5ac8' };
 TourRooms.def('foleyRecords', {
-  title: 'FRUIT FAMILY', rule: 'THROW AT A TURNTABLE TURNS IT A QUARTER. WHERE TWO RECORDS TOUCH, THEIR HALVES MUST MATCH', need: 'MATCH THE RECORDS FIRST!',
+  title: 'FRUIT FAMILY', rule: 'TURN THE RECORDS TILL TOUCHING HALVES MATCH', need: 'MATCH THE RECORDS FIRST!',
   make(o, keep, ctx, A, rng) {
     const g = stageRoom(keep, A, o, prizeOf(o, keep), { st: 7, s0: 6, cx: 19, hatch: [17, 6], ledge: 6 });
     [9, 13, 17].forEach((x, k) => { g.spawn(x - 1, 6, 'foleyRoomMark', { k, cue: 'THROW: TURN' }); g.need('table ' + k, x - 1, 6); });
@@ -387,7 +387,7 @@ TourRooms.def('foleyRecords', {
 /* ================= foleyRain: RAIN FOR ONE ================= */
 const RAIN = { need: 4.0, reach: 5 };
 TourRooms.def('foleyRain', {
-  title: 'RAIN FOR ONE', rule: 'THROW TAKES THE TRAY. TIP IT WITH THE STICK: KEEP THE RICE POURING ON THE LITTLE CLOUD\'S ROOF', need: 'OPEN THE FLOWER FIRST!',
+  title: 'RAIN FOR ONE', rule: 'TIP THE TRAY: KEEP RICE ON THE CLOUD', need: 'OPEN THE FLOWER FIRST!',
   make(o, keep, ctx, A, rng) {
     const g = stageRoom(keep, A, o, prizeOf(o, keep), { st: 7, s0: 6, cx: 18, hatch: 'cage', ledge: 5 });
     g.spawn(8, 6, 'foleyRoomMark', { k: 0, cue: 'THROW: TAKE THE TRAY', mount: true }); g.need('the tray', 8, 6);

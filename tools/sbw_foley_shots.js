@@ -519,7 +519,7 @@ const S5_ROUTE = [
 LEVELS.s5 = async (page, shot, run, pano) => {
   await run('s5', async () => {
     await page.evaluate(HELPERS);
-    await page.evaluate(() => { fresh(); play('29-5'); place(10, 15); sim(0.3); walkTo(12, 3); const D = ents('FoleyDesk')[0]; for (let q = 0; q < 600 && !(D.u() > D.band[0] - 0.01 && D.u() < D.band[0] + 0.02); q++) sim(1 / 120); sim(1 / 120, { action: true, actionPressed: true }); sim(0.35, { action: true }); freeze(); }); await shot('50-29-5-recording.png');
+    await page.evaluate(() => { fresh(); play('29-5'); place(10, 15); sim(0.3); walkTo(12, 3); const D = ents('FoleyDesk').find(e => e.tx === 12); for (let q = 0; q < 600 && !(D.u() > D.band[0] - 0.01 && D.u() < D.band[0] + 0.02); q++) sim(1 / 120); sim(1 / 120, { action: true, actionPressed: true }); sim(0.35, { action: true }); freeze(); }); await shot('50-29-5-recording.png');
     const r = await page.evaluate(() => { thaw(); play('29-5'); place(10, 15); sim(0.3); const a = cut(12, { short: true }); const b = cut(12, { long: true }); const c = cut(12); return { a, b, c }; });
     check('29-5: cut too short or too long, nothing; held through the band and let go at its end, the take plays and the gate lifts', r.a.ok && r.b.ok && r.c.ok && r.c.done, r);
     await page.evaluate(() => { sim(0.2); freeze(); }); await shot('51-29-5-take.png');
@@ -591,6 +591,11 @@ LEVELS.map = async (page, shot, run) => {
     const h = await page.evaluate(() => { thaw(); fresh(); const T = window.BRADY_TOUR; return { shut: !T.TourProgress.countryUnlocked(T.Tour.countries.foley) }; });
     check('before the entrance is used, the land is shut', h.shut, h);
   });
+};
+
+// the boss in portrait (390x844): walk in until he wakes, then a moment of the fight
+LEVELS.portraitBoss = async (page, shot, run) => {
+  await run('p-boss', async () => { await page.evaluate(HELPERS); await page.evaluate(() => { thaw(); fresh(); play('29-6'); toArea('stage'); const m = ents('FoleyBossMic')[0]; for (let q = 0; q < 1200 && !(S().boss && S().boss.state === 'fight'); q++) sim(1 / 120, { right: P().cx < m.cx - 4 }); sim(1.2); freeze(); }); await shot('91-portrait-boss.png'); });
 };
 
 // ---------------- bot mode (--bot): enemies on, no invulnerability, the way a careful player goes ----------------
@@ -679,7 +684,7 @@ LEVELS.botMore = async (page, botRun) => {
 (async () => {
   await session({ width: 844, height: 390 }, async (page, shot, run, pano) => {
     if (BOT) { await LEVELS.bot(page); return; }
-    for (const k in LEVELS) if (k !== 'entrance' && k !== 'bot' && k !== 'botMore') { if (/^r\d/.test(k)) await LEVELS[k](page, shot); else await LEVELS[k](page, shot, run, pano); }
+    for (const k in LEVELS) if (k !== 'entrance' && k !== 'bot' && k !== 'botMore' && k !== 'portraitBoss') { if (/^r\d/.test(k)) await LEVELS[k](page, shot); else await LEVELS[k](page, shot, run, pano); }
   });
   if (!BOT && LEVELS.entrance) await session({ width: 844, height: 390 }, async (page, shot, run, pano) => { await LEVELS.entrance(page, shot, run, pano); });
   if (!BOT) await session({ width: 390, height: 844 }, async (page, shot, run) => {

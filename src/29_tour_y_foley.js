@@ -260,6 +260,32 @@ const painters = {
     for (let k = 0; k < 8; k++) { const x = (k * 170 + 40) % BG_W, y = 50 + (k % 3) * 46; ctx.fillStyle = shade(col, 0.12); ctx.beginPath(); ctx.ellipse(x, y, 70, 22, 0, 0, TAU); ctx.ellipse(x + 40, y - 12, 44, 20, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = shade(col, -0.3); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y - 20); ctx.lineTo(x, 0); ctx.stroke(); }
     ctx.fillStyle = shade(col, -0.3); ctx.fillRect(0, b, BG_W, H - b);
   },
+  // the seaside show's stage scenery, dull and far: fly ropes with sandbags hanging from the grid, framed painted-sky
+  // flats on braces, and a row of cut-out plywood waves along the bottom (nothing Brady plays looks like this)
+  foleyFlats(ctx, L, rng, H) {
+    const b = L.base, col = L.color || '#7a6a70', ink = shade(col, -0.35);
+    ctx.lineJoin = 'round';
+    // framed painted-sky flats, propped on diagonal braces
+    for (let x = 60 + rng() * 80; x < BG_W - 200; x += 330 + rng() * 120) {
+      const w = 150 + rng() * 60, h = 90 + rng() * 30, y = b - 150 - rng() * 40;
+      ctx.fillStyle = ink; ctx.fillRect(x + w * 0.2, y + h, 6, b - y - h); ctx.fillRect(x + w * 0.75, y + h, 6, b - y - h);
+      ctx.strokeStyle = ink; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x + w * 0.2, y + h * 0.5); ctx.lineTo(x + w * 0.2 + 40, b); ctx.stroke();
+      ctx.fillStyle = shade(col, 0.1); ctx.fillRect(x, y, w, h); ctx.lineWidth = 5; ctx.strokeRect(x, y, w, h);
+      ctx.fillStyle = shade(col, 0.24); for (let k = 0; k < 2; k++) { const cx = x + w * (0.3 + k * 0.4), cy = y + h * (0.35 + k * 0.2); ctx.beginPath(); ctx.ellipse(cx, cy, 24, 9, 0, 0, TAU); ctx.ellipse(cx + 12, cy - 6, 14, 8, 0, 0, TAU); ctx.fill(); }
+    }
+    // fly ropes from the grid, each with a sandbag tied on
+    ctx.strokeStyle = shade(col, -0.2); ctx.lineWidth = 2;
+    for (let x = 30 + rng() * 60; x < BG_W; x += 150 + rng() * 110) {
+      const y = 50 + rng() * 120; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, y); ctx.stroke();
+      ctx.fillStyle = shade(col, -0.12); ctx.beginPath(); ctx.ellipse(x, y + 12, 11, 14, 0, 0, TAU); ctx.fill(); ctx.fillStyle = ink; ctx.fillRect(x - 6, y - 1, 12, 3);
+    }
+    // the cut-out waves, two rows, on little feet
+    for (let row = 0; row < 2; row++) {
+      const y = b - 26 + row * 18; ctx.fillStyle = shade(col, row ? -0.05 : 0.04);
+      ctx.beginPath(); ctx.moveTo(0, y + 30); for (let x = row * 30; x <= BG_W + 60; x += 60) ctx.quadraticCurveTo(x + 15, y - 18, x + 30, y + 2), ctx.quadraticCurveTo(x + 45, y + 16, x + 60, y); ctx.lineTo(BG_W, H); ctx.lineTo(0, H); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = ink; ctx.lineWidth = 2; ctx.stroke();
+    }
+  },
   // the rooms' back walls: each its own place
   roomCork(ctx, L, rng, H) { ctx.fillStyle = '#6a3a2a'; ctx.fillRect(0, 0, BG_W, H); ctx.fillStyle = '#7e4a34'; for (let k = 0; k < 60; k++) ctx.fillRect(rng() * BG_W, rng() * H, 3, 3); ctx.fillStyle = '#4a2418'; ctx.fillRect(0, L.base - 40, BG_W, 8); },
   roomBooth(ctx, L, rng, H) { ctx.fillStyle = '#1a1a2a'; ctx.fillRect(0, 0, BG_W, H); ctx.fillStyle = '#26263a'; for (let x = 0; x < BG_W; x += 40) for (let y = 0; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 20, y + 20); ctx.lineTo(x, y + 40); ctx.closePath(); ctx.fill(); } },
@@ -274,27 +300,27 @@ const ROOM = (ground, name, sky, layer, glow) => theme({ ground }, { name, music
 const themes = {
   foley_look: theme(null, {
     name: 'Made You Look', music: 'tour_foley', particles: 'none', rays: null, sky: SKY, horizonGlow: '#ffe0b0', celestial: { type: 'sun', x: 0.78, y: 0.3, r: 34, color: '#fff2d0', glow: '#ffc890' }, stars: 0,
-    layers: [{ kind: 'foleySea', color: '#5a9ab0', base: 300, f: 0.04 }, { kind: 'foleyDunes', color: '#ecd09a', base: 400, f: 0.16 }], fog: '#ffd8b8', decor: ['foleyGrass', 'foleyPost']
+    layers: [{ kind: 'foleySea', color: '#5a9ab0', base: 300, f: 0.04 }, { kind: 'foleyFlats', color: '#d8a890', base: 380, f: 0.09 }, { kind: 'foleyDunes', color: '#ecd09a', base: 400, f: 0.16 }], fog: '#ffd8b8', decor: ['foleyGrass', 'foleyPost']
   }),
   foley_quiet: theme(null, {
     name: 'The Quiet Cut', music: 'tour_foley_hush', particles: 'none', rays: null, sky: ['#6a4a7a', '#c87a8a', '#ffc8a0'], horizonGlow: '#ffb890', celestial: { type: 'sun', x: 0.2, y: 0.6, r: 40, color: '#ffd8a0', glow: '#ff9a7a' }, stars: 0.05,
-    layers: [{ kind: 'foleySea', color: '#4a6a90', base: 310, f: 0.04 }, { kind: 'foleyPier', color: '#5a3a4a', base: 380, f: 0.14 }], fog: '#c87a8a', decor: ['foleyGrass', 'foleyPost']
+    layers: [{ kind: 'foleySea', color: '#4a6a90', base: 310, f: 0.04 }, { kind: 'foleyFlats', color: '#9a6a80', base: 370, f: 0.08 }, { kind: 'foleyPier', color: '#5a3a4a', base: 380, f: 0.14 }], fog: '#c87a8a', decor: ['foleyGrass', 'foleyPost']
   }),
   foley_under: theme(null, {
     name: 'Coconut Understudy', music: 'tour_foley', particles: 'none', rays: null, sky: ['#3a1a24', '#5a2430', '#7a3040'], horizonGlow: '#ffb080', celestial: { type: 'none' }, stars: 0,
-    layers: [{ kind: 'foleyDrapes', color: '#5a1e2e', base: 380, f: 0.06 }], fog: '#5a2430', decor: ['foleyLamp', 'foleyPost']
+    layers: [{ kind: 'foleyDrapes', color: '#5a1e2e', base: 380, f: 0.06 }, { kind: 'foleyFlats', color: '#6e3040', base: 400, f: 0.11 }], fog: '#5a2430', decor: ['foleyLamp', 'foleyPost']
   }),
   foley_round: theme(null, {
     name: 'Sound Goes Round', music: 'tour_foley', particles: 'none', rays: null, sky: ['#5ab0d0', '#9ad8e8', '#e8f8ff'], horizonGlow: '#ffffff', celestial: { type: 'sun', x: 0.3, y: 0.2, r: 30, color: '#fffbe0', glow: '#fff0b0' }, stars: 0,
-    layers: [{ kind: 'foleySea', color: '#3a8ab0', base: 330, f: 0.04 }, { kind: 'foleyCliffs', color: '#a86a5a', base: 400, f: 0.15 }], fog: '#c8ecf8', decor: ['foleyGrass', 'foleyPost']
+    layers: [{ kind: 'foleySea', color: '#3a8ab0', base: 330, f: 0.04 }, { kind: 'foleyFlats', color: '#8ab8c8', base: 360, f: 0.08 }, { kind: 'foleyCliffs', color: '#a86a5a', base: 400, f: 0.15 }], fog: '#c8ecf8', decor: ['foleyGrass', 'foleyPost']
   }),
   foley_take: theme(null, {
     name: 'Cut the Take', music: 'tour_foley_hush', particles: 'none', rays: null, sky: ['#0e1426', '#1a2440', '#2a3458'], horizonGlow: '#8aa0d0', celestial: { type: 'none' }, stars: 0,
-    layers: [{ kind: 'foleyShack', color: '#24384a', base: 380, f: 0.06 }], fog: '#1a2440', decor: ['foleyLamp', 'foleyPost']
+    layers: [{ kind: 'foleyShack', color: '#24384a', base: 380, f: 0.06 }, { kind: 'foleyFlats', color: '#30465a', base: 400, f: 0.11 }], fog: '#1a2440', decor: ['foleyLamp', 'foleyPost']
   }),
   foley_storm: theme(null, {
     name: 'A Storm of His Own Making', music: 'tour_foley_storm', particles: 'none', rays: null, sky: ['#1a1428', '#2a2240', '#3a3050'], horizonGlow: '#8a7ab0', celestial: { type: 'none' }, stars: 0,
-    layers: [{ kind: 'foleyCyc', color: '#2e2a44', base: 380, f: 0.05 }, { kind: 'foleyPier', color: '#221a30', base: 420, f: 0.14 }], fog: '#2a2240', decor: ['foleyLamp']
+    layers: [{ kind: 'foleyCyc', color: '#2e2a44', base: 380, f: 0.05 }, { kind: 'foleyFlats', color: '#3c3654', base: 400, f: 0.09 }, { kind: 'foleyPier', color: '#221a30', base: 420, f: 0.14 }], fog: '#2a2240', decor: ['foleyLamp']
   }),
   foley_arena: theme(null, {
     name: 'Mr. Thunder\'s Stage', music: 'tour_foley_boss', particles: 'none', rays: null, spotlights: true, sky: ['#14101e', '#221a30', '#30243e'], horizonGlow: '#a08ac0', celestial: { type: 'none' }, stars: 0,
