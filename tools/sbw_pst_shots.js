@@ -314,10 +314,10 @@ const HELPERS = `(() => {
   window.climb = (lx, gi, dir) => {
     walkTo(lx - 1, 4); const p = P(); if (gi != null) freshShut(gi);
     // step in toward the lashes with UP held: he grips as soon as he is over them (some hang over a pit)
-    let t = 0, gripped = false, top = null; while (t < 6 && (!gripped || p.pstGrip) && !p.dead) { const G = p.pstGrip, near = G && p.y + p.h - (G.topRung - 2) * 32 < 24, inn = !gripped && p.cx < lx * 32 + 20; if (G) top = G.topRung; window.__cl = { feet: +((p.y + p.h) / 32).toFixed(2), cx: +(p.cx / 32).toFixed(2), vx: Math.round(p.vx) }; sim(1 / 120, { up: true, upPressed: t === 0, right: (near || inn) && dir > 0, left: near && dir < 0 }); t += 1 / 120; if (p.pstGrip) gripped = true; }
+    let t = 0, gripped = false, top = null; while (t < 6 && (!gripped || p.pstGrip) && !p.dead) { const G = p.pstGrip, near = G && p.y + p.h - (G.topRung - 2) * 32 < 24, inn = !gripped && p.cx < lx * 32 + 20; if (G) top = G.topRung; sim(1 / 120, { up: true, upPressed: t === 0, right: (near || inn) && dir > 0, left: near && dir < 0 }); t += 1 / 120; if (p.pstGrip) gripped = true; }
     if (!gripped) return { ok: false, why: 'no grip', at: tileOf() };
-    let ta = 0; window.__tr = []; while (ta < 1.5 && !(p.onGround && ta > 0.1) && !p.dead) { sim(1 / 120, { right: dir > 0, left: dir < 0 }); ta += 1 / 120; if (window.__tr.length < 12 && Math.round(ta * 120) % 4 === 0) window.__tr.push([Math.round(p.x), Math.round(p.y + p.h), Math.round(p.vx), Math.round(p.vy)]); }
-    sim(0.2); return { ok: !p.dead && p.onGround && tileOf()[1] <= (top || 99) - 1, at: tileOf(), top, t: +t.toFixed(2), last: window.__cl, after: { vx: Math.round(p.vx), cx: +(p.cx / 32).toFixed(2), rel: p.pstRel, w: p.w, h: p.h, tiles: [10, 11, 12, 13].map(r => S().area.tiles[r * S().area.W + Math.floor(p.cx / 32) + 1]), tr: window.__tr } };
+    let ta = 0; while (ta < 1.5 && !(p.onGround && ta > 0.1) && !p.dead) { sim(1 / 120, { right: dir > 0, left: dir < 0 }); ta += 1 / 120; }
+    sim(0.2); return { ok: !p.dead && p.onGround && tileOf()[1] <= (top || 99) - 1, at: tileOf(), top, t: +t.toFixed(2) };
   };
   // 32-5: jump up into the picture bubble over tile tx (from standing under it, or from wherever he stands)
   window.picAt = (tx, gi, here) => { if (!here) walkTo(tx, 4); sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.5, { jump: true }); sim(0.8); return { ok: S().toggleBit(gi), at: tileOf() }; };
@@ -640,7 +640,7 @@ const botRun = async (page, id, legs) => {
       try { ok = eval(leg); } catch (e) { ok = { ok: false, err: String(e) }; }
       if (S() !== g || !P() || P().dead || g.state !== 'play' && g.state !== 'clear' && g.state !== 'tally' && g.state !== 'results') {
         const died = S() !== g || !P() || P().dead || /dead|over/.test(g.state);
-        if (died) deaths.push({ leg: i, at: P() ? tileOf() : null, state: g.state });
+        if (died) { const p = P(), en = p && g.entities.filter(e => e.enemy && !e.remove).sort((a, b) => Math.abs(a.cx - p.cx) - Math.abs(b.cx - p.cx))[0]; deaths.push({ leg: i, at: p ? tileOf() : null, state: g.state, by: en ? [en.constructor.name, Math.round((en.cx - p.cx) / 3.2) / 10, Math.round((en.cy - p.cy) / 3.2) / 10] : null }); }
         for (let k = 0; k < 600 && (!S().player || S().player.dead || S().state !== 'play'); k++) sim(0.05);
         g = S(); if (!g.player || deaths.length > 8) break;
         sim(0.5); P().invuln = 0; const rx = tileOf()[0]; let j = i; while (j > 0 && legs[j][0] > rx + 1) j--; i = j; continue;

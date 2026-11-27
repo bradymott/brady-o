@@ -130,8 +130,8 @@ const blinkRows = (() => {
   put(Gr, 138, 20, '8'); fillG(Gr, 140, 9, 152, 10, '#'); put(Gr, 143, 8, 'c'); put(Gr, 149, 8, 'l'); put(Gr, 146, 4, 'w'); put(Gr, 144, 6, 'o.o.o');
   put(Gr, 153, 8, '9'); put(Gr, 151, 8, 'V');
   ground(Gr, 140, 164, 25); put(Gr, 140, 24, 'E'); put(Gr, 155, 19, 'J'); put(Gr, 160, 15, 'R'); put(Gr, 156, 16, 'o.o.o.o.o');
-  ground(Gr, 165, 175, 19); put(Gr, 170, 18, 'p');
-  ground(Gr, 176, 199, 21); put(Gr, 179, 20, 'c'); put(Gr, 184, 16, '?'); put(Gr, 190, 20, 'G'); fillG(Gr, 199, 0, 199, 20, 'H');
+  ground(Gr, 165, 175, 19);
+  ground(Gr, 176, 199, 21); put(Gr, 179, 20, 'c'); put(Gr, 184, 16, '?'); put(Gr, 186, 20, 'p'); put(Gr, 190, 20, 'G'); fillG(Gr, 199, 0, 199, 20, 'H');
   return rowsOf(Gr);
 })();
 stamps.pstBlink = { floor: 21, rows: blinkRows, gold: { '*': 'must', A: 'high', R: 'risky' }, items: ['power', 'power', 'power', 'oneup'], legend: {
@@ -180,7 +180,7 @@ const yawnRows = (() => {
   ground(Gr, 34, 69, 19); put(Gr, 40, 18, 'l'); put(Gr, 46, 18, 'p'); put(Gr, 52, 18, 'c'); put(Gr, 56, 14, '?');
   // ② a feather as the stepping stone over the pit
   put(Gr, 60, 18, 'N'); put(Gr, 64, 18, '2'); put(Gr, 75, 14, 'w');
-  ground(Gr, 80, 112, 19); put(Gr, 82, 18, 'u');
+  ground(Gr, 80, 112, 19); put(Gr, 107, 18, 'u');
   // the mouth between two high spots: the left one has P2 over it, the right one leads on up
   put(Gr, 88, 18, '3'); ground(Gr, 97, 104, 12); put(Gr, 85, 11, 'A'); put(Gr, 98, 11, 'o.o.o.o'); put(Gr, 102, 11, 'l');
   put(Gr, 110, 18, 'c');
