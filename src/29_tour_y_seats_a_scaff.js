@@ -146,7 +146,7 @@ class SeatsScaffold extends Ent {
       c.strokeStyle = INK; c.lineWidth = 4.6; c.beginPath(); c.moveTo(cx, cy + (d > 0 ? 2 * TS : 0)); c.lineTo(cx + 2 * TS, cy + (d > 0 ? 0 : 2 * TS)); c.stroke(); c.strokeStyle = SA.RUST_D; c.lineWidth = 2.6; c.stroke();
     }
     c.restore();
-    for (let k = 0; k < Math.floor(w * h / (TS * TS * 10)); k++) { const cx = x + (Math.floor(R() * w / TS / 2) * 2 + 0.5) * TS, cy = y + (Math.floor(R() * h / TS / 2) * 2 + 0.5) * TS; if (R() < 0.5) SA.clamp(c, cx, cy, 0.7); else { c.save(); c.strokeStyle = SA.CREAM; c.lineWidth = 2.2; for (let q = -2; q <= 2; q += 2) { c.beginPath(); c.moveTo(cx - 5 + q, cy - 5); c.lineTo(cx + 5 + q, cy + 5); c.stroke(); } c.restore(); } }
+    for (let k = 0; k < Math.floor(w * h / (TS * TS * 10)); k++) { const cx = x + (Math.floor(R() * w / TS / 2) * 2 + 0.5) * TS, cy = y + (Math.floor(R() * h / TS / 2) * 2 + 0.5) * TS; if (R() < 0.5) SA.clamp(c, cx, cy, 0.7); else { c.save(); c.lineWidth = 4.4; c.strokeStyle = INK; c.beginPath(); c.ellipse(cx, cy, 7, 5, 0.6, 0, TAU); c.stroke(); c.lineWidth = 2.4; c.strokeStyle = SA.CREAM; c.stroke(); c.restore(); } }
     // the frame: two heavier standards, a top ledger with teal toe boards
     c.save(); c.strokeStyle = INK; c.lineWidth = 1.8; c.fillStyle = SA.RUST_D;
     c.fillRect(x - 3, y - 6, 9, h + 6); c.strokeRect(x - 3, y - 6, 9, h + 6); c.fillRect(x + w - 6, y - 6, 9, h + 6); c.strokeRect(x + w - 6, y - 6, 9, h + 6);

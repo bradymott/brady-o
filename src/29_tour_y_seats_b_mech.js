@@ -169,7 +169,7 @@ class SeatsSeat extends Ent {
 ENTITY_TYPES.seatsSeat = SeatsSeat;
 
 /* ================= 33-4: painted backdrops and the house's look ================= */
-// A stage stretch [x0, x1] is watched by the house: every few seconds the eyes out front glint (1 s tell: THE HOUSE
+// A stage stretch [x0, x1] is watched by the house: every few seconds the stage glows warm (1 s tell: THE HOUSE
 // IS LOOKING), then the house lights come up for a moment. Anyone on the stage then who is not standing in a painted
 // doorway (framed like part of the scenery) is SPOTTED (a hit). A backdrop flat runs on a floor track; standing in
 // its doorway and walking pushes it along (the doorway stays round Brady). Twin flats are roped over one pulley: push
@@ -177,7 +177,7 @@ ENTITY_TYPES.seatsSeat = SeatsSeat;
 // finale's long look can only be borne standing in that overlap.
 // { x0, x1 (px), period, tell, look (s), phase, finale (a long look; its lock opens after one is borne) }
 class SeatsHouse extends Ent {
-  constructor(g, s) { super(g, s, s.x1 - s.x0, TS); this.back = true; Object.assign(this, { x0: s.x0, x1: s.x1, per: s.period || 4.6, tellT: s.tell || 1.1, lookT: s.look || 0.9, ph: s.phase || 0, finale: !!s.finale, id: s.id, gy: s.gy }); this.x = this.x0; this.y = (this.gy - 6) * TS; this.c = 0; this.borne = false; }
+  constructor(g, s) { super(g, s, s.x1 - s.x0, TS); this.back = false; Object.assign(this, { x0: s.x0, x1: s.x1, per: s.period || 4.6, tellT: s.tell || 1.1, lookT: s.look || 0.9, ph: s.phase || 0, finale: !!s.finale, id: s.id, gy: s.gy }); this.x = this.x0; this.y = (this.gy - 6) * TS; this.c = 0; this.borne = false; }
   state() { const c = (this.t + this.ph) % this.per, a = this.per - this.tellT - this.lookT; return c < a ? 'idle' : c < a + this.tellT ? 'tell' : 'look'; }
   onStage(p) { return p.cx > this.x0 && p.cx < this.x1 && p.y + p.h > (this.gy - 6) * TS; }
   hidden(p) { return this.g.entities.some(e => e instanceof SeatsBackdrop && !e.remove && e.frames(p)); }
@@ -185,7 +185,7 @@ class SeatsHouse extends Ent {
     this.t += dt;
     const p = this.g.player, st = this.state();
     if (st !== this.last) {
-      if (st === 'tell' && p && Math.abs(p.cx - (this.x0 + this.x1) / 2) < 22 * TS) { TourKit.sfx('hush', 'select', { vol: 0.35, pitch: 0.5 }); }
+      if (st === 'tell' && p && Math.abs(p.cx - (this.x0 + this.x1) / 2) < 22 * TS) { TourKit.sfx('hush', 'select', { vol: 0.35, pitch: 0.5 }); if (this.onStage(p)) say(this.g, p.cx, p.y - 30, this.finale ? 'THE BIG LOOK! STAND IN THE OVERLAP' : 'THE HOUSE IS LOOKING! STAND IN A DOORWAY', '#ffd84a'); }
       if (st === 'idle' && this.last === 'look' && this.finale && this.seen === false && !this.borne) { this.borne = true; this.g.keys.add(this.id); say(this.g, p ? p.cx : this.x1, (this.gy - 5) * TS, 'BRAVO! THEY THINK YOU ARE SCENERY', '#9aff8a'); Sound.play('secret', { vol: 0.5 }); }
       if (st === 'look') this.seen = !(p && this.onStage(p)) ? (this.finale ? true : false) : false;
       this.last = st;
@@ -202,9 +202,7 @@ class SeatsHouse extends Ent {
     if (st === 'tell') {
       const k = (c - a) / this.tellT;
       ctx.save(); ctx.globalAlpha = 0.25 + 0.25 * Math.sin(this.t * 20); ctx.fillStyle = '#ffe8a0'; ctx.fillRect(this.x0, gy - 4, this.x1 - this.x0, 4); ctx.restore();
-      // the eyes out front, glinting along the stage's lip
-      ctx.save(); for (let x = this.x0 + 20; x < this.x1; x += 70) { const o = Math.sin(x * 0.07) * 6; ctx.fillStyle = `rgba(255,240,170,${0.4 + 0.5 * k})`; ctx.beginPath(); ctx.ellipse(x + o, gy + 18, 4, 3 * (0.3 + 0.7 * k), 0, 0, TAU); ctx.ellipse(x + o + 12, gy + 18, 4, 3 * (0.3 + 0.7 * k), 0, 0, TAU); ctx.fill(); } ctx.restore();
-      const p = this.g.player; if (p && this.onStage(p)) SA.pill(ctx, clamp(p.cx, this.x0 + 120, this.x1 - 120), top + 20, this.finale ? 'THE BIG LOOK! STAND IN THE OVERLAP' : 'THE HOUSE IS LOOKING... STAND IN A DOORWAY', '#ffd84a');
+      ctx.save(); ctx.fillStyle = `rgba(255,232,160,${0.12 + 0.2 * k})`; ctx.fillRect(this.x0, top, this.x1 - this.x0, gy - top); ctx.restore();
     } else if (st === 'look') {
       ctx.save(); const gr = ctx.createLinearGradient(0, top, 0, gy); gr.addColorStop(0, 'rgba(255,236,180,0.05)'); gr.addColorStop(1, 'rgba(255,236,180,0.32)'); ctx.fillStyle = gr; ctx.fillRect(this.x0, top, this.x1 - this.x0, gy - top); ctx.restore();
     }

@@ -225,7 +225,7 @@ const dockRows = (() => {
 })();
 const DK = {
   k: SIGN('THE SHOW IS ON! WHEN THE HOUSE LOOKS, STAND IN A PAINTED DOORWAY. WALK IN ONE AND THE FLAT ROLLS WITH YOU'),
-  K: SIGN('THE EYES OUT FRONT GLINT BEFORE THE HOUSE LOOKS. GET IN A DOORWAY'),
+  K: SIGN('THE STAGE GLOWS WARM BEFORE THE HOUSE LOOKS. GET IN A DOORWAY'),
   O: SIGN('TWIN FLATS ON ONE ROPE: PUSH THE FRONT ONE AND THE BACK ONE SLIDES THE OTHER WAY. THEIR DOORWAYS MEET ONCE'),
   l: ['enemy', 'seatsCrab'], r: ['enemy', 'seatsStoat'], j: ['enemy', 'seatsHen'], d: ['enemy', 'seatsShrew'],
   e: ['piece', 'seats.house', { w: 20, period: 4.6, phase: 0 }],
@@ -244,7 +244,7 @@ stamps.seatsDock = { floor: 17, rows: dockRows, legend: DK, gold: { '*': 'must',
 stamps.seatsGreen = roomStamp('dock@greenOut', 'seatsDoor');
 const L4 = { n: 4, time: 380, name: 'Please Mind the Scenery', mapLabel: 'Please Mind the Scenery', arch: 'pushflat', theme: 'seats_dock',
   gimmick: 'The show is on. When the house looks, stand in a painted doorway and they think you are scenery. Walk in a doorway and the flat rolls along with you. The twin flats\' doorways meet only once',
-  hint: 'The eyes out front glint before the house looks. Twin flats: push the front one until the two doorways overlap and stand right in it. A little seat faces the floor where the second flat starts...',
+  hint: 'The stage glows warm just before the house looks. Twin flats: push the front one until the two doorways overlap and stand right in it. A little seat faces the floor where the second flat starts...',
   postcard: 'Brady! I crossed the stage in the middle of the show inside a painted door. A whole row of owls clapped. I bowed. ♥ C',
   enemies: [['seatsStoat', 1], ['seatsCrab', 1], ['seatsShrew', 2]],
   mapCell: [3, 0], mapFrom: 2,
