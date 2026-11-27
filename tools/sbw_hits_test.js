@@ -301,6 +301,10 @@ Object.assign(ENEMY_SAFE_TYPES, { washCrawler: 'on a drying net: touches only Br
 // touch()); a trellis critter touches only Brady on its own face of the trellis (customCollide)
 Object.assign(BOSS_SAFE, { orch_committee: ['idle', 'tell', 'move', 'sit', 'flick', 'back'] });
 Object.assign(ENEMY_SAFE_TYPES, { orchCrawler: 'on a trellis: touches only Brady on its own face (customCollide)' });
+// The Umbrella Repair District (31): the Inspector is cloth and wire (his tip hurts in an attack, never his body:
+// 29_tour_y_umb_c_boss.js touch()); a canopy critter touches only Brady on its own face (customCollide)
+Object.assign(BOSS_SAFE, { umb_inspector: ['back', 'tell', 'poke', 'scoop', 'jab', 'caught', 'drop'] });
+Object.assign(ENEMY_SAFE_TYPES, { umbCrawler: 'on a canopy: touches only Brady on its own face (customCollide)' });
 const OLD_TYPES = { greeter: 1, pony: 1 };   // the old Black Rock City enemies (08a_chunks.js / 10b_burners.js): in no tour level
 if (!noSweep) {
   const noHurt = [];

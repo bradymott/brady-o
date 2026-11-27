@@ -62,7 +62,9 @@ const NOTES = {
   // Pupo Standard Time (hidden land A7)
   pst: 'Every card from Pupo Standard Time! I packed a biscuit for each word of Pupo\'s sentence. That is four. He says the pause counts, so there is a fifth, and he has already eaten it.',
   post: 'Every card from the harbour on my postcard! I put a stamp on your forehead while you napped so you would come back to me. It says FRAGILE. It is still there, darling. Have a look in the kettle.',   // Postmark Sound (hidden land A2)
-  orch: 'Every card from the orchard! I tied a pear to the bedpost with your red sock so it would stop rolling off. It worked so well you will need scissors.'   // The Orchard After Closing (28)
+  orch: 'Every card from the orchard! I tied a pear to the bedpost with your red sock so it would stop rolling off. It worked so well you will need scissors.',   // The Orchard After Closing (28)
+  // The Umbrella Repair District (31, hidden land A6)
+  umb: 'Every card from the repair district! I sent you a spare rib in a paper sleeve. Not for the umbrella, darling: for the next time you open one indoors and swear it was already like that.',
 };
 const noteOf = C => (NOTES[C.id] || ('Every postcard from ' + C.name + '! I keep them all in a shoebox.')) + ' ♥ C';
 
