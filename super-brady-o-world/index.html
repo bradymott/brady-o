@@ -38250,7 +38250,10 @@ TourHats.NOT = new Set([].concat(
   'foleyProp foleyFlock foleyPanel foleyBank foleyScreen foleyNet foleyNetCrab foleyTrumpet foleyEar foleyPlatter foleyDesk foleyClapGate foleyMachine foleyMic foleyRoomMark foleyBossMic foleyBossMachine foleyRiser foleyFlap'.split(' '),
   // Below the Cheap Seats (33): scaffolds, their critters, the mirror crab, the bolt board, the tell, flats, seats, the
   // house, backdrops, curtains, follow-spots, the encore's actor, paddles and baskets, room marks, the Festival stand
-  'seatsScaffold seatsCrawler seatsMirrorCrab seatsBoltBoard seatsTell seatsFlat seatsSeat seatsHouse seatsBackdrop seatsCurtainLock seatsSpot seatsActor seatsLeadPaddle seatsLeadBasket seatsLeadCurtain seatsPaddleMark seatsRoomMark seatsFestStand'.split(' ')
+  'seatsScaffold seatsCrawler seatsMirrorCrab seatsBoltBoard seatsTell seatsFlat seatsSeat seatsHouse seatsBackdrop seatsCurtainLock seatsSpot seatsActor seatsLeadPaddle seatsLeadBasket seatsLeadCurtain seatsPaddleMark seatsRoomMark seatsFestStand'.split(' '),
+  // The Table Salt Sea (34): notches, heaps, basins, spoons, crystals, the cap, cellar gates, the grain tell, weighing
+  // spoons, room marks, the saucer in 5-3
+  'saltNotch saltHeap saltBasin saltSpoon saltCrystal saltCap saltCellarGate saltGrain saltWeigh saltRoomMark saltMaSaucer'.split(' ')
 ));
 
 /* ---------- the animals: [fx, fxFlip, fy, size] (see the header) ---------- */
@@ -38327,7 +38330,9 @@ Object.assign(TourHats.HEADS, {
   // Foley Beach (hidden land A4): the clapper clam, the hiss kettle, the rubbersole ray, the boom crab
   foleyClam: [0.1, 0.1, -0.95, 0], foleyKettle: [0.0, 0.0, -1.25, 0], foleyRay: [0.25, 0.25, -1.15, 0], foleyCrab: [0.05, 0.05, -1.05, 0],
   // Below the Cheap Seats (33): the bolt crab, the seat shrew, the cable hen, the sandbag stoat
-  seatsCrab: [0.42, 0.42, -1.55, 0], seatsShrew: [0.55, 0.55, -1.2, 0], seatsHen: [0.4, 0.4, -1.4, 0], seatsStoat: [0.45, 0.45, -1.45, 0]
+  seatsCrab: [0.42, 0.42, -1.55, 0], seatsShrew: [0.55, 0.55, -1.2, 0], seatsHen: [0.4, 0.4, -1.4, 0], seatsStoat: [0.45, 0.45, -1.45, 0],
+  // The Table Salt Sea (34): the grain wren, the brine shrimp, the cork weevil, the salt lick
+  saltWren: [0.3, 0.3, -1.3, 0], saltShrimp: [0.4, 0.4, -1.1, 0], saltWeevil: [0.4, 0.4, -1.15, 0], saltLick: [0.05, 0.05, -1.25, 0],
 
 });
 
@@ -104255,6 +104260,2044 @@ TourHooks.on('afterEntities', (play, ctx) => {
 Tour.pstKit.entrance = { HOST, breath, extra, cushionLift, BREATH, EXTRA0, EXTRA1 };
 })();
 
+/* ---- 29_tour_y_salt.js ---- */
+/* ============================================================
+   THE TABLE SALT SEA (world 34, cc 'salt'): a hidden land (docs/handoff/HIDDEN_LAND_BRIEF.md, A9 of
+   docs/design/CHATGPT_RELAY.md). A shaker labelled "just a pinch" has been lying about its contents for years: inside
+   it is a whole sea. Cobalt glass, white crystal stair-steps, tangerine corks and charcoal pinholes.
+   Found only through Morocco: in 5-3, at the last citrus stall of the blue lane, a clay saucer of salt sits on the
+   counter; one crystal on its rim has a tiny blue horizon inside it. Crouch on the saucer until Brady slips through
+   the rim (29_tour_y_salt_e_entry.js).
+   This file: the route stop, the looks (tiles, themes, painted backdrops, props), the critters (Grain Wren, Brine
+   Shrimp, Cork Weevil, Salt Lick), the floating words, THROW on a prop, the route-map emblem, the map's sprites, the
+   music, the country.
+   The stages' mechanics: 29_tour_y_salt_a_mech.js. The boss: 29_tour_y_salt_c_boss.js. The secret rooms:
+   29_tour_y_salt_d_rooms.js. The levels and the land's map: 29_tour_y_salt_levels.js.
+   ============================================================ */
+(function () {
+Tour.addStop({ id: 'salt', world: 34, name: 'The Table Salt Sea', sub: 'a hidden land', lon: -15.5, lat: 27.2, secret: true, bonus: true, d0: 0.8, pin: 'salt' });
+const INK = '#16182e';
+const COBALT = '#2f55c8', COBALT_D = '#1c3586', COBALT_L = '#5a82e8', CRYS = '#f6f9ff', CRYS_B = '#cfe0ff', CRYS_D = '#9fb8e8';
+const CORK = '#f08a2a', CORK_D = '#c0601a', CORK_L = '#ffb060', CHAR = '#34343e', CHAR_L = '#55556a', BRINE = '#3a78d8', BRINE_L = '#7ab0f4', GOLD = '#ffd84a';
+const COL = { a: CORK, b: COBALT, c: CRYS };
+const isSalt = g => !!(g && g.level && g.level.country === 'salt');
+
+/* ---------------- shared drawings ---------------- */
+const SaltArt = {
+  INK, COBALT, COBALT_D, COBALT_L, CRYS, CRYS_B, CRYS_D, CORK, CORK_D, CORK_L, CHAR, CHAR_L, BRINE, BRINE_L, GOLD,
+  // a salt crystal cube seen a little from above: x, y the bottom-left, s the side
+  cube(ctx, x, y, s, a, dash) {
+    ctx.save(); ctx.globalAlpha *= a == null ? 1 : a; ctx.strokeStyle = INK; ctx.lineWidth = 1.8;
+    if (dash) { ctx.setLineDash([5, 4]); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.4; ctx.strokeRect(x + 1, y - s + 1, s - 2, s - 2); ctx.restore(); return; }
+    ctx.fillStyle = CRYS; ctx.fillRect(x, y - s, s, s); ctx.fillStyle = CRYS_B; ctx.fillRect(x, y - s, s, s * 0.22); ctx.fillRect(x + s * 0.78, y - s, s * 0.22, s);
+    ctx.strokeStyle = 'rgba(120,150,210,0.6)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x + s * 0.2, y - s * 0.3); ctx.lineTo(x + s * 0.45, y - s * 0.55); ctx.lineTo(x + s * 0.4, y - s * 0.75); ctx.stroke();
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.8; ctx.strokeRect(x, y - s, s, s); ctx.restore();
+  },
+  // a tangerine cork: centre x, bottom y, width w, height h
+  cork(ctx, x, y, w, h, rot) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot || 0); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    ctx.fillStyle = CORK; rr(ctx, -w / 2, -h, w, h, Math.min(10, h / 3)); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = CORK_L; rr(ctx, -w / 2 + 3, -h + 3, w - 6, 5, 3); ctx.fill();
+    ctx.fillStyle = CORK_D; for (let k = 0; k < Math.round(w / 9); k++) { const px = -w / 2 + 6 + ((k * 37) % (w - 10)), py = -h + 9 + ((k * 23) % Math.max(4, h - 13)); ctx.beginPath(); ctx.arc(px, py, 1.6 + (k % 2), 0, TAU); ctx.fill(); }
+    ctx.restore();
+  },
+  // a heap of salt grains (a mound): centre x, ground y, half width w, height h
+  heap(ctx, x, y, w, h) {
+    if (h < 2) return; ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = CRYS;
+    ctx.beginPath(); ctx.moveTo(x - w, y); ctx.quadraticCurveTo(x - w * 0.35, y - h * 1.05, x, y - h); ctx.quadraticCurveTo(x + w * 0.35, y - h * 1.05, x + w, y); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = CRYS_B; for (let k = 0; k < 9; k++) { const u = (k * 0.37) % 1, px = x - w * 0.8 + u * w * 1.6, py = y - 3 - ((k * 0.61) % 1) * h * 0.6 * (1 - Math.abs(px - x) / w); ctx.fillRect(px, py, 3, 3); }
+    ctx.restore();
+  },
+  // a pour of grains from (x, y0) down to y1 (k: thickness 0..1)
+  stream(ctx, x, y0, y1, t, k) {
+    ctx.save(); ctx.fillStyle = CRYS; ctx.strokeStyle = INK; ctx.lineWidth = 1;
+    const n = Math.round(6 + 10 * k);
+    for (let q = 0; q < n; q++) { const u = ((t * 2.2 + q / n) % 1), yy = y0 + (y1 - y0) * u, xx = x + Math.sin(q * 7.1 + t * 3) * (2 + 4 * k); ctx.beginPath(); ctx.rect(xx - 2.2, yy - 2.2, 4.4, 4.4); ctx.fill(); ctx.stroke(); }
+    ctx.restore();
+  },
+  // a prompt on a dark rounded pill (never bare text over the sky or a character)
+  pill(ctx, x, y, text, col, a) {
+    ctx.save(); ctx.globalAlpha *= a == null ? 1 : a; ctx.font = TourBackstage.F9; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const w = ctx.measureText(text).width + 14, h = 17; ctx.fillStyle = 'rgba(14,18,40,0.88)'; rr(ctx, x - w / 2, y - h / 2, w, h, h / 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1; ctx.stroke(); ctx.fillStyle = col || GOLD; ctx.fillText(text, x, y + 1); ctx.restore();
+  },
+  // a pulsing gold ring on the floor round a mark Brady can use
+  ring(ctx, x, y, t, hot, r) {
+    const k = 0.5 + 0.5 * Math.sin(t * 5), R = (r || 18) * (hot ? 1.15 : 1) + k * 4;
+    ctx.save(); ctx.strokeStyle = hot ? `rgba(255,220,90,${0.65 + 0.35 * k})` : `rgba(255,230,150,${0.4 + 0.3 * k})`; ctx.lineWidth = hot ? 3.5 : 2.5;
+    ctx.beginPath(); ctx.ellipse(x, y - 2, R, R * 0.3, 0, 0, TAU); ctx.stroke(); ctx.restore();
+  },
+  // the button cue over a mark Brady stands on
+  cue(ctx, x, y, t, txt) {
+    const k = 0.5 + 0.5 * Math.sin(t * 6);
+    ctx.save(); ctx.globalAlpha = 0.78 + 0.22 * k; SaltArt.pill(ctx, x, y - 14, txt || 'THROW', GOLD);
+    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(x - 4, y - 4); ctx.lineTo(x + 4, y - 4); ctx.lineTo(x, y + 1 + k * 2); ctx.closePath(); ctx.fill(); ctx.restore();
+  },
+  // the land's tell by every secret: a single cobalt grain of salt that twinkles (the only blue grain in the land)
+  grain(ctx, x, y, t) {
+    const k = 0.5 + 0.5 * Math.sin(t * 3);
+    ctx.save(); ctx.translate(x, y); ctx.rotate(0.3); ctx.fillStyle = COBALT_L; ctx.strokeStyle = INK; ctx.lineWidth = 1.4; ctx.fillRect(-4, -4, 8, 8); ctx.strokeRect(-4, -4, 8, 8);
+    ctx.rotate(-0.3); ctx.globalAlpha = 0.4 + 0.6 * k; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-9, -8); ctx.lineTo(-5, -8); ctx.moveTo(-7, -10); ctx.lineTo(-7, -6); ctx.stroke(); ctx.restore();
+  }
+};
+
+/* ---------------- the land's floating words: always on a dark rounded pill, clear of the HUD and the thumbs ---------------- */
+// SaltSay(g, x, y, text, col, who): a short line that rises and fades (a line with a `who` replaces that speaker's
+// last line: the boss says one thing at a time)
+function SaltSay(g, x, y, text, col, who) {
+  if (!g) return; const L = g.__saltSay || (g.__saltSay = []);
+  if (L.some(q => q.text === text && q.t < 0.4 && Math.abs(q.x - x) < 80)) return;
+  if (who) for (let i = L.length - 1; i >= 0; i--) if (L[i].who === who) L.splice(i, 1);
+  L.push({ x, y, text: String(text), col: col || '#ffffff', t: 0, who, life: who === 'boss' ? 2.2 : 1.4 }); if (L.length > 3) L.shift();
+}
+TourHooks.on('areaLoaded', play => { play.__saltSay = []; });
+TourHooks.on('playUpdate', (play, dt) => { const L = play.__saltSay; if (!L || !L.length) return; for (let i = L.length - 1; i >= 0; i--) { L[i].t += dt; if (L[i].t > L[i].life) L.splice(i, 1); } });
+TourHooks.on('afterEntities', (play, ctx) => {
+  const L = play.__saltSay; if (!L || !L.length) return;
+  const k = Game.viewH / Math.max(1, Game.gameRect ? Game.gameRect.h : Game.viewH);
+  const top = play.camY + 74 * k, bot = play.camY + Game.viewH - 150 * k, x0 = play.camX + 150 * k, x1 = play.camX + Game.viewW - 150 * k;
+  ctx.save(); ctx.font = `${Math.round(12 * k)}px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const placed = [];
+  for (let i = L.length - 1; i >= 0; i--) {
+    const q = L[i];
+    const w = ctx.measureText(q.text).width + 18 * k, h = 22 * k;
+    // a boss line sits in a fixed spot under the boss bar; the others rise from where they were said
+    let x = q.who === 'boss' ? play.camX + Game.viewW / 2 : clamp(q.x, Math.min(x0 + w / 2, play.camX + Game.viewW / 2), Math.max(x1 - w / 2, play.camX + Game.viewW / 2));
+    let y = q.who === 'boss' ? top + h / 2 + 22 * k + (Game.viewH > Game.viewW ? 118 * k : 0) : clamp(q.y - q.t * 22, top + h / 2, Math.max(top + h / 2, bot));
+    for (const r of placed) if (Math.abs(r.x - x) < (r.w + w) / 2 && Math.abs(r.y - y) < h) y = r.y + h + 3 * k;
+    placed.push({ x, y, w });
+    const a = q.t > q.life - 0.4 ? (q.life - q.t) / 0.4 : Math.min(1, q.t * 8);
+    ctx.globalAlpha = a; ctx.fillStyle = 'rgba(14,18,40,0.86)'; rr(ctx, x - w / 2, y - h / 2, w, h, h / 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = q.col; ctx.fillText(q.text, x, y + 1);
+  }
+  ctx.restore();
+});
+
+/* ---------------- THROW on a prop ---------------- */
+// Each frame in a salt level: the first entity with saltProp whose saltTouch(p) is true gets the button (saltInput,
+// pressed and held) and the engine's own THROW (the power picker) does not fire. Holding the button still runs.
+{
+  const pu0 = Player.prototype.update;
+  Player.prototype.update = function (dt, inp) {
+    const g = this.g;
+    if (isSalt(g) && inp && this.state === 'play' && !this.dead) {
+      let prop = null;
+      for (const e of g.entities) if (e.saltProp && !e.remove && e.saltTouch(this)) { prop = e; break; }
+      this.saltProp = prop;
+      if (prop) { prop.saltInput(this, inp, dt); if (inp.actionPressed) inp = Object.assign({}, inp, { actionPressed: false }); }
+    } else this.saltProp = null;
+    return pu0.call(this, dt, inp);
+  };
+  if (typeof TourPicker !== 'undefined' && TourPicker.visible) { const vis0 = TourPicker.visible; TourPicker.visible = function (play) { if (play && play.player && play.player.saltProp) return false; return vis0.call(this, play); }; }
+}
+// Brady's feet on floor row ty, his centre within `wide` tiles of column tx
+const onMark = (p, tx, ty, wide) => p && !p.dead && p.onGround && p.groundTy === ty && Math.abs(p.cx - (tx * TS + TS / 2)) < TS * (wide || 0.75);
+
+/* ---------------- tiles ---------------- */
+// compacted salt tread: chalk-white blocks with a crust of hexagonal crystals on top and a cobalt vein
+const treadGround = {
+  style: 'salt', cap: CRYS, capHi: '#ffffff', dirt: '#e8eef8', dirt2: '#d4deef', rock: '#c8d4ea',
+  paint(ctx, rng) {
+    ctx.fillStyle = '#eef3fb'; ctx.fillRect(0, 0, TS, TS);
+    ctx.strokeStyle = 'rgba(90,110,160,0.45)'; ctx.lineWidth = 1.2; ctx.beginPath(); const a = rng() * TS; ctx.moveTo(a, 0); ctx.lineTo(a + 6 - rng() * 12, TS * 0.5); ctx.lineTo(a + 4 - rng() * 8, TS); ctx.stroke();
+    if (rng() < 0.35) { ctx.fillStyle = 'rgba(47,85,200,0.55)'; ctx.fillRect(0, 14 + rng() * 10, TS, 3); }
+  },
+  paintCap(ctx, x0, x1) {
+    ctx.fillStyle = CRYS_B; ctx.fillRect(x0, 0, x1 - x0, 11);
+    for (let x = x0; x < x1; x += 11) { ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(x + 2, 9); ctx.lineTo(x + 3, 2); ctx.lineTo(x + 8, 1); ctx.lineTo(x + 10, 8); ctx.closePath(); ctx.fill(); }
+    ctx.fillStyle = INK; ctx.fillRect(x0, 10.5, x1 - x0, 1.5);
+  }
+};
+// a cubical crystal ledge (the one-way ledges): pale blue tops, white faces
+const ledgeSemi = {
+  style: 'crystal', c1: CRYS_B, c2: CRYS_D,
+  paint(ctx, part, x0, x1) {
+    ctx.fillStyle = CRYS; ctx.fillRect(x0, 2, x1 - x0, 9); ctx.fillStyle = CRYS_B; ctx.fillRect(x0, 0, x1 - x0, 4);
+    ctx.fillStyle = INK; ctx.fillRect(x0, 10, x1 - x0, 1.5); for (let x = x0 + 16; x < x1; x += 16) ctx.fillRect(x, 3, 1.2, 7);
+  }
+};
+// cork blocks (bricks: they break): tangerine with dark pores
+const corkBrick = {
+  style: 'cork', c1: CORK, c2: CORK_D, mortar: '#8a4010',
+  paint(ctx) {
+    ctx.fillStyle = CORK; ctx.fillRect(0, 0, TS, TS); ctx.fillStyle = CORK_L; ctx.fillRect(0, 0, TS, 4);
+    ctx.fillStyle = CORK_D; for (const [x, y] of [[7, 9], [20, 7], [13, 17], [25, 21], [6, 25], [17, 27]]) { ctx.beginPath(); ctx.arc(x, y, 2, 0, TAU); ctx.fill(); }
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.strokeRect(0.75, 0.75, TS - 1.5, TS - 1.5);
+  }
+};
+// cobalt glass (walls, the hard blocks): a cellar's side with a pale glint
+const glassHard = {
+  c1: COBALT_L, c2: COBALT_D,
+  paint(ctx) {
+    ctx.fillStyle = COBALT; ctx.fillRect(0, 0, TS, TS); ctx.fillStyle = COBALT_D; ctx.fillRect(0, TS - 5, TS, 5);
+    ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.moveTo(5, 4); ctx.lineTo(11, 4); ctx.lineTo(5, 16); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.strokeRect(0.75, 0.75, TS - 1.5, TS - 1.5);
+  }
+};
+const shore = { ground: treadGround, semi: ledgeSemi, brick: corkBrick, hard: glassHard, pillar: { c1: COBALT_L, c2: COBALT_D, cap: CORK, style: 'column' }, accent: CORK, tint: {}, bloom: 0.1, liquid: null };
+// each secret room its own floor and walls
+const roomTiles = (cap, capHi, body, body2, pat, hard1, hard2) => {
+  const ground = { style: 'room', cap, capHi, dirt: body, dirt2: body2, rock: body2,
+    paint(ctx, rng) { ctx.fillStyle = body; ctx.fillRect(0, 0, TS, TS); ctx.fillStyle = body2;
+      if (pat === 'herring') { for (let y = 0; y < TS; y += 8) for (let x = ((y / 8) % 2) * 8; x < TS; x += 16) ctx.fillRect(x, y, 10, 3); }
+      else if (pat === 'tile') { ctx.fillRect(0, TS - 2, TS, 2); ctx.fillRect(TS - 2, 0, 2, TS); }
+      else if (pat === 'plank') { ctx.fillRect(0, 10, TS, 2); ctx.fillRect(0, 22, TS, 2); ctx.fillRect((rng() * 20) | 0, 0, 2, 10); }
+      else if (pat === 'check') { ctx.fillRect(0, 0, TS / 2, TS / 2); ctx.fillRect(TS / 2, TS / 2, TS / 2, TS / 2); }
+      else if (pat === 'dots') { for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.arc(8 + (k % 2) * 16, 8 + (k >> 1) * 16, 3, 0, TAU); ctx.fill(); } } },
+    paintCap(ctx, x0, x1) { ctx.fillStyle = cap; ctx.fillRect(x0, 0, x1 - x0, 10); ctx.fillStyle = capHi; ctx.fillRect(x0, 0, x1 - x0, 3); ctx.fillStyle = INK; ctx.fillRect(x0, 10, x1 - x0, 1.5); } };
+  const hard = { c1: hard1, c2: hard2, paint(ctx) { ctx.fillStyle = hard2; ctx.fillRect(0, 0, TS, TS); ctx.fillStyle = hard1; ctx.fillRect(2, 2, TS - 4, TS - 4); ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.strokeRect(0.75, 0.75, TS - 1.5, TS - 1.5); } };
+  return Object.assign({}, shore, { ground, hard });
+};
+const RT = {
+  kettle: roomTiles('#c8553a', '#f08a6a', '#3a2a2a', '#2e2020', 'tile', '#c8553a', '#8a3020'),
+  lamps: roomTiles('#e8c840', '#fff0a0', '#2a3a5a', '#22304a', 'dots', '#4a5a7a', '#2a3450'),
+  mitts: roomTiles('#5ab08a', '#8ad8b0', '#f4ecd8', '#e0d4b8', 'check', '#5ab08a', '#2e7a5a'),
+  rattle: roomTiles('#a86a3a', '#d8a070', '#6a4a2a', '#5a3c20', 'plank', '#8a5a30', '#5a3818'),
+  stand: roomTiles('#8a6ad8', '#b8a0f0', '#24203a', '#1c182e', 'herring', '#6a50b8', '#3a2a6a')
+};
+
+/* ---------------- painted backdrops ---------------- */
+// far salt flats under a pale sky with a cobalt horizon line of brine
+function flats(ctx, b, col, rng) {
+  ctx.fillStyle = col; ctx.fillRect(0, b - 30, BG_W, 400);
+  ctx.fillStyle = shade(col, 0.12); for (let k = 0; k < 40; k++) { const x = rng() * BG_W, w = 40 + rng() * 120; ctx.fillRect(x, b - 24 + rng() * 20, w, 2); }
+}
+// a row of salt cellars and shakers far off: cobalt glass boxes, cork lids, charcoal caps (plain shapes, no towers)
+function cellars(ctx, b, rng, col, h0, h1) {
+  for (let x = 20; x < BG_W; x += 110 + rng() * 90) {
+    const w = 50 + rng() * 40, h = h0 + rng() * (h1 - h0);
+    wrapDraw(x, w + 20, X => {
+      ctx.fillStyle = col; ctx.fillRect(X, b - h, w, h + 400); ctx.fillStyle = shade(col, 0.25); ctx.fillRect(X + 6, b - h + 8, 8, h - 16);
+      if (rng() < 0.5) { ctx.fillStyle = shade(col, -0.12); ctx.fillRect(X - 4, b - h - 14, w + 8, 14); ctx.fillRect(X + w / 2 - 8, b - h - 22, 16, 8); }
+      else { ctx.fillStyle = shade(CHAR, 0.2); ctx.beginPath(); ctx.ellipse(X + w / 2, b - h, w / 2 + 4, 12, 0, Math.PI, TAU); ctx.fill(); ctx.fillStyle = shade(col, -0.3); for (let k = -1; k <= 1; k++) { ctx.beginPath(); ctx.arc(X + w / 2 + k * 10, b - h - 5, 2, 0, TAU); ctx.fill(); } }
+    });
+  }
+}
+// near: white crystal stair-steps
+function steps(ctx, b, rng, col) {
+  for (let x = 0; x < BG_W; x += 90 + rng() * 70) {
+    const n = 2 + Math.floor(rng() * 3), s = 26 + rng() * 14;
+    wrapDraw(x, n * s + 10, X => { for (let k = 0; k < n; k++) { ctx.fillStyle = shade(col, k % 2 ? 0.06 : 0); ctx.fillRect(X + k * s * 0.7, b - (n - k) * s, s * 1.4, (n - k) * s + 400); ctx.fillStyle = shade(col, -0.12); ctx.fillRect(X + k * s * 0.7, b - (n - k) * s, s * 1.4, 4); } });
+  }
+}
+const painters = {
+  // 34-1: the salt flats and their heaps under a wide pale sky
+  saltFlats(ctx, L, rng, H) { flats(ctx, L.base, L.color, rng); ctx.fillStyle = shade(L.color, -0.08); for (let k = 0; k < 14; k++) { const x = rng() * BG_W, w = 50 + rng() * 80, h = 18 + rng() * 30; wrapDraw(x - w, 2 * w, X => { ctx.beginPath(); ctx.moveTo(X, L.base); ctx.quadraticCurveTo(X + w, L.base - h * 2, X + 2 * w, L.base); ctx.fill(); }); } },
+  saltCellars(ctx, L, rng, H) { cellars(ctx, L.base, rng, L.color, 60, 150); },
+  saltSteps(ctx, L, rng, H) { steps(ctx, L.base, rng, L.color); },
+  // 34-2: the brine sea itself: long low waves, far cork buoys
+  saltSea(ctx, L, rng, H) {
+    const b = L.base; ctx.fillStyle = L.color; ctx.fillRect(0, b - 40, BG_W, 500);
+    ctx.strokeStyle = shade(L.color, 0.22); ctx.lineWidth = 2; for (let y = b - 30; y < b + 120; y += 16) { ctx.beginPath(); for (let x = 0; x <= BG_W; x += 20) ctx.lineTo(x, y + Math.sin(x * 0.03 + y) * 3); ctx.stroke(); }
+    for (let k = 0; k < 8; k++) { const x = rng() * BG_W, y = b - 20 + rng() * 50; ctx.fillStyle = shade(CORK, -0.2); ctx.fillRect(x - 6, y - 8, 12, 8); }
+  },
+  // 34-3: a crystal cave: big cubes leaning together in the dark blue
+  saltCave(ctx, L, rng, H) {
+    const b = L.base; ctx.fillStyle = shade(L.color, -0.2); ctx.fillRect(0, 0, BG_W, H);
+    for (let k = 0; k < 26; k++) { const x = rng() * BG_W, s = 30 + rng() * 70, y = rng() < 0.5 ? b - rng() * 60 : 40 + rng() * 80; wrapDraw(x, s + 10, X => { ctx.save(); ctx.translate(X + s / 2, y); ctx.rotate((rng() - 0.5) * 0.6); ctx.fillStyle = shade(L.color, 0.1 + rng() * 0.15); ctx.fillRect(-s / 2, -s, s, s); ctx.fillStyle = shade(L.color, 0.3); ctx.fillRect(-s / 2, -s, s, s * 0.18); ctx.restore(); }); }
+  },
+  // 34-4: inside the shaker: the cap's charcoal dome overhead, pinholes of daylight, a curve of cobalt glass
+  saltShaker(ctx, L, rng, H) {
+    const b = L.base; ctx.fillStyle = L.color; ctx.fillRect(0, 0, BG_W, H);
+    ctx.fillStyle = shade(L.color, 0.12); for (let x = 0; x < BG_W; x += 160) { ctx.fillRect(x, 0, 60, H); }
+    ctx.fillStyle = 'rgba(255,250,220,0.55)'; for (let k = 0; k < 30; k++) { const x = rng() * BG_W, y = 20 + rng() * 90; ctx.beginPath(); ctx.arc(x, y, 3 + rng() * 3, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = shade(L.color, -0.25); ctx.fillRect(0, b - 10, BG_W, 400);
+  },
+  // 34-5: A Pinch's kitchen: a long cobalt-tiled wall, shelves of shakers, a big soup pot steaming far off
+  saltKitchen(ctx, L, rng, H) {
+    const b = L.base; ctx.fillStyle = L.color; ctx.fillRect(0, 0, BG_W, H);
+    ctx.fillStyle = shade(L.color, 0.08); for (let y = 0; y < b; y += 28) for (let x = ((y / 28) % 2) * 14; x < BG_W; x += 28) ctx.fillRect(x, y, 26, 26);
+    for (let x = 60; x < BG_W; x += 240) { ctx.fillStyle = shade(L.color, -0.3); ctx.fillRect(x, b - 150, 150, 8); for (let k = 0; k < 4; k++) { ctx.fillStyle = k % 2 ? shade(COBALT, -0.2) : shade(CRYS, -0.25); ctx.fillRect(x + 10 + k * 34, b - 186, 22, 36); ctx.fillStyle = shade(CHAR, 0.1); ctx.fillRect(x + 10 + k * 34, b - 194, 22, 8); } }
+    ctx.fillStyle = shade(L.color, -0.35); ctx.fillRect(0, b - 30, BG_W, 400);
+  },
+  // the rooms (B41-B45): each its own place
+  roomKettle(ctx, L, rng, H) { const b = L.base; ctx.fillStyle = '#4a2e2a'; ctx.fillRect(0, 0, BG_W, H); ctx.fillStyle = '#5a3a34'; for (let y = 0; y < H; y += 24) for (let x = ((y / 24) % 2) * 20; x < BG_W; x += 40) ctx.fillRect(x, y, 36, 20); ctx.fillStyle = '#2a1a18'; ctx.fillRect(0, b - 120, BG_W, 12); for (let x = 50; x < BG_W; x += 150) { ctx.fillStyle = '#8a6a5a'; ctx.beginPath(); ctx.arc(x, 70, 18, 0, TAU); ctx.fill(); } },
+  roomLamps(ctx, L, rng, H) { ctx.fillStyle = '#1e2a46'; ctx.fillRect(0, 0, BG_W, H); for (let k = 0; k < 60; k++) { ctx.fillStyle = 'rgba(255,240,180,0.25)'; ctx.beginPath(); ctx.arc(rng() * BG_W, rng() * H * 0.6, 1.5, 0, TAU); ctx.fill(); } ctx.strokeStyle = '#3a4a6a'; ctx.lineWidth = 3; for (let x = 0; x < BG_W; x += 120) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.quadraticCurveTo(x + 60, 60, x + 120, 0); ctx.stroke(); } },
+  roomMitts(ctx, L, rng, H) { ctx.fillStyle = '#f4e8c8'; ctx.fillRect(0, 0, BG_W, H); ctx.fillStyle = '#e8d8b0'; for (let x = 0; x < BG_W; x += 30) ctx.fillRect(x, 0, 14, H); ctx.fillStyle = '#5ab08a'; ctx.fillRect(0, L.base - 140, BG_W, 10); for (let x = 30; x < BG_W; x += 90) { ctx.fillStyle = '#c8b890'; ctx.fillRect(x, 40, 4, 30); ctx.beginPath(); ctx.arc(x + 2, 80, 12, 0, TAU); ctx.fill(); } },
+  roomRattle(ctx, L, rng, H) { ctx.fillStyle = '#8a6a44'; ctx.fillRect(0, 0, BG_W, H); ctx.fillStyle = '#7a5a38'; for (let x = 0; x < BG_W; x += 26) ctx.fillRect(x, 0, 3, H); ctx.fillStyle = '#5a3c20'; for (let y = 60; y < H; y += 110) ctx.fillRect(0, y, BG_W, 8); for (let x = 40; x < BG_W; x += 70) { ctx.fillStyle = '#c8a050'; ctx.beginPath(); ctx.ellipse(x, 52, 8, 12, 0, 0, TAU); ctx.fill(); } },
+  roomStand(ctx, L, rng, H) { ctx.fillStyle = '#2a2244'; ctx.fillRect(0, 0, BG_W, H); for (let x = 0; x < BG_W; x += 90) { ctx.fillStyle = '#3a2e5a'; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 45, 0); ctx.lineTo(x + 30, H); ctx.lineTo(x + 5, H); ctx.closePath(); ctx.fill(); } ctx.fillStyle = 'rgba(255,230,160,0.12)'; ctx.beginPath(); ctx.moveTo(BG_W / 2 - 40, 0); ctx.lineTo(BG_W / 2 + 40, 0); ctx.lineTo(BG_W / 2 + 160, H); ctx.lineTo(BG_W / 2 - 160, H); ctx.closePath(); ctx.fill(); }
+};
+const base = (o, ...mix) => Object.assign({}, ...mix, o);
+const roomTheme = (name, col, kind, rt) => base({ name, music: 'tour_salt_room', particles: 'none', rays: null, sky: [col, col, col], horizonGlow: '#ffffff', celestial: { type: 'none' }, stars: 0, layers: [{ kind, base: 400, f: 0.05 }], fog: col, decor: [] }, rt);
+const themes = {
+  salt_flats: base({ name: 'Angle of Repose', music: 'tour_salt', particles: 'none', rays: '#fff8e0', sky: ['#8ab0e8', '#b8d0f4', '#e8f0fc'], horizonGlow: '#ffffff', celestial: { type: 'sun', x: 0.72, y: 0.22, r: 28, color: '#fffbe8', glow: '#ffffff' }, stars: 0,
+    layers: [{ kind: 'saltFlats', color: '#dfe8f6', base: 300, f: 0.06 }, { kind: 'saltCellars', color: '#a8bce6', base: 360, f: 0.12 }, { kind: 'saltSteps', color: '#cbd8ee', base: 440, f: 0.22 }], fog: '#d8e4f6', decor: ['saltHeapSmall', 'saltCellarProp'] }, shore),
+  salt_sea: base({ name: 'Grain Elevator', music: 'tour_salt_sea', particles: 'none', rays: null, sky: ['#5a88d8', '#8ab0ec', '#cfe0fa'], horizonGlow: '#f0f6ff', celestial: { type: 'sun', x: 0.25, y: 0.2, r: 26, color: '#fffbe8', glow: '#ffffff' }, stars: 0,
+    layers: [{ kind: 'saltSea', color: '#4a7ad0', base: 330, f: 0.08 }, { kind: 'saltSteps', color: '#d4dff0', base: 450, f: 0.2 }], fog: '#a8c4ee', decor: ['saltCellarProp'] }, shore),
+  salt_cave: base({ name: 'Crystal Habit', music: 'tour_salt_sea', particles: 'none', rays: null, sky: ['#1a2a5a', '#25386e', '#30468a'], horizonGlow: '#5a82e8', celestial: { type: 'none' }, stars: 0,
+    layers: [{ kind: 'saltCave', color: '#3a5aa8', base: 420, f: 0.1 }], fog: '#2a3c78', decor: ['saltHeapSmall'] }, shore),
+  salt_shaker: base({ name: 'The Shaker Test', music: 'tour_salt', particles: 'none', rays: null, sky: ['#3a3a4a', '#4a4a5c', '#5a5a6e'], horizonGlow: '#a0a0c0', celestial: { type: 'none' }, stars: 0,
+    layers: [{ kind: 'saltShaker', color: '#4a4c60', base: 430, f: 0.08 }], fog: '#4a4c60', decor: ['saltCellarProp'] }, shore),
+  salt_kitchen: base({ name: 'Season to Taste', music: 'tour_salt_boss', particles: 'none', rays: null, sky: ['#26346a', '#2e3e7a', '#384a8a'], horizonGlow: '#8aa0e0', celestial: { type: 'none' }, stars: 0,
+    layers: [{ kind: 'saltKitchen', color: '#34447e', base: 440, f: 0.08 }], fog: '#34447e' }, shore),
+  salt_room_kettle: roomTheme('The Stove Alcove', '#4a2e2a', 'roomKettle', RT.kettle),
+  salt_room_lamps: roomTheme('The Lamp Loft', '#1e2a46', 'roomLamps', RT.lamps),
+  salt_room_mitts: roomTheme('The Mitt Counter', '#f4e8c8', 'roomMitts', RT.mitts),
+  salt_room_rattle: roomTheme('The Pod Pantry', '#8a6a44', 'roomRattle', RT.rattle),
+  salt_room_stand: roomTheme('The Music Stand', '#2a2244', 'roomStand', RT.stand)
+};
+
+/* ---------------- props (Decor: drawn each frame) ---------------- */
+const decor = {
+  // a little heap of salt left on the flats (scenery: grey-white and low, nothing like the gold-ringed heaps)
+  saltHeapSmall(ctx, x, y) { ctx.save(); ctx.globalAlpha = 0.75; ctx.fillStyle = '#dfe6f2'; ctx.beginPath(); ctx.moveTo(x - 20, y); ctx.quadraticCurveTo(x, y - 18, x + 20, y); ctx.closePath(); ctx.fill(); ctx.restore(); },
+  // an empty cobalt salt cellar on its side (scenery), its cork lid beside it
+  saltCellarProp(ctx, x, y) { ctx.save(); ctx.globalAlpha = 0.5; ctx.fillStyle = '#8aa0d0'; ctx.fillRect(x - 16, y - 22, 26, 22); ctx.fillStyle = '#c8b8a8'; ctx.fillRect(x + 12, y - 8, 10, 8); ctx.restore(); },
+  // the grain tell (drawn by an entity, see the levels file)
+  saltTip(ctx, x, y, t) { SaltArt.grain(ctx, x, y - 6, t || 0); }
+};
+
+/* ---------------- door looks: a cellar door, a cork hatch ---------------- */
+{
+  const dr0 = DoorArt.draw;
+  DoorArt.draw = function (ctx, x, y, look, t, near) {
+    if (look === 'saltCellar' || look === 'saltHatch') {
+      ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+      if (look === 'saltCellar') {
+        ctx.fillStyle = COBALT; rr(ctx, x - 22, y - 60, 44, 60, 6); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = near ? '#0a1030' : COBALT_D; rr(ctx, x - 16, y - 52, 32, 52, 4); ctx.fill();
+        SaltArt.cork(ctx, x, y - 54, 48, 12);
+      } else {
+        SaltArt.cork(ctx, x, y, 40, 50);
+        ctx.fillStyle = near ? '#2a1408' : CORK_D; rr(ctx, x - 13, y - 42, 26, 40, 8); ctx.fill(); ctx.stroke();
+      }
+      ctx.restore(); return;
+    }
+    return dr0.call(this, ctx, x, y, look, t, near);
+  };
+}
+
+/* ---------------- the critters ---------------- */
+// GRAIN WREN: a cobalt wren on a salt-cube perch; she pecks her own perch away grain by grain (it shrinks), then has
+// to swoop (her tell: she looks down at the stump and flaps, then dives)
+const wrenArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y - 10); ctx.scale(e.dir || 1, 1); ctx.strokeStyle = INK; ctx.lineWidth = 1.6;
+  const flap = Math.sin(t * 18) * 0.7, peck = m !== 'swoop' && Math.sin(t * 7) > 0.5;
+  if (m !== 'swoop') { const s = 6 + 5 * (0.5 + 0.5 * Math.cos(t * 0.6)); SaltArt.cube(ctx, -s / 2, 16, s); }
+  ctx.fillStyle = COBALT; ctx.beginPath(); ctx.ellipse(0, 0, 11, 9, 0, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(3, 4, 6, 4, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = COBALT_D; ctx.save(); ctx.translate(-3, -2); ctx.rotate(-0.5 + flap); ctx.beginPath(); ctx.ellipse(-6, 0, 9, 4, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore();
+  ctx.beginPath(); ctx.moveTo(-9, -2); ctx.lineTo(-16, -9); ctx.lineTo(-13, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(5, -4, 3.4, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(6, peck ? -3 : -5, 1.6, 0, TAU); ctx.fill();
+  ctx.fillStyle = CORK; ctx.beginPath(); ctx.moveTo(9, -3); ctx.lineTo(17, peck ? 3 : -2); ctx.lineTo(10, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.restore();
+};
+// BRINE SHRIMP: a pink shrimp who now and then goes rigid and pretends to be a teaspoon (stiff, silver, eyes shut)
+const shrimpArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, m === 'flat' ? 0.45 : 1); ctx.strokeStyle = INK; ctx.lineWidth = 1.7;
+  if (m === 'notice') {
+    // a teaspoon (honestly): a long silver handle and a bowl, a shrimp's tail sticking out
+    ctx.fillStyle = '#d8dce8'; rr(ctx, -16, -8, 22, 5, 2); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.ellipse(10, -6, 8, 5, 0, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#f48a8a'; ctx.beginPath(); ctx.moveTo(-16, -6); ctx.lineTo(-22, -11); ctx.lineTo(-22, -1); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(6, -9); ctx.lineTo(10, -9); ctx.stroke(); ctx.restore(); return;
+  }
+  const wig = Math.sin(t * 12) * 2;
+  ctx.fillStyle = '#f48a8a'; ctx.beginPath(); ctx.moveTo(14, -12); ctx.quadraticCurveTo(4, -24, -10, -16); ctx.quadraticCurveTo(-18, -10, -14, -2); ctx.lineTo(-20, 0); ctx.lineTo(-12, 4); ctx.quadraticCurveTo(-4, -4, 4, -6); ctx.quadraticCurveTo(12, -6, 14, -12); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = '#c84a5a'; ctx.lineWidth = 1.2; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.arc(-6 + k * 6, -12, 6, 0.4, 1.6); ctx.stroke(); }
+  ctx.strokeStyle = INK; for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.moveTo(-4 + k * 4, -5); ctx.lineTo(-5 + k * 4 + wig * (k % 2 ? 1 : -1), 0); ctx.stroke(); }
+  ctx.beginPath(); ctx.moveTo(13, -14); ctx.quadraticCurveTo(24, -26, 30, -20); ctx.moveTo(12, -15); ctx.quadraticCurveTo(18, -30, 26, -30); ctx.stroke();
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(10, -15, 3, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(11, -15, 1.4, 0, TAU); ctx.fill();
+  ctx.restore();
+};
+// CORK WEEVIL: a cork-bodied weevil with a drill for a snout. It drills a tidy hole (the tell: the drill spins, curls of
+// cork fly), then charges, triumphant, and falls through his own hole at the end of the run
+const weevilArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, m === 'flat' ? 0.45 : 1); ctx.strokeStyle = INK; ctx.lineWidth = 1.7;
+  const run = m === 'charge', drill = m === 'notice', st = run ? Math.sin(t * 26) * 3 : Math.sin(t * 9) * 1.5;
+  ctx.fillStyle = CORK_D; for (const [lx, s] of [[-9, st], [-2, -st], [6, st]]) ctx.fillRect(lx + s * 0.4, -8, 3.5, 8);
+  SaltArt.cork(ctx, -3, -6, 26, 18);
+  ctx.fillStyle = CORK; ctx.beginPath(); ctx.arc(11, -14, 6.5, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(12, -16, 3, 0, TAU); ctx.fill(); ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(13, -16, 1.4, 0, TAU); ctx.fill();
+  ctx.save(); ctx.translate(17, -13); if (drill) ctx.rotate(Math.sin(t * 40) * 0.08);
+  ctx.fillStyle = '#c8ccd8'; ctx.beginPath(); ctx.moveTo(0, -4); ctx.lineTo(12, 0); ctx.lineTo(0, 4); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); for (let k = 0; k < 3; k++) { ctx.moveTo(2 + k * 3, -3 + k * 0.8); ctx.lineTo(4 + k * 3, 3 - k * 0.8); } ctx.stroke(); ctx.restore();
+  if (drill) { ctx.fillStyle = CORK_L; for (let k = 0; k < 3; k++) { const a = t * 9 + k * 2; ctx.beginPath(); ctx.arc(26 + Math.cos(a) * 6, -16 + Math.sin(a) * 6, 2, 0, TAU); ctx.fill(); } }
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(9, -20); ctx.quadraticCurveTo(8, -28, 4, -30); ctx.moveTo(12, -20); ctx.quadraticCurveTo(15, -28, 18, -29); ctx.stroke();
+  ctx.restore();
+};
+// SALT LICK: a block of salt with eyes and one enormous tongue. The tell: the tongue bulges in his cheek and his eyes
+// squeeze (0.9 s); then it shoots out along the floor and sticks to the crystals there ("STUCK!") for a second
+const lickArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, 1); ctx.strokeStyle = INK; ctx.lineWidth = 1.8;
+  const tell = m === 'notice', out = m === 'charge';
+  ctx.fillStyle = CRYS_D; ctx.fillRect(-14, -5, 7, 5); ctx.fillRect(6, -5, 7, 5); ctx.strokeRect(-14, -5, 7, 5); ctx.strokeRect(6, -5, 7, 5);
+  ctx.fillStyle = CRYS; rr(ctx, -16, -34, 32, 30, 4); ctx.fill(); ctx.stroke(); ctx.fillStyle = CRYS_B; ctx.fillRect(-15, -33, 30, 6);
+  // eyes (squeezed shut in the tell)
+  if (tell) { ctx.beginPath(); ctx.moveTo(-6, -24); ctx.lineTo(-1, -21); ctx.lineTo(-6, -18); ctx.moveTo(10, -24); ctx.lineTo(5, -21); ctx.lineTo(10, -18); ctx.stroke(); }
+  else { ctx.fillStyle = '#ffffff'; for (const ex of [-3, 7]) { ctx.beginPath(); ctx.arc(ex, -22, 4, 0, TAU); ctx.fill(); ctx.stroke(); } ctx.fillStyle = INK; for (const ex of [-2, 8]) { ctx.beginPath(); ctx.arc(ex, -22, 1.7, 0, TAU); ctx.fill(); } }
+  // the tongue: in the mouth, bulging, or out along the floor
+  ctx.fillStyle = '#f07a8a';
+  if (out) { const L = e.tongueL || 0; ctx.beginPath(); ctx.moveTo(10, -12); ctx.quadraticCurveTo(14 + L * 0.3, -4, 14 + L, -4); ctx.arc(14 + L, -8, 4.5, Math.PI / 2, -Math.PI / 2, true); ctx.quadraticCurveTo(14 + L * 0.3, -14, 10, -16); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+  else { const k = tell ? 1 + 0.4 * Math.sin(t * 30) : 1; ctx.beginPath(); ctx.ellipse(12, -12, 6 * k, 4 * k, 0, 0, TAU); ctx.fill(); ctx.stroke(); }
+  ctx.restore();
+};
+const tongueArt = (c, s) => {};
+const enemies = {
+  saltWren: { cls: TourFlyer.make({ w: 26, h: 22, range: 3, speed: 0.8, swoop: true, art: wrenArt, burst: COBALT,
+    onSwoop: e => { if (e.g.onScreen(e)) SaltSay(e.g, e.cx, e.y - 10, 'OOPS. ATE MY PERCH.', CRYS); } }), place: 'fly' },
+  saltShrimp: { cls: TourEnemy.make({ w: 30, h: 22, speed: 0.7, behavior: 'walk', edgeTurn: true, art: shrimpArt, burst: '#f48a8a',
+    init(e) { e.spoonT = 2.5 + Math.random() * 1.5; },
+    think(e, dt) {
+      if (e.spoonS > 0) { e.spoonS -= dt; e.vx = 0; e.mode = 'notice'; if (e.spoonS <= 0) { e.mode = 'walk'; e.vx = e.dir * e.speed; } return; }
+      if (!e.vx) e.vx = e.dir * e.speed;
+      e.mode = 'walk'; e.spoonT -= dt;
+      if (e.spoonT <= 0) { e.spoonT = 3 + Math.random() * 1.5; e.spoonS = 1.4; if (e.g.onScreen(e, 40)) SaltSay(e.g, e.cx, e.y - 14, pick(['I AM A TEASPOON.', 'JUST A SPOON HERE.', '(TEASPOON NOISES)']), CRYS); }
+    } }), place: 'walk' },
+  saltWeevil: { cls: TourEnemy.make({ w: 30, h: 24, speed: 0.8, behavior: 'charge', edgeTurn: true, range: 6, windup: 0.8, chargeSpeed: 4.0, chargeT: 0.9, art: weevilArt, burst: CORK,
+    onNotice: e => { if (e.g.onScreen(e)) SaltSay(e.g, e.cx, e.y - 12, 'A TIDY HOLE... TA-DA!', CORK_L); } }), place: 'walk' },
+  saltLick: { cls: TourEnemy.make({ w: 30, h: 34, speed: 0, behavior: 'still', art: lickArt, burst: CRYS,
+    init(e) { e.lickT = 1.5 + Math.random(); e.tongueL = 0; },
+    think(e, dt) {
+      const p = e.g.player; e.vx = 0;
+      if (e.tellT > 0) { e.tellT -= dt; e.mode = 'notice'; if (e.tellT <= 0) { e.outT = 1.3; e.tongueL = 0; } return; }
+      if (e.outT > 0) {
+        e.outT -= dt; e.mode = 'charge'; e.tongueL = Math.min(68, e.tongueL + dt * 400);
+        // the tongue hurts only while it shoots out (the first 0.25 s); stuck on the floor it is just a tongue
+        if (e.outT > 1.05) tourFire(e.g, e.dir > 0 ? e.cx + 10 : e.cx - 10 - e.tongueL, e.y + e.h - 16, { vx: 0, w: e.tongueL, h: 12, life: 1 / 60, col: '#f07a8a', art: tongueArt });
+        if (e.outT < 1.0 && !e.stuckSaid) { e.stuckSaid = true; if (e.g.onScreen(e, 40)) SaltSay(e.g, e.cx, e.y - 14, 'STUCK! THELP!', '#f07a8a'); }
+        if (e.outT <= 0) { e.mode = 'walk'; e.tongueL = 0; e.stuckSaid = false; }
+        return;
+      }
+      e.mode = 'walk'; if (p) e.dir = sign(p.cx - e.cx) || e.dir; e.lickT -= dt;
+      if (e.lickT <= 0 && p && !p.dead && Math.abs(p.cx - e.cx) < 5 * TS && Math.abs(p.cy - e.cy) < 2 * TS) { e.lickT = 2.6; e.tellT = 0.9; }
+    } }), place: 'walk' }
+};
+
+/* ---------------- the route map: a salt cellar with a cork lid in the pin ---------------- */
+const emblem = (ctx, x, y, r, t) => {
+  ctx.save();
+  ctx.fillStyle = '#cfe0fa'; ctx.beginPath(); ctx.arc(x, y, r * 0.95, 0, TAU); ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = Math.max(1, r * 0.08);
+  ctx.fillStyle = COBALT; ctx.fillRect(x - r * 0.42, y - r * 0.25, r * 0.84, r * 0.7); ctx.strokeRect(x - r * 0.42, y - r * 0.25, r * 0.84, r * 0.7);
+  ctx.fillStyle = CRYS; ctx.fillRect(x - r * 0.32, y + r * 0.02, r * 0.64, r * 0.35);
+  ctx.fillStyle = CORK; ctx.fillRect(x - r * 0.48, y - r * 0.45, r * 0.96, r * 0.22); ctx.strokeRect(x - r * 0.48, y - r * 0.45, r * 0.96, r * 0.22);
+  ctx.restore();
+};
+
+/* ---------------- the land's map: sprites and the salt flats ---------------- */
+Object.assign(TourOWPaint.art, {
+  // a heap of salt
+  saltHeapSprite(c, r) { SaltArt.heap(c, 0, 0, r, r * 0.8); },
+  // a cobalt cellar with a cork lid
+  saltCellarSprite(c, r) { c.fillStyle = COBALT; c.fillRect(-r * 0.6, -r, r * 1.2, r); c.strokeRect(-r * 0.6, -r, r * 1.2, r); c.fillStyle = CRYS; c.fillRect(-r * 0.45, -r * 0.55, r * 0.9, r * 0.5); SaltArt.cork(c, 0, -r, r * 1.4, r * 0.35); },
+  // A Pinch's kitchen (the boss): a soup pot on a stove, a chef's cork beside it
+  saltPotSprite(c, r) { c.fillStyle = CHAR; c.fillRect(-r, -r * 0.8, r * 2, r * 0.8); c.strokeRect(-r, -r * 0.8, r * 2, r * 0.8); c.fillStyle = BRINE_L; c.fillRect(-r * 0.85, -r * 0.8, r * 1.7, r * 0.15); SaltArt.cork(c, r * 1.3, 0, r * 0.6, r); c.fillStyle = '#ffffff'; c.beginPath(); c.arc(r * 1.3, -r * 1.1, r * 0.35, 0, TAU); c.fill(); c.stroke(); },
+  // a floating cork
+  saltCorkSprite(c, r) { SaltArt.cork(c, 0, 0, r * 1.6, r * 0.8); }
+});
+// a crust of crystal cubes instead of a coast, over the brine
+TourOWLands.coast.saltCrust = function (c, ow, ring) {
+  const L = ow.look, ink = this.INK;
+  c.save(); c.translate(6, 12); OWGeo.path(c, ring, true); c.fillStyle = 'rgba(10,20,60,0.3)'; c.fill(); c.restore();
+  c.save(); c.translate(0, 8); OWGeo.path(c, ring, true); c.fillStyle = CRYS_D; c.fill(); c.strokeStyle = ink; c.lineWidth = 2.6; c.stroke(); c.restore();
+  OWGeo.path(c, ring, true); c.fillStyle = L.land; c.fill();
+  c.save(); OWGeo.path(c, ring, true); c.clip(); c.strokeStyle = '#ffffff'; c.lineWidth = 9; OWGeo.path(c, ring, true); c.stroke(); c.restore();
+  OWGeo.path(c, ring, true); c.strokeStyle = ink; c.lineWidth = 2.8; c.stroke();
+};
+// the flats under the trails: crust cracks in hexagons, little heaps
+TourOWScenes.groundPaint.salt = function (c, ow) {
+  const R = TourOWPaint.rng('saltground');
+  c.lineJoin = 'round'; c.lineCap = 'round'; c.strokeStyle = 'rgba(60,90,160,0.18)'; c.lineWidth = 2;
+  for (let k = 0; k < 70; k++) { const x = 220 + R() * 1100, y = 190 + R() * 500, s = 14 + R() * 10; c.beginPath(); for (let q = 0; q <= 6; q++) { const a = q / 6 * TAU; c.lineTo(x + Math.cos(a) * s, y + Math.sin(a) * s * 0.6); } c.stroke(); }
+};
+TourLandscape.looks.salt = ['#cfe0fa', '#8ab0e8', COBALT, CORK, CRYS, CHAR, 'saltCellarLm'];
+{
+  const lm0 = TourLandscape.landmark;
+  TourLandscape.landmark = function (ctx, kind, x, y, size, ink, accent) {
+    if (kind !== 'saltCellarLm') return lm0.call(this, ctx, kind, x, y, size, ink, accent);
+    ctx.save(); ctx.translate(x, y); ctx.scale(size / 40, size / 40); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    TourOWPaint.art.saltCellarSprite.call(TourOWPaint, ctx, 22);
+    ctx.restore();
+  };
+}
+
+/* ---------------- music: a breezy shore tune, a slow brine waltz, a little room tune, the chef's march ---------------- */
+const tracks = {
+  tour_salt: {
+    bpm: 112, bars: 8, rv: 0.35, dl: 0.2, hx: 0.04,
+    ch: 'G Em C D G Em Am D',
+    ld: 'B6:4 D7:4 G7:8 | E7:4 D7:4 B6:8 | C7:4 E7:4 G7:4 E7:4 | D7:8 A6:8 | B6:4 D7:4 G7:8 | G7:4 F#7:4 E7:8 | C7:4 E7:4 A7:4 G7:4 | F#7:8 D7:8',
+    li: 'pluck', lv: 0.14,
+    bp: 'r.......r...f...', bi: 'pluckb', bv: 0.28,
+    ap: '..c...c...c...c.', ai: 'glass', av: 0.05, ao: 64,
+    dr: ['k.......k.......', '....s.......s...', 'h.h.h.h.h.h.h.h.'], dv: 0.22
+  },
+  tour_salt_sea: {
+    bpm: 96, bpb: 3, bars: 8, rv: 0.45, dl: 0.25, hx: 0.04,
+    ch: 'D D Bm Bm G A D A',
+    ld: 'F#6:3 A6:3 D7:3 | E7:6 C#7:3 | D7:3 B6:3 F#6:3 | B6:9 | G6:3 B6:3 D7:3 | E7:3 C#7:3 A6:3 | D7:3 F#7:3 A7:3 | E7:9',
+    li: 'glass', lv: 0.13,
+    bp: 'r..f..', bi: 'sub', bv: 0.26,
+    ap: '...c.c', ai: 'harp', av: 0.05, ao: 60,
+    dr: ['k.....', '...s..', 'h.hh.h'], dv: 0.2
+  },
+  tour_salt_room: {
+    bpm: 116, bars: 4, rv: 0.4, dl: 0.2, hx: 0.04,
+    ch: 'C Am F G',
+    ld: 'E7:4 G7:4 C8:8 | A7:4 C8:4 E8:8 | F7:4 A7:4 C8:4 A7:4 | G7:4 B7:4 D8:8',
+    li: 'mbox', lv: 0.13,
+    bp: 'r.......r.......', bi: 'sub', bv: 0.22,
+    ap: 'c...c...c...c...', ai: 'harp', av: 0.05, ao: 66,
+    dr: ['k.......k.......', '....s.......s...', '..h...h...h...h.'], dv: 0.2
+  },
+  tour_salt_boss: {
+    bpm: 140, bars: 8, rv: 0.3, hx: 0.06,
+    ch: 'Am Am F E Am Am Dm E',
+    ld: 'A6:2 C7:2 E7:2 A7:2 G7:4 E7:4 | F7:2 E7:2 D7:2 C7:2 A6:8 | F7:2 A7:2 C8:2 A7:2 F7:4 A7:4 | G#7:4 B7:4 E7:8 |' +
+        'A7:2 C8:2 E8:2 C8:2 A7:4 C8:4 | B7:2 A7:2 G#7:2 A7:2 E7:8 | D7:2 F7:2 A7:2 D8:2 C8:4 A7:4 | B7:4 D8:4 G#7:8',
+    li: 'brass', lv: 0.15,
+    bp: 'r-.r-.r-.r-.r-o-', bi: 'reese', bv: 0.3,
+    ap: '..c...c...c...c.', ai: 'pluck', av: 0.05, ao: 55,
+    dr: ['k...k...k...k...', '....s.......s..s', 'h.h.h.h.h.h.h.h.'], dv: 0.4
+  }
+};
+
+Tour.country({
+  id: 'salt', secret: true, bonus: true, colors: COL, tagline: 'A hidden land: the whole sea inside a shaker that says "just a pinch"',
+  themes, painters, decor, enemies, tracks,
+  music: { level: 'tour_salt', boss: 'tour_salt_boss', map: null },
+  landmark: 'the crystal stair-steps', emblem,
+  arrival: 'Brady! You slipped through the rim of a saucer and came out in the salt cellar the whole sea is kept in. The shaker says "just a pinch". It has been lying for years. I have always suspected ours. ♥ C',
+  coin: { name: 'GRAINS', draw(ctx, x, y) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(0.25); ctx.fillStyle = CRYS; ctx.fillRect(-7, -7, 14, 14); ctx.fillStyle = CRYS_B; ctx.fillRect(-7, -7, 14, 4); ctx.fillRect(3, -7, 4, 14);
+    ctx.strokeStyle = COBALT_D; ctx.lineWidth = 1.6; ctx.strokeRect(-7, -7, 14, 14); ctx.restore();
+  } },
+  levels: []
+});
+// the land's own opened locks (kept off the HUD's key row): g.saltKeys
+Tour.saltKit = { keys: g => g.saltKeys || (g.saltKeys = new Set()), SOLID, say: SaltSay, COL, INK, SaltArt, onMark, isSalt, wrenArt, shrimpArt, weevilArt, lickArt, decor, RT };
+try { if (typeof window !== 'undefined') { window.BRADY_TOUR = window.BRADY_TOUR || {}; window.BRADY_TOUR.saltKit = Tour.saltKit; if (typeof TourMap !== 'undefined' && !window.BRADY_TOUR.TourMap) window.BRADY_TOUR.TourMap = TourMap; } } catch (e) { /* not in a browser */ }
+})();
+
+/* ---- 29_tour_y_salt_a_mech.js ---- */
+/* ============================================================
+   THE TABLE SALT SEA: the props of 34-1 to 34-4 (and the weighing spoon of 34-5's lead-in). Every prop takes the
+   button only while Brady stands on its pulsing gold mark (29_tour_y_salt.js: saltProp).
+   34-1 ANGLE OF REPOSE (repose): a salt heap by a notch in the tread. Hold RUN on the heap's mark to scuff it: the
+        top layer slides downhill into the notch, which fills from the bottom up to the gold FULL line at its lip and
+        sets hard. The last heap feeds two notches with only just enough salt: a scuff that starts while the first
+        notch is short fills the first; keep scuffing past its FULL line and the extra spills away. Stop at FULL,
+        then scuff again for the second. A heap that runs dry is topped up by the shaker over it (it shakes first).
+   34-2 GRAIN ELEVATOR (brinefloat): a basin of brine with a weighted cork in a cradle at the bottom. Jump on the salt
+        spoon by the basin: it tips a dose in, the brine thickens a band (the density gauge on the basin's wall) and
+        the cork's float line rises: at the gauge's top band the cork floats up and rides at the surface; stand on it
+        and it drifts across. The last basin has a low stone lip and a spoon under the shaker that refills itself:
+        after the first dose the cork rides half-afloat at the surface; board it before the spoon tips again by
+        itself, or the cork lifts past the lip and floats off (it comes back to its cradle).
+   34-3 CRYSTAL HABIT (cubegrow): a salt crystal with a flat face. Stand on it and hold THROW: a new cube grows out of
+        the face shown by the dashed preview. Late on the crystal needs a corner (sideways, then down) and the brine
+        rises in the trough under it once it starts growing: finish before the brine reaches the stem, or the new
+        cubes dissolve.
+   34-4 THE SHAKER TEST (shakercap): inside a perforated cap: Brady walks on the cap's inner disc, its holes at his
+        feet. The cap shakes (the tell), then pours: salt goes down through every hole he isn't standing on into the
+        bowls below. The gold bowl must get enough in one pour to sink and lift the cellar gate. The last bowl is
+        narrow: stand astride two neighbouring holes so the whole pour goes down the one left.
+   The checker: filled notches, grown cubes and floating corks are in the level for it from the start (the game hides
+   them until made); a shaker gate is a lock whose key is standing on its plug spot.
+   ============================================================ */
+(function () {
+const SK = Tour.saltKit, INK = SK.INK, SA = SK.SaltArt, say = SK.say, onMark = SK.onMark;
+const markOf = s => ({ tx: Math.round((s.x - TS / 2) / TS), fy: Math.round(s.y / TS) });
+const hideTiles = (g, L) => { for (const [x, y] of L) g.setTile(x, y, T.EMPTY); };
+const showTiles = (g, L, t) => { for (const [x, y] of L) g.setTile(x, y, t == null ? T.GROUND : t); };
+const liftOut = (g, L) => { const p = g.player; if (!p || p.dead) return; for (const [x, y] of L) if (p.x < (x + 1) * TS && p.x + p.w > x * TS && p.y < (y + 1) * TS && p.y + p.h > y * TS) { p.y = y * TS - p.h; p.vy = Math.min(0, p.vy); } };
+const byId = (g, cls, id) => g.entities.find(e => e instanceof cls && e.id === id && !e.remove);
+
+/* a mark prop: subclasses define act(p) or hold(p, on, dt) */
+class SaltMark extends Ent {
+  constructor(g, s, w, h) { super(g, s, w || TS, h || TS); const m = markOf(s); this.tx = m.tx; this.fy = m.fy; this.friendly = true; this.back = true; this.saltProp = true; this.cue = 'THROW'; }
+  live() { return true; }
+  saltTouch(p) { return this.live() && onMark(p, this.tx, this.fy, 0.8); }
+  saltInput(p, inp, dt) { if (inp.actionPressed && this.act) this.act(p); this.held = !!inp.action; this.heldT = this.g.t; }
+  holding() { const p = this.g.player; return !!(this.held && this.g.t - this.heldT < 0.04 && p && this.saltTouch(p)); }
+  touchPlayer() {}
+  drawMark(ctx) { const p = this.g.player, hot = p && this.saltTouch(p); if (this.live()) SA.ring(ctx, (this.tx + 0.5) * TS, this.fy * TS, this.t, hot, 17); if (hot && !this.holding()) SA.cue(ctx, (this.tx + 0.5) * TS, this.fy * TS - 2.6 * TS, this.t, this.cue); }
+}
+
+/* ======================= 34-1: heaps and notches ======================= */
+// a notch: columns x0..x1 of the tread's top row (gy); fill 0..1 (1: level with the lip, set hard)
+class SaltNotch extends Ent {
+  constructor(g, s) { super(g, s, TS, TS); this.id = s.id; this.x0 = s.x0; this.x1 = s.x1; this.gy = s.gy; this.cells = []; for (let x = s.x0; x <= s.x1; x++) this.cells.push([x, s.gy]); this.fill = 0; this.spill = 0; this.back = true; this.friendly = true; this.x = s.x0 * TS; this.y = s.gy * TS; this.w = (s.x1 - s.x0 + 1) * TS; this.h = 2 * TS; hideTiles(g, this.cells); }
+  add(v) {
+    if (this.fill >= 1) { this.spill = 0.4; return; }
+    this.fill = Math.min(1, this.fill + v);
+    if (this.fill >= 1) { showTiles(this.g, this.cells); liftOut(this.g, this.cells); this.g.burst(this.cx, this.y, 14, '#ffffff', 'dust'); TourKit.sfx('crunch', 'bump', { vol: 0.5, pitch: 1.4 }); say(this.g, this.cx, this.y - 20, 'FULL!', SA.GOLD); }
+  }
+  update(dt) { this.t += dt; if (this.spill > 0) this.spill -= dt; }
+  touchPlayer() {}
+  draw(ctx) {
+    const x0 = this.x, x1 = this.x + this.w, lip = this.y, deep = lip + 2.2 * TS, top = lip + (1 - this.fill) * 2.2 * TS;
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    // the notch's dark walls (it falls away below)
+    ctx.fillStyle = 'rgba(20,30,70,0.35)'; ctx.fillRect(x0, lip, this.w, deep - lip);
+    // the salt in it, levelled
+    if (this.fill > 0) { ctx.fillStyle = SA.CRYS; ctx.fillRect(x0, top, this.w, deep - top + 40); ctx.fillStyle = SA.CRYS_B; ctx.fillRect(x0, top, this.w, 4); ctx.beginPath(); ctx.moveTo(x0, top); ctx.lineTo(x1, top); ctx.stroke(); }
+    // the FULL line at the lip: a gold dashed bar with a tag, big while it is short
+    if (this.fill < 1) {
+      ctx.setLineDash([8, 6]); ctx.strokeStyle = SA.GOLD; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x0 + 2, lip + 3); ctx.lineTo(x1 - 2, lip + 3); ctx.stroke(); ctx.setLineDash([]);
+      SA.pill(ctx, (x0 + x1) / 2, lip - 2.2 * TS, Math.round(this.fill * 100) + '%  FULL AT THE LINE', '#ffffff', 0.9);
+    }
+    if (this.spill > 0) { for (let k = 0; k < 5; k++) { const u = (this.t * 3 + k / 5) % 1; ctx.fillStyle = SA.CRYS; ctx.fillRect(x1 - 6 + u * 30, lip - 6 + u * u * 50, 4, 4); } SA.pill(ctx, (x0 + x1) / 2, lip - 1.2 * TS, 'SPILLING!', '#ff9a8a'); }
+    ctx.restore();
+  }
+}
+// the heap: on its mark hold RUN to scuff; salt slides to its notches in order (see the header)
+class SaltHeap extends SaltMark {
+  saltTouch(p) { return this.live() && onMark(p, this.tx, this.fy, 1.0); }
+  constructor(g, s) { super(g, s, TS, TS); this.cap = s.cap || 1.6; this.salt = this.cap; this.notches = s.notches; this.rate = 0.8; this.target = null; this.refillT = 0; this.cue = 'HOLD RUN'; this.hx = (this.tx + 1.8) * TS; }
+  live() { return this.salt > 0.02 && this.notchList().some(n => n.fill < 1); }
+  notchList() { return this.notches.map(id => byId(this.g, SaltNotch, id)).filter(Boolean); }
+  saltInput(p, inp, dt) {
+    if (inp.action && !this.wasHeld) { const L = this.notchList(); this.target = L.find(n => n.fill < 1) || null; }
+    this.wasHeld = !!inp.action; this.held = !!inp.action; this.heldT = this.g.t;
+  }
+  update(dt) {
+    this.t += dt;
+    const p = this.g.player, on = p && this.saltTouch(p) && this.holding();
+    if (!on) this.wasHeld = this.held && this.g.t - this.heldT < 0.04;
+    this.scuff = on && this.target && this.salt > 0;
+    if (this.scuff) { const v = Math.min(this.salt, this.rate * dt); this.salt -= v; this.target.add(v); if (Math.random() < 0.3) TourKit.sfx('scuff', 'bump', { vol: 0.15, pitch: 1.8 + Math.random() * 0.3 }); }
+    // run dry with a notch still short: the shaker overhead shakes (1.2 s), then pours the heap back
+    if (this.salt <= 0.02 && this.notchList().some(n => n.fill < 1)) {
+      this.refillT += dt;
+      if (this.refillT > 0.1 && this.refillT < 0.2 && !this.toldR) { this.toldR = true; say(this.g, this.hx, this.fy * TS - 3 * TS, 'THE SHAKER WILL TOP IT UP', '#ffffff'); }
+      if (this.refillT > 1.2) this.salt = Math.min(this.cap, this.salt + dt * 1.2);
+      if (this.salt >= this.cap) { this.refillT = 0; this.toldR = false; }
+    } else if (this.refillT > 0 && this.salt >= this.cap - 0.01) this.refillT = 0;
+  }
+  draw(ctx) {
+    const gy = this.fy * TS, k = this.salt / this.cap, t = this.t;
+    // the shaker over the heap (shaking while it is about to pour, pouring while it refills)
+    const sy = gy - 4.2 * TS, shake = this.refillT > 0 && this.refillT <= 1.2 ? Math.sin(t * 40) * 3 : 0;
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    ctx.fillStyle = SA.CHAR; ctx.beginPath(); ctx.ellipse(this.hx + shake, sy, 26, 10, 0, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = SA.COBALT; ctx.fillRect(this.hx - 20 + shake, sy - 30, 40, 26); ctx.strokeRect(this.hx - 20 + shake, sy - 30, 40, 26);
+    ctx.fillStyle = '#0a0a14'; for (let q = -1; q <= 1; q++) { ctx.beginPath(); ctx.arc(this.hx + q * 9 + shake, sy + 2, 2.4, 0, TAU); ctx.fill(); }
+    ctx.restore();
+    if (this.refillT > 1.2) SA.stream(ctx, this.hx, sy + 6, gy - k * 40, t, 0.8);
+    // the heap: two bands (top layer pale) so its size reads; while scuffed, the top layer slides downhill
+    SA.heap(ctx, this.hx, gy, 18 + 44 * Math.sqrt(k), 8 + 46 * k);
+    if (this.scuff && this.target) {
+      const tx = this.target.cx, ty = this.target.y + 4, n = 10;
+      for (let q = 0; q < n; q++) { const u = (t * 1.6 + q / n) % 1, x = lerp(this.hx, tx, u), y = lerp(gy - 30 * k, ty, u) - Math.sin(u * Math.PI) * 10; ctx.fillStyle = SA.CRYS; ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.fillRect(x - 3, y - 3, 6, 6); ctx.strokeRect(x - 3, y - 3, 6, 6); }
+      ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 3; ctx.setLineDash([6, 6]); ctx.lineDashOffset = -t * 40; ctx.beginPath(); ctx.moveTo(this.hx + 10, gy - 34 * k); ctx.quadraticCurveTo((this.hx + tx) / 2, gy - 40, tx, ty); ctx.stroke(); ctx.restore();
+    }
+    this.drawMark(ctx);
+  }
+}
+
+/* ======================= 34-2: basins, spoons and corks ======================= */
+// the basin: columns x0..x1, its surface row sy (the row the cork's top rides at), its floor row by; need doses
+// to float the cork; lip: the last basin's (a dose past need lifts the cork away); the cork's deck tiles are ghosts
+class SaltBasin extends Ent {
+  constructor(g, s) {
+    super(g, s, TS, TS); Object.assign(this, { id: s.id, x0: s.x0, x1: s.x1, sy: s.sy, by: s.by, need: s.need || 2, lip: !!s.lip, auto: s.auto || 0 });
+    this.x = s.x0 * TS; this.y = s.sy * TS; this.w = (s.x1 - s.x0 + 1) * TS; this.h = (s.by - s.sy + 1) * TS; this.back = true; this.friendly = true;
+    this.dose = 0; this.cork = null; this.goneT = 0;
+  }
+  // a dose of salt from the spoon
+  addDose() {
+    if (this.goneT > 0) return;
+    this.dose++; this.g.burst(this.x + 2 * TS, this.y + 8, 10, '#ffffff', 'dust'); TourKit.sfx('plop', 'bump', { vol: 0.5, pitch: 0.8 });
+    if (this.dose === this.need) say(this.g, this.cx, this.y - TS, 'THE CORK FLOATS!', SA.GOLD);
+    else if (this.dose < this.need) say(this.g, this.cx, this.y - TS, 'THICKER... ' + this.dose + ' / ' + this.need, '#ffffff');
+    if (this.lip && this.dose > this.need && this.cork && !this.cork.riding()) { this.cork.drift = 1; say(this.g, this.cx, this.y - TS, 'TOO SALTY! IT FLOATS OFF', '#ff9a8a'); this.goneT = 3.5; }
+  }
+  update(dt) {
+    this.t += dt;
+    if (!this.cork) { this.cork = new SaltCork(this.g, this); this.g.spawn(this.cork); }
+    if (this.goneT > 0) { this.goneT -= dt; if (this.goneT <= 0) { this.dose = 0; this.cork.reset(); } }
+  }
+  level() { return Math.min(1, this.dose / this.need); }
+  touchPlayer() {}
+  draw(ctx) {
+    const x0 = this.x, w = this.w, top = this.y + 10, bot = (this.by + 1) * TS, k = this.level();
+    ctx.save();
+    // brine: darker and greener when thin, deep cobalt when thick
+    ctx.fillStyle = k >= 1 ? 'rgba(40,90,210,0.78)' : `rgba(${80 - 40 * k},${150 - 60 * k},${220 - 10 * k},0.66)`; ctx.fillRect(x0, top, w, bot - top);
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 2; ctx.beginPath(); for (let x = x0; x <= x0 + w; x += 8) ctx.lineTo(x, top + Math.sin(x * 0.08 + this.t * 3) * 2); ctx.stroke();
+    // the density gauge on the near wall: bands, the filled ones white, the float band gold
+    const gx = x0 - 22, gh = 2.2 * TS, gy0 = top + 6;
+    ctx.save(); ctx.fillStyle = 'rgba(10,20,50,0.75)'; rr(ctx, gx - 4, gy0 - 4, 22, gh + 8, 6); ctx.fill(); ctx.restore();
+    if (this.cork) this.cork.drawBody(ctx);
+    for (let q = 0; q < this.need + (this.lip ? 1 : 0); q++) { const bh = gh / (this.need + (this.lip ? 1 : 0)), yy = gy0 + gh - (q + 1) * bh; ctx.fillStyle = q < this.dose ? (q === this.need - 1 ? SA.GOLD : '#ffffff') : (q >= this.need ? 'rgba(255,120,110,0.5)' : 'rgba(255,255,255,0.18)'); ctx.fillRect(gx, yy + 1, 14, bh - 2); }
+    ctx.restore();
+  }
+}
+// the cork: a platform; in its cradle at the bottom until the brine is thick enough, then it rises to ride at the
+// surface; with Brady on it, it drifts across to the far side (and back when he steps off)
+class SaltCork extends Ent {
+  constructor(g, basin) { super(g, null, 3 * TS, 26); this.B = basin; this.solidTop = true; this.isPlatform = true; this.dx = 0; this.dy = 0; this.friendly = true; this.reset(); }
+  reset() { const B = this.B; this.drift = 0; this.x = B.x0 * TS + 4; this.home = this.x; this.far = (B.x1 - 2) * TS - 4; this.ry = (B.by + 1) * TS - this.h; this.y = 1e5; this.remove = false; this.dead = false; }
+  afloat() { return this.B.dose >= this.B.need && !(this.drift > 2.5); }
+  riding() { const p = this.g.player; return !!(p && p.ride === this && p.onGround); }
+  update(dt) {
+    this.t += dt; const B = this.B, px = this.x, py = this.y;
+    const surf = B.sy * TS, floor = (B.by + 1) * TS - this.h;
+    let ty = B.dose >= B.need ? surf : lerp(floor, floor - 0.6 * TS, B.dose / B.need);
+    if (this.drift > 0) { this.drift += dt; ty = surf - this.drift * 2.6 * TS; this.x += dt * 1.2 * TS; }
+    this.ry = approach(this.ry, ty, dt * (this.ry > ty ? 5 : 2.2) * TS) + (B.dose >= B.need && !this.drift ? Math.sin(this.t * 2.4) * 0.15 : 0);
+    if (B.dose >= B.need && !this.drift) { const goal = this.riding() ? this.far : this.home; this.x = approach(this.x, goal, dt * 2.6 * TS); }
+    // sunk in its cradle it is no floor (the brine is deep): only a floating cork holds Brady
+    this.y = this.afloat() ? this.ry : 1e5;
+    this.dx = this.x - px; this.dy = py > 1e4 || this.y > 1e4 ? 0 : this.y - py;
+  }
+  touchPlayer() {}
+  // the basin draws it (sunk, its hitbox is far below and the engine would not draw it)
+  draw() {}
+  drawBody(ctx) {
+    const B = this.B, cx = this.cx, by = this.ry + this.h, k = B.level();
+    if (this.drift > 3.4) return;
+    // the cradle (until it floats)
+    if (B.dose < B.need) { ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = SA.CHAR; ctx.fillRect(this.home - 6, (B.by + 1) * TS - 8, this.w + 12, 8); ctx.strokeRect(this.home - 6, (B.by + 1) * TS - 8, this.w + 12, 8); ctx.restore(); }
+    SA.cork(ctx, cx, by, this.w, this.h + 8);
+    // its weight (a little iron) and its float line: a white dashed line across it that climbs as the brine thickens
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = SA.CHAR; ctx.fillRect(cx - 8, by - 2, 16, 8); ctx.strokeRect(cx - 8, by - 2, 16, 8);
+    const fl = by - (this.h + 8) * (0.15 + 0.6 * k); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5; ctx.setLineDash([6, 4]); ctx.beginPath(); ctx.moveTo(this.x - 4, fl); ctx.lineTo(this.x + this.w + 4, fl); ctx.stroke(); ctx.restore();
+    if (B.dose >= B.need && !this.drift && !this.riding()) SA.ring(ctx, cx, this.ry + 2, this.t, false, 26);
+  }
+}
+// the spoon: a long salt spoon on a pivot by the basin; land on its handle end and it tips a dose in. auto: the last
+// spoon sits under a shaker and tips by itself `auto` seconds after a dose (it fills, then nods: the tell)
+class SaltSpoon extends Ent {
+  constructor(g, s) { super(g, s, 2 * TS, 14); this.x = s.x - TS / 2; this.y = s.y - 14; this.basin = s.basin; this.auto = s.auto || 0; this.solidTop = true; this.isPlatform = true; this.dx = 0; this.dy = 0; this.tip = 0; this.cool = 0; this.autoT = -1; this.friendly = true; }
+  basinE() { return byId(this.g, SaltBasin, this.basin); }
+  update(dt) {
+    this.t += dt; if (this.cool > 0) this.cool -= dt; this.tip = approach(this.tip, 0, dt * 2.5);
+    const p = this.g.player, B = this.basinE(); if (!B) return;
+    const on = !!(p && !p.dead && p.ride === this);
+    if (on && !this.rideWas && this.cool <= 0) this.fire(B);
+    this.rideWas = on;
+    if (this.autoT >= 0 && B.dose >= 1) { this.autoT += dt; if (this.autoT >= this.auto) { this.autoT = -1; this.fire(B, true); } }
+  }
+  fire(B, auto) { this.tip = 1; this.cool = 0.7; B.addDose(); if (this.auto && !auto && B.dose === B.need) this.autoT = 0; if (auto) this.autoT = -1; }
+  touchPlayer() {}
+  draw(ctx) {
+    const x = this.x, y = this.y + this.h, k = this.tip, B = this.basinE();
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    // the pivot block
+    ctx.fillStyle = SA.CRYS_D; ctx.fillRect(x + this.w / 2 - 8, y - 2, 16, 10); ctx.strokeRect(x + this.w / 2 - 8, y - 2, 16, 10);
+    // the spoon: handle under Brady, bowl hanging out over the basin (it nods down into it when it tips)
+    ctx.save(); ctx.translate(x + this.w / 2, y - 4); ctx.rotate(k * 0.5);
+    ctx.fillStyle = '#d8dce8'; rr(ctx, -this.w / 2, -6, this.w, 8, 3); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(this.w / 2 + 14, -2, 15, 9, 0, 0, TAU); ctx.fill(); ctx.stroke();
+    // its load of salt (the auto spoon fills under its shaker before it nods)
+    const full = this.auto ? (this.autoT >= 0 ? Math.min(1, this.autoT / this.auto) : (B && B.dose === 0 ? 1 : 0.2)) : 1;
+    if (k < 0.3 && full > 0.05) { ctx.fillStyle = SA.CRYS; ctx.beginPath(); ctx.ellipse(this.w / 2 + 14, -6, 12 * full + 2, 5 * full + 1, 0, Math.PI, TAU); ctx.fill(); ctx.stroke(); }
+    ctx.restore();
+    if (this.auto) {
+      const sx = x + this.w / 2 + 14 + this.w / 2, sy = y - 3.8 * TS, shaking = this.autoT >= 0 && this.autoT > this.auto - 1.0;
+      ctx.fillStyle = SA.COBALT; ctx.fillRect(sx - 14 + (shaking ? Math.sin(this.t * 40) * 3 : 0), sy - 26, 28, 22); ctx.strokeRect(sx - 14, sy - 26, 28, 22);
+      ctx.fillStyle = SA.CHAR; ctx.beginPath(); ctx.ellipse(sx, sy - 2, 18, 7, 0, 0, TAU); ctx.fill(); ctx.stroke();
+      if (this.autoT >= 0) { SA.stream(ctx, sx, sy + 4, y - 14, this.t, 0.5); SA.pill(ctx, sx, sy - 40, 'REFILLING: ' + Math.max(0, this.auto - this.autoT).toFixed(1) + 's', '#ffd84a'); }
+    }
+    ctx.restore();
+    if (!this.told && this.g.player && Math.abs(this.g.player.cx - this.cx) < 4 * TS) { this.told = true; }
+  }
+}
+
+/* ======================= 34-3: crystals that grow ======================= */
+// a crystal: its stem cells (solid from the start) and its plan: the cells that grow, in order, one per hold; brine:
+// { y0, y1, x0, x1, speed } the trough that rises once growth starts (reaching row y1 dissolves the grown cubes)
+class SaltCrystal extends SaltMark {
+  constructor(g, s) {
+    super(g, s, TS, TS); this.id = s.id; this.stem = s.stem; this.plan = s.plan; this.n = 0; this.k = 0; this.hold = 0; this.brine = s.brine || null; this.lvl = 0; this.cue = 'HOLD THROW';
+    hideTiles(g, this.plan);
+  }
+  live() { return this.n < this.plan.length; }
+  // Brady stands on any cube of this crystal (stem or grown)
+  saltTouch(p) {
+    if (!this.live() || !p || p.dead || !p.onGround) return false;
+    const fy = p.groundTy, cells = this.stem.concat(this.plan.slice(0, this.n));
+    return cells.some(([x, y]) => y === fy && Math.abs(p.cx - (x * TS + TS / 2)) < TS * 0.9);
+  }
+  saltInput(p, inp) { this.held = !!inp.action; this.heldT = this.g.t; }
+  update(dt) {
+    this.t += dt; const g = this.g;
+    if (this.k > 0) this.k = Math.max(0, this.k - dt * 3);
+    if (this.live() && this.holding()) {
+      this.hold += dt;
+      if (this.hold >= 0.45) { const c = this.plan[this.n++]; showTiles(g, [c], T.HARD); liftOut(g, [c]); this.hold = 0; this.k = 1; g.burst((c[0] + 0.5) * TS, (c[1] + 0.5) * TS, 10, '#ffffff', 'spark'); TourKit.sfx('grow', 'select', { vol: 0.5, pitch: 1 + this.n * 0.12 }); if (this.brine && this.n === 1) say(g, this.cx, this.y - 2 * TS, 'THE BRINE IS RISING!', '#ff9a8a'); }
+    } else this.hold = 0;
+    // the brine rising in the trough under the last crystal: once it touches the stem's foot, the new cubes dissolve
+    const B = this.brine;
+    if (B) {
+      if (this.n > 0 && this.n < this.plan.length) this.lvl = Math.min(1, this.lvl + dt / B.time);
+      else if (this.n === 0 || this.n >= this.plan.length) this.lvl = Math.max(0, this.lvl - dt / 2);
+      if (this.lvl >= 1) { hideTiles(g, this.plan.slice(0, this.n)); this.n = 0; this.lvl = 0.99; say(g, this.cx, this.y - 2 * TS, 'DISSOLVED! IT DRAINS... TRY AGAIN', '#ff9a8a'); this.lvl = 0.98; this.drain = true; }
+      if (this.drain) { this.lvl = Math.max(0, this.lvl - dt / 1.5); if (this.lvl <= 0) this.drain = false; }
+    }
+  }
+  draw(ctx) {
+    const g = this.g, t = this.t;
+    // the brine trough
+    if (this.brine) {
+      const B = this.brine, top = lerp((B.y1 + 1) * TS + 2 * TS, B.y1 * TS + TS, this.lvl);
+      ctx.save(); ctx.fillStyle = 'rgba(58,120,216,0.7)'; ctx.fillRect(B.x0 * TS, top, (B.x1 - B.x0 + 1) * TS, (B.y1 + 4) * TS - top);
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.beginPath(); for (let x = B.x0 * TS; x <= (B.x1 + 1) * TS; x += 8) ctx.lineTo(x, top + Math.sin(x * 0.07 + t * 4) * 2); ctx.stroke();
+      // the stem's danger line (where the brine touches it)
+      ctx.setLineDash([6, 5]); ctx.strokeStyle = '#ff9a8a'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(B.x0 * TS, B.y1 * TS + TS); ctx.lineTo((B.x1 + 1) * TS, B.y1 * TS + TS); ctx.stroke(); ctx.restore();
+    }
+    // the grown cubes (drawn over the hard tiles), the stem, and the dashed preview of the next one
+    for (const [x, y] of this.stem) SA.cube(ctx, x * TS, (y + 1) * TS, TS);
+    for (let q = 0; q < this.n; q++) { const [x, y] = this.plan[q], s = q === this.n - 1 && this.k > 0 ? TS * (1 - this.k * 0.4) : TS; SA.cube(ctx, x * TS + (TS - s) / 2, (y + 1) * TS - (TS - s) / 2, s); }
+    if (this.live()) {
+      const [x, y] = this.plan[this.n], p = g.player, hot = p && this.saltTouch(p), k = 0.5 + 0.5 * Math.sin(t * 5);
+      ctx.save(); ctx.globalAlpha = hot ? 0.75 + 0.25 * k : 0.45; SA.cube(ctx, x * TS, (y + 1) * TS, TS, 1, true);
+      if (this.hold > 0) { ctx.fillStyle = 'rgba(255,255,255,0.6)'; const s = TS * this.hold / 0.45; ctx.fillRect(x * TS + (TS - s) / 2, y * TS + (TS - s) / 2, s, s); }
+      ctx.restore();
+      if (hot && !this.holding()) SA.cue(ctx, p.cx, p.y - 0.6 * TS, t, this.cue);
+    }
+  }
+}
+
+/* ======================= 34-4: the shaker cap ======================= */
+// the cap: holes at columns `holes` on floor row fy (Brady walks on the cap's disc, row fy); a bowl under each
+// hole; the gold bowl (index `gold`) needs `need` of one pour (1 = all of it); a cellar gate (a lock) opens when it
+// gets it. The cap shakes (1.0 s tell) every `per` seconds, then pours for 1.2 s.
+class SaltCap extends Ent {
+  constructor(g, s) { super(g, s, TS, TS); Object.assign(this, { id: s.id, holes: s.holes, fy: s.fy, bowlY: s.bowlY, gold: s.gold, need: s.need, per: s.per || 4.2, lock: s.lock, narrow: !!s.narrow, span: s.span || null }); this.cyc = 1.0; this.got = s.holes.map(() => 0); this.done = false; this.back = true; this.friendly = true; this.x = (s.holes[0] - 3) * TS; this.w = (s.holes[s.holes.length - 1] - s.holes[0] + 7) * TS; this.y = (s.fy - 2) * TS; this.h = 7 * TS; }
+  plugged(k) { const p = this.g.player; if (!p || p.dead || !p.onGround || p.groundTy !== this.fy + 1) return false; return Math.abs(p.cx - (this.holes[k] + 0.5) * TS) < TS * 0.85; }
+  update(dt) {
+    this.t += dt; if (this.done) return;
+    const g = this.g, p = g.player; if (!p || Math.abs(p.cx - this.cx) > 14 * TS) return;
+    this.cyc += dt;
+    const shake = this.cyc >= this.per - 1.0 && this.cyc < this.per, pour = this.cyc >= this.per && this.cyc < this.per + 1.2;
+    if (shake && !this.toldS) { this.toldS = true; TourKit.sfx('rattle', 'select', { vol: 0.3, pitch: 0.5 }); }
+    if (pour) {
+      if (!this.open) { this.open = this.holes.map((_, k) => !this.plugged(k)); this.got = this.holes.map(() => 0); }
+      const n = this.open.filter(Boolean).length;
+      // the plug can't change mid-pour: the shoe goes down as it starts
+      this.open.forEach((o, k) => { if (o && n) this.got[k] += dt / 1.2 / n; });
+    }
+    if (this.cyc >= this.per + 1.2) {
+      const gk = this.got[this.gold] || 0;
+      if (gk >= this.need - 0.06) { this.done = true; SK.keys(g).add(this.lock); say(g, (this.holes[this.gold] + 0.5) * TS, this.bowlY * TS - 2 * TS, 'THE GOLD BOWL SINKS! THE GATE LIFTS', SA.GOLD); TourKit.sfx('clunk', 'secret', { vol: 0.5 }); }
+      else if (this.open) say(g, (this.holes[this.gold] + 0.5) * TS, this.bowlY * TS - 2 * TS, gk > 0 ? 'NOT ENOUGH IN THE GOLD BOWL' : 'NONE IN THE GOLD BOWL', '#ffffff');
+      this.cyc = 0; this.open = null; this.toldS = false; if (!this.done) this.got = this.holes.map(() => 0);
+    }
+  }
+  touchPlayer() {}
+  draw(ctx) {
+    // the cap's charcoal disc over the chamber (drawn over its tiles), its rim
+    if (this.span) { const x0 = this.span[0] * TS, x1 = (this.span[1] + 1) * TS, y0 = (this.fy + 1) * TS; ctx.save(); ctx.fillStyle = SA.CHAR; ctx.fillRect(x0, y0, x1 - x0, TS); ctx.fillStyle = SA.CHAR_L; ctx.fillRect(x0, y0, x1 - x0, 5); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(x0, y0, x1 - x0, TS); ctx.fillStyle = 'rgba(0,0,0,0.35)'; for (let x = x0 + 12; x < x1; x += 24) { ctx.beginPath(); ctx.arc(x, y0 + 20, 2, 0, TAU); ctx.fill(); } ctx.restore(); }
+    const t = this.t, fyp = (this.fy + 1) * TS, shake = !this.done && this.cyc >= this.per - 1.0 && this.cyc < this.per ? Math.sin(t * 46) * 2.5 : 0, pour = !this.done && this.cyc >= this.per && this.cyc < this.per + 1.2;
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    // the holes in the disc: charcoal pinholes; the plugged ones under Brady's shoe; a pour drops from each open one
+    this.holes.forEach((hx, k) => {
+      const x = (hx + 0.5) * TS + shake, plug = this.plugged(k);
+      ctx.fillStyle = '#05050a'; ctx.beginPath(); ctx.ellipse(x, fyp + 4, 9, 4, 0, 0, TAU); ctx.fill();
+      ctx.strokeStyle = plug ? SA.GOLD : 'rgba(255,255,255,0.7)'; ctx.lineWidth = plug ? 3 : 1.5; ctx.beginPath(); ctx.ellipse(x, fyp + 4, 12, 5.5, 0, 0, TAU); ctx.stroke();
+      if (pour && this.open && this.open[k]) SA.stream(ctx, x, fyp + 10, this.bowlY * TS - 12, t, 0.9);
+      // the bowl under it (the gold one larger, with its fill line)
+      const bx = (hx + 0.5) * TS, by = this.bowlY * TS, gold = k === this.gold, bw = gold && this.narrow ? 11 : gold ? 22 : 18;
+      ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = gold ? SA.GOLD : '#c8ccd8';
+      ctx.beginPath(); ctx.moveTo(bx - bw, by - 16); ctx.lineTo(bx + bw, by - 16); ctx.quadraticCurveTo(bx + bw, by, bx, by); ctx.quadraticCurveTo(bx - bw, by, bx - bw, by - 16); ctx.closePath(); ctx.fill(); ctx.stroke();
+      const f = Math.min(1, this.done && gold ? 1 : this.got[k] || 0); if (f > 0) { ctx.fillStyle = SA.CRYS; ctx.fillRect(bx - bw + 3, by - 4 - f * 10, 2 * bw - 6, f * 10); }
+      if (gold) { ctx.setLineDash([4, 3]); ctx.strokeStyle = INK; ctx.beginPath(); ctx.moveTo(bx - bw + 2, by - 4 - this.need * 10); ctx.lineTo(bx + bw - 2, by - 4 - this.need * 10); ctx.stroke(); ctx.setLineDash([]); }
+    });
+    ctx.restore();
+    if (!this.done) { const gx = (this.holes[this.gold] + 0.5) * TS; SA.pill(ctx, gx, this.bowlY * TS - 46, this.need >= 1 ? 'GOLD BOWL: THE WHOLE POUR' : 'GOLD BOWL: HALF A POUR', SA.GOLD); }
+    if (!this.done && this.cyc >= this.per - 1.0 && this.cyc < this.per) SA.pill(ctx, this.cx, this.y - 6, 'THE CAP SHAKES...', '#ffffff');
+  }
+}
+// the cellar gate: a cobalt glass slab (a lock) that slides up when its cap's gold bowl sinks
+// (its own key set, Tour.saltKit.keys(g): the land's opened locks stay off the HUD's key row)
+class SaltCellarGate extends Ent {
+  constructor(g, s) { const h = s.h || 4; super(g, s, TS, h * TS); this.x = s.x - TS / 2; this.y = s.y - this.h; this.id = s.id; this.open = false; this.openT = 0; this.back = true; this.friendly = true; const tx = Math.floor(s.x / TS), ty1 = Math.floor((s.y - 1) / TS); this.tiles = []; for (let k = 0; k < h; k++) this.tiles.push([tx, ty1 - k]); }
+  update(dt) { this.t += dt; if (this.open) this.openT += dt; else if (SK.keys(this.g).has(this.id)) { this.open = true; for (const [x, y] of this.tiles) this.g.setTile(x, y, T.EMPTY); Sound.play('door', { vol: 0.6 }); } }
+  touchPlayer() {}
+  draw(ctx) {
+    const k = this.open ? clamp((this.openT || 0) / 0.6, 0, 1) : 0, x = this.x, y = this.y - k * this.h, h = this.h;
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.globalAlpha = 1 - k * 0.6;
+    ctx.fillStyle = SA.COBALT; ctx.fillRect(x + 2, y, TS - 4, h); ctx.strokeRect(x + 2, y, TS - 4, h);
+    ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(x + 6, y + 6, 5, h - 12);
+    ctx.fillStyle = SA.GOLD; ctx.beginPath(); ctx.arc(x + TS / 2, y + h / 2, 7, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+}
+
+
+/* ======================= 34-5's lead-in: weighing spoons ======================= */
+// a weighing spoon on the floor (columns x0..x1, Brady on row fy), its dial on a post, a shaker over its bowl and a
+// pot past it with a lid (a lock). Stand on the spoon: the shaker shakes (0.8 s), then pours; the needle climbs. Step
+// off (both feet) in the gold band: the spoon tips a pinch into the pot and its lid lifts. shoe: Brady's own weight
+// counts on the needle while he stands there (step off at the shoe mark). A miss: the spoon empties, try again
+class SaltWeigh extends Ent {
+  constructor(g, s) { super(g, s, TS, TS); Object.assign(this, { id: s.id, x0: s.x0, x1: s.x1, fy: s.fy, lock: s.lock, shoe: !!s.shoe }); this.x = s.x0 * TS; this.w = (s.x1 - s.x0 + 1) * TS; this.y = (s.fy - 5) * TS; this.h = 6 * TS; this.S = 0; this.read = 0; this.state = 'wait'; this.st = 0; this.tip = 0; this.done = false; this.back = true; this.friendly = true; }
+  on() { const p = this.g.player; return !!(p && !p.dead && p.onGround && p.groundTy === this.fy + 1 && p.cx > this.x && p.cx < this.x + this.w); }
+  reading() { return this.S + (this.shoe && this.on() ? 0.4 : 0); }
+  update(dt) {
+    this.t += dt; this.tip = Math.max(0, this.tip - dt * 1.5);
+    const g = this.g, on = this.on(); this.read = approach(this.read, this.reading(), dt * 2.5);
+    if (this.done) return;
+    this.st += dt;
+    if (this.state === 'wait') { if (on && this.st > 0.3) { this.state = 'shake'; this.st = 0; } return; }
+    if (this.state === 'shake') { if (!on) { this.state = 'wait'; this.st = 0; return; } if (this.st > 0.8) { this.state = 'pour'; this.st = 0; } return; }
+    if (this.state === 'pour') {
+      if (on && this.st < 4) this.S += 0.4 * dt;
+      if (!on) { this.judge(); return; }
+      if (this.S > 1.17) { this.S = 0; this.tip = 1; say(g, this.cx, this.y, 'TOO SALTY! STEP OFF SOONER', '#ffffff'); this.state = 'rest'; this.st = 0; }
+      return;
+    }
+    if (this.state === 'rest') { if (this.st > 1.2) { this.state = 'wait'; this.st = 0; } }
+  }
+  judge() {
+    const g = this.g, S = this.S; this.S = 0; this.tip = 1; this.st = 0;
+    if (S >= 0.85 && S <= 1.15) { this.done = true; SK.keys(g).add(this.lock); say(g, this.cx, this.y, 'A PINCH! THE LID LIFTS', SA.GOLD); TourKit.sfx('ding', 'secret', { vol: 0.5 }); this.state = 'done'; return; }
+    say(g, this.cx, this.y, S < 0.05 ? 'STAY ON TILL IT POURS' : 'BLAND! STAY ON LONGER', '#ffffff'); this.state = 'rest';
+  }
+  touchPlayer() {}
+  draw(ctx) {
+    const fyp = (this.fy + 1) * TS, on = this.on(), x0 = this.x, x1 = this.x + this.w, t = this.t;
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2.2;
+    // the spoon: level with Brady on it, tipped toward the pot when he's off
+    ctx.save(); ctx.translate((x0 + x1) / 2, fyp - 5); ctx.rotate(on ? 0 : -0.06 - this.tip * 0.25);
+    ctx.fillStyle = '#d8dce8'; rr(ctx, -this.w / 2, -4, this.w - 30, 8, 4); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.ellipse(this.w / 2 - 20, -2, 22, 9, 0, 0, TAU); ctx.fill(); ctx.stroke();
+    if (this.S > 0.02) { ctx.fillStyle = SA.CRYS; ctx.beginPath(); ctx.ellipse(this.w / 2 - 20, -7, Math.min(1.2, this.S) * 18, 4 + this.S * 4, 0, Math.PI, TAU); ctx.fill(); ctx.stroke(); }
+    ctx.restore();
+    // the shaker over the bowl
+    const sx = x1 - 20, sy = fyp - 4 * TS, sh = this.state === 'shake' ? Math.sin(t * 40) * 3 : 0;
+    ctx.fillStyle = SA.COBALT; ctx.fillRect(sx - 14 + sh, sy - 26, 28, 22); ctx.strokeRect(sx - 14 + sh, sy - 26, 28, 22); ctx.fillStyle = SA.CHAR; ctx.beginPath(); ctx.ellipse(sx + sh, sy - 3, 17, 6, 0, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.restore();
+    if (this.state === 'pour' && on && this.st < 4) SA.stream(ctx, sx, sy + 3, fyp - 12, t, 0.55);
+    // the dial on its post at the spoon's handle end
+    const dx = x0 + 20, dy = fyp - 3.3 * TS, R = 30, ang = v => Math.PI + clamp(v / 1.6, 0, 1) * Math.PI;
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2.2; ctx.fillStyle = SA.CHAR; ctx.fillRect(dx - 3, dy, 6, fyp - dy - 8);
+    ctx.fillStyle = '#f6f2e8'; ctx.beginPath(); ctx.arc(dx, dy, R, Math.PI, TAU); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.lineWidth = 9; ctx.strokeStyle = SA.GOLD; ctx.beginPath(); ctx.arc(dx, dy, R - 7, ang(0.85), ang(1.15)); ctx.stroke();
+    if (this.shoe) { const a = ang(1.4); ctx.fillStyle = '#c84a3a'; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; rr(ctx, dx + Math.cos(a) * (R - 7) - 6, dy + Math.sin(a) * (R - 7) - 4, 12, 8, 3); ctx.fill(); ctx.stroke(); }
+    const a = ang(this.read); ctx.lineWidth = 4; ctx.strokeStyle = '#c8323a'; ctx.beginPath(); ctx.moveTo(dx, dy); ctx.lineTo(dx + Math.cos(a) * (R - 4), dy + Math.sin(a) * (R - 4)); ctx.stroke();
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(dx, dy, 4, 0, TAU); ctx.fill(); ctx.restore();
+    if (!this.done && !on) SA.ring(ctx, (x0 + x1) / 2, fyp, t, false, this.w / 2);
+  }
+}
+ENTITY_TYPES.saltWeigh = SaltWeigh;
+Tour.pieces['salt.weigh'] = function (st, o) { const B = st.B, x = st.x, fy = st.gy - 1, w = o.w || 4; B.spawn('saltWeigh', x, fy, { id: o.id, x0: x, x1: x + w - 1, fy, lock: o.lock, shoe: !!o.shoe }); if (o.lock) B.vkey(o.lock, [[x + 1, fy]], 'any'); return st.x; };
+
+/* ---------------- the land's tell by every secret: one cobalt grain ---------------- */
+class SaltGrainTell extends Ent {
+  constructor(g, s) { super(g, s, 10, 10); this.back = true; this.friendly = true; this.dy = s.dy || 0; }
+  touchPlayer() {}
+  draw(ctx) { SA.grain(ctx, this.cx, this.y + this.h - 4 + this.dy, this.t); }
+}
+
+Object.assign(ENTITY_TYPES, { saltNotch: SaltNotch, saltHeap: SaltHeap, saltBasin: SaltBasin, saltSpoon: SaltSpoon, saltCrystal: SaltCrystal, saltCap: SaltCap, saltCellarGate: SaltCellarGate, saltGrain: SaltGrainTell });
+Object.assign(Tour.saltKit, { SaltWeigh });
+
+/* ---------------- the pieces (the letter's cell: st.x, st.gy - 1) ---------------- */
+Object.assign(Tour.pieces, {
+  // a notch: the letter is its left column on the tread's top row; { w, id } (the stamp leaves the pit open)
+  'salt.notch'(st, o) { const B = st.B, x0 = st.x, gy = st.gy - 1, w = o.w || 5; for (let q = 0; q < w; q++) B.set(x0 + q, gy, T.GROUND); B.spawn('saltNotch', x0, gy, { id: o.id, x0, x1: x0 + w - 1, gy }); return st.x; },
+  // a heap: the letter is its mark (Brady stands there); { notches: [ids], cap }
+  'salt.heap'(st, o) { st.B.spawn('saltHeap', st.x, st.gy - 1, { notches: o.notches, cap: o.cap }); return st.x; },
+  // a basin: the letter is its top-left water cell; { w, d (rows of brine), need, lip, id }; the cork's deck: ghosts
+  'salt.basin'(st, o) {
+    const B = st.B, x0 = st.x, sy = st.gy - 1, w = o.w || 8, d = o.d || 4;
+    B.spawn('saltBasin', x0, sy, { id: o.id, x0, x1: x0 + w - 1, sy, by: sy + d - 1, need: o.need || 2, lip: !!o.lip });
+    // the checker: the cork's whole ride is one-way floor across the surface
+    for (let q = 0; q < w; q++) B.ghosts.push([x0 + q, sy]);
+    return st.x;
+  },
+  // a spoon: the letter is its handle (Brady lands there); { basin, auto }
+  'salt.spoon'(st, o) { st.B.spawn('saltSpoon', st.x, st.gy - 1, { basin: o.basin, auto: o.auto || 0 }); return st.x; },
+  // a crystal: the letter is its stem's top cell; { h (stem rows down), plan: [[dx, dy], ...] relative to the letter,
+  // brine: { dx0, dx1, dy } relative (the row under which the brine must stay), time }
+  'salt.crystal'(st, o) {
+    const B = st.B, x = st.x, y = st.gy - 1, stem = [];
+    for (let q = 0; q < (o.w || 1); q++) for (let k = 0; k < (o.h || 1); k++) { B.set(x - q, y + k, T.HARD); stem.push([x - q, y + k]); }
+    const plan = (o.plan || []).map(([dx, dy]) => [x + dx, y + dy]);
+    // the checker: a cube that grows sideways or down is floor from the start; one that grows UP (lifting Brady) is a
+    // one-way step (a column of hard cells would be a wall to it)
+    plan.forEach(([px, py], i) => { const prev = i ? plan[i - 1] : [x, y]; if (py < prev[1]) B.ghosts.push([px, py]); else B.set(px, py, T.HARD); });
+    const brine = o.brine ? { x0: x + o.brine.dx0, x1: x + o.brine.dx1, y1: y + o.brine.dy, time: o.brine.time || 9 } : null;
+    B.spawn('saltCrystal', x, y - 1, { id: o.id, stem, plan, brine });
+    return st.x;
+  },
+  // a cap: the letter is the cap's first hole's column on the disc's top row; { holes: [dx...], gold, need, bowlDy,
+  // lock, narrow, per }; its gate is placed by 'salt.gate'; the checker's key: standing on the plug spot(s)
+  'salt.cap'(st, o) {
+    const B = st.B, x = st.x, fy = st.gy - 1, holes = o.holes.map(d => x + d);
+    B.spawn('saltCap', x, fy, { id: o.id, holes, fy, bowlY: fy + (o.bowlDy || 4), gold: o.gold, need: o.need, lock: o.lock, narrow: !!o.narrow, per: o.per, span: o.span ? [x + o.span[0], x + o.span[1]] : null });
+    const plug = (o.plug || []).map(d => [x + d, fy]); if (plug.length) B.vkey(o.lock, plug, 'any');
+    return st.x;
+  },
+  // the cellar gate: a lock h rows tall whose foot is the letter
+  'salt.gate'(st, o) { const B = st.B, x = st.x, y = st.gy - 1, n = B.spawns.length; B.lock(x, y - (o.h || 4) + 1, y, o.id, 'door'); for (let k = n; k < B.spawns.length; k++) if (B.spawns[k].type === 'lock') { B.spawns[k].type = 'saltCellarGate'; B.spawns[k].h = o.h || 4; } return st.x; },
+  // the cobalt grain (the land's tell by every secret)
+  'salt.grain'(st, o) { st.B.spawn('saltGrain', st.x, st.gy - 1, { dy: o.dy || 0 }); return st.x; }
+});
+
+Object.assign(TourLandscape.ARCH_LABEL, { repose: 'HEAPS', brinefloat: 'CORKS', cubegrow: 'CRYSTALS', shakercap: 'THE CAP' });
+Object.assign(Tour.saltKit, { SaltMark, SaltNotch, SaltHeap, SaltBasin, SaltCork, SaltSpoon, SaltCrystal, SaltCap, hideTiles, showTiles, liftOut, byId });
+})();
+
+/* ---- 29_tour_y_salt_c_boss.js ---- */
+/* ============================================================
+   THE TABLE SALT SEA: 34-5 SEASON TO TASTE, and A PINCH, the cork who considers himself a chef.
+   The lead-in (the kitchen's long counter): weighing spoons (29_tour_y_salt_a_mech.js, salt.weigh). The boss: a tangerine cork
+   in a chef's hat and apron behind his soup pot at the right of his kitchen. In the middle of the floor lies the great
+   weighing spoon; on the wall at the left, its dial: a big needle, a gold PINCH band and (phase 3) a little shoe mark
+   one weight above it. He is cork: stomping just bounces. Every hit is a correct measure in his soup, by the land's
+   own trick: Brady's weight holds the spoon level while A Pinch pours into its bowl; when Brady steps off (both feet
+   off it), the spoon tips whatever is in it into the soup. In the gold band: "PERFECT!" (a hit). Short: "BLAND!";
+   over it while he stands there: "TOO SALTY!" (no harm done either way, the next measure comes).
+     1 ONE FINGER    he holds up one finger (1.0 s), then a steady dusting: stand on the spoon and step off when the
+                     needle reaches the gold band. Between measures he seasons the floor: three big crystals' shadows
+                     (1.0 s) where they will land, round Brady: step out of them.
+     2 TWO FINGERS   two fingers (1.0 s), then a pair of pours: the first is coarse rock salt. Be OFF the spoon for it:
+                     the lumps bounce off the tipped spoon and roll away both ways along the floor (jump them). Jump
+                     back on for the second, a dusting, and step off at the band.
+     3 THE RUB       he rubs finger and thumb (1.0 s), then three tiny trickles; now Brady's own weight counts on the
+                     needle: it reads one shoe heavy while he stands there. After the third trickle the needle sits on
+                     the shoe mark: step off and it falls back into the band. Off after the second: BLAND.
+   Two good measures a phase. At the end he tastes the soup, takes off his hat and gives the shaker the afternoon off.
+   ============================================================ */
+(function () {
+const SK = Tour.saltKit, INK = SK.INK, SA = SK.SaltArt;
+const say = (g, b, text, col) => SK.say(g, g.camX + Game.viewW / 2, -1e4, text, col || '#ffffff', 'boss');
+// the arena (relative columns, arenaW 24): the spoon from SP0 to SP1 (its bowl the last three), the pot, his stool
+const SP0 = 8, SP1 = 14, POT = 16, STOOL = 19;
+const BAND = [0.85, 1.15], SHOE = 0.4;
+
+Tour.pieces['salt.arena_kitchen'] = function (st, o) {
+  const B = st.B, { x0, w, GY } = o;
+};
+
+const brain = {
+  phases: [4, 2],
+  guardText: 'MIND THE HAT!',
+  wake(b) {
+    b.phase = 1; const x0 = b.arenaX0;
+    b.sp0 = x0 + SP0 * TS; b.sp1 = x0 + (SP1 + 1) * TS; b.potX = x0 + (POT + 1) * TS; b.homeX = x0 + (STOOL + 1.5) * TS;
+    b.S = 0; b.read = 0; b.tip = 0; b.crystals = []; b.lumps = []; b.good = 0; b.needs = 0;
+    say(b.g, b, 'A PINCH, CHEF. STAND ON THE SPOON, PLEASE.', '#ffffff');
+    b.go('idle');
+  },
+  phase(b, n) {
+    const g = b.g; b.go('idle'); b.at = -0.8;
+    if (n === 2) { g.bannerText = 'TWO FINGERS'; g.bannerT = 2.0; say(g, b, 'THE FIRST POUR IS COARSE. STAY OFF FOR IT.', '#ffffff'); }
+    if (n === 3) { g.bannerText = 'THE RUB'; g.bannerT = 2.0; say(g, b, 'YOUR WEIGHT COUNTS NOW. STEP OFF AT THE SHOE.', '#ffffff'); }
+  },
+  hurt(b) { b.go('season'); },
+  touch(b, p) { return true; },   // touching the chef never hurts (his crystals and lumps do)
+  hit(b, kind) { if (kind === 'stomp' || kind === 'spin') return 'bounce'; return false; },
+  lastHit(b) { say(b.g, b, 'MMM. PERFECT. THE SHAKER HAS THE AFTERNOON OFF.', SA.GOLD); return false; },
+  // Brady on the spoon: on the floor, his centre over it
+  on(b) { const p = b.g.player; return !!(p && !p.dead && p.onGround && p.cx > b.sp0 && p.cx < b.sp1 && p.y + p.h > b.floorY - 6); },
+  // what the needle reads: the salt in the bowl, and in phase 3 Brady's own weight while he stands there
+  reading(b) { return b.S + ((b.phase || 1) === 3 && this.on(b) ? SHOE : 0); },
+  // the measure is over: tip the spoon into the soup and judge it
+  judge(b) {
+    const g = b.g, S = b.S; b.tip = 1; b.S = 0;
+    if (S >= BAND[0] && S <= BAND[1]) { g.burst(b.potX, b.floorY - 2 * TS, 18, SA.GOLD, 'confetti'); TourKit.sfx('ding', 'secret', { vol: 0.6 }); b.damage(1, { quiet: true }); if (b.state === 'dying' || b.remove) return; say(g, b, pick(['PERFECT! A PINCH EXACTLY.', 'MMM! MAGNIFIQUE.', 'NOW THAT IS SEASONING.']), SA.GOLD); if (b.act !== 'idle') b.go('season'); return; }
+    say(g, b, S < BAND[0] ? (S < 0.05 ? 'NOTHING IN THE SPOON?' : 'BLAND! NOT ENOUGH.') : 'TOO SALTY! START AGAIN.', '#ffffff'); b.go('season');
+  },
+  update(b, dt) {
+    const g = b.g, p = g.player, ph = b.phase || 1, fy = b.floorY;
+    b.guard = 'bounce';
+    if (!b.crystals) this.wake(b);
+    b.x = b.homeX - b.w / 2; b.y = fy - TS - b.h + Math.sin(b.t * 3) * 1.5;
+    b.tip = Math.max(0, b.tip - dt * 1.5);
+    const on = this.on(b);
+    b.read = approach(b.read, this.reading(b), dt * 2.5);
+    this.hazards(b, dt);
+    if (b.act !== 'pour') b.flowing = false;
+    if (b.act === 'walk') b.go('idle');
+    if (b.act === 'idle') { b.S = 0; if (b.at > 1.4) b.go('tell'); return; }
+    if (b.act === 'tell') {
+      if (b.first) { say(g, b, ph === 1 ? 'ONE FINGER: A DUSTING.' : ph === 2 ? 'TWO FINGERS: COARSE, THEN FINE.' : 'A RUB: THREE TINY TRICKLES.', '#ffffff'); TourKit.sfx('ahem', 'select', { vol: 0.4, pitch: 0.7 }); }
+      if (b.at >= 1.0) { b.S = 0; b.pourK = 0; b.go(ph === 2 ? 'coarse' : 'pour'); }
+      return;
+    }
+    // phase 2's first pour: coarse rock salt. On a level spoon (Brady on it) it lands in the bowl: far too much.
+    // On the tipped spoon it bounces off and two lumps roll away along the floor, both ways
+    if (b.act === 'coarse') {
+      if (b.first) { b.coarseOn = false; b.coarseDone = false; }
+      if (b.at > 0.5 && !b.coarseDone) { b.coarseDone = true; if (on) { b.S += 1.3; b.coarseOn = true; this.judge(b); return; } else { const cx = (b.sp0 + b.sp1) / 2; b.lumps.push({ x: cx - TS, d: -1, t: 0 }, { x: cx + TS, d: 1, t: 0 }); TourKit.sfx('thud', 'bump', { vol: 0.6, pitch: 0.6 }); } }
+      if (b.at > 1.2) { b.coarseDone = false; b.go('gap'); }
+      return;
+    }
+    if (b.act === 'gap') { if (b.at > 1.4) { b.pourK = 0; b.go('pour'); } return; }
+    if (b.act === 'pour') {
+      // phase 1 and 2: a steady dusting for 3 s; phase 3: three trickles of 0.4 (0.5 s each, 0.6 s apart)
+      let flowing;
+      if (ph === 3) { const c = b.at % 1.1; flowing = b.at < 3.3 && c < 0.5; }
+      else flowing = b.at < 3.2;
+      b.flowing = flowing;
+      if (flowing && on) b.S += (ph === 3 ? 0.7 : 0.4) * dt;
+      // Brady steps off with salt in the bowl: it tips into the soup
+      if (b.wasOn && !on && b.S > 0.05) { this.judge(b); b.wasOn = false; return; }
+      b.wasOn = on;
+      if (on && this.reading(b) - (ph === 3 ? SHOE : 0) > BAND[1] + 0.02) { this.judge(b); return; }
+      // the pour is done and nobody stepped off: in phase 3 he waits a little for Brady (the needle on the shoe mark)
+      if (b.at > (ph === 3 ? 6.5 : 4.4)) { if (b.S > 0.05) this.judge(b); else { say(g, b, 'NOBODY ON THE SPOON? TSK.', '#ffffff'); b.go('season'); } }
+      return;
+    }
+    // between measures: he seasons the floor; three crystals' shadows round Brady (1.0 s), then they drop
+    if (b.act === 'season') {
+      if (b.first) { b.flowing = false; const px = p ? p.cx : b.cx; const xs = [px, px - 3.5 * TS, px + 3.5 * TS].map(x => clamp(x, b.arenaX0 + TS, b.potX - TS)); for (const x of xs) b.crystals.push({ x, t: 0 }); }
+      if (b.at > 2.0) b.go('idle');
+      return;
+    }
+    b.go('idle');
+  },
+  // the falling crystals and the rolling lumps (they hurt; each has its tell)
+  hazards(b, dt) {
+    const g = b.g, p = g.player, fy = b.floorY;
+    for (const c of b.crystals) {
+      c.t += dt;
+      if (c.t >= 1.0 && !c.hit) { c.hit = true; g.burst(c.x, fy - 4, 10, '#ffffff', 'dust'); TourKit.sfx('crunch', 'bump', { vol: 0.5, pitch: 0.9 }); if (p && !p.dead && Math.abs(p.cx - c.x) < 0.85 * TS && p.y + p.h > fy - 2.2 * TS) p.hurt({ x: c.x - 16, w: 32 }); }
+    }
+    b.crystals = b.crystals.filter(c => c.t < 1.5);
+    for (const L of b.lumps) {
+      L.t += dt; L.x += L.d * 3.4 * TS * dt;
+      const box = { x: L.x - 12, y: fy - 22, w: 24, h: 22 };
+      if (p && !p.dead && overlap(p, box)) p.hurt(box);
+    }
+    b.lumps = b.lumps.filter(L => L.x > b.arenaX0 + 10 && L.x < b.potX - 10);
+  },
+  draw(b, ctx, t) {
+    // A Pinch: a tangerine cork in a chef's hat and an apron, a little moustache; he holds a shaker over the bowl
+    const x = b.cx, y = b.y + b.h, ph = b.phase || 1, tell = b.act === 'tell';
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2.2;
+    SA.cork(ctx, x, y, 58, 74);
+    // apron
+    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(x - 20, y - 38); ctx.lineTo(x + 20, y - 38); ctx.lineTo(x + 24, y - 4); ctx.lineTo(x - 24, y - 4); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // the hat
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(x - 22, y - 86, 44, 14); ctx.strokeRect(x - 22, y - 86, 44, 14);
+    for (const dx of [-14, 0, 14]) { ctx.beginPath(); ctx.arc(x + dx, y - 92, 13, 0, TAU); ctx.fill(); ctx.stroke(); }
+    // face: stern brows, a twirled moustache, eyes on Brady
+    const p = b.g.player, look = p ? clamp((p.cx - x) / 200, -1, 1) * 2 : 0;
+    ctx.fillStyle = '#ffffff'; for (const dx of [-10, 10]) { ctx.beginPath(); ctx.arc(x + dx, y - 58, 6, 0, TAU); ctx.fill(); ctx.stroke(); }
+    ctx.fillStyle = INK; for (const dx of [-10, 10]) { ctx.beginPath(); ctx.arc(x + dx + look, y - 58, 2.6, 0, TAU); ctx.fill(); }
+    ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x - 17, y - 68); ctx.lineTo(x - 4, y - 64); ctx.moveTo(x + 17, y - 68); ctx.lineTo(x + 4, y - 64); ctx.stroke();
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(x, y - 47); ctx.quadraticCurveTo(x - 10, y - 51, x - 16, y - 44); ctx.quadraticCurveTo(x - 8, y - 47, x, y - 44); ctx.quadraticCurveTo(x + 8, y - 47, x + 16, y - 44); ctx.quadraticCurveTo(x + 10, y - 51, x, y - 47); ctx.fill();
+    ctx.restore();
+  }
+};
+// the spoon, its dial, the pot, the shadows, the crystals and the lumps, in the world over the floor
+TourHooks.on('afterEntities', (play, ctx) => {
+  const b = play.boss; if (!b || b.style !== 'salt_pinch' || b.remove || !b.crystals) return;
+  const fy = b.floorY, t = play.t, on = brain.on(b), ph = b.phase || 1;
+  ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2.4;
+  // his stool (drawn: Brady can walk past it to the gate)
+  ctx.fillStyle = SA.COBALT_D; ctx.fillRect(b.homeX - 1.4 * TS, fy - TS, 2.8 * TS, TS); ctx.strokeRect(b.homeX - 1.4 * TS, fy - TS, 2.8 * TS, TS);
+  // the pot (steaming) between the spoon and the chef
+  ctx.fillStyle = SA.CHAR; rr(ctx, b.potX - 34, fy - 52, 68, 52, 8); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#e8a050'; ctx.fillRect(b.potX - 28, fy - 50, 56, 8);
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 3; for (let q = -1; q <= 1; q++) { ctx.beginPath(); ctx.moveTo(b.potX + q * 14, fy - 56); ctx.quadraticCurveTo(b.potX + q * 14 + Math.sin(t * 2 + q) * 8, fy - 74, b.potX + q * 14, fy - 92); ctx.stroke(); }
+  // the weighing spoon on the floor: a long silver handle, the bowl at the pot end; level with Brady on it, tipped
+  // (bowl up toward the pot) while he is off; pulsing gold when it wants him
+  const tilt = on ? 0 : 0.08 + b.tip * 0.3, cxs = (b.sp0 + b.sp1) / 2;
+  ctx.save(); ctx.translate(cxs, fy - 6); ctx.rotate(-tilt); ctx.strokeStyle = INK; ctx.lineWidth = 2.4;
+  ctx.fillStyle = '#d8dce8'; rr(ctx, b.sp0 - cxs, -5, b.sp1 - b.sp0 - 2.4 * TS, 9, 4); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(b.sp1 - cxs - 1.4 * TS, -2, 1.5 * TS, 12, 0, 0, TAU); ctx.fill(); ctx.stroke();
+  if (b.S > 0.02) { ctx.fillStyle = SA.CRYS; ctx.beginPath(); ctx.ellipse(b.sp1 - cxs - 1.4 * TS, -8, Math.min(1.3, b.S) * TS, 6 + Math.min(1.3, b.S) * 6, 0, Math.PI, TAU); ctx.fill(); ctx.stroke(); }
+  ctx.restore();
+  const want = (b.act === 'pour' && !on) || (b.act === 'gap');
+  if (want || (b.act === 'tell' && ph !== 2 && !on)) SA.ring(ctx, cxs, fy, t, true, 3 * TS);
+  // the dial on the wall at the left: a big needle over a scale, the gold PINCH band, the shoe mark in phase 3
+  const dx = b.arenaX0 + 4.5 * TS, dy = fy - 4.3 * TS, R = 1.8 * TS, ang = v => Math.PI + clamp(v / 1.6, 0, 1) * Math.PI;
+  ctx.fillStyle = '#f6f2e8'; ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(dx, dy, R, Math.PI, TAU); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.lineWidth = 14; ctx.strokeStyle = SA.GOLD; ctx.beginPath(); ctx.arc(dx, dy, R - 12, ang(BAND[0]), ang(BAND[1])); ctx.stroke();
+  ctx.lineWidth = 2; ctx.strokeStyle = INK; for (let v = 0; v <= 1.6; v += 0.2) { const a = ang(v); ctx.beginPath(); ctx.moveTo(dx + Math.cos(a) * (R - 4), dy + Math.sin(a) * (R - 4)); ctx.lineTo(dx + Math.cos(a) * (R - 20), dy + Math.sin(a) * (R - 20)); ctx.stroke(); }
+  if (ph === 3) { const a = ang(1.05 + SHOE); const sx = dx + Math.cos(a) * (R - 12), sy = dy + Math.sin(a) * (R - 12); ctx.fillStyle = '#c84a3a'; rr(ctx, sx - 9, sy - 5, 18, 10, 4); ctx.fill(); ctx.stroke(); }
+  const a = ang(b.read); ctx.lineWidth = 5; ctx.strokeStyle = '#c8323a'; ctx.beginPath(); ctx.moveTo(dx, dy); ctx.lineTo(dx + Math.cos(a) * (R - 8), dy + Math.sin(a) * (R - 8)); ctx.stroke();
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(dx, dy, 7, 0, TAU); ctx.fill();
+  SA.pill(ctx, dx, dy + 16, ph === 3 ? 'STEP OFF AT THE SHOE' : 'STEP OFF IN THE GOLD', SA.GOLD);
+
+  // his arm: the tell held up big (one finger, two fingers, the rub) or the shaker held out over the spoon's bowl
+  { const x = b.cx, y = b.y + b.h, tell = b.act === 'tell', hx = x - 46, hy = y - 78;
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 6; ctx.lineCap = 'round';
+    if (tell) {
+      ctx.beginPath(); ctx.moveTo(x - 26, y - 40); ctx.lineTo(hx, hy + 18); ctx.stroke(); ctx.lineWidth = 2.4; ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(hx, hy + 14, 13, 0, TAU); ctx.fill(); ctx.stroke();
+      const n = ph === 3 ? 2 : ph;
+      for (let q = 0; q < n; q++) { const fx = hx - 5 + q * 10 + (ph === 3 ? Math.sin(t * 30) * 2.5 * (q ? 1 : -1) : 0); rr(ctx, fx - 4.5, hy - 16 + (ph === 3 && q ? 10 : 0), 9, 28, 4.5); ctx.fill(); ctx.stroke(); }
+      if (ph === 3) for (let q = 0; q < 3; q++) { ctx.fillStyle = SA.CRYS; ctx.fillRect(hx - 3 + Math.sin(t * 9 + q) * 6, hy + 30 + ((t * 40 + q * 9) % 26), 3, 3); }
+      SA.pill(ctx, hx, hy - 34, ph === 1 ? 'ONE FINGER' : ph === 2 ? 'TWO FINGERS' : 'THE RUB', SA.GOLD);
+    } else {
+      const sx = b.sp1 - 1.4 * TS, sy = fy - 4.4 * TS;
+      ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(x - 26, y - 40); ctx.quadraticCurveTo(x - 60, sy - 30, sx + 16, sy - 14); ctx.stroke(); ctx.lineWidth = 2.4;
+      ctx.fillStyle = SA.COBALT; ctx.fillRect(sx - 16, sy - 32, 32, 28); ctx.strokeRect(sx - 16, sy - 32, 32, 28); ctx.fillStyle = SA.CHAR; ctx.beginPath(); ctx.ellipse(sx, sy - 4, 19, 7, 0, 0, TAU); ctx.fill(); ctx.stroke();
+      if (b.flowing) SA.stream(ctx, sx, sy + 2, fy - 14, t, ph === 3 ? 0.3 : 0.7);
+      if (b.act === 'coarse' && b.at < 0.6) for (let q = 0; q < 3; q++) { const u = Math.min(1, b.at / 0.5); SA.cube(ctx, sx - 16 + q * 11, sy + 12 + u * (fy - sy - 22), 13); }
+    }
+    ctx.restore(); }
+  // the crystals' shadows (the tell) and the crystals falling into them
+  for (const c of b.crystals) {
+    if (c.t < 1.0) { const k = c.t; ctx.fillStyle = `rgba(20,20,50,${0.25 + 0.35 * k})`; ctx.beginPath(); ctx.ellipse(c.x, fy - 2, 20 + 6 * k, 6, 0, 0, TAU); ctx.fill(); if (c.t > 0.7) SA.cube(ctx, c.x - 14, lerp(fy - 7 * TS, fy, (c.t - 0.7) / 0.3), 28); }
+    else SA.cube(ctx, c.x - 14, fy, 28, 1 - (c.t - 1.0) / 0.5);
+  }
+  for (const L of b.lumps) { ctx.save(); ctx.translate(L.x, fy - 12); ctx.rotate(L.t * 8 * L.d); SA.cube(ctx, -12, 12, 24); ctx.restore(); }
+  ctx.restore();
+});
+const boss = { id: 'salt_pinch', name: 'A Pinch', hp: 6, dims: [70, 100], floats: true, music: 'tour_salt_boss', country: 'salt', brain };
+Tour.boss(boss);
+if (typeof BOSS_INK_REACH !== 'undefined') BOSS_INK_REACH.salt_pinch = [20, 20, 20, 20];
+Tour.saltKit.pinch = brain;
+})();
+
+/* ---- 29_tour_y_salt_d_rooms.js ---- */
+/* ============================================================
+   THE TABLE SALT SEA: the five secret rooms (CHATGPT_RELAY.md B41-B45, all rhythm games), one per stage, in order.
+   Each a 10-25 second game with a rule that reads in two seconds, played in ONE landscape view on a raised stage in
+   the middle band (clear of the top bar, the stick and the buttons), each its own place with its own floor, walls and
+   arrangement. Every beat has a visible cue: they play with the sound off.
+     saltKettle 34-1 THE STOVE ALCOVE  LONG AND SHORT OF IT: the kettle puffs a row of four, dots and ribbons; then
+                                       the row's slots light one by one: tap THROW for a dot, hold it for a ribbon.
+     saltLamps  34-2 THE LAMP LOFT     HALF-TIME: the lamp flashes; the Grain Wren claps on every flash, the big Cork
+                                       claps on every second one (he lifts his hands the flash before). Clap (THROW)
+                                       with the Cork, four slow claps in a row; never on the wren's.
+     saltMitts  34-3 THE MITT COUNTER  THE OTHER MITT: two oven mitts take turns, the one about to slap lifts first;
+                                       JUMP for the left mitt's print, THROW for the right's. Four prints in a row.
+     saltRattle 34-4 THE POD PANTRY    FINISH THE RATTLE: a salt shaker rattles on two rings and the third ring stays
+                                       empty: THROW on the third. Three turns.
+     saltStand  34-5 THE MUSIC STAND   ACCOMPANIST WANTED: a cork dancer steps unevenly across the music stand, each
+                                       foot lifting before it lands; THROW as each one lands, with the slow stretch at
+                                       the end of her phrase. One whole phrase.
+   A miss costs nothing (a raspberry, the turn starts again). The prize cage opens at the win. Each kind scripts its
+   own win for tools/sbw_rooms_test.js (testWin). The title comes alone first, then the rule on a pill, then the
+   room's counter in one spot under the HUD.
+   ============================================================ */
+(function () {
+if (typeof TourRooms === 'undefined' || !Tour.saltKit) return;
+const SK = Tour.saltKit, INK = SK.INK, SA = SK.SaltArt, RK = TourRoomKit;
+const chime = (k, ok) => Sound.play('select', { vol: 0.5, pitch: ok === false ? 0.45 : Math.pow(2, [0, 4, 7, 12][k % 4] / 12) });
+const tick = k => Sound.play('select', { vol: 0.25, pitch: 1.6 + k * 0.1 });
+const W = 28, R1 = 20;   // the playable part is 21 columns: one landscape view (the rest of the 28 is rock)
+const WIN = 0.2;         // a press counts within 0.2 s of its beat
+// the room's shape: the way in on a raised ledge at the top left (clear of the stick), a stage (top row st) for the
+// game, the cage at cx on the stage (or on a higher tier); L: { st, s0, cx, tier: [x, st2], shelf, mark }
+function stageRoom(keep, A, o, L) {
+  L = Object.assign({ st: 8, s0: 6, cx: 17 }, L || {});
+  const g = RK.room(W), st = L.st;
+  g.west(keep);
+  for (let x = 1; x < 6; x++) for (let y = 1; y <= 10; y++) { const c = g.get(x, y); if (c === '@' || c === 'D') { g.put(x, 5, c); if (c === 'D') { g.doorsAt[x + ',5'] = g.doorsAt[x + ',' + y]; delete g.doorsAt[x + ',' + y]; } g.put(x, y, '.'); } }
+  g.fill(1, 6, 5, 10, '#');
+  g.fill(R1 + 1, 1, W - 2, 10, '#');
+  if (L.shelf) { g.hline(L.s0, R1, st, '-'); for (const x of [L.s0 + 1, Math.floor((L.s0 + R1) / 2), R1 - 1]) g.vline(x, st + 1, 10, 'H'); }
+  else g.fill(L.s0, st, R1, 10, '#');
+  if (L.tier) g.fill(L.tier[0], L.tier[1], R1, st, '#');
+  const items = RK.prize(o, keep), cw = Math.max(3, items.length + 2), cst = L.tier ? L.tier[1] : st;
+  g.cage(A.id, L.cx, cst - 1, items, { w: cw, h: 4 }); g.fill(L.cx + cw + 1, 1, R1, cst - 1, '#');
+  g.data.st = st; g.data.cst = cst;
+  return g;
+}
+function mirror(g, keys) {
+  const Wd = g.W;
+  g.g = g.g.map(r => r.slice().reverse());
+  const flip = M => { const o = {}; for (const k in M) { const [x, y] = k.split(',').map(Number); o[(Wd - 1 - x) + ',' + y] = M[k]; } return o; };
+  g.boxes = flip(g.boxes); g.doorsAt = flip(g.doorsAt);
+  for (const q of g.needs) q.x = Wd * TS - q.x - q.w;
+  for (const k of keys || []) { const v = g.data[k]; if (Array.isArray(v)) g.data[k] = v.map(x => Wd - 1 - x); else if (typeof v === 'number') g.data[k] = Wd - 1 - v; }
+  g.data.mirror = true; return g;
+}
+// the room's counter: one spot just under the top bar, never over the game band; not while the rule is up
+const hud = (play, ctx, str, col) => { if (play.toastT > 0) return; TourRooms.hudText(play, ctx, str, col, 13, 20); };
+const quiet = (play, R) => !(play.bannerT > 0) && !R.ruleWait;
+// the mark on the stage: while Brady stands on it the room kind gets the buttons (input: pressed and held)
+class SaltRoomMark extends Ent {
+  constructor(g, s) { super(g, s, TS, TS); this.x = s.x - TS / 2; this.y = s.y - TS; this.friendly = true; this.back = true; this.saltProp = true; this.tx = Math.round(this.x / TS); this.fy = Math.round(s.y / TS); this.cue = s.cue || 'THROW'; this.eatJump = !!s.eatJump; }
+  room() { const A = this.g.area; return A && A.roomKit ? { A, R: TourRooms.state(this.g, A), K: TourRooms.kinds[A.roomKit.kind] } : null; }
+  saltTouch(p) { const r = this.room(); return !!r && !r.R.won && SK.onMark(p, this.tx, this.fy, 0.9); }
+  saltInput(p, inp, dt) { const r = this.room(); if (r && r.K.input && quiet(this.g, r.R)) r.K.input(this.g, r.A, r.R, r.A.roomKit, this, p, inp, dt); }
+  update(dt) { this.t += dt; }
+  touchPlayer() {}
+  draw(ctx) { const p = this.g.player, r = this.room(); if (r && !r.R.won) SA.ring(ctx, this.cx, this.fy * TS, this.t, p && this.saltTouch(p), 17); if (p && r && !r.R.won && !this.saltTouch(p)) SA.cue(ctx, this.cx, this.fy * TS - 2.4 * TS, this.t, 'STAND HERE'); }
+}
+ENTITY_TYPES.saltRoomMark = SaltRoomMark;
+const P = play => play.player;
+const mk = (g, x, y, o) => g.spawn(x, y, 'saltRoomMark', o || {});
+const markX = play => { const m = play.entities.find(e => e instanceof SaltRoomMark); return m ? m.cx : 0; };
+const onIt = play => { const m = play.entities.find(e => e instanceof SaltRoomMark), p = P(play); return !!(m && p && m.saltTouch(p)); };
+// a press near a beat time (within WIN): the nearest unclaimed beat index, or -1
+const near = (beats, t, used) => { let best = -1, bd = WIN; beats.forEach((b, i) => { if (used[i]) return; const d = Math.abs(t - b); if (d <= bd) { bd = d; best = i; } }); return best; };
+const pill = (ctx, x, y, s, col) => SA.pill(ctx, x, y, s, col || '#ffffff');
+// the testWin helper: step frames, pressing the button(s) at given times of the room's clock (R.t)
+const stepTo = (g, R, frame, until, inp) => { for (let q = 0; q < 2400 && R.t < until && !R.won; q++) frame(g, inp || {}); };
+// testWin's start: Brady stood on the mark, the title and the rule gone by
+const ready = (g, R, frame) => { const m = g.entities.find(e => e instanceof SaltRoomMark), p = g.player; if (m) { p.x = m.cx - p.w / 2; p.y = m.fy * TS - p.h; p.vx = p.vy = 0; } for (let q = 0; q < 120 * 6 && !quiet(g, R); q++) frame(g, {}); for (let q = 0; q < 30; q++) frame(g, {}); };
+
+/* ================= saltKettle: LONG AND SHORT OF IT (the stove alcove) ================= */
+// the kettle on its burner on the stage; the row of four puff slots over the stage; the mark left of the kettle
+const KET = { mark: 9, kettle: 13, beat: 0.9 };
+TourRooms.def('saltKettle', {
+  title: 'LONG AND SHORT OF IT', rule: 'TAP FOR A DOT, HOLD FOR A RIBBON', need: 'MATCH THE KETTLE FIRST!',
+  make(o, keep, ctx, A, rng) {
+    const g = stageRoom(keep, A, o, { st: 8, cx: 17 });
+    mk(g, KET.mark, 7, {}); g.winSpot(A.id, KET.mark, 7); g.coins(14, 16, 5);
+    return g;
+  },
+  enter(play, A, R) { if (!R.won) this.turn(R); },
+  turn(R) { const pat = R.pats ? R.pats[(R.fails || 0) % 3] : null; R.pats = R.pats || [[0, 1, 0, 1], [1, 0, 0, 1], [0, 0, 1, 1]]; R.pat = R.pats[(R.fails || 0) % 3]; R.ph = 'demo'; R.t = 0; R.got = []; R.down = -1; R.lk = -1; },
+  // the four slots of Brady's turn start at 4 beats + a breath after the demo's start
+  slot(R, k) { return 4 * KET.beat + 1.2 + k * KET.beat; },
+  input(play, A, R, kit, m, p, inp) {
+    if (R.ph !== 'play') return;
+    if (inp.actionPressed) { const k = R.got.length; if (k < 4 && Math.abs(R.t - this.slot(R, k)) <= WIN + 0.1) { R.down = R.t; } else this.miss(play, A, R, 'NOT ON ITS SLOT! LISTEN AGAIN'); }
+    R.held = !!inp.action;
+  },
+  miss(play, A, R, why) { R.fails = (R.fails || 0) + 1; RK.raspberry(play, why); this.turn(R); },
+  update(play, dt, A, R, kit) {
+    if (R.won || !quiet(play, R)) return;
+    R.t += dt; if (!onIt(play)) R.held = false;
+    if (R.ph === 'demo') { const k = Math.floor(R.t / KET.beat); if (k !== R.lk) { R.lk = k; if (k < 4) tick(R.pat[k]); } if (R.t >= 4 * KET.beat + 1.2 - WIN - 0.1) R.ph = 'play'; return; }
+    const k = R.got.length; if (k >= 4) return;
+    const s0 = this.slot(R, k);
+    // a press is down: it is a ribbon once held 0.45 s, a dot if let go before
+    if (R.down >= 0) {
+      const held = R.t - R.down;
+      if (!R.held || held >= 0.45) { const long = held >= 0.45; if (long !== !!R.pat[k]) { this.miss(play, A, R, R.pat[k] ? 'THAT ONE WAS A RIBBON! HOLD IT' : 'THAT ONE WAS A DOT! JUST A TAP'); return; } R.got.push(long ? 1 : 0); R.down = -1; chime(k, true); if (R.got.length >= 4) TourRooms.win(play, A, R, { text: 'THE KETTLE SINGS ALONG!', coins: 3 }); }
+      return;
+    }
+    if (R.t > s0 + WIN + 0.1) this.miss(play, A, R, 'MISSED ONE! LISTEN AGAIN');
+  },
+  draw(play, ctx, A, R, kit) {
+    const t = play.t, y8 = 8 * TS, kx = (KET.kettle + 0.5) * TS;
+    // the burner and the cobalt enamel kettle, its spout to the left, steam from it
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2.4;
+    ctx.fillStyle = SA.CHAR; ctx.fillRect(kx - 40, y8 - 14, 80, 14); ctx.strokeRect(kx - 40, y8 - 14, 80, 14);
+    ctx.fillStyle = '#ff8a3a'; for (let q = -2; q <= 2; q++) { ctx.beginPath(); ctx.moveTo(kx + q * 12 - 4, y8 - 14); ctx.lineTo(kx + q * 12, y8 - 22 - Math.sin(t * 20 + q) * 3); ctx.lineTo(kx + q * 12 + 4, y8 - 14); ctx.fill(); }
+    ctx.fillStyle = SA.COBALT; ctx.beginPath(); ctx.ellipse(kx, y8 - 46, 36, 30, 0, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(kx - 30, y8 - 52); ctx.lineTo(kx - 58, y8 - 74); ctx.lineTo(kx - 52, y8 - 78); ctx.lineTo(kx - 24, y8 - 62); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = SA.CORK; ctx.beginPath(); ctx.arc(kx, y8 - 78, 7, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.ellipse(kx + 12, y8 - 56, 8, 14, 0.4, 0, TAU); ctx.fill();
+    ctx.restore();
+    if (R.won) return;
+    // the row of four slots across the top of the band: a dot or a ribbon in each as the kettle puffs it (demo), then
+    // Brady's slots light one by one (the lit one pulses gold)
+    const x0 = 7 * TS, y = 3.2 * TS;
+    for (let k = 0; k < 4; k++) {
+      const x = x0 + k * 2.4 * TS, shown = R.ph === 'demo' ? R.t >= k * KET.beat : true, long = R.pat && R.pat[k];
+      ctx.save(); ctx.fillStyle = 'rgba(20,14,30,0.72)'; rr(ctx, x - 6, y - 22, 2 * TS + 12, 44, 12); ctx.fill();
+      const cur = R.ph === 'play' && R.got.length === k && Math.abs(R.t - this.slot(R, k)) < 0.6;
+      if (cur) { ctx.strokeStyle = SA.GOLD; ctx.lineWidth = 3; ctx.stroke(); }
+      ctx.fillStyle = '#ffffff'; ctx.strokeStyle = INK; ctx.lineWidth = 2;
+      if (shown) { if (long) { rr(ctx, x + 2, y - 7, 2 * TS - 4, 14, 7); ctx.fill(); ctx.stroke(); } else { ctx.beginPath(); ctx.arc(x + TS, y, 9, 0, TAU); ctx.fill(); ctx.stroke(); } }
+      if (R.got && R.got[k] != null) { ctx.fillStyle = '#7aff9a'; ctx.beginPath(); ctx.arc(x + 2 * TS - 4, y - 16, 6, 0, TAU); ctx.fill(); ctx.stroke(); }
+      ctx.restore();
+    }
+    // the puff leaving the spout in the demo (the same shape as its slot)
+    if (R.ph === 'demo') { const k = Math.floor(R.t / KET.beat), u = (R.t % KET.beat) / KET.beat; if (k < 4) { ctx.save(); ctx.globalAlpha = 1 - u * 0.6; ctx.fillStyle = '#ffffff'; ctx.strokeStyle = INK; ctx.lineWidth = 2; const sx = kx - 60 - u * 40, sy = y8 - 84 - u * 60; if (R.pat[k]) { rr(ctx, sx - 30, sy - 7, 60, 14, 7); } else { ctx.beginPath(); ctx.arc(sx, sy, 10, 0, TAU); } ctx.fill(); ctx.stroke(); ctx.restore(); } }
+    if (R.ph === 'play' && R.down >= 0) { const k = Math.min(1, (play.t, R.t - R.down) / 0.45); pill(ctx, markX(play), 5.2 * TS, k >= 1 ? 'RIBBON!' : 'HOLDING...', SA.GOLD); }
+    hud(play, ctx, R.ph === 'demo' ? 'THE KETTLE PUFFS...' : 'YOUR TURN: ' + R.got.length + ' / 4');
+  },
+  testWin(g, A, R, kit, frame) {
+    ready(g, R, frame);
+    for (let n = 0; n < 3 && !R.won; n++) {
+      this.turn(R);
+      for (let k = 0; k < 4 && !R.won; k++) {
+        const s0 = this.slot(R, k); stepTo(g, R, frame, s0);
+        frame(g, { action: true, actionPressed: true });
+        if (R.pat[k]) stepTo(g, R, frame, s0 + 0.6, { action: true }); else frame(g, {});
+        stepTo(g, R, frame, s0 + 0.4);
+      }
+      for (let q = 0; q < 120 && !R.won; q++) frame(g, {});
+    }
+  }
+});
+
+/* ================= saltLamps: HALF-TIME (the lamp loft) ================= */
+// the lamp hangs in the middle of the band; the wren on a perch to its left, the Cork to its right; the mark under the
+// lamp on a plank shelf; mirrored (the way in at the top right, the cage on the left)
+const LAMP = { beat: 0.75, mark: 10 };
+TourRooms.def('saltLamps', {
+  title: 'HALF-TIME', rule: 'CLAP WITH THE BIG CORK, NOT THE WREN', need: 'FOUR SLOW CLAPS FIRST!',
+  make(o, keep, ctx, A, rng) {
+    const g = stageRoom(keep, A, o, { st: 8, cx: 17, shelf: true });
+    mk(g, LAMP.mark, 7, {}); g.winSpot(A.id, LAMP.mark, 7);
+    mirror(g, []); g.data.mark = W - 1 - LAMP.mark;
+    return g;
+  },
+  enter(play, A, R) { if (!R.won) { R.t = 0; R.n = 0; R.lastOk = -1; } },
+  // flash k at k * beat (from 1.0 s); the Cork claps on the even ones
+  flashAt: k => 1.0 + k * LAMP.beat,
+  input(play, A, R, kit, m, p, inp) {
+    if (!inp.actionPressed) return;
+    const k = Math.round((R.t - 1.0) / LAMP.beat), d = Math.abs(R.t - this.flashAt(k));
+    if (k < 0 || d > WIN) { this.miss(play, R, 'NOT ON A FLASH! WATCH THE CORK'); return; }
+    if (k % 2) { this.miss(play, R, 'THAT WAS THE WREN\'S CLAP!'); return; }
+    if (k === R.lastOk) return;
+    if (R.lastOk >= 0 && k !== R.lastOk + 2) R.n = 0;
+    R.lastOk = k; R.n++; chime(R.n - 1, true); R.pop = 0.3;
+    if (R.n >= 4) TourRooms.win(play, A, R, { text: 'IN TIME WITH THE CORK!', coins: 3 });
+  },
+  miss(play, R, why) { R.fails = (R.fails || 0) + 1; R.n = 0; R.lastOk = -1; RK.raspberry(play, why); R.t = 0; },
+  update(play, dt, A, R, kit) {
+    if (R.won || !quiet(play, R)) return;
+    R.t += dt; if (R.pop > 0) R.pop -= dt;
+    // a slow clap missed (Brady on the mark, the Cork clapped without him): the count starts again
+    const k = Math.round((R.t - 1.0) / LAMP.beat);
+    if (R.lastOk >= 0 && k >= R.lastOk + 2 && R.t > this.flashAt(R.lastOk + 2) + WIN + 0.05) { R.n = 0; R.lastOk = -1; }
+    if (k !== R.lk && R.t >= this.flashAt(Math.max(0, k)) && k >= 0) { R.lk = k; tick(k % 2 ? 0 : 3); }
+  },
+  draw(play, ctx, A, R, kit) {
+    const t = play.t, cx = (W - 1 - LAMP.mark + 0.5) * TS, y = 3.4 * TS;
+    const k = Math.round((R.t - 1.0) / LAMP.beat), d = R.t - this.flashAt(k), lit = R.t >= 1.0 && Math.abs(d) < 0.12, even = k % 2 === 0;
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2.4;
+    // the lamp on its chain: a cobalt shade, a big bulb that flashes
+    ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, y - 24); ctx.stroke();
+    if (lit) { ctx.fillStyle = 'rgba(255,240,160,0.35)'; ctx.beginPath(); ctx.arc(cx, y, 64, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = lit ? '#fff4b0' : '#8a8466'; ctx.beginPath(); ctx.arc(cx, y + 4, 14, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = SA.COBALT; ctx.beginPath(); ctx.moveTo(cx - 26, y); ctx.lineTo(cx + 26, y); ctx.lineTo(cx + 12, y - 24); ctx.lineTo(cx - 12, y - 24); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // the wren (left): claps her wings on every flash
+    const wx = cx - 3.5 * TS, wy = 5.2 * TS, wclap = lit ? 1 : 0;
+    ctx.fillStyle = SA.COBALT_D; ctx.fillRect(wx - 3, wy + 10, 6, 7 * TS - wy - 10 + 1.2 * TS); ctx.strokeRect(wx - 3, wy + 10, 6, 1.2 * TS);
+    SK.wrenArt(ctx, { dir: 1 }, wx, wy + 16, 'fly', wclap ? 0 : t);
+    if (wclap) pill(ctx, wx, wy - 26, 'CLAP', '#cfe0ff');
+    // the Cork (right): big; lifts his hands on the odd flash (the tell), claps on the even
+    const ox = cx + 3 * TS, oy = 8 * TS - 2, up = R.t >= 1.0 && !even && Math.abs(d) < LAMP.beat * 0.9, clap = lit && even;
+    SA.cork(ctx, ox, oy, 48, 66);
+    ctx.fillStyle = '#ffffff'; for (const dx of [-9, 9]) { ctx.beginPath(); ctx.arc(ox + dx, oy - 44, 5, 0, TAU); ctx.fill(); ctx.stroke(); } ctx.fillStyle = INK; for (const dx of [-9, 9]) { ctx.beginPath(); ctx.arc(ox + dx, oy - 43, 2.2, 0, TAU); ctx.fill(); }
+    const hy = clap ? oy - 76 : up ? oy - 84 : oy - 40, hs = clap ? 0 : up ? 18 : 30;
+    ctx.fillStyle = '#ffffff'; for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(ox + s * hs, hy, 9, 0, TAU); ctx.fill(); ctx.stroke(); }
+    if (clap) pill(ctx, ox, oy - 104, 'CLAP!', SA.GOLD);
+    ctx.restore();
+    if (R.pop > 0) pill(ctx, (W - 1 - LAMP.mark + 0.5) * TS, 5.6 * TS, 'CLAP!', '#7aff9a');
+    if (!R.won) hud(play, ctx, 'SLOW CLAPS: ' + R.n + ' / 4');
+  },
+  testWin(g, A, R, kit, frame) {
+    ready(g, R, frame); R.t = 0; R.n = 0; R.lastOk = -1;
+    for (let k = 0; k < 8 && !R.won; k += 2) { stepTo(g, R, frame, this.flashAt(k)); frame(g, { action: true, actionPressed: true }); frame(g, {}); }
+  }
+});
+
+/* ================= saltMitts: THE OTHER MITT (the mitt counter) ================= */
+// the counter top over the stage; two oven mitts hang over it, left and right; the row of four prints between them;
+// the cage on a higher tier at the right
+const MIT = { beat: 1.1, mark: 10 };
+TourRooms.def('saltMitts', {
+  title: 'THE OTHER MITT', rule: 'JUMP FOR THE LEFT MITT, THROW FOR RIGHT', need: 'FOUR PRINTS FIRST!',
+  make(o, keep, ctx, A, rng) {
+    const g = stageRoom(keep, A, o, { st: 8, cx: 17, tier: [16, 7] });
+    mk(g, MIT.mark, 7, { eatJump: true }); g.winSpot(A.id, MIT.mark, 7);
+    return g;
+  },
+  enter(play, A, R) { if (!R.won) this.turn(R); },
+  turn(R) { R.pats = R.pats || [[0, 1, 0, 0], [1, 0, 1, 1], [0, 0, 1, 0]]; R.pat = R.pats[(R.fails || 0) % 3]; R.t = 0; R.got = []; },
+  slapAt: k => 1.6 + k * MIT.beat,
+  input(play, A, R, kit, m, p, inp) {
+    const btn = inp.jumpPressed ? 0 : inp.actionPressed ? 1 : -1; if (btn < 0) return;
+    const k = R.got.length; if (k >= 4) return;
+    if (Math.abs(R.t - this.slapAt(k)) > WIN) { this.miss(play, R, 'NOT ON THE SLAP!'); return; }
+    if (btn !== R.pat[k]) { this.miss(play, R, R.pat[k] ? 'THAT WAS THE RIGHT MITT: THROW' : 'THAT WAS THE LEFT MITT: JUMP'); return; }
+    R.got.push(btn); chime(k, true);
+    if (R.got.length >= 4) TourRooms.win(play, A, R, { text: 'FOUR PRINTS, NO SMUDGES!', coins: 3 });
+  },
+  miss(play, R, why) { R.fails = (R.fails || 0) + 1; RK.raspberry(play, why); this.turn(R); },
+  update(play, dt, A, R, kit) {
+    if (R.won || !quiet(play, R)) return;
+    R.t += dt; const k = R.got.length;
+    if (k < 4 && R.t > this.slapAt(k) + WIN + 0.05) this.miss(play, R, 'MISSED A SLAP!');
+  },
+  draw(play, ctx, A, R, kit) {
+    const t = play.t, y8 = 8 * TS, k = R.got ? R.got.length : 0;
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2.4;
+    // the four print spots on a tea towel along the band's top
+    for (let q = 0; q < 4; q++) {
+      const x = (7.2 + q * 2.2) * TS, y = 3.0 * TS;
+      ctx.fillStyle = '#ffffff'; rr(ctx, x - 26, y - 22, 52, 44, 8); ctx.fill(); ctx.stroke();
+      if (R.got && R.got[q] != null) { ctx.fillStyle = R.got[q] ? SA.CORK : SA.COBALT; ctx.beginPath(); ctx.ellipse(x, y + 2, 14, 16, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.ellipse(x + (R.got[q] ? 14 : -14), y - 6, 6, 9, R.got[q] ? 0.5 : -0.5, 0, TAU); ctx.fill(); }
+      else if (q === k && !R.won) { ctx.strokeStyle = SA.GOLD; ctx.lineWidth = 3; ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.ellipse(x, y + 2, 14, 16, 0, 0, TAU); ctx.stroke(); ctx.setLineDash([]); ctx.strokeStyle = INK; ctx.lineWidth = 2.4; }
+    }
+    // the mitts: cobalt (left, JUMP) and tangerine (right, THROW); the one that slaps next lifts high first
+    for (const side of [0, 1]) {
+      const mx = side ? 15.2 * TS : 5.6 * TS, my0 = y8 - 1.8 * TS;
+      let lift = 0; const s0 = k < 4 && R.pat ? this.slapAt(k) : -9, mine = R.pat && R.pat[k] === side;
+      if (mine && !R.won) { const d = s0 - R.t; lift = d > 0 && d < 0.8 ? 1 - Math.abs(d - 0.4) / 0.4 * 0.0 : 0; if (d > 0 && d < 0.8) lift = Math.min(1, (0.8 - d) / 0.4); if (d <= 0.06 && d > -0.15) lift = -0.3; }
+      const my = my0 - lift * 1.6 * TS;
+      ctx.fillStyle = side ? SA.CORK : SA.COBALT; ctx.beginPath(); ctx.ellipse(mx, my, 26, 32, 0, 0, TAU); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(mx + (side ? 26 : -26), my - 8, 10, 16, side ? 0.5 : -0.5, 0, TAU); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(mx - 26, my + 22, 52, 10); ctx.strokeRect(mx - 26, my + 22, 52, 10);
+      pill(ctx, mx, my0 + 50, side ? 'THROW' : 'JUMP', side ? SA.CORK_L : '#cfe0ff');
+    }
+    ctx.restore();
+    if (!R.won) hud(play, ctx, 'PRINTS: ' + k + ' / 4');
+  },
+  testWin(g, A, R, kit, frame) {
+    ready(g, R, frame);
+    for (let n = 0; n < 2 && !R.won; n++) {
+      this.turn(R);
+      for (let k = 0; k < 4 && !R.won; k++) { stepTo(g, R, frame, this.slapAt(k)); frame(g, R.pat[k] ? { action: true, actionPressed: true } : { jump: true, jumpPressed: true }); frame(g, {}); }
+    }
+  }
+});
+
+/* ================= saltRattle: FINISH THE RATTLE (the pod pantry) ================= */
+// a big salt shaker on a pantry shelf; three rings over it light in turn; the mark on the low stage; mirrored
+const RAT = { beat: 0.8, mark: 10 };
+TourRooms.def('saltRattle', {
+  title: 'FINISH THE RATTLE', rule: 'THROW ON THE EMPTY THIRD RING', need: 'THREE TURNS FIRST!',
+  make(o, keep, ctx, A, rng) {
+    const g = stageRoom(keep, A, o, { st: 9, cx: 16 });
+    mk(g, RAT.mark, 8, {}); g.winSpot(A.id, RAT.mark, 8);
+    mirror(g, []);
+    return g;
+  },
+  enter(play, A, R) { if (!R.won) { R.t = 0; R.n = 0; R.done = -1; } },
+  // turn k: rings at 1.0 + k * 3.2 + (0, 1, 2) * beat; the third is Brady's
+  ringAt: (k, r) => 1.0 + k * 4 * RAT.beat + r * RAT.beat,
+  input(play, A, R, kit, m, p, inp) {
+    if (!inp.actionPressed) return;
+    const k = Math.max(0, Math.round((R.t - 1.0 - 2 * RAT.beat) / (4 * RAT.beat))), d = Math.abs(R.t - this.ringAt(k, 2));
+    if (d > WIN || k === R.done) { this.miss(play, R, R.t < this.ringAt(k, 2) - WIN ? 'TOO SOON! ONLY THE THIRD RING' : 'NOT ON THE RING!'); return; }
+    R.done = k; R.n++; R.pop = 0.4; chime(R.n, true);
+    if (R.n >= 3) TourRooms.win(play, A, R, { text: 'RATTLED IN TIME!', coins: 3 });
+  },
+  miss(play, R, why) { R.fails = (R.fails || 0) + 1; RK.raspberry(play, why); R.t = 0; R.n = 0; R.done = -1; },
+  update(play, dt, A, R, kit) {
+    if (R.won || !quiet(play, R)) return;
+    R.t += dt; if (R.pop > 0) R.pop -= dt;
+    const k = R.n; if (R.done < k && R.t > this.ringAt(k, 2) + WIN + 0.05 && R.done !== k) this.miss(play, R, 'THE THIRD RING STAYED EMPTY!');
+  },
+  draw(play, ctx, A, R, kit) {
+    const t = play.t, cx = (W - 1 - RAT.mark + 0.5) * TS, y9 = 9 * TS, k = R.n || 0;
+    const r = [0, 1, 2].map(q => R.t - this.ringAt(k, q));
+    const shake = (r[0] > 0 && r[0] < 0.25) || (r[1] > 0 && r[1] < 0.25);
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2.4;
+    // the shaker (jiggling on its rattles) on a shelf behind the mark
+    const sx = cx + 3.2 * TS + (shake ? Math.sin(t * 60) * 4 : 0), sy = y9 - 0.6 * TS;
+    ctx.fillStyle = '#8a5a30'; ctx.fillRect(sx - 40, sy, 80, 10); ctx.strokeRect(sx - 40, sy, 80, 10);
+    ctx.fillStyle = 'rgba(220,230,250,0.9)'; rr(ctx, sx - 22, sy - 64, 44, 64, 8); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = SA.CRYS; ctx.fillRect(sx - 18, sy - 30, 36, 28);
+    ctx.fillStyle = SA.CHAR; ctx.beginPath(); ctx.ellipse(sx, sy - 64, 24, 10, 0, Math.PI, TAU); ctx.fill(); ctx.stroke();
+    ctx.restore();
+    // the three rings across the top of the band: ring 1 and 2 flash with the rattle; ring 3 is dashed and empty, it
+    // fills with Brady's THROW (gold) as its turn comes round
+    for (let q = 0; q < 3; q++) {
+      const x = (8 + q * 3) * TS, y = 3.3 * TS, lit = r[q] > -0.05 && r[q] < 0.25, soon = q === 2 && r[2] > -0.8 && r[2] < 0.25;
+      ctx.save(); ctx.strokeStyle = q === 2 ? (soon ? SA.GOLD : '#ffffff') : INK; ctx.lineWidth = q === 2 ? 4 : 3;
+      ctx.fillStyle = 'rgba(20,14,30,0.7)'; ctx.beginPath(); ctx.arc(x, y, 30, 0, TAU); ctx.fill();
+      if (q === 2) ctx.setLineDash([7, 5]);
+      ctx.beginPath(); ctx.arc(x, y, 24 + (lit ? 4 : 0), 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+      if (lit && q < 2) { ctx.fillStyle = SA.CRYS; for (let n = 0; n < 6; n++) { const a = n / 6 * TAU + t * 4; ctx.fillRect(x + Math.cos(a) * 14 - 2, y + Math.sin(a) * 14 - 2, 5, 5); } }
+      if (q === 2 && R.pop > 0) { ctx.fillStyle = SA.GOLD; ctx.beginPath(); ctx.arc(x, y, 18, 0, TAU); ctx.fill(); }
+      ctx.restore();
+    }
+    if (!R.won) hud(play, ctx, 'TURNS: ' + k + ' / 3');
+  },
+  testWin(g, A, R, kit, frame) {
+    ready(g, R, frame); R.t = 0; R.n = 0; R.done = -1;
+    for (let k = 0; k < 3 && !R.won; k++) { stepTo(g, R, frame, this.ringAt(k, 2)); frame(g, { action: true, actionPressed: true }); frame(g, {}); }
+  }
+});
+
+/* ================= saltStand: ACCOMPANIST WANTED (the music stand) ================= */
+// a cork dancer steps across a big music stand over the stage; each foot lifts (0.35 s) before it lands; the last step
+// is a slow stretch. The mark at the stage's left; two tiers (the cage high on the right)
+const STEPS = [0, 0.7, 1.05, 1.75, 2.1, 2.8, 4.2];
+TourRooms.def('saltStand', {
+  title: 'ACCOMPANIST WANTED', rule: 'THROW EACH TIME A FOOT LANDS', need: 'ONE WHOLE PHRASE FIRST!',
+  make(o, keep, ctx, A, rng) {
+    const g = stageRoom(keep, A, o, { st: 9, cx: 17, tier: [16, 7] });
+    mk(g, 8, 8, {}); g.winSpot(A.id, 8, 8);
+    return g;
+  },
+  enter(play, A, R) { if (!R.won) { R.t = 0; R.used = []; } },
+  landAt: k => 1.4 + STEPS[k],
+  input(play, A, R, kit, m, p, inp) {
+    if (!inp.actionPressed) return;
+    const i = near(STEPS.map((_, k) => this.landAt(k)), R.t, R.used);
+    if (i < 0) { this.miss(play, R, 'NO FOOT LANDED THEN!'); return; }
+    if (R.used.filter(Boolean).length !== i) { this.miss(play, R, 'MISSED A STEP!'); return; }
+    R.used[i] = true; chime(i, true); R.pop = 0.3;
+    if (R.used.filter(Boolean).length >= STEPS.length) TourRooms.win(play, A, R, { text: 'SHE TAKES A BOW!', coins: 4 });
+  },
+  miss(play, R, why) { R.fails = (R.fails || 0) + 1; RK.raspberry(play, why); R.t = 0; R.used = []; },
+  update(play, dt, A, R, kit) {
+    if (R.won || !quiet(play, R)) return;
+    R.t += dt; if (R.pop > 0) R.pop -= dt;
+    const n = R.used.filter(Boolean).length;
+    if (n < STEPS.length && R.t > this.landAt(n) + WIN + 0.05) this.miss(play, R, 'A FOOT LANDED ALONE!');
+  },
+  draw(play, ctx, A, R, kit) {
+    const t = play.t, n = R.used ? R.used.filter(Boolean).length : 0;
+    // the music stand: a wide tilted desk with staves; the dancer walks along its ledge
+    const x0 = 6.5 * TS, x1 = 15 * TS, ly = 5.2 * TS;
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2.4;
+    ctx.fillStyle = SA.CHAR; ctx.fillRect((x0 + x1) / 2 - 4, ly, 8, 9 * TS - ly); ctx.fillRect((x0 + x1) / 2 - 30, 9 * TS - 8, 60, 8);
+    ctx.fillStyle = '#f6f2e8'; ctx.beginPath(); ctx.moveTo(x0, ly); ctx.lineTo(x1, ly); ctx.lineTo(x1 - 14, ly - 2.4 * TS); ctx.lineTo(x0 + 14, ly - 2.4 * TS); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = 'rgba(40,40,60,0.45)'; ctx.lineWidth = 1.2; for (let q = 0; q < 5; q++) { const y = ly - 0.5 * TS - q * 7; ctx.beginPath(); ctx.moveTo(x0 + 20, y); ctx.lineTo(x1 - 20, y); ctx.stroke(); }
+    ctx.fillStyle = SA.CHAR; ctx.fillRect(x0 - 6, ly, x1 - x0 + 12, 8);
+    // the cork dancer: her position follows the steps; the next foot lifts in the 0.35 s before it lands
+    const k = Math.min(STEPS.length - 1, n), land = this.landAt(k), d = land - R.t, prog = (n + clamp(1 - d / 0.7, 0, 1)) / STEPS.length;
+    const dx = lerp(x0 + 30, x1 - 30, Math.min(1, prog)), fy = ly - 2;
+    const lifting = d > 0 && d < (k === STEPS.length - 1 ? 1.0 : 0.35), foot = k % 2;
+    ctx.strokeStyle = INK; ctx.lineWidth = 4;
+    for (const s of [0, 1]) { const up = lifting && s === foot; ctx.beginPath(); ctx.moveTo(dx + (s ? 6 : -6), fy - 26); ctx.lineTo(dx + (s ? 10 : -10) + (up ? 8 : 0), fy - (up ? 16 : 0)); ctx.stroke(); }
+    SA.cork(ctx, dx, fy - 24, 26, 34, Math.sin(t * 3) * 0.08);
+    ctx.fillStyle = '#ffffff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(dx - 18, fy - 30); ctx.lineTo(dx + 18, fy - 30); ctx.lineTo(dx + 10, fy - 40); ctx.lineTo(dx - 10, fy - 40); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(dx - 5, fy - 48, 2, 0, TAU); ctx.arc(dx + 5, fy - 48, 2, 0, TAU); ctx.fill();
+    if (lifting) pill(ctx, dx + (foot ? 26 : -26), fy - 26, k === STEPS.length - 1 ? 'S-T-R-E-T-C-H...' : 'LIFT', '#ffffff');
+    ctx.restore();
+    // the phrase's footprints along the ledge: done ones gold
+    for (let q = 0; q < STEPS.length; q++) { ctx.save(); ctx.fillStyle = q < n ? SA.GOLD : 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.ellipse(lerp(x0 + 30, x1 - 30, (q + 1) / STEPS.length), ly + 18, 6, 4, 0, 0, TAU); ctx.fill(); ctx.restore(); }
+    if (R.pop > 0) pill(ctx, markX(play), 6.2 * TS, 'TAP!', '#7aff9a');
+    if (!R.won) hud(play, ctx, 'STEPS: ' + n + ' / ' + STEPS.length);
+  },
+  testWin(g, A, R, kit, frame) {
+    ready(g, R, frame); R.t = 0; R.used = [];
+    for (let k = 0; k < STEPS.length && !R.won; k++) { stepTo(g, R, frame, this.landAt(k)); frame(g, { action: true, actionPressed: true }); frame(g, {}); }
+  }
+});
+
+// a salt room's words in turn: the title alone (about 1.5 s), then the rule's pill; the room's lines after that
+{
+  const en0 = TourRooms.enter;
+  TourRooms.enter = function (play, A) {
+    en0.apply(this, arguments);
+    const kit = A.roomKit; if (!(kit && /^salt/.test(kit.kind))) return;
+    const R = this.state(play, A);
+    play.toastT = 0; play.bannerT = Math.max(play.bannerT || 0, 1.5); R.ruleWait = !R.won && !!kit.rule;
+  };
+  const dr0 = TourRooms.draw;
+  TourRooms.draw = function (play, ctx) {
+    const kit = play.area && play.area.roomKit;
+    if (!(kit && /^salt/.test(kit.kind)) || !(play.bannerT > 0)) return dr0.apply(this, arguments);
+    ctx.save(); ctx.globalAlpha = clamp(1 - play.bannerT * 3, 0.15, 1); try { return dr0.apply(this, arguments); } finally { ctx.restore(); }
+  };
+  const up0 = TourRooms.update;
+  TourRooms.update = function (play, dt) {
+    const A = play.area, kit = A && A.roomKit;
+    if (kit && /^salt/.test(kit.kind)) { const R = this.state(play, A); if (R.ruleWait && !(play.bannerT > 0)) { R.ruleWait = false; play.toast(kit.rule); } }
+    return up0.apply(this, arguments);
+  };
+}
+// the camera in a salt room: the whole room's width in view, the stage band in the middle
+TourHooks.on('camera', (play, dt) => {
+  const A = play.area; if (!(A && A.roomKit && /^salt/.test(A.roomKit.kind))) return;
+  const vw = (R1 + 1) * TS, mir = A.roomKit.data && A.roomKit.data.mirror;
+  if (Game.viewW >= vw - 8) play.camX = clamp((mir ? A.W * TS - vw : 0) + (vw - Game.viewW) / 2, 0, Math.max(0, A.W * TS - Game.viewW));
+});
+{
+  const ct0 = Play.prototype.camTargetY;
+  Play.prototype.camTargetY = function (snap) { const A = this.area; if (A && A.roomKit && /^salt/.test(A.roomKit.kind)) return clamp(TS, 0, Math.max(0, A.H * TS - Game.viewH)); return ct0.call(this, snap); };
+}
+Tour.saltKit.Rooms = TourRooms;
+})();
+
+/* ---- 29_tour_y_salt_e_entry.js ---- */
+/* ============================================================
+   THE TABLE SALT SEA: the hidden way in (the land's best secret), in Morocco 5-3 CHEFCHAOUEN BLUE.
+   ChatGPT's entrance: "crouch on the salt saucer at the last citrus stall until Brady slips through its rim. One salt
+   crystal on the rim has a tiny blue horizon inside it."
+   In the medina's first (day) stretch, after the second laundry gap, the lane passes three little citrus stalls,
+   painted the way Morocco paints its props (flat warm colours, no ink line): plank counters under striped cloth
+   awnings, baskets of oranges, a terracotta jar. On the counter of the LAST stall sits a clay saucer heaped with salt;
+   one crystal on its rim holds a tiny blue sea and its horizon: the only odd thing there. No sign, no arrow, no coins,
+   nothing on the level card. Hop up onto that counter, stand on the saucer and crouch (stick down) for a moment: Brady
+   sinks into the salt, slips through the rim, the land's name comes up and 5-3 clears through its new 'salt' exit,
+   which opens the land.
+   The host level's files are not touched: this file re-registers 5-3 with one piece added in its first stretch and
+   one exit added; its other exits, postcards and totals are as they were.
+   The checker: an exit box standing on the saucer's counter (crouching there is the only way in).
+   ============================================================ */
+(function () {
+const MA = Tour.countries.ma, SK = Tour.saltKit;
+if (!MA || !SK || !MA.levels[2]) return;
+
+/* ---------------- the stalls, in Morocco's own painting: flat colours, soft shading, no ink ---------------- */
+const MC = { plank: '#a8703a', plank2: '#8a5a2a', post: '#7a4a22', cloth: '#f4ead2', stripe: '#3a5ab0', basket: '#c8a060', basket2: '#a8803c', orange: '#f0902a', orange2: '#d8701a', leaf: '#3a8a4a', clay: '#c0643a', clay2: '#a04e2a', salt: '#f8f6f0', salt2: '#dcd8d0', jar: '#d87a40', jarBlue: '#3a5ab0' };
+const oranges = (ctx, x, y, n) => { for (let k = 0; k < n; k++) { const ox = x - (n - 1) * 6 + k * 12 + (k % 2) * 2, oy = y - (k % 2 ? 10 : 4); ctx.fillStyle = MC.orange; ctx.beginPath(); ctx.arc(ox, oy, 6.5, 0, TAU); ctx.fill(); ctx.fillStyle = MC.orange2; ctx.beginPath(); ctx.arc(ox + 2, oy + 2, 3.5, 0, TAU); ctx.fill(); } ctx.fillStyle = MC.leaf; ctx.beginPath(); ctx.ellipse(x + 4, y - 16, 6, 3, -0.5, 0, TAU); ctx.fill(); };
+// a stall: counter top at (x0..x1, y), its awning, a basket of oranges; jar on the left one
+function stall(ctx, x0, x1, y, gy, k) {
+  // posts, awning (cream cloth with blue stripes, a fringe), counter planks
+  ctx.fillStyle = MC.post; ctx.fillRect(x0 + 2, y - 86, 6, gy - y + 86); ctx.fillRect(x1 - 8, y - 86, 6, gy - y + 86);
+  ctx.fillStyle = MC.cloth; ctx.beginPath(); ctx.moveTo(x0 - 8, y - 92); ctx.lineTo(x1 + 8, y - 92); ctx.lineTo(x1 + 4, y - 70); ctx.lineTo(x0 - 4, y - 70); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = MC.stripe; for (let x = x0; x < x1; x += 22) ctx.fillRect(x + 4, y - 92, 5, 22);
+  ctx.fillStyle = MC.cloth; for (let x = x0 - 4; x < x1 + 4; x += 7) ctx.fillRect(x, y - 70, 3, 5);
+  ctx.fillStyle = MC.plank2; ctx.fillRect(x0, y + 4, x1 - x0, gy - y - 4);
+  ctx.fillStyle = MC.plank; ctx.fillRect(x0 - 4, y, x1 - x0 + 8, 8); ctx.fillStyle = 'rgba(0,0,0,0.12)'; for (let x = x0 + 14; x < x1; x += 18) ctx.fillRect(x, y + 10, 2, gy - y - 12);
+  // a basket of oranges
+  const bx = k === 2 ? x0 + 22 : (x0 + x1) / 2;
+  ctx.fillStyle = MC.basket; ctx.beginPath(); ctx.moveTo(bx - 22, y - 14); ctx.lineTo(bx + 22, y - 14); ctx.lineTo(bx + 17, y); ctx.lineTo(bx - 17, y); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = MC.basket2; for (let q = -2; q <= 2; q++) ctx.fillRect(bx + q * 8 - 1, y - 13, 2, 12);
+  oranges(ctx, bx, y - 12, k === 1 ? 4 : 3);
+  // ordinary small things on the counters (so the salt saucer is not the only odd one out)
+  const dish = (dx, fill, dots) => { const sx = x0 + dx; ctx.fillStyle = MC.clay2; ctx.beginPath(); ctx.ellipse(sx, y - 2, 13, 3.5, 0, 0, TAU); ctx.fill(); ctx.fillStyle = MC.clay; ctx.beginPath(); ctx.moveTo(sx - 14, y - 7); ctx.quadraticCurveTo(sx, y + 1, sx + 14, y - 7); ctx.closePath(); ctx.fill(); ctx.fillStyle = fill; for (const [ddx, ddy] of dots) { ctx.beginPath(); ctx.ellipse(sx + ddx, y - 9 + ddy, 3.2, 2.4, 0, 0, TAU); ctx.fill(); } };
+  const cups = dx => { const sx = x0 + dx; for (let q = 0; q < 3; q++) { ctx.fillStyle = q % 2 ? '#e8d8b0' : '#f4ead2'; ctx.fillRect(sx - 6 + q * 0.5, y - 7 - q * 6, 12, 6); ctx.fillStyle = MC.jarBlue; ctx.fillRect(sx - 6 + q * 0.5, y - 5 - q * 6, 12, 1.5); } };
+  if (k === 0) dish(18, '#5a6a2a', [[-6, 0], [0, -1], [6, 0], [-3, -3], [3, -3]]);
+  if (k === 1) { dish(x1 - x0 - 22, '#7a3e1e', [[-6, 0], [0, -1], [6, 0], [-3, -3], [3, -3]]); cups(16); }
+  if (k === 2) cups(x1 - x0 - 14);
+  if (k === 0) { ctx.fillStyle = MC.jar; ctx.beginPath(); ctx.ellipse(x1 - 18, y - 14, 11, 14, 0, 0, TAU); ctx.fill(); ctx.fillRect(x1 - 23, y - 34, 10, 8); ctx.fillStyle = MC.jarBlue; ctx.fillRect(x1 - 29, y - 16, 22, 3); }
+}
+// the saucer (its centre x, its foot y): a clay dish heaped with salt; one crystal on its rim holds a blue horizon
+function saucer(ctx, x, y, t, sink) {
+  ctx.fillStyle = MC.clay2; ctx.beginPath(); ctx.ellipse(x, y - 3, 22, 5, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = MC.clay; ctx.beginPath(); ctx.moveTo(x - 24, y - 9); ctx.quadraticCurveTo(x, y + 2, x + 24, y - 9); ctx.lineTo(x + 22, y - 11); ctx.lineTo(x - 22, y - 11); ctx.closePath(); ctx.fill();
+  // the salt heaped in it (it sinks a little while Brady crouches on it)
+  ctx.fillStyle = MC.salt; ctx.beginPath(); ctx.moveTo(x - 20, y - 10); ctx.quadraticCurveTo(x - 6, y - 20 + sink * 6, x + 2, y - 19 + sink * 6); ctx.quadraticCurveTo(x + 12, y - 18 + sink * 6, x + 20, y - 10); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = MC.salt2; for (const [dx, dy] of [[-12, -13], [-4, -16], [6, -15], [13, -12], [0, -12]]) ctx.fillRect(x + dx, y + dy + sink * 4, 3, 3);
+  // five small crystals lying ON the rim, all the same size and white; the fourth (front right) holds a sliver of
+  // blue sea and a horizon line (no glow, no sparkle: found only by looking)
+  const rim = [[-19, -10], [-10, -8], [1, -7.5], [11, -8], [19, -10]];
+  rim.forEach(([dx, dy], k) => {
+    const cx = x + dx, cy = y + dy;
+    ctx.fillStyle = '#f2f0ea'; ctx.beginPath(); ctx.moveTo(cx - 2.6, cy + 1.6); ctx.lineTo(cx - 2.6, cy - 1.6); ctx.lineTo(cx, cy - 3); ctx.lineTo(cx + 2.6, cy - 1.6); ctx.lineTo(cx + 2.6, cy + 1.6); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#d6d2c8'; ctx.fillRect(cx + 0.6, cy - 1.2, 1.8, 2.6);
+    if (k === 3) { ctx.fillStyle = '#3a68c0'; ctx.fillRect(cx - 2.2, cy + 0.1, 4.4, 1.4); ctx.fillStyle = '#9ac4e8'; ctx.fillRect(cx - 2.2, cy - 1.3, 4.4, 1.4); }
+  });
+}
+
+/* ---------------- the last stall's saucer and the way in ---------------- */
+class SaltMaSaucer extends Ent {
+  constructor(g, s) {
+    super(g, s, TS, TS); this.tx = Math.round((s.x - TS / 2) / TS); this.crow = Math.round(s.y / TS); this.x0 = s.dx0.map(d => this.tx + d); this.x1 = s.dx1.map(d => this.tx + d); this.gy = this.crow + 2; this.x = this.x0[0] * TS - 16; this.w = (this.x1[2] - this.x0[0] + 2) * TS; this.y = (this.crow - 4) * TS; this.h = (this.gy - this.crow + 4) * TS; this.back = true; this.friendly = true;
+    this.exitKey = 'salt'; this.secret = true; this.arr = -1; this.crouchT = 0; this.sx = (this.tx + 0.5) * TS;
+  }
+  update(dt) {
+    this.t += dt;
+    const g = this.g, p = g.player;
+    if (!p || p.dead) return;
+    if (this.arr >= 0) {
+      this.arr += dt; p.vx = 0; p.vy = 0; p.x = this.sx - p.w / 2; p.y = this.crow * TS - p.h + Math.min(p.h + 6, this.arr * 50); p.invuln = Math.max(p.invuln || 0, 0.5);
+      if (this.arr > 0.3 && !this.named) { this.named = true; g.bannerText = 'THE TABLE SALT SEA'; g.bannerT = 2.6; TourKit.sfx('secret', 'secret', { vol: 0.9 }); if (g.toast) g.toast('A HIDDEN LAND! DOWN THROUGH THE SAUCER\'S RIM...'); }
+      if (this.arr > 2.3 && g.state === 'play') { p.state = 'play'; g.levelClear(this); }
+      return;
+    }
+    // crouching on the saucer (on the counter, over it): it sinks; a full second and Brady slips through the rim
+    const on = p.onGround && p.groundTy === this.crow && Math.abs(p.cx - this.sx) < 0.6 * TS;
+    const down = !!(p.inp ? p.inp.down : Input.down) || p.crouch;
+    if (on && down) { this.crouchT += dt; if (this.crouchT >= 1.0) { this.arr = 0; p.stunT = 3; g.burst(this.sx, this.crow * TS - 10, 14, '#ffffff', 'dust'); TourKit.sfx('crunch', 'bump', { vol: 0.6, pitch: 1.3 }); } }
+    else this.crouchT = Math.max(0, this.crouchT - dt * 2);
+  }
+  touchPlayer() {}
+  draw(ctx) {
+    // the three stalls behind everything; the saucer on the last counter
+    const y = this.crow * TS, gy = this.gy * TS;
+    for (let k = 0; k < 3; k++) { const a = this.x0[k], b = this.x1[k]; stall(ctx, a * TS, (b + 1) * TS, y, gy, k); }
+    ctx.save(); ctx.translate(this.sx, y); ctx.scale(1.35, 1.35); saucer(ctx, 0, 0, this.t, Math.min(1, this.crouchT)); ctx.restore();
+  }
+}
+ENTITY_TYPES.saltMaSaucer = SaltMaSaucer;
+// while slipping in, Brady sinks into the saucer (clipped at its rim)
+{
+  const dr0 = Player.prototype.draw;
+  Player.prototype.draw = function (ctx) {
+    const e = this.g && this.g.entities && this.g.entities.find(q => q instanceof SaltMaSaucer && q.arr >= 0);
+    if (!e) return dr0.apply(this, arguments);
+    ctx.save(); ctx.beginPath(); ctx.rect(this.x - 60, this.y - 400, this.w + 120, e.crow * TS - 12 - (this.y - 400)); ctx.clip(); dr0.apply(this, arguments); ctx.restore();
+  };
+}
+// the checker: an exit box standing on the saucer's counter
+if (typeof VALIDATOR_EXITS !== 'undefined') VALIDATOR_EXITS.saltMaSaucer = { w: 20, h: 40 };
+
+/* the stalls piece, run inside 5-3's strip: 24 tiles of lane, three stalls with counters 2 rows up (one-way planks) */
+Tour.pieces['salt.maStalls'] = function (st, o) {
+  const B = st.B, x = st.x, gy = st.gy, cy = gy - 2;
+  st.floor(x, x + 23);
+  const x0 = [x + 2, x + 9, x + 16], x1 = [x + 5, x + 12, x + 20];
+  for (let k = 0; k < 3; k++) for (let q = x0[k]; q <= x1[k]; q++) B.set(q, cy, T.SEMI);
+  const tx = x0[2] + 2;
+  B.spawn('saltMaSaucer', tx, cy - 1, { dx0: x0.map(v => v - tx), dx1: x1.map(v => v - tx), exit: 'salt' });
+  return x + 24;
+};
+
+/* ---------------- 5-3, amended: the stalls in the first (day) stretch, the 'salt' exit ---------------- */
+{
+  const L0 = MA.levels[2];
+  if (L0 && L0.areas && !L0.exits.salt) {
+    const spec = JSON.parse(JSON.stringify(Object.assign({}, L0, { index: undefined, kind: undefined, v2: undefined, legacySecret: undefined })));
+    spec.n = 3; spec.secret = L0.secret;
+    spec.exits = Object.assign({}, JSON.parse(JSON.stringify(L0.exits)), { salt: { to: 'land:salt' } });
+    const A = spec.areas.find(a => a.id === 'medina'), k = A.script.findIndex(s2 => Array.isArray(s2) && s2[0] === 'lines' && s2[1] && s2[1].dayY === 3);
+    A.script.splice(k + 1, 0, ['salt.maStalls', {}]);
+    Tour.amend('ma', { levels: [spec] });
+  }
+}
+// the level card's exit pips: the way through the saucer is not counted until it has been found
+{
+  const ef0 = TourProgress.exitsFound;
+  TourProgress.exitsFound = function (id) {
+    const r = ef0.call(this, id), L = Tour.specOf(id);
+    if (!L || !L.exits || !L.exits.salt || L.exits.salt.to !== 'land:salt') return r;
+    const E = (Save.data.exits || {})[id] || {};
+    return E.salt ? r : { found: r.found, total: Math.max(0, r.total - 1) };
+  };
+}
+})();
+
+/* ---- 29_tour_y_salt_levels.js ---- */
+/* ============================================================
+   THE TABLE SALT SEA: the stages (world 34) and the land's map. Five stages, each a new kind of play, taught where a
+   slip costs nothing, tested, then twisted; the last one is the boss.
+   34-1 ANGLE OF REPOSE (repose), 34-2 GRAIN ELEVATOR (brinefloat), 34-3 CRYSTAL HABIT (cubegrow), 34-4 THE SHAKER TEST
+   (shakercap), 34-5 SEASON TO TASTE (lair: A Pinch, the cork who considers himself a chef). Each stage's one secret
+   room is behind the land's one tell: a single cobalt grain of salt that twinkles (the only blue grain in the land).
+   ============================================================ */
+(function () {
+const C = Tour.countries.salt;
+if (!C) return;
+const grid = (W, H, ch) => Array.from({ length: H }, () => Array(W).fill(ch));
+const put = (Gr, x, y, str) => { for (let k = 0; k < str.length; k++) if (x + k >= 0 && x + k < Gr[0].length) Gr[y][x + k] = str[k]; };
+const fillG = (Gr, x0, y0, x1, y1, ch) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) Gr[y][x] = ch; };
+const ground = (Gr, x0, x1, top, ch) => fillG(Gr, x0, top, x1, Gr.length - 1, ch || '#');
+const pit = (Gr, x0, x1) => fillG(Gr, x0, 0, x1, Gr.length - 1, '.');
+const rowsOf = Gr => Gr.map(r => r.join(''));
+const stamps = {};
+const SIGN = text => ['spawn', 'sign', { text }];
+const GRAIN = o => ['piece', 'salt.grain', o || {}];
+const ENEMY = { r: ['enemy', 'saltShrimp'], f: ['enemy', 'saltWren'], j: ['enemy', 'saltWeevil'], l: ['enemy', 'saltLick'] };
+// a secret room's stand-in stamp (the room kind builds its own place from it): its door out, its prize
+const roomStamp = (out, look, items) => ({ floor: 12, rows: [
+  '############################', '#..........................#', '#..........................#', '#..........................#',
+  '#..........................#', '#..........................#', '#..........................#', '#..........................#',
+  '#..........................#', '#..........................#', '#..........................#', '#.@..D..................?..#',
+  '############################', '############################'], items: items || ['oneup'], doors: [{ to: out, look: look || 'saltHatch' }] });
+const DOOR = (to, look) => ['spawn', 'portal', { kind: 'door', look: look || 'saltCellar', targetRef: to }];
+
+/* ---------------- 34-1 Angle of Repose ---------------- */
+// the tread's top is row 18. ① the teach: a heap by a notch (nothing else about); ② crystal stair-steps up to a high
+// plateau with a heap and a notch in it; above the plateau a climb of ledges to a high cellar door (the cobalt grain on
+// its sill: room B41); ③ the last heap with two notches (stop at the first one's FULL line), the end
+const flatRows = (() => {
+  const W = 200, H = 22, Gr = grid(W, H, '.');
+  ground(Gr, 0, 20, 18); put(Gr, 3, 17, '@'); put(Gr, 6, 17, 'k'); put(Gr, 10, 14, '?'); put(Gr, 16, 17, '1'); put(Gr, 21, 18, 'n');
+  ground(Gr, 30, 52, 18); put(Gr, 31, 17, 'c'); put(Gr, 34, 13, '*'); put(Gr, 31, 15, 'o.o.o'); put(Gr, 44, 17, 'r'); put(Gr, 38, 17, 'x');
+  // crystal stair-steps up to the plateau (row 13)
+  put(Gr, 48, 16, '--'); put(Gr, 51, 14, '--'); ground(Gr, 53, 74, 13); ground(Gr, 84, 92, 13);
+  put(Gr, 60, 9, '?'); put(Gr, 58, 12, 'f'); put(Gr, 69, 12, '2'); put(Gr, 75, 13, 'm'); put(Gr, 87, 12, 'r');
+  // the climb to the high door (B41) from the plateau's left end
+  put(Gr, 55, 10, '--'); put(Gr, 58, 7, '--'); fillG(Gr, 61, 4, 66, 4, 'H'); put(Gr, 63, 3, 'A'); put(Gr, 65, 3, 'u'); put(Gr, 61, 2, 'o.o');
+  put(Gr, 86, 9, 'o.o.o');
+  // down to the tread, ③
+  put(Gr, 92, 12, '.'); ground(Gr, 93, 120, 18); put(Gr, 94, 16, '-'); put(Gr, 100, 17, 'c'); put(Gr, 104, 17, 'a'); put(Gr, 108, 17, 'j'); put(Gr, 112, 14, '?');
+  put(Gr, 118, 17, '3'); put(Gr, 123, 18, 'p'); ground(Gr, 129, 133, 18); put(Gr, 134, 18, 'q'); ground(Gr, 143, W - 1, 18);
+  put(Gr, 115, 17, 'K'); put(Gr, 138, 13, 'R'); put(Gr, 130, 15, 'o.o');
+  put(Gr, 146, 17, 'l'); put(Gr, 152, 17, 'c'); put(Gr, 158, 16, 'HH'); put(Gr, 158, 15, 'HH'); put(Gr, 161, 13, '--'); put(Gr, 164, 10, '--'); put(Gr, 165, 8, 'P');
+  put(Gr, 170, 17, 'r'); put(Gr, 176, 17, 'j'); put(Gr, 172, 14, 'o.o.o'); put(Gr, 182, 17, 'x'); put(Gr, 190, 17, 'G');
+  fillG(Gr, W - 1, 0, W - 1, 17, 'H');
+  // the notches' pits (the pieces lay their hidden floors)
+  pit(Gr, 21, 29); fillG(Gr, 75, 13, 83, H - 1, '.'); pit(Gr, 123, 128); pit(Gr, 134, 142);
+  put(Gr, 21, 18, 'n'); put(Gr, 75, 13, 'm'); put(Gr, 123, 18, 'p'); put(Gr, 134, 18, 'q');
+  return rowsOf(Gr);
+})();
+const FLAT = Object.assign({}, ENEMY, {
+  k: SIGN('A SALT HEAP! STAND ON ITS GOLD RING AND HOLD RUN: THE TOP LAYER SLIDES DOWN INTO THE NOTCH'),
+  K: SIGN('THIS HEAP FEEDS TWO NOTCHES. LET GO OF RUN WHEN THE FIRST ONE IS FULL, THEN SCUFF AGAIN'),
+  x: ['decor', 'saltCellarProp'],
+  '1': ['piece', 'salt.heap', { notches: ['n1'], cap: 1.6 }], n: ['piece', 'salt.notch', { w: 9, id: 'n1' }],
+  '2': ['piece', 'salt.heap', { notches: ['n2'], cap: 1.6 }], m: ['piece', 'salt.notch', { w: 9, id: 'n2' }],
+  '3': ['piece', 'salt.heap', { notches: ['n3', 'n4'], cap: 2.6 }], p: ['piece', 'salt.notch', { w: 6, id: 'n3' }], q: ['piece', 'salt.notch', { w: 9, id: 'n4' }],
+  A: DOOR('kettle@in'), u: GRAIN(), a: ['anchor', 'kettleOut']
+});
+stamps.saltFlat = { floor: 18, rows: flatRows, legend: FLAT, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power', 'power'] };
+stamps.saltKettle = roomStamp('flats@kettleOut', 'saltHatch');
+const L1 = { n: 1, name: 'Angle of Repose', mapLabel: 'Angle of Repose', arch: 'repose', theme: 'salt_flats',
+  gimmick: 'Salt heaps beside notches in the tread: hold RUN on a heap\'s gold ring to scuff its top layer downhill into the notch, until it is full to the line and sets hard. The last heap feeds two notches',
+  hint: 'Hold RUN on the ring. The last heap has only just enough: let go when the first notch reaches its FULL line, then scuff again. A blue grain twinkles on a high sill...',
+  postcard: 'Brady! I scuffed a heap of salt into a hole and walked across it. The heap looked a bit put out. It said it was resting at its natural angle. ♥ C',
+  enemies: [['saltShrimp', 3], ['saltWeevil', 2], ['saltWren', 1], ['saltLick', 1]],
+  mapCell: [0, 0], mapFrom: -1,
+  exits: { main: { to: '34-2' } },
+  areas: [
+    { id: 'flats', gen: 'room', theme: 'salt_flats', stamp: 'saltFlat', camera: 'free', bottomKill: true },
+    { id: 'kettle', gen: 'room', role: 'secret', theme: 'salt_room_kettle', stamp: 'saltKettle', room: 'saltKettle' }
+  ] };
+
+/* ---------------- 34-2 Grain Elevator ---------------- */
+// floors on row 18. ① the teach: a spoon by a basin that floats its cork with one dose; ② a basin that needs two
+// doses; a cobalt cellar block whose left face is only glass paint (the grain on top: room B42 inside); ③ a lick by
+// the spoon of a wide basin, a climb to a high postcard; ④ the last basin, with a low lip and a spoon under a shaker
+// that tips again by itself: board the half-floating cork before it does
+const seaRows = (() => {
+  const W = 200, H = 22, Gr = grid(W, H, '.');
+  ground(Gr, 0, 19, 18); put(Gr, 3, 17, '@'); put(Gr, 6, 17, 'k'); put(Gr, 10, 14, '?'); put(Gr, 17, 17, '1'); pit(Gr, 20, 28); put(Gr, 20, 18, 'N');
+  ground(Gr, 29, 43, 18); put(Gr, 32, 17, 'c'); put(Gr, 36, 13, '*'); put(Gr, 33, 15, 'o.o.o'); put(Gr, 38, 17, 'r'); put(Gr, 41, 17, '2'); pit(Gr, 44, 53); put(Gr, 44, 18, 'd');
+  ground(Gr, 54, 93, 18); put(Gr, 54, 17, 'K'); put(Gr, 73, 14, '?'); put(Gr, 76, 17, 'j');
+  // the cellar block with its painted-glass left face (B42 inside)
+  put(Gr, 58, 15, '--'); fillG(Gr, 61, 14, 69, 14, 'H'); fillG(Gr, 64, 11, 69, 13, 'H'); fillG(Gr, 65, 12, 68, 13, '.'); fillG(Gr, 64, 12, 64, 13, 'F'); put(Gr, 67, 13, 'A'); put(Gr, 66, 10, 'u');
+  put(Gr, 80, 17, 'x'); put(Gr, 84, 17, 'c'); put(Gr, 88, 17, 'a'); put(Gr, 124, 11, 'f');
+  put(Gr, 91, 17, '3'); put(Gr, 78, 17, 'r'); pit(Gr, 94, 105); put(Gr, 94, 18, 'e');
+  ground(Gr, 106, 150, 18); put(Gr, 116, 17, 'r'); put(Gr, 114, 16, '-'); put(Gr, 117, 13, '--'); put(Gr, 120, 10, '--'); put(Gr, 121, 8, 'P'); put(Gr, 125, 14, '?'); put(Gr, 128, 17, 'j');
+  put(Gr, 136, 17, 'c'); put(Gr, 140, 17, 'Z'); put(Gr, 130, 13, 'f');
+  put(Gr, 148, 17, '4'); pit(Gr, 151, 163); put(Gr, 151, 18, 'M'); put(Gr, 157, 13, 'R');
+  ground(Gr, 164, W - 1, 18); put(Gr, 168, 15, 'o.o.o'); put(Gr, 174, 17, 'r'); put(Gr, 180, 17, 'x'); put(Gr, 190, 17, 'G');
+  fillG(Gr, W - 1, 0, W - 1, 17, 'H');
+  return rowsOf(Gr);
+})();
+const SEA = Object.assign({}, ENEMY, {
+  k: SIGN('JUMP ON THE SALT SPOON: IT TIPS A DOSE INTO THE BRINE. THICK ENOUGH, THE CORK FLOATS UP: RIDE IT ACROSS'),
+  K: SIGN('THIS BRINE NEEDS TWO DOSES. WATCH THE GAUGE ON THE BASIN WALL'),
+  Z: SIGN('THE LAST SPOON REFILLS AND TIPS BY ITSELF. GET ON THE CORK BEFORE IT DOES, OR IT FLOATS OFF'),
+  x: ['decor', 'saltCellarProp'],
+  N: ['piece', 'salt.basin', { id: 'b1', w: 9, d: 4, need: 1 }], '1': ['piece', 'salt.spoon', { basin: 'b1' }],
+  d: ['piece', 'salt.basin', { id: 'b2', w: 10, d: 4, need: 2 }], '2': ['piece', 'salt.spoon', { basin: 'b2' }],
+  e: ['piece', 'salt.basin', { id: 'b3', w: 12, d: 4, need: 2 }], '3': ['piece', 'salt.spoon', { basin: 'b3' }],
+  M: ['piece', 'salt.basin', { id: 'b4', w: 13, d: 4, need: 1, lip: true }], '4': ['piece', 'salt.spoon', { basin: 'b4', auto: 3.4 }],
+  A: DOOR('lamps@in'), u: GRAIN(), a: ['anchor', 'lampsOut']
+});
+stamps.saltSea = { floor: 18, rows: seaRows, legend: SEA, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power'] };
+stamps.saltLamps = roomStamp('sea@lampsOut', 'saltHatch');
+const L2 = { n: 2, name: 'Grain Elevator', mapLabel: 'Grain Elevator', arch: 'brinefloat', theme: 'salt_sea',
+  gimmick: 'Basins of brine with a weighted cork asleep in a cradle at the bottom: jump on the salt spoon to tip a dose in, thicken the brine until the cork floats up, then ride it across. The last spoon refills itself',
+  hint: 'The gauge on the basin wall shows the doses: gold means it floats. On the last basin get on the half-floating cork before the spoon tips again. A blue grain sits on top of a glass block...',
+  postcard: 'Brady! I salted a pond until a cork came up for air, and then it gave me a lift. I tipped it nothing. It seemed to expect that. ♥ C',
+  enemies: [['saltShrimp', 3], ['saltWeevil', 2], ['saltWren', 2], ['saltLick', 1]],
+  mapCell: [1, 0], mapFrom: 0,
+  exits: { main: { to: '34-3' } },
+  areas: [
+    { id: 'sea', gen: 'room', theme: 'salt_sea', stamp: 'saltSea', camera: 'free', bottomKill: true },
+    { id: 'lamps', gen: 'room', role: 'secret', theme: 'salt_room_lamps', stamp: 'saltLamps', room: 'saltLamps' }
+  ] };
+
+/* ---------------- 34-3 Crystal Habit ---------------- */
+// floors on row 18. ① the teach: a little crystal at a cliff's edge grows a bridge across; ② a crystal that grows
+// straight up (an elevator: each cube lifts Brady) to a high shelf, a bridge from a crystal on a pillar; ③ an
+// optional crystal elevator to a high sill (the grain on it: room B43's cellar door); ④ the corner: a glass beam
+// overhead stops the bridge, so it grows down from the tip and on, lower; the brine rises in the trough below
+const caveRows = (() => {
+  const W = 200, H = 22, Gr = grid(W, H, '.');
+  ground(Gr, 0, 19, 18); put(Gr, 3, 17, '@'); put(Gr, 6, 17, 'k'); put(Gr, 10, 14, '?'); put(Gr, 18, 17, '1'); pit(Gr, 20, 28);
+  ground(Gr, 29, 52, 18); put(Gr, 30, 17, 'c'); put(Gr, 34, 13, '*'); put(Gr, 31, 15, 'o.o.o'); put(Gr, 40, 17, 'r'); put(Gr, 46, 17, 'K');
+  // ② the elevator crystal up to the shelf (row 12), the shelf, a pillar crystal bridging down the far side
+  put(Gr, 50, 17, '2'); ground(Gr, 51, 64, 12); put(Gr, 56, 11, 'f'); put(Gr, 58, 8, '?'); put(Gr, 63, 11, '3'); pit(Gr, 65, 73); ground(Gr, 74, 96, 12);
+  put(Gr, 78, 11, 'j'); put(Gr, 81, 11, 'c');
+  // ③ the optional elevator to the high sill (B43)
+  put(Gr, 88, 11, '4'); fillG(Gr, 89, 5, 94, 5, 'H'); put(Gr, 92, 4, 'A'); put(Gr, 94, 4, 'u'); put(Gr, 90, 3, 'o.o');
+  put(Gr, 96, 11, '.'); ground(Gr, 97, 140, 18); put(Gr, 99, 17, 'a'); put(Gr, 104, 17, 'l'); put(Gr, 110, 14, '?'); put(Gr, 114, 17, 'r'); put(Gr, 120, 17, 'c');
+  put(Gr, 126, 16, '--'); put(Gr, 129, 14, '--'); put(Gr, 132, 11, '--'); put(Gr, 133, 9, 'P'); put(Gr, 136, 17, 'Z'); put(Gr, 138, 15, '---');
+  // ④ the corner: the cliff (row 13) from 141, the stem at its edge, the beam overhead past the tip, the trough below
+  ground(Gr, 141, 150, 13); put(Gr, 144, 12, 'j'); put(Gr, 149, 12, '5'); fillG(Gr, 155, 8, 163, 12, 'H'); pit(Gr, 151, 160); put(Gr, 157, 13, 'R');
+  ground(Gr, 161, W - 1, 16); put(Gr, 166, 15, 'o.o.o'); put(Gr, 172, 15, 'r'); put(Gr, 178, 15, 'c'); put(Gr, 184, 15, 'x'); put(Gr, 190, 15, 'G');
+  fillG(Gr, W - 1, 0, W - 1, 15, 'H');
+  return rowsOf(Gr);
+})();
+const CAVE = Object.assign({}, ENEMY, {
+  k: SIGN('A SALT CRYSTAL! STAND ON IT AND HOLD THROW: A NEW CUBE GROWS WHERE THE DASHED SQUARE IS'),
+  K: SIGN('SOME CRYSTALS GROW UP. A CUBE GROWING UNDER YOU LIFTS YOU WITH IT'),
+  Z: SIGN('THE LAST ONE TURNS A CORNER UNDER THE BEAM. THE BRINE RISES ONCE IT STARTS: KEEP GROWING'),
+  x: ['decor', 'saltCellarProp'],
+  '1': ['piece', 'salt.crystal', { id: 'c1', h: 1, w: 2, plan: [[1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0], [10, 0]] }],
+  '2': ['piece', 'salt.crystal', { id: 'c2', h: 1, plan: [[0, -1], [0, -2], [0, -3], [0, -4], [0, -5]] }],
+  '3': ['piece', 'salt.crystal', { id: 'c3', h: 1, w: 2, plan: [[1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0], [10, 0]] }],
+  '4': ['piece', 'salt.crystal', { id: 'c4', h: 1, plan: [[0, -1], [0, -2], [0, -3], [0, -4], [0, -5], [0, -6]] }],
+  '5': ['piece', 'salt.crystal', { id: 'c5', h: 1, w: 2, plan: [[1, 0], [2, 0], [3, 0], [4, 0], [4, 1], [4, 2], [4, 3], [5, 3], [6, 3], [7, 3], [8, 3], [9, 3], [10, 3], [11, 3]], brine: { dx0: 2, dx1: 11, dy: 4, time: 16 } }],
+  A: DOOR('mitts@in'), u: GRAIN(), a: ['anchor', 'mittsOut']
+});
+stamps.saltCave = { floor: 18, rows: caveRows, legend: CAVE, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power', 'power'] };
+stamps.saltMitts = roomStamp('cave@mittsOut', 'saltHatch');
+const L3 = { n: 3, name: 'Crystal Habit', mapLabel: 'Crystal Habit', arch: 'cubegrow', theme: 'salt_cave',
+  gimmick: 'Salt crystals that grow while you hold THROW on them: a new cube comes out of the flat face, where the dashed square shows. Bridges, lifts, and late on a corner under a glass beam while the brine rises',
+  hint: 'Stand on any cube of a crystal and hold THROW. A cube growing under Brady lifts him. On the last one keep growing: the brine dissolves it if it reaches the stem. A blue grain sits on a high sill...',
+  postcard: 'Brady! I held a salt crystal until it grew me a staircase. Then it grew me a bit more staircase than I needed. Crystals are like that. ♥ C',
+  enemies: [['saltShrimp', 3], ['saltWeevil', 2], ['saltWren', 1], ['saltLick', 1]],
+  mapCell: [2, 0], mapFrom: 1,
+  exits: { main: { to: '34-4' } },
+  areas: [
+    { id: 'cave', gen: 'room', theme: 'salt_cave', stamp: 'saltCave', camera: 'free', bottomKill: true },
+    { id: 'mitts', gen: 'room', role: 'secret', theme: 'salt_room_mitts', stamp: 'saltMitts', room: 'saltMitts' }
+  ] };
+
+/* ---------------- 34-4 The Shaker Test ---------------- */
+// the floor is row 14 (Brady on 13). Inside the cap the floor is its charcoal disc, the holes at Brady's feet and a
+// chamber of bowls under it; a cellar gate at the end of each disc lifts when its gold bowl sinks. ① two holes: plug
+// the other one; ② three holes, half a pour will do; a glass block whose left face is only paint (the grain on top:
+// room B44); ③ the same with a critter on the disc; ④ the narrow bowl: stand astride the two neighbouring holes
+const capRows = (() => {
+  const W = 190, H = 22, Gr = grid(W, H, '.');
+  ground(Gr, 0, W - 1, 14);
+  const chamber = (x0, x1) => { fillG(Gr, x0, 15, x1, 16, '.'); fillG(Gr, x0, 14, x1, 14, 'H'); };
+  put(Gr, 3, 13, '@'); put(Gr, 6, 13, 'k'); put(Gr, 9, 10, '?');
+  chamber(15, 28); put(Gr, 16, 13, '1'); put(Gr, 28, 13, 'U');
+  put(Gr, 32, 13, 'c'); put(Gr, 36, 9, '*'); put(Gr, 34, 11, 'o.o.o'); put(Gr, 40, 13, 'r'); put(Gr, 44, 13, 'K');
+  put(Gr, 46, 11, '--'); fillG(Gr, 49, 10, 57, 10, 'H'); fillG(Gr, 52, 7, 57, 9, 'H'); fillG(Gr, 53, 8, 56, 9, '.'); fillG(Gr, 52, 8, 52, 9, 'F'); put(Gr, 55, 9, 'A'); put(Gr, 54, 6, 'u');
+  chamber(59, 74); put(Gr, 60, 13, '2'); put(Gr, 74, 13, 'V');
+  put(Gr, 78, 13, 'c'); put(Gr, 82, 13, 'a'); put(Gr, 88, 13, 'l'); put(Gr, 92, 10, '?'); put(Gr, 94, 12, '--'); put(Gr, 97, 9, '--'); put(Gr, 98, 7, 'P');
+  chamber(101, 116); put(Gr, 102, 13, '3'); put(Gr, 116, 13, 'E'); put(Gr, 108, 13, 'r'); put(Gr, 110, 7, 'f');
+  put(Gr, 120, 13, 'c'); put(Gr, 124, 13, 'Z'); put(Gr, 126, 10, '?');
+  chamber(129, 144); put(Gr, 130, 13, '4'); put(Gr, 144, 13, 'Y'); put(Gr, 136, 9, 'R');
+  put(Gr, 156, 11, 'o.o.o'); put(Gr, 166, 13, 'r'); put(Gr, 175, 13, 'r'); put(Gr, 168, 13, 'x'); put(Gr, 180, 13, 'G');
+  fillG(Gr, W - 1, 0, W - 1, 13, 'H');
+  return rowsOf(Gr);
+})();
+const CAP = Object.assign({}, ENEMY, {
+  k: SIGN('INSIDE THE SHAKER CAP! WHEN IT SHAKES IT POURS DOWN EVERY HOLE YOU ARE NOT STANDING ON. FILL THE GOLD BOWL'),
+  K: SIGN('HALF A POUR IS ENOUGH HERE: PLUG ONE OF THE OTHER HOLES'),
+  Z: SIGN('A NARROW BOWL NEEDS THE WHOLE POUR. TWO HOLES SIT SIDE BY SIDE: STAND ASTRIDE THEM'),
+  x: ['decor', 'saltCellarProp'],
+  '1': ['piece', 'salt.cap', { id: 'cap1', holes: [2, 8], gold: 1, need: 1, bowlDy: 4, span: [-1, 12], lock: 'gate1', plug: [2] }], U: ['piece', 'salt.gate', { id: 'gate1', h: 4 }],
+  '2': ['piece', 'salt.cap', { id: 'cap2', holes: [2, 7, 12], gold: 2, need: 0.5, bowlDy: 4, span: [-1, 14], lock: 'gate2', plug: [2, 7] }], V: ['piece', 'salt.gate', { id: 'gate2', h: 4 }],
+  '3': ['piece', 'salt.cap', { id: 'cap3', holes: [3, 8, 12], gold: 0, need: 0.5, bowlDy: 4, span: [-1, 14], lock: 'gate3', plug: [8, 12] }], E: ['piece', 'salt.gate', { id: 'gate3', h: 4 }],
+  '4': ['piece', 'salt.cap', { id: 'cap4', holes: [3, 4, 10], gold: 2, need: 1, bowlDy: 4, span: [-1, 14], lock: 'gate4', plug: [3, 4], narrow: true }], Y: ['piece', 'salt.gate', { id: 'gate4', h: 4 }],
+  A: DOOR('rattle@in'), u: GRAIN(), a: ['anchor', 'rattleOut']
+});
+stamps.saltCap = { floor: 14, rows: capRows, legend: CAP, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power', 'power'] };
+stamps.saltRattle = roomStamp('cap@rattleOut', 'saltHatch');
+const L4 = { n: 4, name: 'The Shaker Test', mapLabel: 'The Shaker Test', arch: 'shakercap', theme: 'salt_shaker',
+  gimmick: 'Inside the shaker\'s perforated cap: when it shakes it pours down every hole Brady isn\'t standing on, into the bowls below. Plug the right holes with a shoe so the gold bowl gets enough to sink and lift the gate',
+  hint: 'Watch the cap shake, then stand on a hole before it pours. The narrow bowl needs the whole pour: stand astride the two holes side by side. A blue grain sits on a glass block...',
+  postcard: 'Brady! I stood inside a salt shaker with one shoe on a hole and it poured exactly where I wanted. I have never been so in control of seasoning. ♥ C',
+  enemies: [['saltShrimp', 3], ['saltWeevil', 1], ['saltWren', 1], ['saltLick', 1]],
+  mapCell: [3, 0], mapFrom: 2,
+  exits: { main: { to: '34-5' } },
+  areas: [
+    { id: 'cap', gen: 'room', theme: 'salt_shaker', stamp: 'saltCap', camera: 'free', bottomKill: true },
+    { id: 'rattle', gen: 'room', role: 'secret', theme: 'salt_room_rattle', stamp: 'saltRattle', room: 'saltRattle' }
+  ] };
+
+/* ---------------- 34-5 Season to Taste (the boss) ---------------- */
+// A Pinch's kitchen counter, floor row 16 (Brady on 15): ① a weighing spoon and a pot lid across the way (stand on,
+// step off in the gold); ② shrimp, a climb of shelves to a high cellar door (the grain on its sill: room B45, which
+// lets out past the last spoon); ③ the last tasting: Brady's own weight counts (step off at the shoe); the kitchen door
+const tasteRows = (() => {
+  const W = 84, H = 20, Gr = grid(W, H, '#');
+  fillG(Gr, 1, 1, W - 2, 15, '.');
+  put(Gr, 3, 15, '@'); put(Gr, 6, 15, 'k'); put(Gr, 9, 12, '?'); put(Gr, 12, 15, '1'); put(Gr, 20, 15, 'U');
+  put(Gr, 24, 15, 'c'); put(Gr, 28, 11, '*'); put(Gr, 26, 13, 'o.o.o'); put(Gr, 32, 15, 'r');
+  put(Gr, 30, 12, '---'); put(Gr, 34, 9, '---'); fillG(Gr, 38, 6, 43, 6, 'H'); put(Gr, 40, 5, 'A'); put(Gr, 42, 5, 'u'); put(Gr, 38, 4, 'o.o'); put(Gr, 36, 7, 'R');
+  put(Gr, 44, 15, 'K'); put(Gr, 47, 15, '2'); put(Gr, 55, 15, 'V'); put(Gr, 58, 15, 'a'); put(Gr, 60, 12, '?'); put(Gr, 64, 12, '--'); put(Gr, 65, 9, 'P'); put(Gr, 68, 15, 'f');
+  put(Gr, 76, 15, 'E');
+  return rowsOf(Gr);
+})();
+const TASTE = Object.assign({}, ENEMY, {
+  k: SIGN('A WEIGHING SPOON! STAND ON IT WHILE THE SHAKER POURS. STEP OFF WHEN THE NEEDLE IS IN THE GOLD'),
+  K: SIGN('THE LAST TASTING: YOUR OWN WEIGHT COUNTS. STEP OFF WHEN THE NEEDLE REACHES THE SHOE'),
+  '1': ['piece', 'salt.weigh', { id: 'w1', w: 4, lock: 'pot1' }], U: ['piece', 'salt.gate', { id: 'pot1', h: 4 }],
+  '2': ['piece', 'salt.weigh', { id: 'w2', w: 4, lock: 'pot2', shoe: true }], V: ['piece', 'salt.gate', { id: 'pot2', h: 4 }],
+  A: DOOR('stand@in'), u: GRAIN(), a: ['anchor', 'standOut'],
+  E: DOOR('kitchen@in', 'saltCellar')
+});
+stamps.saltTaste = { floor: 16, rows: tasteRows, legend: TASTE, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power'] };
+stamps.saltStand = roomStamp('counter@standOut', 'saltHatch', ['star']);
+const L5 = { n: 5, name: 'Season to Taste', mapLabel: 'Season to Taste', arch: 'lair', theme: 'salt_kitchen', boss: 'salt_pinch',
+  gimmick: 'A Pinch, the cork who considers himself a chef, pours into his great weighing spoon. Brady\'s weight holds it level: step off when the needle is in the gold and a perfect pinch tips into the soup',
+  hint: 'He can\'t be stomped. One finger: a dusting. Two fingers: stay OFF for the coarse pour (jump the lumps), back on for the fine one. The rub: your weight counts, so step off at the shoe. Step out of the crystals\' shadows',
+  postcard: 'Brady! You seasoned the chef\'s soup to his satisfaction, which I gather has never happened. He gave the shaker the afternoon off. It went to the seaside. It is the seaside. ♥ C',
+  enemies: [['saltShrimp', 1], ['saltWren', 1]],
+  mapCell: [4, 0], mapFrom: 3,
+  exits: { main: { to: null } },
+  areas: [
+    { id: 'counter', gen: 'room', theme: 'salt_kitchen', stamp: 'saltTaste' },
+    { id: 'stand', gen: 'room', role: 'secret', theme: 'salt_room_stand', stamp: 'saltStand', room: 'saltStand' },
+    { id: 'kitchen', gen: 'arena', role: 'arena', layout: 'kitchen', arenaW: 24, H: 18, roof: false, theme: 'salt_kitchen' }
+  ] };
+
+Tour.amend('salt', { stamps, levels: [L1, L2, L3, L4, L5] });
+Tour.saltLevels = { grid, put, fillG, ground, pit, rowsOf, SIGN, GRAIN, ENEMY, roomStamp, DOOR, stamps };
+
+/* ---------------- the land's map: salt flats in a cobalt sea ---------------- */
+if (typeof TOUR_OW_MAPS !== 'undefined') TOUR_OW_MAPS.salt = {
+  labels: { '34-1': 'Angle of Repose', '34-2': 'Grain Elevator', '34-3': 'Crystal Habit', '34-4': 'The Shaker Test', '34-5': 'Season to Taste' },
+  w: 1520, h: 760,
+  pal: { sea: '#3a68c8', deep: '#2448a0', land: '#e8eef8', light: '#ffffff', path: '#f08a2a', beach: '#cfe0fa', cliff: '#1c3586', roof: '#f08a2a', wall: '#f6f9ff' },
+  sea: 'waves', coast: 'saltCrust', tufts: 'none', trail: 'sand', bridge: 'stone', meadow: false, woods: false, foam: true, birds: false,
+  // a long spoon lying in the sea: the handle runs in from the left, the bowl is the land's right end
+  land: [[[150, 330], [420, 300], [700, 310], [880, 240], [1080, 170], [1300, 200], [1420, 360], [1330, 560], [1100, 620], [880, 520], [700, 430], [420, 440], [160, 430]]],
+  nodes: { start: [210, 380], '34-1': [380, 370, 'n'], '34-2': [620, 370, 'n'], '34-3': [900, 330, 'n'], '34-4': [1160, 280, 'n'], '34-5': [1180, 480, 's'], port: [960, 500] },
+  paths: { 'start>34-1': [[290, 360]], '34-1>34-2': [[500, 350]], '34-2>34-3': [[760, 380]], '34-3>34-4': [[1030, 280]], '34-4>34-5': [[1280, 380]], '34-5>port': [[1070, 520]] },
+  feat: [
+    ['sprite', 'saltHeapSprite', 520, 410, 22], ['sprite', 'saltHeapSprite', 1000, 230, 20], ['sprite', 'saltCellarSprite', 1320, 470, 24],
+    ['sprite', 'saltCorkSprite', 760, 560, 22], ['sprite', 'saltPotSprite', 1180, 400, 28], ['sprite', 'saltCorkSprite', 300, 520, 16]
+  ],
+  flora: ['rock'], density: 0,
+  live: [['circle', 760, 120, 60, 0.6]]
+};
+})();
+
 /* ---- 29_tour_y_seats.js ---- */
 /* ============================================================
    BELOW THE CHEAP SEATS (world 33, cc 'seats'): a hidden land (docs/handoff/HIDDEN_LAND_BRIEF.md, A8 of
@@ -115747,6 +117790,22 @@ const BoxArt = (() => {
       // the shell clasp: on the front at the lid's edge; hit, it flips up and over
       rot(c, 16, 14, -flip * 2.4, () => { c.beginPath(); c.moveTo(16 - 4, 16); for (let k = 0; k <= 6; k++) { const a = PI + k * PI / 6, r = k % 2 ? 6 : 5.4; c.lineTo(16 + Math.cos(a) * r, 16 + Math.sin(a) * r); } c.lineTo(16 + 4, 16); c.closePath(); fs(c, Ap, 1.1); L(c, [[16, 15.6], [13, 11.5]], Ap2, 0.8); L(c, [[16, 15.6], [19, 11.5]], Ap2, 0.8); });
     } }
+    ,
+    // ---- The Table Salt Sea (34, hidden land): a cobalt glass salt cellar heaped with salt under a tangerine cork lid
+    //      with a charcoal handle; the hit pops the cork up and it tips off to lean against the side; empty: a bare
+    //      cobalt box, the cork leaning on it ----
+    salt: { name: 'The Table Salt Sea', draw(c, p) {
+      const Cb = '#2f55c8', Cd = '#1c3586', Cl = '#5a82e8', Ck = '#f08a2a', Ckd = '#c0601a', Wh = '#f6f9ff', Ch = '#34343e';
+      const q = io(seg(p, 0.05, 0.75)), salt = 1 - seg(p, 0.3, 0.9);
+      // the glass cellar (see-through front: the salt heap inside, falling away as the prize goes)
+      R(c, 4, 12, 24, 18, 3, Cb);
+      c.fillStyle = Cd; c.fillRect(6, 14, 20, 14);
+      if (salt > 0.02) { c.fillStyle = Wh; c.beginPath(); c.moveTo(6, 28); c.lineTo(6, 28 - 11 * salt); c.quadraticCurveTo(16, 28 - 15 * salt, 26, 28 - 11 * salt); c.lineTo(26, 28); c.closePath(); c.fill(); }
+      c.fillStyle = Cl; c.fillRect(7, 15, 2.4, 11);
+      // the cork lid with its handle: seated, popped up, then tipped off to lean on the right side
+      const lx = 16 + 12 * q, ly = 12 - 9 * Math.sin(q * PI) + 4 * q, a = q * 1.25;
+      rot(c, lx, ly, a, () => { R(c, lx - 13, ly - 6, 26, 7, 2.5, Ck); c.fillStyle = Ckd; for (const [dx, dy] of [[-8, -3], [-2, -2], [5, -4], [9, -2]]) { c.beginPath(); c.arc(lx + dx, ly + dy, 0.9, 0, TAU); c.fill(); } R(c, lx - 4, ly - 11, 8, 5, 1.5, Ch); });
+    } }
   };
 
   // ---- painting the states ----
@@ -116270,7 +118329,9 @@ const NOTES = {
   umb: 'Every card from the repair district! I sent you a spare rib in a paper sleeve. Not for the umbrella, darling: for the next time you open one indoors and swear it was already like that.',
   gal: 'Every postcard from the gallery! I hung the worst Piwi portrait in the hall so the coats have something to laugh at. Mind the hook, darling: it is where your hat used to go.',   // The Unflattering Gallery (hidden land A5)
   foley: 'Every card from Foley Beach! I packed two coconut halves so you can do the horse in the kitchen. Do it quietly, darling, the neighbours think we keep one.',   // Foley Beach (hidden land A4)
-  seats: 'Every card from under the cheap seats! I have put a folding chair facing the wall in the hall so you feel at home. Twice I sat on it the right way round. Both times, darling, it folded me up.'   // Below the Cheap Seats (33)
+  seats: 'Every card from under the cheap seats! I have put a folding chair facing the wall in the hall so you feel at home. Twice I sat on it the right way round. Both times, darling, it folded me up.',   // Below the Cheap Seats (33)
+  // The Table Salt Sea (34, hidden land A9)
+  salt: 'Every card from the salt sea! I have stopped trusting our shaker. It says "just a pinch" and it has said that since our wedding. I weighed it. Brady, it is a lot more than a pinch.',
 };
 const noteOf = C => (NOTES[C.id] || ('Every postcard from ' + C.name + '! I keep them all in a shoebox.')) + ' ♥ C';
 
