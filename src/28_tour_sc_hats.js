@@ -344,7 +344,7 @@ Object.assign(TourHats.HEADS, {
   // The Orchard After Closing (28): the pear fly, the tie worm, the pip finch, the bark snail
   orchFly: [0.3, 0.3, -1.1, 0], orchWorm: [0.4, 0.4, -0.9, 0], orchFinch: [0.3, 0.3, -1.3, 0], orchSnail: [0.5, 0.5, -1.15, 0],
   // Below the Cheap Seats (33): the bolt crab, the seat shrew, the cable hen, the sandbag stoat
-  seatsCrab: [0.4, 0.4, -1.0, 0], seatsShrew: [0.6, 0.6, -0.9, 0], seatsHen: [0.35, 0.35, -1.25, 0], seatsStoat: [0.45, 0.45, -1.0, 0]
+  seatsCrab: [0.42, 0.42, -1.55, 0], seatsShrew: [0.55, 0.55, -1.2, 0], seatsHen: [0.4, 0.4, -1.4, 0], seatsStoat: [0.45, 0.45, -1.45, 0]
 
 });
 

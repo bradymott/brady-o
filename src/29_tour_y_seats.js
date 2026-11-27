@@ -323,6 +323,50 @@ const painters = {
     ctx.fillRect(0, b, BG_W, H - b);
     ctx.fillStyle = 'rgba(255,220,140,0.12)'; ctx.fillRect(0, b - 20, BG_W, 20);
   },
+  // overhead: the underside of the raked seating, stepping down left to right; between the slats, dangling feet and
+  // dropped popcorn show through (all dim)
+  seatsRake(ctx, L, rng, H) {
+    const b = L.base, c = L.color, hi = L.hi || 'rgba(255,230,170,0.16)';
+    for (let x0 = -60; x0 < BG_W; x0 += 420) {
+      for (let k = 0; k < 7; k++) {
+        const x = x0 + k * 60, y = 10 + k * 22;
+        ctx.fillStyle = c; ctx.fillRect(x, y, 64, 14); ctx.fillRect(x + 54, y, 10, 40);
+        ctx.fillStyle = hi; ctx.fillRect(x + 2, y + 14, 50, 4);
+        // a pair of feet dangling through the gap (shoes only), a few popcorn crumbs
+        if ((k + x0) % 3 === 0) { ctx.fillStyle = c; for (const d of [8, 22]) { ctx.fillRect(x + d, y + 18, 5, 16); ctx.beginPath(); ctx.ellipse(x + d + 5, y + 35, 7, 3.5, 0, 0, TAU); ctx.fill(); } }
+        ctx.fillStyle = 'rgba(244,230,196,0.28)'; for (let q = 0; q < 3; q++) { ctx.beginPath(); ctx.arc(x + 10 + rng() * 40, y + 20 + rng() * (b * 0.4), 2 + rng() * 1.5, 0, TAU); ctx.fill(); }
+      }
+      // the great raking stringer under the steps
+      ctx.strokeStyle = c; ctx.lineWidth = 12; ctx.beginPath(); ctx.moveTo(x0 - 20, 0); ctx.lineTo(x0 + 440, 175); ctx.stroke();
+    }
+  },
+  // mid: scaffold poles, sandbags hanging on lines, rope coils on cleats
+  seatsRig(ctx, L, rng, H) {
+    const b = L.base, c = L.color;
+    ctx.strokeStyle = c; ctx.fillStyle = c;
+    for (let x = 40; x < BG_W; x += 190 + rng() * 60) {
+      ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, b); ctx.stroke();
+      ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(x - 30, b - 120 - rng() * 60); ctx.lineTo(x + 30, b - 120 - rng() * 60); ctx.stroke();
+      // a sandbag on a line from the dark
+      const sx = x + 70 + rng() * 40, sy = 60 + rng() * 120; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(sx, 0); ctx.lineTo(sx, sy); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(sx - 5, sy); ctx.quadraticCurveTo(sx - 16, sy + 10, sx - 13, sy + 24); ctx.quadraticCurveTo(sx, sy + 30, sx + 13, sy + 24); ctx.quadraticCurveTo(sx + 16, sy + 10, sx + 5, sy); ctx.closePath(); ctx.fill();
+      // a rope coil hung on the pole
+      ctx.lineWidth = 3; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.ellipse(x + 8 + k * 2, b - 70 + k * 2, 9, 13, 0.2, 0, TAU); ctx.stroke(); }
+    }
+    ctx.fillRect(0, b, BG_W, H - b);
+  },
+  // near: mulberry swags with gold hems hung from above, a row of dim footlights along the bottom
+  seatsDrape(ctx, L, rng, H) {
+    const b = L.base, c = L.color, hem = L.hem || 'rgba(176,128,30,0.55)';
+    for (let x = 0; x < BG_W; x += 640) {
+      for (const [x0, d] of [[x, 1], [x + 320, -1]]) {
+        ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(x0, 0); ctx.lineTo(x0 + 150 * d, 0); ctx.quadraticCurveTo(x0 + 60 * d, 90, x0 + 20 * d, 220); ctx.lineTo(x0, 230); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = hem; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(x0 + 150 * d, 0); ctx.quadraticCurveTo(x0 + 60 * d, 90, x0 + 20 * d, 220); ctx.stroke();
+      }
+      ctx.fillStyle = c; ctx.fillRect(x, 0, 640, 26); ctx.fillStyle = hem; ctx.fillRect(x, 26, 640, 4);
+    }
+    for (let x = 30; x < BG_W; x += 80) { ctx.fillStyle = 'rgba(255,224,150,0.10)'; ctx.beginPath(); ctx.arc(x, b - 6, 22, Math.PI, 0); ctx.fill(); ctx.fillStyle = c; ctx.fillRect(x - 10, b - 8, 20, 8); ctx.fillStyle = 'rgba(255,230,160,0.35)'; ctx.fillRect(x - 5, b - 10, 10, 3); }
+  },
   // the rooms: each its own back wall
   roomStore(ctx, L, rng, H) { const b = L.base; ctx.fillStyle = '#4a2618'; ctx.fillRect(0, 0, BG_W, H); ctx.fillStyle = '#5a3020'; for (let y = 0; y < H; y += 40) ctx.fillRect(0, y, BG_W, 20); for (let x = 40; x < BG_W; x += 220) { ctx.fillStyle = '#5e3424'; ctx.fillRect(x, b - 230, 160, 10); ctx.fillRect(x, b - 140, 160, 10); ctx.fillRect(x + 6, b - 230, 8, 230); ctx.fillRect(x + 146, b - 230, 8, 230); ctx.fillStyle = '#6a4030'; for (let k = 0; k < 4; k++) { ctx.fillRect(x + 22 + k * 32, b - 262, 24, 32); ctx.fillRect(x + 22 + k * 32, b - 172, 24, 32); } } },
   roomWeights(ctx, L, rng, H) { const b = L.base; ctx.fillStyle = '#2a2c34'; ctx.fillRect(0, 0, BG_W, H); ctx.strokeStyle = '#3e424e'; ctx.lineWidth = 3; for (let x = 0; x < BG_W; x += 24) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); } for (let y = 0; y < H; y += 24) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(BG_W, y); ctx.stroke(); } ctx.fillStyle = '#4a4e5a'; for (let x = 40; x < BG_W; x += 120) for (let k = 0; k < 5; k++) ctx.fillRect(x, b - 40 - k * 16, 60, 12); },
@@ -338,17 +382,17 @@ const base = (o, ...mix) => Object.assign({}, ...mix, o);
 const room = (name, sky, layer) => base({ name, music: 'tour_seats_room', particles: 'none', rays: null, sky: [sky, sky, sky], horizonGlow: '#ffffff', celestial: { type: 'none' }, stars: 0, layers: [{ kind: layer, base: 400, f: 0.05 }], fog: sky, decor: [] }, RT[{ roomStore: 'store', roomWeights: 'weights', roomProps: 'props', roomGreen: 'green', roomPit: 'pit', roomCall: 'call' }[layer]]);
 const themes = {
   seats_scaffold: base({ name: 'Two Ways Round a Pole', music: 'tour_seats', particles: 'none', rays: '#ffe0b0', sky: SKY, horizonGlow: '#c8906a', celestial: { type: 'none' }, stars: 0,
-    layers: [{ kind: 'seatsUnder', color: '#2e2030', base: 330, f: 0.06 }, { kind: 'seatsScaff', color: '#3e2a32', base: 430, f: 0.2 }], fog: '#4a3038', decor: ['seatsCoilDecor', 'seatsLampDecor'] }, understage),
+    layers: [{ kind: 'seatsRake', color: '#2a1c2a', base: 330, f: 0.04 }, { kind: 'seatsScaff', color: '#3e2a32', base: 430, f: 0.12 }, { kind: 'seatsRig', color: '#46303a', base: 460, f: 0.22 }], fog: '#4a3038', decor: ['seatsCoilDecor', 'seatsLampDecor'] }, understage),
   seats_flies: base({ name: 'Slack Department', music: 'tour_seats_flies', particles: 'none', rays: null, sky: ['#241a2e', '#3e2a3a', '#6a4a3a'], horizonGlow: '#d8a070', celestial: { type: 'none' }, stars: 0,
-    layers: [{ kind: 'seatsUnder', color: '#30223a', base: 330, f: 0.05 }, { kind: 'seatsFlies', color: '#3a2a38', base: 430, f: 0.18 }], fog: '#4a3440', decor: ['seatsCoilDecor', 'seatsBagDecor'] }, understage),
+    layers: [{ kind: 'seatsRake', color: '#2c2034', base: 330, f: 0.04 }, { kind: 'seatsFlies', color: '#3a2a38', base: 430, f: 0.12 }, { kind: 'seatsRig', color: '#4a3442', base: 460, f: 0.22 }], fog: '#4a3440', decor: ['seatsCoilDecor', 'seatsBagDecor'] }, understage),
   seats_rowg: base({ name: 'The Seat That Ate Row G', music: 'tour_seats', particles: 'none', rays: '#ffd8a0', sky: ['#1a2a30', '#2a3a40', '#4a4a40'], horizonGlow: '#a8b890', celestial: { type: 'none' }, stars: 0,
-    layers: [{ kind: 'seatsUnder', color: '#1e2e34', base: 320, f: 0.05 }, { kind: 'seatsStalls', color: '#22383c', base: 430, f: 0.18 }], fog: '#2e4448', decor: ['seatsLampDecor'] }, understage),
+    layers: [{ kind: 'seatsRake', color: '#1c2a30', base: 320, f: 0.04 }, { kind: 'seatsStalls', color: '#22383c', base: 430, f: 0.12 }, { kind: 'seatsRig', color: '#2a4044', base: 460, f: 0.22 }], fog: '#2e4448', decor: ['seatsLampDecor'] }, understage),
   seats_dock: base({ name: 'Please Mind the Scenery', music: 'tour_seats_flies', particles: 'none', rays: null, sky: ['#2a1a20', '#4a2a2e', '#7a4a3a'], horizonGlow: '#e0a070', celestial: { type: 'none' }, stars: 0,
-    layers: [{ kind: 'seatsUnder', color: '#36202a', base: 330, f: 0.05 }, { kind: 'seatsDock', color: '#4a2e30', base: 430, f: 0.17 }], fog: '#5a3a3a', decor: ['seatsCoilDecor'] }, understage),
+    layers: [{ kind: 'seatsRake', color: '#301c26', base: 330, f: 0.04 }, { kind: 'seatsDock', color: '#4a2e30', base: 430, f: 0.12 }, { kind: 'seatsRig', color: '#52343a', base: 450, f: 0.18 }, { kind: 'seatsDrape', color: '#5a2038', base: 470, f: 0.26 }], fog: '#5a3a3a', decor: ['seatsCoilDecor'] }, understage),
   seats_house: base({ name: 'House Left', music: 'tour_seats', particles: 'none', rays: null, sky: ['#120e1e', '#1e1830', '#2e2440'], horizonGlow: '#5a4a7a', celestial: { type: 'none' }, stars: 0,
-    layers: [{ kind: 'seatsUnder', color: '#1a1428', base: 320, f: 0.05 }, { kind: 'seatsHouse', color: '#221c34', base: 430, f: 0.18 }], fog: '#2a2240', decor: ['seatsLampDecor'] }, understage),
+    layers: [{ kind: 'seatsRake', color: '#18122a', base: 320, f: 0.04 }, { kind: 'seatsHouse', color: '#221c34', base: 430, f: 0.12 }, { kind: 'seatsDrape', color: '#3a1630', base: 470, f: 0.24 }], fog: '#2a2240', decor: ['seatsLampDecor'] }, understage),
   seats_stage: base({ name: 'Just One More Bow', music: 'tour_seats_boss', particles: 'none', rays: null, sky: ['#1a0a14', '#3a1424', '#5a2a2a'], horizonGlow: '#c87a5a', celestial: { type: 'none' }, stars: 0,
-    layers: [{ kind: 'seatsUnder', color: '#2a1220', base: 330, f: 0.05 }, { kind: 'seatsProsc', color: '#3a1626', base: 430, f: 0.16 }], fog: '#4a1e2e', decor: ['seatsCoilDecor'] }, understage),
+    layers: [{ kind: 'seatsRake', color: '#28101e', base: 330, f: 0.04 }, { kind: 'seatsProsc', color: '#3a1626', base: 430, f: 0.12 }, { kind: 'seatsRig', color: '#46202e', base: 450, f: 0.18 }, { kind: 'seatsDrape', color: '#5e1c38', base: 470, f: 0.26 }], fog: '#4a1e2e', decor: ['seatsCoilDecor'] }, understage),
   seats_room_store: room('The Cable Store', '#4a2618', 'roomStore'),
   seats_room_weights: room('The Counterweight Cage', '#2a2c34', 'roomWeights'),
   seats_room_props: room('The Props Table', '#5a3e1a', 'roomProps'),

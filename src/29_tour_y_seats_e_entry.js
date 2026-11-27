@@ -116,8 +116,8 @@ Tour.pieces['seats.festStand'] = function (st, o) {
     spec.n = 1; spec.secret = L0.secret;
     spec.exits = Object.assign({}, JSON.parse(JSON.stringify(L0.exits)), { seats: { to: 'land:seats' } });
     const A = spec.areas.find(a => a.id === 'campsite'), cellR = A.script[0][1];
-    // the flag decor at the right of the alley gives way to the stand (its letter at column 20 of the floor row)
-    const r11 = cellR.rows[11].split(''); r11[24] = '.'; r11[20] = 'Y'; cellR.rows[11] = r11.join('');
+    // the flag decor at the right of the alley gives way to the stand (its letter at column 13 of the floor row, so the spot under the last bench sits mid-view)
+    const r11 = cellR.rows[11].split(''); r11[24] = '.'; r11[13] = 'Y'; cellR.rows[11] = r11.join('');
     cellR.legend = Object.assign({}, cellR.legend || {}, { Y: ['piece', 'seats.festStand', {}] });
     Tour.amend('fest', { levels: [spec] });
   }

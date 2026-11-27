@@ -286,7 +286,7 @@ TourRooms.def('seatsEgg', {
 });
 
 /* ================= seatsGap: PERFECT GAP (the green room) ================= */
-// mirrored. A big tureen of soup on the stage, a plank across its rim the stage itself; Brady's weight on the plank
+// mirrored. A big tureen of soup on a tea trolley in the middle of the stage; Brady's weight on the boards beside it
 // tips the tureen toward him: the two crackers floating on it slide that way (the soup's current spreads them
 // apart). The olive sits on them while the gap between them is narrow: a slow count of three wins; if the gap opens
 // under it, the olive plops in (a miss)
@@ -320,8 +320,13 @@ TourRooms.def('seatsGap', {
   draw(play, ctx, A, R, kit) {
     const y8 = 8 * TS, cx = this.cx(A), tilt = R.tilt || 0, a = tilt * 0.12;
     // the tureen: a big cream bowl sunk in the stage under the plank
-    ctx.save(); ctx.translate(cx, y8 + 6); ctx.rotate(a); ctx.strokeStyle = INK; ctx.lineWidth = 2.4;
-    ctx.fillStyle = '#f0e8d0'; ctx.beginPath(); ctx.moveTo(-GAP.half - 16, -10); ctx.quadraticCurveTo(-GAP.half, 70, 0, 74); ctx.quadraticCurveTo(GAP.half, 70, GAP.half + 16, -10); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // the tea trolley it stands on: a teal top, two tin legs, four wheels on the boards
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    ctx.fillStyle = SA.TIN_D; for (const d of [-1, 1]) { ctx.fillRect(cx + d * (GAP.half - 20) - 4, y8 - 26, 8, 22); ctx.strokeRect(cx + d * (GAP.half - 20) - 4, y8 - 26, 8, 22); ctx.fillStyle = INK; for (const e of [-8, 8]) { ctx.beginPath(); ctx.arc(cx + d * (GAP.half - 20) + e, y8 - 5, 5, 0, TAU); ctx.fill(); } ctx.fillStyle = SA.TIN_D; }
+    ctx.fillStyle = SA.TEAL; rr(ctx, cx - GAP.half + 4, y8 - 34, 2 * GAP.half - 8, 10, 3); ctx.fill(); ctx.stroke();
+    ctx.restore();
+    ctx.save(); ctx.translate(cx, y8 - 78); ctx.rotate(a); ctx.strokeStyle = INK; ctx.lineWidth = 2.4;
+    ctx.fillStyle = '#f0e8d0'; ctx.beginPath(); ctx.moveTo(-GAP.half - 16, -10); ctx.quadraticCurveTo(-GAP.half, 40, 0, 44); ctx.quadraticCurveTo(GAP.half, 40, GAP.half + 16, -10); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.fillStyle = '#e0a050'; ctx.beginPath(); ctx.ellipse(0, -10, GAP.half + 10, 9, 0, 0, TAU); ctx.fill(); ctx.stroke();
     ctx.fillStyle = 'rgba(255,240,200,0.4)'; ctx.beginPath(); ctx.ellipse(-GAP.half * 0.4, -12, 30, 3, 0, 0, TAU); ctx.fill();
     // the crackers and the olive (on a stagehand's cocktail stick until it can sit on both)
@@ -330,7 +335,7 @@ TourRooms.def('seatsGap', {
     const ox = ((R.c1 || -70) + (R.c2 || 70)) / 2;
     if (ok || R.won) { ctx.fillStyle = '#5a8a3a'; ctx.beginPath(); ctx.ellipse(ox, -26, 11, 9, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#d84a3a'; ctx.beginPath(); ctx.arc(ox + 4, -28, 3, 0, TAU); ctx.fill(); }
     ctx.restore();
-    if (!(ok || R.won)) { ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#5a8a3a'; const oy = y8 - 3 * TS; ctx.beginPath(); ctx.ellipse(cx + ox, oy, 11, 9, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.strokeStyle = SA.CREAM; ctx.beginPath(); ctx.moveTo(cx + ox, oy - 9); ctx.lineTo(cx + ox, oy - 40); ctx.stroke(); ctx.setLineDash([4, 5]); ctx.strokeStyle = 'rgba(255,236,170,0.7)'; ctx.beginPath(); ctx.moveTo(cx + ox, oy + 10); ctx.lineTo(cx + ox, y8 - 10); ctx.stroke(); ctx.restore(); }
+    if (!(ok || R.won)) { ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#5a8a3a'; const oy = y8 - 4.6 * TS; ctx.beginPath(); ctx.ellipse(cx + ox, oy, 11, 9, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.strokeStyle = SA.CREAM; ctx.beginPath(); ctx.moveTo(cx + ox, oy - 9); ctx.lineTo(cx + ox, oy - 40); ctx.stroke(); ctx.setLineDash([4, 5]); ctx.strokeStyle = 'rgba(255,236,170,0.7)'; ctx.beginPath(); ctx.moveTo(cx + ox, oy + 10); ctx.lineTo(cx + ox, y8 - 96); ctx.stroke(); ctx.restore(); }
     if (!R.won && quiet(play, R)) hud(play, ctx, R.on ? 'COUNT: ' + Math.min(3, Math.floor(R.n) + 1) + '...' : 'CLOSE THE GAP: ' + Math.max(0, Math.round(gap - GAP.oliveMax)));
   },
   testWin(g, A, R, kit, frame) {
@@ -342,18 +347,18 @@ TourRooms.def('seatsGap', {
 });
 
 /* ================= seatsRest: LEAVE ME A REST (the band pit) ================= */
-// the way in on the right (mirrored); the band (four tin stagehands) on a riser at the back; the beat lamps over them;
+// the way in on the left, the cage on a riser at the right; the band (four tin stagehands) on a riser at the back; the beat lamps over them;
 // the mark in front. A count-in bar first (watch: three bob, the fourth naps), then two bars to play: THROW on beats
 // 1, 2 and 3; keep your thumb off the fourth
 const BEAT = 0.75, TAP = 0.2;
 TourRooms.def('seatsRest', {
   title: 'LEAVE ME A REST', rule: 'TAP THROW ON THREE BEATS. NOT THE FOURTH', need: 'PLAY TWO BARS FIRST!',
   make(o, keep, ctx, A, rng) {
-    const g = stageRoom(keep, A, o, { st: 8, cx: 17 });
+    // (the cage up on a riser at the right, well clear of the stick's corner)
+    const g = stageRoom(keep, A, o, { st: 8, cx: 16, tier: [16, 7] });
     mk(g, 11, 7, 0, 'TAP THROW');
     g.winSpot(A.id, 11, 7);
     g.coins(8, 9, 5); g.coins(13, 14, 5);
-    mirror(g, []);
     return g;
   },
   cx(A) { return ((A.roomKit.data && A.roomKit.data.mirror ? W - 1 - 11 : 11) + 0.5) * TS; },

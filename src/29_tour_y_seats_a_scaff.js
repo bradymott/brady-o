@@ -102,6 +102,8 @@ const scOf = p => p.seatsSc || (p.seatsSc = { grip: null, face: 0, crossT: 0, co
       ctx.save(); ctx.translate(this.cx, this.cy); ctx.scale(sx, 1); ctx.translate(-this.cx, -this.cy); dr0.call(this, ctx, t); ctx.restore();
       return;
     }
+    // a soft dark halo behind him while he grips, so his bun and shades read against the tubes
+    { const gr = ctx.createRadialGradient(this.cx, this.cy - 6, 6, this.cx, this.cy - 6, 44); gr.addColorStop(0, 'rgba(16,10,20,0.62)'); gr.addColorStop(1, 'rgba(16,10,20,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(this.cx, this.cy - 6, 44, 0, TAU); ctx.fill(); }
     if (W.face === 1) { ctx.save(); ctx.globalAlpha *= 0.92; dr0.call(this, ctx, t); ctx.restore(); } else dr0.call(this, ctx, t);
     if (W.face === 1) {
       // the frame in front of him (a shaded band over him says "behind"), then any near-face critter close by
@@ -126,24 +128,26 @@ class SeatsScaffold extends Ent {
   drawTubes(c, front) {
     const x = this.x, y = this.y, w = this.w, h = this.h;
     c.save(); c.lineCap = 'round';
+    // the ledgers (horizontal) dark and set back; the poles (upright) brighter
     for (const pass of [0, 1]) {
-      c.strokeStyle = pass ? (front ? 'rgba(200,86,42,0.9)' : SA.RUST) : INK; c.lineWidth = pass ? 3.6 : 6.2;
-      c.beginPath();
-      for (let xx = x + TS / 2; xx < x + w; xx += 2 * TS) { c.moveTo(xx, y + 2); c.lineTo(xx, y + h - 2); }
-      for (let yy = y + TS / 2; yy < y + h; yy += 2 * TS) { c.moveTo(x + 2, yy); c.lineTo(x + w - 2, yy); }
-      c.stroke();
+      c.strokeStyle = pass ? (front ? 'rgba(110,52,30,0.75)' : '#7a3a22') : 'rgba(30,22,36,0.8)'; c.lineWidth = pass ? 3 : 5;
+      c.beginPath(); for (let yy = y + TS / 2; yy < y + h; yy += 2 * TS) { c.moveTo(x + 2, yy); c.lineTo(x + w - 2, yy); } c.stroke();
+    }
+    for (const pass of [0, 1]) {
+      c.strokeStyle = pass ? (front ? 'rgba(200,86,42,0.8)' : SA.RUST) : INK; c.lineWidth = pass ? 3.6 : 6.2;
+      c.beginPath(); for (let xx = x + TS / 2; xx < x + w; xx += 2 * TS) { c.moveTo(xx, y + 2); c.lineTo(xx, y + h - 2); } c.stroke();
     }
     c.restore();
   }
   paint(c) {
     const x = this.x, y = this.y, w = this.w, h = this.h, R = mulberry32(this.seed);
-    c.fillStyle = 'rgba(20,10,20,0.22)'; c.fillRect(x, y, w, h);
+    c.fillStyle = 'rgba(20,10,20,0.3)'; c.fillRect(x, y, w, h);
     this.drawTubes(c, false);
     // braces across some squares, rope lashings at some crossings, clamps at the joints
     c.save(); c.lineCap = 'round';
     for (let k = 0; k < Math.floor(w * h / (TS * TS * 16)); k++) {
       const cx = x + (Math.floor(R() * (w / TS - 2) / 2) * 2 + 0.5) * TS, cy = y + (Math.floor(R() * (h / TS - 2) / 2) * 2 + 0.5) * TS, d = R() < 0.5 ? 1 : -1;
-      c.strokeStyle = INK; c.lineWidth = 4.6; c.beginPath(); c.moveTo(cx, cy + (d > 0 ? 2 * TS : 0)); c.lineTo(cx + 2 * TS, cy + (d > 0 ? 0 : 2 * TS)); c.stroke(); c.strokeStyle = SA.RUST_D; c.lineWidth = 2.6; c.stroke();
+      c.strokeStyle = 'rgba(30,22,36,0.6)'; c.lineWidth = 4; c.beginPath(); c.moveTo(cx, cy + (d > 0 ? 2 * TS : 0)); c.lineTo(cx + 2 * TS, cy + (d > 0 ? 0 : 2 * TS)); c.stroke(); c.strokeStyle = 'rgba(110,52,30,0.7)'; c.lineWidth = 2; c.stroke();
     }
     c.restore();
     for (let k = 0; k < Math.floor(w * h / (TS * TS * 10)); k++) { const cx = x + (Math.floor(R() * w / TS / 2) * 2 + 0.5) * TS, cy = y + (Math.floor(R() * h / TS / 2) * 2 + 0.5) * TS; if (R() < 0.5) SA.clamp(c, cx, cy, 0.7); else { c.save(); c.lineWidth = 4.4; c.strokeStyle = INK; c.beginPath(); c.ellipse(cx, cy, 7, 5, 0.6, 0, TAU); c.stroke(); c.lineWidth = 2.4; c.strokeStyle = SA.CREAM; c.stroke(); c.restore(); } }
