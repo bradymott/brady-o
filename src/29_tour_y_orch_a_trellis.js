@@ -10,8 +10,8 @@
      - Pear Flies and Tie Worms crawl on one face. Only a critter on Brady's face can touch him: climb round it, or slip
        behind a stake and pass it on the other face. A critter on the far face shows as one broad hatched shape.
      - A BRANCH FORK at a trellis's edge hangs down over the gap. Hold the stick against it (toward the gap) and it
-       bends up level: a new path across to the next trellis. A LATE fork springs back the moment you let it go,
-       unless you bend it from the FAR face, where its tie hooks it in place (the tie is drawn round the back).
+       bends up level: a new path across to the next trellis. A LATE fork is tied round the back: from the near face
+       it only strains (its tie pulls taut and flashes: TIED ROUND THE BACK); from the FAR face it bends.
    The game and the level checker: the checker sees all of an area's trellises as one grid of spots joined to their
    four neighbours (one-way edges: climbing; a fork's branch only away from its root), entered from the ground or by a
    jump of up to three rows. Letting go is the engine's own jump from that spot.
@@ -201,7 +201,14 @@ class OrchFork extends Ent {
   push(p, W, dx, dt) {
     const near = W.grip && W.grip !== this.zone && Math.abs(p.cx - this.rootX) < TS * 1.1 && Math.abs(gripY(p) - (this.rowY + 0.5) * TS) < TS * 0.9;
     if (!this.bent) {
-      if (near && dx === this.dir) { this.pushT += dt; if (this.pushT >= NET.bend) this.bend(W.face); } else this.pushT = Math.max(0, this.pushT - dt * 2);
+      if (near && dx === this.dir) {
+        this.pushT += dt;
+        if (this.pushT >= NET.bend) {
+          // a late fork pushed from the near face never bends: it strains, its tie round the back pulls taut
+          if (this.late && W.face !== 1) { if (!(this.strainT > 0)) { OK.say(this.g, this.rootX + this.dir * 2 * TS, this.y - 10, 'TIED ROUND THE BACK', '#ffd84a'); TourKit.sfx('creak', 'select', { vol: 0.45, pitch: 0.55 }); } this.strainT = 0.7; this.pushT = NET.bend * 0.6; }
+          else this.bend(W.face);
+        }
+      } else this.pushT = Math.max(0, this.pushT - dt * 2);
       return;
     }
     if (this.late && !this.tied) {
@@ -213,8 +220,7 @@ class OrchFork extends Ent {
   }
   bend(face) {
     this.bent = true; this.pushT = 0; this.relT = 0;
-    if (this.late && face === 1) { this.tied = true; OK.say(this.g, this.rootX + this.dir * 2 * TS, this.y - 10, 'TIED ROUND THE BACK!', '#ffd84a'); }
-    else if (this.late) OK.say(this.g, this.rootX + this.dir * 2 * TS, this.y - 10, 'IT WANTS TO SPRING BACK...', '#ffffff');
+    if (this.late) { this.tied = true; OK.say(this.g, this.rootX + this.dir * 2 * TS, this.y - 10, 'UNTIED AND BENT FROM BEHIND!', '#ffd84a'); }
     TourKit.sfx('creak', 'select', { vol: 0.4, pitch: 0.7 });
   }
   spring() {
@@ -224,14 +230,20 @@ class OrchFork extends Ent {
     const p = this.g.player, W = p && p.orchTr;
     if (W && W.grip === this.zone) { const gx = this.rootX - this.dir * TS * 0.6, z = netAt(this.g.area, gx, gripY(p)); if (z) { W.grip = z; p.x = gx - p.w / 2; } else { W.grip = null; W.cool = NET.cool; W.face = 0; } }
   }
-  update(dt) { this.t += dt; this.ang = approach(this.ang, this.bent ? 0 : 1, dt * (this.bent ? 5 : 7)); }
+  update(dt) { this.t += dt; if (this.strainT > 0) this.strainT -= dt; this.ang = approach(this.ang, this.bent ? 0 : 1, dt * (this.bent ? 5 : 7)); }
   touchPlayer() {}
   draw(ctx) {
-    const x = this.rootX, y = (this.rowY + 0.5) * TS, L = this.len * TS + TS * 0.6, a = this.ang * 1.0, d = this.dir, t = this.t;
+    const st = this.strainT > 0 ? this.strainT / 0.7 : 0, x = this.rootX, y = (this.rowY + 0.5) * TS, L = this.len * TS + TS * 0.6, a = this.ang * 1.0 - st * 0.12 * (0.6 + 0.4 * Math.sin(this.t * 40)), d = this.dir, t = this.t;
     const ex = x + d * Math.cos(a) * L, ey = y + Math.sin(a) * L;
     const p = this.g.player, W = p && p.orchTr, far = W && W.grip && W.face === 1;
     // the far-side tie: dashed when seen through the lattice, solid once it holds the branch
-    if (this.late) { ctx.save(); if (!this.tied) { ctx.setLineDash([3, 3]); ctx.globalAlpha = far ? 1 : 0.6; } OA.tie(ctx, x + d * 6, y - 4, 1.1); ctx.restore(); }
+    if (this.late) {
+      ctx.save(); if (!this.tied && !st) { ctx.setLineDash([3, 3]); ctx.globalAlpha = far ? 1 : 0.6; }
+      // straining from the near face: the tie round the back pulls taut and flashes, a creak ring at the root
+      if (st) { const f = Math.sin(t * 30) > 0; OA.tie(ctx, x + d * 6, y - 4, 1.4, f ? '#ffd84a' : OA.RUST); ctx.strokeStyle = `rgba(255,216,74,${st})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, 18 + (1 - st) * 14, 0, TAU); ctx.stroke(); }
+      else OA.tie(ctx, x + d * 6, y - 4, 1.1);
+      ctx.restore();
+    }
     OA.branch(ctx, x, y, ex, ey, 9, 0.15 * (1 - this.ang) * d, this.late ? '#9a8a2a' : OA.PEAR_D);
     // a fork at the tip, leaves along it
     OA.branch(ctx, ex - d * 10 * Math.cos(a), ey - 10 * Math.sin(a), ex + d * 6, ey - 14, 5, 0, OA.PEAR_D);

@@ -25,12 +25,12 @@
 if (typeof TourRooms === 'undefined' || !Tour.orchKit) return;
 const OK = Tour.orchKit, INK = OK.INK, OA = OK.OrchArt, RK = TourRoomKit;
 const chime = (k, ok) => Sound.play('select', { vol: 0.5, pitch: ok === false ? 0.45 : Math.pow(2, [0, 4, 7, 12][k % 4] / 12) });
-const W = 28, R1 = 23;
+const W = 28, R1 = 20;   // the playable part is 21 columns: one landscape view (the rest of the 28 is rock)
 // the room's shape: the way in on a raised ledge at the top left (clear of the stick), a stage (top row st) for the
 // game, the cage on the stage at the right; mirror: everything flipped (the way in at the top right). L: { st, s0,
 // shelf (a plank shelf on posts instead of a solid stage), tier: [x, st2] (a second, higher tier from column x), cx }
 function stageRoom(keep, A, o, L) {
-  L = Object.assign({ st: 8, s0: 6, cx: 19 }, L || {});
+  L = Object.assign({ st: 8, s0: 6, cx: 17 }, L || {});
   const g = RK.room(W), st = L.st;
   g.west(keep);
   for (let x = 1; x < 6; x++) for (let y = 1; y <= 10; y++) { const c = g.get(x, y); if (c === '@' || c === 'D') { g.put(x, 5, c); if (c === 'D') { g.doorsAt[x + ',5'] = g.doorsAt[x + ',' + y]; delete g.doorsAt[x + ',' + y]; } g.put(x, y, '.'); } }
@@ -75,18 +75,18 @@ const mk = (g, x, y, k, cue, hold) => g.spawn(x, y, 'orchRoomMark', { k, cue, ho
 /* ================= orchUmbrella: BORROWED UMBRELLA (the potting shed) ================= */
 // the bench is the stage (row 8, Brady on 7) from column 6; three shelves over it; the drips fall in the two gaps;
 // the return stand at the bench's end by the cage
-const SHELVES = [[6, 8], [11, 12], [16, 17]], GAPS = [[9, 10], [13, 15]];
+const SHELVES = [[6, 7], [10, 11], [14, 15]], GAPS = [[8, 9], [12, 13]], STAND = 16;
 TourRooms.def('orchUmbrella', {
-  title: 'BORROWED UMBRELLA', rule: 'HOLD THROW TO OPEN THE LEAF BETWEEN THE SHELVES ONLY. GET THE RECEIPT TO THE STAND DRY', need: 'RETURN THE UMBRELLA FIRST!',
+  title: 'BORROWED UMBRELLA', rule: 'HOLD THROW BETWEEN SHELVES. STAY DRY TO THE STAND', need: 'RETURN THE UMBRELLA FIRST!',
   make(o, keep, ctx, A, rng) {
-    const g = stageRoom(keep, A, o, { st: 8, cx: 20 });
+    const g = stageRoom(keep, A, o, { st: 8, cx: 17 });
     mk(g, 7, 7, 'lane', 'HOLD THROW');
-    g.need('the return stand', 18, 7); g.winSpot(A.id, 18, 7);
-    g.coins(9, 10, 5); g.coins(13, 15, 5);
+    g.need('the return stand', STAND, 7); g.winSpot(A.id, STAND, 7);
+    g.coins(8, 9, 5); g.coins(12, 13, 5);
     return g;
   },
   enter(play, A, R) { if (!R.won) { R.open = false; R.wet = 0; R.drip = 0; } },
-  inLane(play, A, R, p) { const tx = p.cx / TS; return p.groundTy === 8 && tx >= 6 && tx <= 19; },
+  inLane(play, A, R, p) { const tx = p.cx / TS; return p.groundTy === 8 && tx >= 6 && tx <= STAND + 1; },
   input(play, A, R, kit, m, p, inp) { R.open = !!inp.action; },
   shelfAt(x) { return SHELVES.some(([a, b]) => x >= a * TS - 4 && x <= (b + 1) * TS + 4); },
   reset(play, A, R, why) { R.fails = (R.fails || 0) + 1; RK.raspberry(play, why); const p = P(play); p.x = 6.5 * TS - p.w / 2; p.y = 8 * TS - p.h; p.vx = p.vy = 0; R.open = false; },
@@ -99,7 +99,7 @@ TourRooms.def('orchUmbrella', {
     if (!quiet(play, R)) return;
     if (R.open && this.shelfAt(p.cx)) { this.reset(play, A, R, 'SNAGGED ON THE SHELF! BACK TO THE DOOR'); return; }
     for (const d of R.drops) if (d.fall > 0.7 && d.fall < 1 && Math.abs(p.cx - d.x) < TS * 1.1 && !R.open) { this.reset(play, A, R, 'SPLASH! THE RECEIPT IS SOGGY'); return; }
-    if (p.onGround && p.groundTy === 8 && p.cx >= 18 * TS && p.cx <= 19.2 * TS) { chime(2, true); TourRooms.win(play, A, R, { text: 'RETURNED, BONE DRY!', coins: 3 }); }
+    if (p.onGround && p.groundTy === 8 && p.cx >= STAND * TS && p.cx <= (STAND + 1) * TS) { chime(2, true); TourRooms.win(play, A, R, { text: 'RETURNED, BONE DRY!', coins: 3 }); }
   },
   draw(play, ctx, A, R, kit) {
     const t = play.t, p = P(play), y8 = 8 * TS;
@@ -116,8 +116,8 @@ TourRooms.def('orchUmbrella', {
     // the roof's leak marks
     ctx.save(); ctx.fillStyle = 'rgba(40,30,30,0.5)'; for (const [a, b] of GAPS) { ctx.beginPath(); ctx.ellipse((a + b + 1) / 2 * TS, 4.4 * TS, 14, 5, 0, 0, TAU); ctx.fill(); } ctx.restore();
     // the return stand (a little counter with a bell) at the end of the bench
-    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#b8945a'; ctx.fillRect(18 * TS - 2, y8 - 26, TS + 4, 26); ctx.strokeRect(18 * TS - 2, y8 - 26, TS + 4, 26); ctx.fillStyle = '#e8c840'; ctx.beginPath(); ctx.arc(18.5 * TS, y8 - 30, 6, Math.PI, 0); ctx.fill(); ctx.stroke(); ctx.restore();
-    if (!R.won) OA.pill(ctx, 18.5 * TS, y8 - 50, 'RETURN', '#ffffff', 0.85);
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#b8945a'; ctx.fillRect(STAND * TS - 2, y8 - 26, TS + 4, 26); ctx.strokeRect(STAND * TS - 2, y8 - 26, TS + 4, 26); ctx.fillStyle = '#e8c840'; ctx.beginPath(); ctx.arc((STAND + 0.5) * TS, y8 - 30, 6, Math.PI, 0); ctx.fill(); ctx.stroke(); ctx.restore();
+    if (!R.won) OA.pill(ctx, (STAND + 0.5) * TS, y8 - 50, 'RETURN', '#ffffff', 0.85);
     // the leaf over Brady (open) or furled under his arm, the receipt in his hand
     if (p && !R.won && this.inLane(play, A, R, p)) {
       const x = p.cx, y = p.y - 6;
@@ -140,9 +140,9 @@ TourRooms.def('orchUmbrella', {
 // the peel feeds right to left along row 4 over the stage; the snips hang over column 12; the saucer under them
 const SNIP = 12;
 TourRooms.def('orchPeel', {
-  title: 'CLEAN CUT', rule: 'THROW TO SNIP WHEN A JOINT IN THE PEEL IS UNDER THE SNIPS. THREE TIDY CURLS', need: 'THREE CURLS FIRST!',
+  title: 'CLEAN CUT', rule: 'SNIP EACH JOINT UNDER THE SNIPS. THREE CURLS', need: 'THREE CURLS FIRST!',
   make(o, keep, ctx, A, rng) {
-    const g = stageRoom(keep, A, o, { st: 8, cx: 19 });
+    const g = stageRoom(keep, A, o, { st: 8, cx: 17 });
     mk(g, SNIP, 7, 0, 'SNIP');
     g.winSpot(A.id, SNIP, 7);
     g.coins(15, 17, 5);
@@ -151,12 +151,12 @@ TourRooms.def('orchPeel', {
   },
   enter(play, A, R) { if (!R.won) { R.n = 0; R.u = 0; } },
   // the joints' x (px): the strip enters from the far side and runs past the snips
-  joints(A, R, kit) { const sx = (kit.data.snip + 0.5) * TS, dir = kit.data.mirror ? 1 : -1, x0 = sx - dir * 9 * TS; return [0, 3, 6].map(k => x0 + dir * (R.u - k * 3 * TS)); },
+  joints(A, R, kit) { const sx = (kit.data.snip + 0.5) * TS, dir = kit.data.mirror ? 1 : -1, x0 = sx - dir * 7 * TS; return [0, 3, 6].map(k => x0 + dir * (R.u - k * 3 * TS)); },
   update(play, dt, A, R, kit) {
     if (R.won || !quiet(play, R)) return;
     R.u = (R.u || 0) + 1.2 * TS * dt;
     // the whole strip has gone past: it feeds again from the start (the curls cut so far stay)
-    if (R.u > 20 * TS) { R.u = 0; R.cut = []; }
+    if (R.u > 18 * TS) { R.u = 0; R.cut = []; }
   },
   mark(play, A, R, kit) {
     if (R.won) return;
@@ -170,14 +170,14 @@ TourRooms.def('orchPeel', {
     // the peel: a long pale-green ribbon with three dark notched joints
     if (!R.won) {
       const J = this.joints(A, R, kit), x0 = J[0] + dir * 1.5 * TS, x1 = J[2] - dir * 1.5 * TS;
-      ctx.save(); ctx.beginPath(); ctx.rect(6 * TS, y - 20, 16 * TS, 40); ctx.clip();
+      ctx.save(); ctx.beginPath(); ctx.rect(sx - 6.4 * TS, y - 20, 12.8 * TS, 40); ctx.clip();
       ctx.strokeStyle = INK; ctx.lineWidth = 16; ctx.beginPath(); ctx.moveTo(x0, y); for (let x = Math.min(x0, x1); x <= Math.max(x0, x1); x += 8) ctx.lineTo(x, y + Math.sin(x * 0.05) * 3); ctx.stroke();
       ctx.strokeStyle = '#c8d870'; ctx.lineWidth = 12; ctx.stroke();
       (R.cut || []).length;
       J.forEach((x, i) => { if ((R.cut || []).includes(i)) return; const near = Math.abs(x - sx) < 16; ctx.fillStyle = near ? '#ffd84a' : OA.BARK_D; ctx.beginPath(); ctx.moveTo(x - 6, y - 8); ctx.lineTo(x, y); ctx.lineTo(x - 6, y + 8); ctx.lineTo(x + 6, y + 8); ctx.lineTo(x, y); ctx.lineTo(x + 6, y - 8); ctx.closePath(); ctx.fill(); });
       ctx.restore();
       // the rollers it feeds from
-      ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#a89878'; for (const x of [6.4 * TS, 21.6 * TS]) { ctx.beginPath(); ctx.arc(x, y, 12, 0, TAU); ctx.fill(); ctx.stroke(); } ctx.restore();
+      ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#a89878'; for (const x of [sx - 6.6 * TS, sx + 6.6 * TS]) { ctx.beginPath(); ctx.arc(x, y, 12, 0, TAU); ctx.fill(); ctx.stroke(); } ctx.restore();
     }
     // the snips hanging over the strip (they close on a THROW)
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#c8ccd8';
@@ -201,9 +201,9 @@ TourRooms.def('orchPeel', {
 /* ================= orchOwl: THE OWL'S SHUTTER (the hay loft) ================= */
 // a plank shelf for a stage; the camera on its tripod at column 9; the owl on the beam at column 15
 TourRooms.def('orchOwl', {
-  title: 'THE OWL\'S SHUTTER', rule: 'THE SLEEPY OWL LIFTS ITS FEATHERS ONE BY ONE. THROW THE CAMERA DURING ITS GRIN. TWICE', need: 'TWO GOOD PHOTOS FIRST!',
+  title: 'THE OWL\'S SHUTTER', rule: 'SNAP THE OWL\'S GRIN. TWICE', need: 'TWO GOOD PHOTOS FIRST!',
   make(o, keep, ctx, A, rng) {
-    const g = stageRoom(keep, A, o, { st: 8, cx: 19, shelf: true });
+    const g = stageRoom(keep, A, o, { st: 8, cx: 17, shelf: true });
     mk(g, 9, 7, 0, 'SNAP');
     g.winSpot(A.id, 9, 7);
     g.coins(12, 16, 5);
@@ -215,13 +215,13 @@ TourRooms.def('orchOwl', {
   update(play, dt, A, R) { if (R.won || !quiet(play, R)) return; R.c = (R.c || 0) + dt; R.flash = Math.max(0, (R.flash || 0) - dt); },
   mark(play, A, R) {
     if (R.won) return; R.flash = 0.3; Sound.play('select', { vol: 0.5, pitch: 2 });
-    if (this.phase(R).st === 'grin') { R.n++; chime(R.n, true); OK.say(play, 15 * TS, 2 * TS, R.n >= 2 ? 'FRAME IT!' : 'CAUGHT GRINNING!', '#ffd84a'); R.c = 3.6; if (R.n >= 2) TourRooms.win(play, A, R, { text: 'A LOVELY PORTRAIT!', coins: 4 }); }
+    if (this.phase(R).st === 'grin') { R.n++; chime(R.n, true); OK.say(play, 13.5 * TS, 4.4 * TS, R.n >= 2 ? 'FRAME IT!' : 'CAUGHT GRINNING!', '#ffd84a'); R.c = 3.6; if (R.n >= 2) TourRooms.win(play, A, R, { text: 'A LOVELY PORTRAIT!', coins: 4 }); }
     else { R.fails = (R.fails || 0) + 1; RK.raspberry(play, 'ALL WINGS. TRY AGAIN'); R.c = 3.6; }
   },
   draw(play, ctx, A, R) {
-    const t = play.t, ph = this.phase(R), x = 15 * TS, y = 5.0 * TS;
+    const t = play.t, ph = this.phase(R), x = 13.5 * TS, y = 5.0 * TS;
     // the beam, the owl (a carved wooden toy), its wings over its face, feathers lifting one by one
-    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#5a3e26'; ctx.fillRect(10 * TS, y + 30, 10 * TS, 10); ctx.strokeRect(10 * TS, y + 30, 10 * TS, 10);
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#5a3e26'; ctx.fillRect(10 * TS, y + 30, 7 * TS, 10); ctx.strokeRect(10 * TS, y + 30, 7 * TS, 10);
     ctx.fillStyle = '#b8864a'; ctx.beginPath(); ctx.ellipse(x, y, 28, 32, 0, 0, TAU); ctx.fill(); ctx.stroke();
     ctx.fillStyle = '#d8a860'; ctx.beginPath(); ctx.ellipse(x, y + 8, 16, 18, 0, 0, TAU); ctx.fill();
     // the face: eyes shut, and the grin when uncovered
@@ -252,12 +252,12 @@ TourRooms.def('orchOwl', {
 /* ================= orchSorbet: DO US A FLAVOUR (the sorbet parlour) ================= */
 // a two-tier counter: the dispenser's mark on the high tier (column 15); the cone turns under the nozzle
 TourRooms.def('orchSorbet', {
-  title: 'DO US A FLAVOUR', rule: 'HOLD THROW TO PIPE THE PEAR SORBET. LET GO WHEN THE CURL\'S TIP STANDS UP STRAIGHT. TWO CONES', need: 'TWO TALL CONES FIRST!',
+  title: 'DO US A FLAVOUR', rule: 'PIPE IT: LET GO WHEN THE TIP STANDS', need: 'TWO TALL CONES FIRST!',
   make(o, keep, ctx, A, rng) {
-    const g = stageRoom(keep, A, o, { st: 9, cx: 19, tier: [13, 7] });
-    mk(g, 15, 6, 0, 'HOLD THROW', true);
-    g.winSpot(A.id, 15, 6); g.coins(8, 10, 6);
-    mirror(g, []); g.data.nz = W - 1 - 15;
+    const g = stageRoom(keep, A, o, { st: 9, cx: 17, tier: [11, 7] });
+    mk(g, 14, 6, 0, 'HOLD THROW', true);
+    g.winSpot(A.id, 14, 6); g.coins(7, 9, 6);
+    mirror(g, []); g.data.nz = W - 1 - 14;
     return g;
   },
   enter(play, A, R) { if (!R.won) { R.n = 0; R.h = 0; R.piping = false; } },
@@ -275,9 +275,9 @@ TourRooms.def('orchSorbet', {
   update(play, dt, A, R) { if (R.won) return; const p = P(play); if (!(p && p.orchProp && p.orchProp.room)) R.piping = R.piping && false; },
   draw(play, ctx, A, R, kit) {
     // the cone stands on the counter a step from the mark (toward the cage), the piping bag over it
-    const t = play.t, x = (kit.data.nz + 0.5) * TS + (kit.data.mirror ? -1.6 : 1.6) * TS, base = 7 * TS - 16;
+    const t = play.t, x = (kit.data.nz + 0.5) * TS + (kit.data.mirror ? 1.6 : -1.6) * TS, base = 7 * TS - 16;
     // the dispenser on the counter wall: a plum box, a nozzle
-    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; const bx = x + (kit.data.mirror ? -34 : 34); ctx.fillStyle = '#f4ecd4'; ctx.beginPath(); ctx.moveTo(bx - 14, base - 74); ctx.lineTo(bx + 14, base - 74); ctx.lineTo(bx + (kit.data.mirror ? 14 : -14), base - 30); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = OA.PLUM; ctx.fillRect(bx - 14, base - 80, 28, 8); ctx.strokeRect(bx - 14, base - 80, 28, 8);
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; const bx = x + (kit.data.mirror ? 30 : -30); ctx.fillStyle = '#f4ecd4'; ctx.beginPath(); ctx.moveTo(bx - 14, base - 74); ctx.lineTo(bx + 14, base - 74); ctx.lineTo(bx + (kit.data.mirror ? 14 : -14), base - 30); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = OA.PLUM; ctx.fillRect(bx - 14, base - 80, 28, 8); ctx.strokeRect(bx - 14, base - 80, 28, 8);
     // the cone on its turning stand, the curl growing in it, its tip swaying
     const h = R.won ? 1 : (R.h || 0), sw = R.won ? 0 : this.sway(R), up = Math.abs(sw) < 0.28 && h > 0.5;
     ctx.fillStyle = '#d8a860'; ctx.beginPath(); ctx.moveTo(x - 14, base - 20); ctx.lineTo(x + 14, base - 20); ctx.lineTo(x, base + 14); ctx.closePath(); ctx.fill(); ctx.stroke();
@@ -291,7 +291,7 @@ TourRooms.def('orchSorbet', {
       if (up) { ctx.strokeStyle = `rgba(255,216,74,${0.6 + 0.4 * Math.sin(t * 10)})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(tx, tipY - 8, 12, 0, TAU); ctx.stroke(); }
     }
     // the cones already served, on the counter
-    for (let k = 0; k < (R.won ? 2 : R.n || 0); k++) { const cx2 = x + (kit.data.mirror ? -2 - k : 2 + k) * TS; OA.pear(ctx, cx2, 7 * TS - 22, 0.7, '#e4f0a0', false); ctx.fillStyle = '#d8a860'; ctx.beginPath(); ctx.moveTo(cx2 - 9, 7 * TS - 22); ctx.lineTo(cx2 + 9, 7 * TS - 22); ctx.lineTo(cx2, 7 * TS); ctx.closePath(); ctx.fill(); ctx.strokeStyle = INK; ctx.stroke(); }
+    for (let k = 0; k < (R.won ? 2 : R.n || 0); k++) { const cx2 = x + (kit.data.mirror ? 1 + k * 0.8 : -1 - k * 0.8) * TS; OA.pear(ctx, cx2, 7 * TS - 22, 0.7, '#e4f0a0', false); ctx.fillStyle = '#d8a860'; ctx.beginPath(); ctx.moveTo(cx2 - 9, 7 * TS - 22); ctx.lineTo(cx2 + 9, 7 * TS - 22); ctx.lineTo(cx2, 7 * TS); ctx.closePath(); ctx.fill(); ctx.strokeStyle = INK; ctx.stroke(); }
     ctx.restore();
     if (!R.won && quiet(play, R)) hud(play, ctx, 'CONES ' + (R.n || 0) + ' OF 2');
   },
@@ -304,13 +304,13 @@ TourRooms.def('orchSorbet', {
 
 /* ================= orchStamp: UNDER THE STAMP (the label office) ================= */
 // the belt runs left to right over the stage from column 8 to 20; the tray's mark at column 7; the stamp over 15
-const BELT0 = 8, BELT1 = 20, STAMPX = 15;
+const BELT0 = 7, BELT1 = 15, STAMPX = 12;
 TourRooms.def('orchStamp', {
-  title: 'UNDER THE STAMP', rule: 'THROW AT THE TRAY TO SEND A BLANK LABEL DOWN THE BELT. GET IT UNDER THE STAMP AS IT DROPS. TWO', need: 'TWO PUNCHED LABELS FIRST!',
+  title: 'UNDER THE STAMP', rule: 'SEND A LABEL UNDER THE STAMP. TWICE', need: 'TWO PUNCHED LABELS FIRST!',
   make(o, keep, ctx, A, rng) {
-    const g = stageRoom(keep, A, o, { st: 8, cx: 20 });
-    mk(g, 7, 7, 0, 'SEND');
-    g.winSpot(A.id, 7, 7); g.coins(9, 12, 4);
+    const g = stageRoom(keep, A, o, { st: 8, cx: 17 });
+    mk(g, 6, 7, 0, 'SEND');
+    g.winSpot(A.id, 6, 7); g.coins(8, 10, 5);
     return g;
   },
   enter(play, A, R) { if (!R.won) { R.n = 0; R.c = 0; R.labels = []; } },
@@ -337,7 +337,7 @@ TourRooms.def('orchStamp', {
     // the labels riding it
     for (const L of R.labels || []) { ctx.fillStyle = IV; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.fillRect(L.x - 12, by - 14, 24, 14); ctx.strokeRect(L.x - 12, by - 14, 24, 14); if (L.punched) { ctx.fillStyle = OA.RUST; ctx.beginPath(); ctx.arc(L.x, by - 7, 4, 0, TAU); ctx.fill(); } }
     // the tray of blank labels by the mark
-    ctx.fillStyle = '#8a6a4a'; ctx.fillRect(6.6 * TS, 8 * TS - 16, 30, 16); ctx.strokeStyle = INK; ctx.strokeRect(6.6 * TS, 8 * TS - 16, 30, 16); ctx.fillStyle = IV; ctx.fillRect(6.6 * TS + 4, 8 * TS - 20, 22, 6);
+    ctx.fillStyle = '#8a6a4a'; ctx.fillRect(5.6 * TS, 8 * TS - 16, 30, 16); ctx.strokeStyle = INK; ctx.strokeRect(5.6 * TS, 8 * TS - 16, 30, 16); ctx.fillStyle = IV; ctx.fillRect(5.6 * TS + 4, 8 * TS - 20, 22, 6);
     // the stamp on its column; the clerk (a Bark Snail in a visor) at the handle
     const sy = by - 18 - h * 1.3 * TS;
     ctx.fillStyle = '#5a5a6a'; ctx.fillRect(sx - 4, 3.6 * TS, 8, sy - 3.6 * TS); ctx.fillStyle = OA.PLUM; rr(ctx, sx - 22, sy - 26, 44, 26, 4); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = OA.RUST; ctx.fillRect(sx - 18, sy - 4, 36, 6);
@@ -359,14 +359,14 @@ const IV = OA.IVORY;
 
 /* ================= orchPip: ONE LOOSE PIP (the pip cellar) ================= */
 // three pears hang over the stage at columns 10, 13, 16, each with a mark under it; the shaker's mark at column 7
-const PEARS = [10, 13, 16];
+const PEARS = [10, 12, 14];
 TourRooms.def('orchPip', {
-  title: 'ONE LOOSE PIP', rule: 'THROW THE SHAKER, WATCH THE WINDOWS. ONE PIP KEEPS RATTLING AFTER THE OTHERS STOP: THROW UNDER THAT PEAR. TWICE', need: 'FIND THE LOOSE PIP FIRST!',
+  title: 'ONE LOOSE PIP', rule: 'SHAKE, THEN PICK THE RATTLING PIP. TWICE', need: 'FIND THE LOOSE PIP FIRST!',
   make(o, keep, ctx, A, rng) {
-    const g = stageRoom(keep, A, o, { st: 8, cx: 19 });
+    const g = stageRoom(keep, A, o, { st: 8, cx: 17 });
     mk(g, 7, 7, 's', 'SHAKE');
     PEARS.forEach((x, k) => { mk(g, x, 7, k, 'THIS ONE'); g.need('pear ' + k, x, 7); });
-    g.winSpot(A.id, 13, 7);
+    g.winSpot(A.id, 12, 7);
     mirror(g, []); g.data.pears = PEARS.map(x => W - 1 - x); g.data.shaker = W - 1 - 7;
     return g;
   },
@@ -387,7 +387,7 @@ TourRooms.def('orchPip', {
     kit.data.pears.forEach((x, k) => {
       const cx = (x + 0.5) * TS, shake = R.st === 'shake' ? Math.sin(t * 30 + k) * 0.18 : 0, py = 6.0 * TS;
       ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx, 3.6 * TS); ctx.lineTo(cx, py - 1.6 * TS); ctx.stroke();
-      OA.pear(ctx, cx, py, 1.9, OA.PEAR, true, shake);
+      OA.pear(ctx, cx, py, 1.6, OA.PEAR, true, shake);
       // the cutaway window with three pips inside
       ctx.translate(cx, py - 19); ctx.rotate(shake); ctx.fillStyle = '#fff6dc'; ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.ellipse(0, 0, 13, 16, 0, 0, TAU); ctx.fill(); ctx.stroke();
       const loose = k === R.loose && (R.st === 'settle' || R.st === 'pick');
@@ -435,7 +435,7 @@ TourRooms.def('orchPip', {
 TourHooks.on('camera', (play, dt) => {
   const A = play.area; if (!(A && A.roomKit && /^orch/.test(A.roomKit.kind))) return;
   const vw = (R1 + 1) * TS, mir = A.roomKit.data && A.roomKit.data.mirror;
-  if (Game.viewW >= vw - 8) play.camX = mir ? clamp(A.W * TS - vw - (Game.viewW - vw) / 2, 0, Math.max(0, A.W * TS - Game.viewW)) : clamp((vw - Game.viewW) / 2, 0, Math.max(0, A.W * TS - Game.viewW));
+  if (Game.viewW >= vw - 8) play.camX = clamp((mir ? A.W * TS - vw : 0) + (vw - Game.viewW) / 2, 0, Math.max(0, A.W * TS - Game.viewW));
 });
 {
   const ct0 = Play.prototype.camTargetY;

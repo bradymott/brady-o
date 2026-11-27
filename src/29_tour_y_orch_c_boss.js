@@ -17,7 +17,7 @@
 (function () {
 const OK = Tour.orchKit, INK = OK.INK, OA = OK.OrchArt;
 const say = (g, b, text, col) => OK.say(g, b ? b.cx : 0, b ? b.y : 0, text, col || '#ffffff', 'boss');
-const PERCH = [5, 11, 17, 23];
+const PERCH = [9, 14, 19, 24];   // the first mark clear of the stick in the corner
 
 /* ---------------- the arena: the night lawn, four sprung branches, the voting basket ---------------- */
 Tour.pieces['orch.arena_committee'] = function (st, o) {
@@ -39,7 +39,7 @@ const brain = {
   wake(b) {
     b.phase = 1; b.votes = 0; b.memberVotes = 0; const x0 = b.arenaX0 / TS;
     b.perches = PERCH.map(k => ({ x: (x0 + k) * TS + TS / 2, tx: x0 + k, whip: 0 }));
-    b.basketX = b.arenaX0 + 2.4 * TS; b.basketY = b.floorY - 3.4 * TS; b.stalkX = (b.arenaX0 + b.arenaX1) / 2; b.homeY = b.floorY - 6.1 * TS;
+    b.basketX = b.arenaX0 + 5.5 * TS; b.basketY = b.floorY - 3.4 * TS; b.stalkX = (b.arenaX0 + b.arenaX1) / 2; b.homeY = b.floorY - 6.1 * TS;
     b.pears = [0, 1, 2].map(k => ({ k, x: b.stalkX + (k - 1) * 34, y: b.homeY + (k === 1 ? 10 : 0), mode: 'home', sp: 0 }));
     say(b.g, b, 'THIS MEETING OF THE WINDFALL COMMITTEE IS NOW IN SESSION.', '#ffffff');
     b.go('idle');

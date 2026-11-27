@@ -179,12 +179,12 @@ STAGES.trellis = async ({ ev, shot, run, pano }) => {
     // the late fork: bent from the near face it springs back; from behind, its tie holds it
     r = await ev(() => {
       thaw(); place(146, 22); sim(0.1); sim(0.4, { jump: true, jumpPressed: true, up: true }); goNet(155, 12);
-      const f = ents('OrchFork').filter(e => e.late).sort((a, b) => a.rootX - b.rootX)[0]; window.__dbg = { g0: grip(), at: at(), n: ents('OrchFork').length }; let bentNear = false; for (let k = 0; k < 72; k++) { sim(1 / 120, { right: true }); bentNear = bentNear || f.bent; } sim(0.5); const sprang = !f.bent && !!grip();
+      const f = ents('OrchFork').filter(e => e.late).sort((a, b) => a.rootX - b.rootX)[0]; window.__dbg = { g0: grip(), at: at(), n: ents('OrchFork').length }; let bentNear = false, strained = false; for (let k = 0; k < 72; k++) { sim(1 / 120, { right: true }); bentNear = bentNear || f.bent; strained = strained || f.strainT > 0; } sim(0.5); const stillGrip = !!grip();
       goNet(147, 14); press('jump'); sim(0.45); const face = grip() && grip().face; goNet(155, 12); sim(0.6, { right: true }); const tied = f.tied; sim(0.5); const holds = f.bent;
       goNet(163, 12); const g = grip();
-      return { bentNear, sprang, face, tied, holds, g, dbg: window.__dbg };
+      return { bentNear, strained, stillGrip, face, tied, holds, g };
     });
-    check('28-1: a late fork bent from the near face springs back when let go (Brady is sprung back onto the trellis, no fall)', r.bentNear && r.sprang, r);
+    check('28-1: a late fork pushed from the near face never bends: it strains, its tie round the back pulls taut (TIED ROUND THE BACK)', !r.bentNear && r.strained && r.stillGrip, r);
     check('28-1: round the back, the late fork\'s tie holds it: Brady crosses on the far face', r.face === 1 && r.tied && r.holds && r.g && r.g.x >= 162 && r.g.face === 1, r);
     await ev(() => { goNet(158, 12); freeze(); }); await shot('14-28-1-late-fork-tied.png');
     await ev(() => { thaw(); place(87, 4); sim(0.3); freeze(); }); await shot('15-28-1-shed-ledge-bitten-pear.png');
@@ -256,7 +256,7 @@ STAGES.sleeve = async ({ ev, shot, run, pano }) => {
       return { join: sl.join, stuck, flipped, bottom, bot: sl.bot + 1 };
     });
     check('28-4: the late sleeve: past its rust tie the seam turns (the old way only winds it back to the tie); turning round takes it to the bottom', Math.abs(r.stuck - (r.join + 1)) < 0.6 && r.bottom >= r.bot - 0.05, r);
-    await ev(() => { sim(0.1); freeze(); }); await shot('42-28-4-late-sleeve.png');
+    await ev(() => { play('28-4'); const sl = ents('OrchSleeve').filter(s2 => s2.join != null).sort((a, b) => b.x - a.x)[0]; place(Math.floor(sl.cx / 32), sl.top); sim(0.3); const h0 = sl.hd(), k0 = h0 > 0 ? 'left' : 'right'; for (let k = 0; k < 900 && sl.hd() === h0; k++) sim(1 / 120, { [k0]: true }); sim(0.9, { [k0 === 'left' ? 'right' : 'left']: true }); freeze(); }); await shot('42-28-4-late-sleeve.png');
     // the lift past the high bank, up into the canopy niche
     r = await ev(() => { thaw(); play('28-4'); const sl = ents('OrchSleeve').find(s2 => s2.bot - s2.top > 15); place(Math.floor(sl.cx / 32) - 3, sl.bot); sim(0.2); walkTo(sl.cx, 6); const ride = P().ride === sl; sim(9, { right: true }); return { ride, top: sl.y / 32, want: sl.top + 1 }; });
     check('28-4: a sleeve wound WITH its seam rises past the high bank, up to the canopy niche', Math.abs(r.top - r.want) < 0.05, r);
@@ -320,7 +320,7 @@ STAGES.lawn = async ({ ev, shot, run, pano }) => {
 const ROOMS = [
   ['70-room-b11-borrowed-umbrella', '28-1', `place(83, 4); sim(0.2); press('up');`,
     `walkTo(6.5 * 32, 6); sim(0.1); for (let k = 0; k < 240 && !room().fails; k++) sim(1 / 120, { right: true, action: true });`,
-    `walkTo(6.5 * 32, 6); const R = room(); const K = BRADY_TOUR.orchKit; for (let k = 0; k < 900 && !R.won; k++) { const p = P(); const sh = [[6, 8], [11, 12], [16, 17]].some(([a, b]) => p.cx + 12 >= a * 32 - 4 && p.cx - 2 <= (b + 1) * 32 + 4); const dr = (R.drops || []).some(d => d.swell > 0.6 && d.fall < 1 && Math.abs(p.cx + 30 - d.x) < 40); sim(1 / 120, { right: !(sh && dr && false), action: !sh }); }`],
+    `walkTo(6.5 * 32, 6); const R = room(); const K = BRADY_TOUR.orchKit; for (let k = 0; k < 900 && !R.won; k++) { const p = P(); const sh = [[6, 7], [10, 11], [14, 15]].some(([a, b]) => p.cx + 12 >= a * 32 - 4 && p.cx - 2 <= (b + 1) * 32 + 4); const dr = (R.drops || []).some(d => d.swell > 0.6 && d.fall < 1 && Math.abs(p.cx + 30 - d.x) < 40); sim(1 / 120, { right: !(sh && dr && false), action: !sh }); }`],
   ['71-room-b12-clean-cut', '28-2', `place(90, 8); sim(0.2); press('up');`,
     `const m = ents('OrchRoomMark')[0]; walkTo(m.cx, 4); press('action');`,
     `const m = ents('OrchRoomMark')[0], R = room(), K = kit(); walkTo(m.cx, 4); const sx = (K.data.snip + 0.5) * 32, Kd = BRADY_TOUR; for (let k = 0; k < 120 * 30 && !R.won; k++) { const J = window.joints(); const hit = J.some((x, i) => Math.abs(x - sx) < 6 && !(R.cut || []).includes(i)); if (hit) press('action'); else sim(1 / 120); }`],
@@ -332,7 +332,7 @@ const ROOMS = [
     `const m = ents('OrchRoomMark')[0], R = room(), Kd = window.sorbet; walkTo(m.cx, 4); for (let n = 0; n < 4 && !R.won; n++) { for (let k = 0; k < 900; k++) { sim(1 / 120, { action: true }); if (R.h > 0.6 && Math.abs(Kd()) < 0.08) break; } sim(0.2); }`],
   ['74-room-b15-under-the-stamp', '28-5', `place(4, 20); sim(0.2); for (let k = 0; k < 300 && S().area.aid === 'nursery'; k++) sim(1 / 120, { left: true }); for (let k = 0; k < 600 && (S().fade.a > 0.05 || P().state !== 'play'); k++) sim(1 / 120);`,
     `const m = ents('OrchRoomMark')[0], R = room(); walkTo(m.cx, 4); for (let k = 0; k < 400 && !(R.c % 2.4 > 0.45 && R.c % 2.4 < 0.55); k++) sim(1 / 120); press('action'); sim(6);`,
-    `const m = ents('OrchRoomMark')[0], R = room(); walkTo(m.cx, 4); const travel = (15.2 - 8) / 2.4, want = ((1.62 - travel) % 2.4 + 2.4) % 2.4; let c0 = R.c % 2.4; for (let k = 0; k < 120 * 20 && !R.won; k++) { const c = R.c % 2.4; if (c0 < want && c >= want) press('action'); else sim(1 / 120); c0 = c; }`],
+    `const m = ents('OrchRoomMark')[0], R = room(); walkTo(m.cx, 4); const travel = (12.2 - 7) / 2.4, want = ((1.62 - travel) % 2.4 + 2.4) % 2.4; let c0 = R.c % 2.4; for (let k = 0; k < 120 * 20 && !R.won; k++) { const c = R.c % 2.4; if (c0 < want && c >= want) press('action'); else sim(1 / 120); c0 = c; }`],
   ['75-room-one-loose-pip', '28-6', `place(70, 9); sim(0.2); press('up');`,
     `const R = room(), sh = ents('OrchRoomMark').find(m => m.k === 's'); walkTo(sh.cx, 4); press('action'); sim(1.6); const w = ents('OrchRoomMark').find(m => m.k !== 's' && m.k !== R.loose); walkTo(w.cx, 4); press('action');`,
     `const R = room(); for (let n = 0; n < 3 && !R.won; n++) { const sh = ents('OrchRoomMark').find(m => m.k === 's'); walkTo(sh.cx, 4); press('action'); sim(1.6); const m = ents('OrchRoomMark').find(e => e.k === R.loose); walkTo(m.cx, 4); press('action'); sim(0.3); }`]

@@ -31,8 +31,8 @@ const roomStamp = (out, look, items) => ({ floor: 12, rows: [
 /* ---------------- 28-1 Elbows on the Trellis ---------------- */
 // ground tops are row 23. ① the teach: a little trellis over the grass, then one over the first gap; a fork bent
 // across a pit between two trellises; ② collars (slip behind the stake past a fly), the tall trellis up to the high
-// bank (the potting-shed ledge with the bitten pear at its top left: room B11); ③ the late fork: it springs back from
-// the near face, so go round the back and bend it there; ④ two late forks in a row, critters on both faces
+// bank (the potting-shed ledge with the bitten pear at its top left: room B11); ③ the late fork: tied round the back,
+// it only strains from the near face, so go round the back and bend it there; ④ two late forks in a row, critters on both faces
 const trelRows = (() => {
   const W = 246, H = 30, Gr = grid(W, H, '.');
   // ① the teach
@@ -68,7 +68,7 @@ const TRL = {
   k: SIGN('A TRELLIS! PUSH UP INTO IT TO GRIP, CLIMB WITH THE STICK, JUMP TO LET GO'),
   K: SIGN('A BRANCH FORK HANGS AT THE EDGE: HOLD THE STICK AGAINST IT AND IT BENDS ACROSS THE GAP'),
   J: SIGN('A STAKE WITH A RUST TIE IS A COLLAR: JUMP THERE TO SLIP ROUND THE BACK. ONLY CRITTERS ON YOUR SIDE CAN TOUCH YOU'),
-  O: SIGN('LATE FORKS SPRING BACK WHEN YOU LET GO. THEIR TIE IS ROUND THE BACK: BEND THEM FROM BEHIND'),
+  O: SIGN('A LATE FORK IS TIED ROUND THE BACK: IT ONLY BENDS FROM THE FAR SIDE'),
   x: ['decor', 'orchCrate'], l: ['enemy', 'orchWorm'], r: ['enemy', 'orchFinch'], j: ['enemy', 'orchSnail'], d: ['enemy', 'orchFly'],
   '1': TREL(8, 5), '2': TREL(12, 7),
   '3': TREL(6, 8), f: FORK(5), '4': TREL(8, 8),
@@ -86,7 +86,7 @@ const TRL = {
 stamps.orchTrellis = { floor: 23, rows: trelRows, legend: TRL, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power', 'power'] };
 stamps.orchShed = roomStamp('rows@shedOut', 'orchHatch');
 const L1 = { n: 1, time: 400, name: 'Elbows on the Trellis', mapLabel: 'Elbows on the Trellis', arch: 'espalier', theme: 'orch_trellis',
-  gimmick: 'Espalier trellises over the orchard\'s ditches: grip, climb any way, slip behind a stake to pass the critters on the other face, and push a branch fork across a gap. Late forks spring back unless their tie is done up from behind',
+  gimmick: 'Espalier trellises over the orchard\'s ditches: grip, climb any way, slip behind a stake to pass the critters on the other face, and push a branch fork across a gap. A late fork is tied round the back and only bends from there',
   hint: 'Only a critter on your side of the trellis can touch you. A late fork\'s tie is round the back: bend it from there. Something has been nibbling a pear high over the tall trellis...',
   postcard: 'Brady! The pear trees here hold hands along wires all day. Once the gate shuts they let go and stretch. I did my pliés with them. ♥ C',
   enemies: [['orchWorm', 2], ['orchFinch', 3], ['orchSnail', 1], ['orchFly', 1]],
