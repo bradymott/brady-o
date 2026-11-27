@@ -60,7 +60,7 @@ const dreamRows = (() => {
   ground(Gr, 110, 160, 19); put(Gr, 112, 18, 'c');
   // the cushion fort: a ceiling slab with one gap (the tell), cushions under it; its roof is the run to the forts
   fillG(Gr, 114, 14, 136, 15, 'H'); fillG(Gr, 123, 14, 124, 15, '.');
-  put(Gr, 116, 18, '6'); put(Gr, 123, 18, '7'); put(Gr, 129, 18, '8'); put(Gr, 124, 16, 'Z'); put(Gr, 133, 18, 'l');
+  put(Gr, 116, 18, '6'); put(Gr, 123, 18, '7'); put(Gr, 129, 18, '8'); put(Gr, 124, 16, 'Z'); put(Gr, 133, 18, 'p');
   put(Gr, 115, 12, 'o.o.o.o'); put(Gr, 127, 12, 'o.o.o.o'); put(Gr, 131, 13, 'm');
   fillG(Gr, 137, 14, 152, 15, 'H'); put(Gr, 140, 11, 'A'); put(Gr, 142, 13, 'e'); put(Gr, 146, 12, 'o.o.o'); put(Gr, 150, 13, 'K');
   put(Gr, 154, 18, 'a'); put(Gr, 158, 18, 'c'); put(Gr, 156, 18, 'k');
