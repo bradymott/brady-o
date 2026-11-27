@@ -267,7 +267,7 @@ const painters = {
   // 28-2: a meadow of tall flowers and beehives (skeps) on stands, the sun low
   orchMeadow(ctx, L, rng, H) {
     const b = L.base; ctx.fillStyle = L.color; ctx.fillRect(0, b, BG_W, H - b);
-    for (let x = 0; x < BG_W; x += 14 + rng() * 10) { const h = 30 + rng() * 60; ctx.strokeStyle = '#6a8a4a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, b); ctx.lineTo(x + 3, b - h); ctx.stroke(); ctx.fillStyle = ['#f4d8e4', '#ffffff', '#f4c870', '#d8b8f0'][(rng() * 4) | 0]; ctx.beginPath(); ctx.arc(x + 3, b - h, 4 + rng() * 3, 0, TAU); ctx.fill(); }
+    for (let x = 0; x < BG_W; x += 14 + rng() * 10) { const h = 30 + rng() * 60; ctx.strokeStyle = '#6a8a4a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, b); ctx.lineTo(x + 3, b - h); ctx.stroke(); ctx.fillStyle = ['#e8e0a0', '#ffffff', '#f4c870', '#d8d8b0'][(rng() * 4) | 0]; ctx.beginPath(); ctx.arc(x + 3, b - h, 4 + rng() * 3, 0, TAU); ctx.fill(); }
     for (let x = 120; x < BG_W; x += 380) { ctx.fillStyle = '#7a6a4a'; ctx.fillRect(x - 3, b - 40, 6, 40); ctx.fillStyle = '#c8a050'; ctx.beginPath(); ctx.moveTo(x - 24, b - 40); ctx.quadraticCurveTo(x - 26, b - 92, x, b - 96); ctx.quadraticCurveTo(x + 26, b - 92, x + 24, b - 40); ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#9a7a30'; ctx.lineWidth = 2; for (let k = 1; k < 5; k++) { ctx.beginPath(); ctx.moveTo(x - 24, b - 40 - k * 11); ctx.lineTo(x + 24, b - 40 - k * 11); ctx.stroke(); } }
   },
   // 28-3: the pruning yard: big old cut trees, stubs, cut branches in heaps
@@ -281,9 +281,12 @@ const painters = {
   },
   // 28-4: the packing shed's side: paper-sleeved pears hanging in long rows, crates
   orchSleeves(ctx, L, rng, H) {
+    // (no paper sleeves back here: they would read as the real ones) beams, shelves of crates, a ladder, lamps
     const b = L.base; ctx.fillStyle = L.color; ctx.fillRect(0, b, BG_W, H - b);
-    for (let y = 40; y < b - 60; y += 70) { ctx.strokeStyle = 'rgba(80,60,60,0.5)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(BG_W, y); ctx.stroke(); for (let x = 30 + (y % 40); x < BG_W; x += 60) { ctx.fillStyle = ['#e8dcc0', '#d8c8a8', '#f0e4cc'][(x / 60 | 0) % 3]; ctx.beginPath(); ctx.moveTo(x - 9, y + 4); ctx.lineTo(x + 9, y + 4); ctx.lineTo(x + 7, y + 34); ctx.quadraticCurveTo(x, y + 40, x - 7, y + 34); ctx.closePath(); ctx.fill(); ctx.strokeStyle = 'rgba(160,140,110,0.6)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - 8, y + 10); ctx.lineTo(x + 8, y + 18); ctx.moveTo(x - 8, y + 20); ctx.lineTo(x + 8, y + 28); ctx.stroke(); } }
-    for (let x = 50; x < BG_W; x += 200) { ctx.fillStyle = '#a8906a'; ctx.fillRect(x, b - 40, 60, 40); ctx.fillStyle = '#8a7250'; for (let k = 0; k < 4; k++) ctx.fillRect(x, b - 36 + k * 10, 60, 3); }
+    ctx.fillStyle = '#5a4040'; for (let y = 50; y < b - 40; y += 90) ctx.fillRect(0, y, BG_W, 10);
+    for (let x = 0; x < BG_W; x += 240) { ctx.fillRect(x + 10, 50, 12, b - 50); }
+    for (let y = 60; y < b - 40; y += 90) for (let x = 40; x < BG_W; x += 70) { ctx.fillStyle = '#8a6a5a'; ctx.fillRect(x, y - 34, 50, 34); ctx.fillStyle = '#9a7a6a'; for (let k = 0; k < 3; k++) ctx.fillRect(x, y - 30 + k * 11, 50, 4); }
+    for (let x = 120; x < BG_W; x += 300) { ctx.strokeStyle = '#4a3a3a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 40); ctx.stroke(); ctx.fillStyle = 'rgba(255,220,150,0.55)'; ctx.beginPath(); ctx.arc(x, 46, 9, 0, TAU); ctx.fill(); }
   },
   // 28-5: the grafting nursery: rows of young trees on stakes, each with a waxed bandage
   orchNursery(ctx, L, rng, H) {

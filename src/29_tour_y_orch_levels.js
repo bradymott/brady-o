@@ -243,7 +243,91 @@ const L4 = { n: 4, name: 'A Pear in a Sleeve', mapLabel: 'A Pear in a Sleeve', a
     { id: 'parlour', gen: 'room', role: 'secret', theme: 'orch_room_parlour', stamp: 'orchParlour' }
   ] };
 
-Tour.amend('orch', { stamps, levels: [L1, L2, L3, L4] });
+/* ---------------- 28-5 The Graft Takes ---------------- */
+// floors on row 21, then 18. ① the teach: two cut branches over the first ditch, the far one swaying; stand on the
+// near tip and graft when the notches meet (a miss costs nothing); behind the start a soft hole by a bitten pear
+// (drop in: room B15, the label office); ② a graft with a fly over the gap; ③ a graft up on the
+// terrace with flies; ④ the last graft: Brady's weight pulls the near cut down, so the notches meet on the far cut's
+// LOW swing
+const graftRows = (() => {
+  const W = 206, H = 26, Gr = grid(W, H, '.');
+  ground(Gr, 0, 24, 21); put(Gr, 6, 20, '@'); put(Gr, 9, 20, 'k'); put(Gr, 13, 17, '?'); put(Gr, 18, 20, 'x');
+  // behind the start: a soft hole in the soil, a bitten pear by it (drop in: room B15, the label office)
+  pit(Gr, 1, 2); fillG(Gr, 1, 25, 2, 25, 'w'); put(Gr, 3, 20, 'u'); put(Gr, 15, 20, 'a');
+  put(Gr, 24, 20, '1'); pit(Gr, 25, 34);
+  ground(Gr, 35, 70, 21); put(Gr, 40, 20, 'c'); put(Gr, 50, 16, '*'); put(Gr, 46, 20, 'l'); put(Gr, 56, 17, '?'); put(Gr, 62, 20, 'z');
+  put(Gr, 70, 20, '2'); pit(Gr, 71, 80); put(Gr, 75, 16, 'd');
+  ground(Gr, 81, 103, 21); put(Gr, 84, 20, 'c'); put(Gr, 96, 17, '?'); put(Gr, 100, 20, 'r');
+  ground(Gr, 104, 112, 18); put(Gr, 112, 17, '3'); pit(Gr, 113, 122); put(Gr, 117, 13, 'd'); put(Gr, 118, 15, 'R');
+  ground(Gr, 123, 150, 18); put(Gr, 126, 17, 'c'); put(Gr, 135, 17, 'l'); put(Gr, 140, 14, '?'); put(Gr, 146, 17, 'K');
+  put(Gr, 150, 17, '4'); pit(Gr, 151, 161); put(Gr, 156, 12, 'd');
+  ground(Gr, 162, W - 1, 18); put(Gr, 166, 17, 'c'); put(Gr, 174, 17, 'r'); fillG(Gr, 186, 15, 187, 17, 'H'); put(Gr, 186, 12, 'P'); put(Gr, 192, 17, 'z'); put(Gr, 200, 17, 'G');
+  fillG(Gr, W - 1, 0, W - 1, 17, 'H');
+  return rowsOf(Gr);
+})();
+const GR = o => ['piece', 'orch.graft', Object.assign({ gap: 10, dir: 1 }, o || {})];
+const GRAFT = {
+  k: SIGN('TWO CUT BRANCHES! STAND ON THE NEAR TIP\'S RING AND PRESS THROW WHEN THE BARK NOTCHES MEET: THEY GROW INTO AN ARCH'),
+  K: SIGN('THE LAST CUT SAGS UNDER YOUR WEIGHT. WATCH FOR THE FAR CUT\'S LOW SWING'),
+  x: ['decor', 'orchCrate'], l: ['enemy', 'orchWorm'], r: ['enemy', 'orchFinch'], z: ['enemy', 'orchSnail'], d: ['enemy', 'orchFly'],
+  '1': GR({ period: 2.8 }), '2': GR({ period: 2.4, phase: 0.6 }), '3': GR({ period: 2.2, amp: 20 }), '4': GR({ period: 2.6, amp: 26, sag: 20 }),
+  w: ['seam', 'bottom', 'office@in'], u: BITE(), a: ['anchor', 'officeOut']
+};
+stamps.orchGraft = { floor: 21, rows: graftRows, legend: GRAFT, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power', 'power'] };
+stamps.orchOffice = roomStamp('nursery@officeOut', 'orchShed');
+const L5 = { n: 5, name: 'The Graft Takes', mapLabel: 'The Graft Takes', arch: 'graft', theme: 'orch_graft',
+  gimmick: 'The grafting nursery by moonlight: stand on a cut branch\'s tip and press THROW when its notch meets the swaying far cut\'s, and the two grow into a living arch. The last one sags under your weight',
+  hint: 'Wait for the gold line between the notches, then THROW. On the last graft your weight pulls the near cut down: wait for the far cut\'s low swing. Someone left a bitten pear by a soft hole...',
+  postcard: 'Brady! Two branches here grew into one. The gardener says it takes a steady hand and a good tie. I said that is how we did it. ♥ C',
+  enemies: [['orchWorm', 2], ['orchFinch', 2], ['orchSnail', 2], ['orchFly', 3]],
+  mapCell: [4, 0], mapFrom: 3,
+  exits: { main: { to: '28-6' } },
+  areas: [
+    { id: 'nursery', gen: 'room', theme: 'orch_graft', stamp: 'orchGraft', camera: 'free', bottomKill: true },
+    { id: 'office', gen: 'room', role: 'secret', theme: 'orch_room_office', stamp: 'orchOffice' }
+  ] };
+
+/* ---------------- 28-6 Windfall Committee (the boss) ---------------- */
+// the night lawn, floor row 16 under the low boughs (row 10). The lead-in teaches the boss's trick: pluck a loaded
+// branch from underneath (its mark) with THROW and its spring flicks the pear into the voting basket; three votes
+// open the hedge. The third branch leans AWAY from the basket: THROW at its far-side mark to persuade it first. Past
+// the hedge a gap in the boughs (the bitten pear under it) lets Brady up onto the run along the top of the boughs to
+// the pip cellar (One Loose Pip), which lets him out by the gate to the committee
+const lawnRows = (() => {
+  const W = 84, H = 20, Gr = grid(W, H, '#');
+  fillG(Gr, 1, 11, W - 2, 15, '.');
+  put(Gr, 3, 15, '@'); put(Gr, 5, 15, 'k'); put(Gr, 9, 12, '?'); put(Gr, 4, 11, '*'); put(Gr, 2, 12, 'o.o');
+  put(Gr, 14, 15, '1'); put(Gr, 20, 15, 'n'); put(Gr, 28, 15, '2'); put(Gr, 34, 15, '3'); put(Gr, 41, 15, 'j'); put(Gr, 30, 12, '?');
+  // the gap in the boughs, the bitten pear under it, a crate to hop from
+  fillG(Gr, 49, 10, 51, 10, '.'); put(Gr, 53, 15, 'u'); fillG(Gr, 50, 13, 50, 13, '-');
+  fillG(Gr, 46, 1, W - 2, 9, '.'); fillG(Gr, 49, 10, 51, 10, '.'); put(Gr, 56, 9, 'BB'); put(Gr, 60, 6, 'd'); put(Gr, 64, 9, 'R'); put(Gr, 54, 7, 'o.o.o'); put(Gr, 70, 9, 'A'); put(Gr, 67, 7, 'P');
+  put(Gr, 58, 15, 'c'); put(Gr, 64, 15, 'l'); put(Gr, 72, 15, 'a'); put(Gr, 78, 15, 'E');
+  return rowsOf(Gr);
+})();
+const LAWN = {
+  k: SIGN('PLUCK A LOADED BRANCH FROM UNDERNEATH: STAND ON ITS GOLD RING AND PRESS THROW. ITS SPRING FLICKS THE PEAR INTO THE BASKET'),
+  '1': ['piece', 'orch.loaded', { basket: 21 }], '2': ['piece', 'orch.loaded', { basket: 21 }], '3': ['piece', 'orch.loaded', { basket: 21, lean: true, lx: 3, key: 'orch:committee' }],
+  n: ['piece', 'orch.basket', { n: 3, lock: 'orch:committee' }], j: ['piece', 'orch.gate', { id: 'orch:committee', h: 5 }],
+  l: ['enemy', 'orchWorm'], d: ['enemy', 'orchFly'], u: BITE(),
+  A: ['spawn', 'portal', { kind: 'door', look: 'orchHatch', targetRef: 'cellar@in' }], a: ['anchor', 'cellarOut'],
+  E: ['spawn', 'portal', { kind: 'door', look: 'orchShed', targetRef: 'orchard@in' }]
+};
+stamps.orchLawn = { floor: 16, rows: lawnRows, legend: LAWN, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power'] };
+stamps.orchCellar = roomStamp('lawn@cellarOut', 'orchShed', ['star']);
+const L6 = { n: 6, name: 'Windfall Committee', mapLabel: 'Windfall Committee', arch: 'lair', theme: 'orch_night', boss: 'orch_committee',
+  gimmick: 'Three pears on one stalk sit as the Windfall Committee. Each drops onto a sprung branch: pluck it from underneath and its spring flicks the pear into the voting basket. The leaf, the blush, the pointing stalk',
+  hint: 'You can\'t stomp a pear. A raised leaf means a drop: stand clear, then pluck. A blush means a lunge to that side: wait on the other side. A pointing stalk means it lunges AWAY from you: stand on the far side so it lands by the basket',
+  postcard: 'Brady! The pears held a vote on whether you could stay. Motion carried, three to nothing. Piwi abstained, out of habit. ♥ C',
+  enemies: [['orchWorm', 1], ['orchFly', 1]],
+  mapCell: [5, 0], mapFrom: 4,
+  exits: { main: { to: null } },
+  areas: [
+    { id: 'lawn', gen: 'room', theme: 'orch_night', stamp: 'orchLawn' },
+    { id: 'cellar', gen: 'room', role: 'secret', theme: 'orch_room_cellar', stamp: 'orchCellar' },
+    { id: 'orchard', gen: 'arena', role: 'arena', layout: 'committee', arenaW: 28, H: 20, roof: false, theme: 'orch_night' }
+  ] };
+
+Tour.amend('orch', { stamps, levels: [L1, L2, L3, L4, L5, L6] });
 
 /* ---------------- the land's map: an orchard behind a clipped hedge ---------------- */
 if (typeof TOUR_OW_MAPS !== 'undefined') TOUR_OW_MAPS.orch = {
