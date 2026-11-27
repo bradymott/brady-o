@@ -531,6 +531,7 @@ const BoxArt = (() => {
       // the coral J latch: hanging down over the front, flipped up on the hit
       const fl = seg(p, 0, 0.3);
       rot(c, 16, 14, -fl * PI * 0.9, () => { R(c, 14, 12, 4, 5, 1, Co, 1.2); L(c, [[16, 17], [16, 22]], K, 3.2); L(c, [[16, 17], [16, 22]], Co, 1.8); c.beginPath(); c.arc(14, 22, 2, 0, PI); c.strokeStyle = K; c.lineWidth = 3.2; c.stroke(); c.strokeStyle = Co; c.lineWidth = 1.8; c.stroke(); });
+    } },
     // ---- Foley Beach (29, hidden land A4): a felt-lined petrol-blue prop tin, a burgundy felt band and an apricot
     //      scallop-shell clasp; hit, the shell clasp flips up and the lid swings open on its back hinge; empty, the
     //      lid stands open over the burgundy felt lining ----
