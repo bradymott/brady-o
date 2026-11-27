@@ -139,8 +139,10 @@ STAGES.door = async ({ ev, shot, run }) => {
     check('before the entrance: the land is hidden on the route map, 34-1 is locked, 5-3\'s card shows its three old exits', r.hidden && !r.unlocked && !r.land && r.pips.total === 3, r);
     const pips0 = r.pips;
     r = await ev(() => { play('5-3'); const q = S().area.spawns.find(q => q.type === 'saltMaSaucer'), tx = Math.round((q.x - 16) / 32), cy = Math.round(q.y / 32); window.__sau = { tx, cy, gy: cy + 2, x0: tx + q.dx0[0] }; place(window.__sau.x0 - 6, window.__sau.gy - 1); sim(0.4); return window.__sau; });
-    await ev(() => { const s = window.__sau; place(s.x0 - 2, s.gy - 1); sim(0.4); freeze(); });
+    await ev(() => { const s = window.__sau; place(s.x0 + 9, s.gy - 1); sim(0.4); freeze(); });
     await shot('00-entrance-5-3-the-stalls.png');
+    await ev(() => { thaw(); const s = window.__sau; place(s.tx - 3, s.gy - 1); sim(0.4); freeze(); });
+    await shot('00b-entrance-5-3-the-saucer-close.png');
     // walking the lane past the stalls (under the counters) does nothing
     r = await ev(() => { thaw(); const s = window.__sau, p = P(); place(s.x0 - 2, s.gy - 1); sim(0.2); sim(2.4, { right: true }); return { state: p.state, at: at(), tx: s.tx }; });
     check('5-3: walking the lane under the stalls passes them by', r.state === 'play' && r.at.x > r.tx, r);

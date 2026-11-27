@@ -325,7 +325,7 @@ class SaltCap extends Ent {
       if (gold) { ctx.setLineDash([4, 3]); ctx.strokeStyle = INK; ctx.beginPath(); ctx.moveTo(bx - bw + 2, by - 4 - this.need * 10); ctx.lineTo(bx + bw - 2, by - 4 - this.need * 10); ctx.stroke(); ctx.setLineDash([]); }
     });
     ctx.restore();
-    if (!this.done) { const gx = (this.holes[this.gold] + 0.5) * TS; SA.pill(ctx, gx, this.bowlY * TS + 16, this.need >= 1 ? 'GOLD BOWL: THE WHOLE POUR' : 'GOLD BOWL: HALF A POUR', SA.GOLD); }
+    if (!this.done) { const gx = (this.holes[this.gold] + 0.5) * TS; SA.pill(ctx, gx, this.bowlY * TS - 46, this.need >= 1 ? 'GOLD BOWL: THE WHOLE POUR' : 'GOLD BOWL: HALF A POUR', SA.GOLD); }
     if (!this.done && this.cyc >= this.per - 1.0 && this.cyc < this.per) SA.pill(ctx, this.cx, this.y - 6, 'THE CAP SHAKES...', '#ffffff');
   }
 }

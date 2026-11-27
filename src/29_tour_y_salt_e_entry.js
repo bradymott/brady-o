@@ -44,10 +44,10 @@ function saucer(ctx, x, y, t, sink) {
   ctx.fillStyle = MC.salt; ctx.beginPath(); ctx.moveTo(x - 20, y - 10); ctx.quadraticCurveTo(x - 6, y - 20 + sink * 6, x + 2, y - 19 + sink * 6); ctx.quadraticCurveTo(x + 12, y - 18 + sink * 6, x + 20, y - 10); ctx.closePath(); ctx.fill();
   ctx.fillStyle = MC.salt2; for (const [dx, dy] of [[-12, -13], [-4, -16], [6, -15], [13, -12], [0, -12]]) ctx.fillRect(x + dx, y + dy + sink * 4, 3, 3);
   // the crystal on the rim (right): clear, a tiny sea and its horizon inside
-  const cx = x + 17, cy = y - 15;
-  ctx.fillStyle = '#eef6ff'; ctx.beginPath(); ctx.moveTo(cx - 5, cy + 4); ctx.lineTo(cx - 5, cy - 3); ctx.lineTo(cx, cy - 6); ctx.lineTo(cx + 5, cy - 3); ctx.lineTo(cx + 5, cy + 4); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#8ac8f4'; ctx.fillRect(cx - 4, cy - 2, 8, 2.5); ctx.fillStyle = '#1a4ab8'; ctx.fillRect(cx - 4, cy + 0.5, 8, 3);
-  ctx.fillStyle = `rgba(255,255,255,${0.5 + 0.5 * Math.sin(t * 2.2)})`; ctx.fillRect(cx - 4, cy + 0.2, 8, 0.9);
+  const cx = x + 18, cy = y - 16;
+  ctx.fillStyle = '#eef6ff'; ctx.beginPath(); ctx.moveTo(cx - 6, cy + 5); ctx.lineTo(cx - 6, cy - 4); ctx.lineTo(cx, cy - 8); ctx.lineTo(cx + 6, cy - 4); ctx.lineTo(cx + 6, cy + 5); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#8ac8f4'; ctx.fillRect(cx - 5, cy - 3, 10, 3.5); ctx.fillStyle = '#1a4ab8'; ctx.fillRect(cx - 5, cy + 0.5, 10, 4);
+  ctx.fillStyle = `rgba(255,255,255,${0.5 + 0.5 * Math.sin(t * 2.2)})`; ctx.fillRect(cx - 5, cy + 0.2, 10, 1);
 }
 
 /* ---------------- the last stall's saucer and the way in ---------------- */
@@ -77,7 +77,7 @@ class SaltMaSaucer extends Ent {
     // the three stalls behind everything; the saucer on the last counter
     const y = this.crow * TS, gy = this.gy * TS;
     for (let k = 0; k < 3; k++) { const a = this.x0[k], b = this.x1[k]; stall(ctx, a * TS, (b + 1) * TS, y, gy, k); }
-    saucer(ctx, this.sx, y, this.t, Math.min(1, this.crouchT));
+    ctx.save(); ctx.translate(this.sx, y); ctx.scale(1.35, 1.35); saucer(ctx, 0, 0, this.t, Math.min(1, this.crouchT)); ctx.restore();
   }
 }
 ENTITY_TYPES.saltMaSaucer = SaltMaSaucer;
