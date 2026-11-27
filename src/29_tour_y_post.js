@@ -543,7 +543,7 @@ TourOWLands.coast.postEdge = function (c, ow, ring) {
 TourOWScenes.groundPaint.post = function (c, ow) {
   const R = TourOWPaint.rng('postground'), A = TourOWPaint.art;
   c.fillStyle = 'rgba(47,79,200,0.12)'; for (let y = 180; y < 720; y += 14) for (let x = 200 + (y % 28 ? 7 : 0); x < 1340; x += 14) { c.beginPath(); c.arc(x, y, 1.6, 0, TAU); c.fill(); }
-  for (let k = 0; k < 5; k++) { c.save(); c.translate(300 + R() * 900, 220 + R() * 420); A.postMarkS.call(TourOWPaint, c, 40 + R() * 20); c.restore(); }
+  for (let k = 0; k < 5; k++) { c.save(); c.translate(300 + R() * 900, 220 + R() * 420); A.postMarkS.call(TourOWPaint, c, 22 + R() * 10); c.restore(); }
 };
 TourLandscape.looks.post = ['#c8e8f8', '#5a7ae8', '#2f4fc8', '#fbe6a2', '#fff4cc', '#f47a5a', 'postHarbour'];
 {
