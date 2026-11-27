@@ -166,8 +166,8 @@ stamps.boneClay = { floor: 19, rows: clayRows, gold: { '*': 'must', A: 'high', R
   '2': PRESS([51, 52, 19], 'low', { low: [55, 19, 63, 19], tall: [54, 15, 55, 18] }, 1),
   '3': PRESS([86, 87, 19], 'tall', { tall: [90, 16, 91, 18], low: [89, 18, 92, 18] }, 2, null, 1.2),
   '4': PRESS([131, 132, 19], 'low', { low: [137, 19, 152, 19], tall: [136, 15, 137, 18] }, 3),
-  '5': PRESS([168, 169, 19], 'tall', { tall: [172, 16, 173, 18], low: [171, 18, 174, 18] }, null, [174, 12], 0.8),
-  f: ['piece', 'bone.soft', { x: 110, y: 13, w: 2, to: [110, 20] }], x: ['decor', 'boneTell'], X: ['anchor', 'castOut']
+  '5': PRESS([168, 169, 19], 'tall', { tall: [172, 16, 173, 18], low: [171, 18, 174, 18] }, null, [174, 13], 0.8),
+  f: ['piece', 'bone.soft', { x: 110, y: 13, w: 2, to: [110, 21] }], x: ['decor', 'boneTell'], X: ['anchor', 'castOut']
 } };
 stamps.boneCastOld = oldRoom('clay@castOut', ['star']);
 const L3 = { n: 3, name: 'Make an Impression', mapLabel: 'Make an Impression', arch: 'mould', theme: 'bone_clay',
@@ -182,7 +182,54 @@ const L3 = { n: 3, name: 'Make an Impression', mapLabel: 'Make an Impression', a
     { id: 'cast', gen: 'room', role: 'secret', room: 'boneOrder', theme: 'bone_room_cast', stamp: 'boneCastOld', bone: { room: true } }
   ] };
 
-Tour.amend('bone', { stamps, levels: [L1, L2, L3] });
+/* ---------------- 37-4 Clean Break ---------------- */
+// ① the teach: a cracked replica standing in the path: hold THROW on the mark, let go at the fork, the top half
+// falls away and the stump is a hop; ② a tall slab against a cliff whose stepped seam leaves a staircase; down the
+// far side (a cracked plug low in the cliff face, whiskers beside it: the tar pool); a tall rib cage, three critters
+// on its faces; a replica wall standing on a bone bridge over a pit; ③ the twist: the last cut: the useful ankle is
+// the SMALL half, and the safe seam ends just before the persimmon joint (the obvious fork is past it: wrong).
+const cutRows = (() => {
+  const W = 172, H = 26, Gr = grid(W, H, '.');
+  ground(Gr, 0, 34, 19); put(Gr, 3, 18, '@'); put(Gr, 6, 18, 'n'); put(Gr, 9, 15, '?'); put(Gr, 11, 18, '1');
+  put(Gr, 20, 14, '*'); put(Gr, 24, 18, 'e'); put(Gr, 27, 18, 'k'); put(Gr, 30, 18, '2');
+  ground(Gr, 35, 60, 13); put(Gr, 38, 12, 'c'); put(Gr, 46, 12, 'u'); put(Gr, 50, 9, '?'); put(Gr, 55, 12, 'l');
+  // the tar pool: a cracked plug low in the cliff's face, a tunnel behind it, its door
+  fillG(Gr, 56, 17, 59, 18, '.'); put(Gr, 57, 18, 'D'); put(Gr, 61, 17, 'x'); put(Gr, 62, 18, '5');
+  ground(Gr, 61, 71, 19); put(Gr, 63, 18, 'X'); put(Gr, 64, 18, 'c'); put(Gr, 65, 18, 'i'); put(Gr, 64, 17, 'j'); put(Gr, 64, 16, 'J'); put(Gr, 64, 15, 'K');
+  ground(Gr, 72, 100, 7); put(Gr, 80, 6, 'w'); put(Gr, 86, 3, 'A'); put(Gr, 90, 3, 'M'); put(Gr, 95, 6, 'N'); put(Gr, 99, 6, '3');
+  pit(Gr, 101, 108); ground(Gr, 109, 118, 7); put(Gr, 112, 6, 'c'); put(Gr, 116, 6, 'r');
+  ground(Gr, 119, 135, 19); put(Gr, 122, 18, 'w'); put(Gr, 126, 18, 'k'); put(Gr, 128, 18, '4');
+  ground(Gr, 136, W - 1, 14); put(Gr, 142, 13, 'r'); pit(Gr, 150, 153); put(Gr, 151, 10, 'R'); put(Gr, 147, 8, 'M'); put(Gr, 158, 13, 'e'); put(Gr, 165, 13, 'G'); fillG(Gr, W - 1, 0, W - 1, 13, '#');
+  return rowsOf(Gr);
+})();
+const P_ = (x, y) => [x * TS, y * TS];
+const CHISEL = o => ['piece', 'bone.chisel', Object.assign({ speed: 2.0, tol: 0.8 * TS }, o)];
+stamps.boneCut = { floor: 19, rows: cutRows, gold: { '*': 'must', A: 'high', R: 'risky' }, items: ['power', 'power'], doors: [{ to: 'tar@in', look: 'boneCrack' }], legend: {
+  n: SIGN('A CRACKED REPLICA! STAND ON THE ORANGE MARK AND HOLD THROW: THE CHISEL RUNS ALONG THE SEAM. LET GO WHERE IT FORKS'),
+  N: SIGN('A REPLICA WALL ON A BONE BRIDGE: CUT ALONG ITS FOOT. SPLIT THE WRONG PLACE AND IT JUST CRUNCHES: TRY AGAIN'),
+  k: ['decor', 'boneBucket'], l: ['decor', 'boneLabel'], r: ['decor', 'boneRock'], e: ['enemy', 'boneMouse'], w: ['enemy', 'boneNewt'], u: ['enemy', 'boneBrush'], M: ['enemy', 'boneRook'],
+  '1': CHISEL({ mark: [11, 19], keep: [[12, 17, 14, 18]], drop: [[12, 14, 14, 16]], seam: [P_(12, 17), P_(15, 17)], stop: 1.5 * TS, fork: { d: 1.5 * TS, to: P_(14.2, 14.6) }, g: 0 }),
+  '2': CHISEL({ mark: [30, 19], keep: [[31, 17, 32, 18], [33, 15, 34, 18]], drop: [[31, 13, 32, 16], [33, 13, 34, 14]], seam: [P_(31, 17), P_(33, 17), P_(33, 15), P_(35, 15)], stop: 4 * TS, fork: { d: 4 * TS, to: P_(33.6, 13.3) }, g: 1 }),
+  '3': CHISEL({ mark: [103, 7], keep: [[101, 7, 108, 7]], drop: [[104, 2, 105, 6]], seam: [P_(104, 7), P_(106, 7)], stop: 1 * TS, fork: { d: 1 * TS, to: P_(105.4, 5) }, g: 2 }),
+  '4': CHISEL({ mark: [129, 19], keep: [[134, 17, 135, 18]], drop: [[130, 14, 135, 16], [130, 17, 133, 18]], seam: [P_(130, 17), P_(134, 17), P_(134, 14)], stop: 3.5 * TS, tol: 0.55 * TS, end: true, joint: [134 * TS + 6, 17 * TS - 4], fork: { d: 5.5 * TS, to: P_(132, 14.3) }, g: 3 }),
+  '5': CHISEL({ mark: [61, 19], keep: [], drop: [[60, 17, 60, 18]], seam: [P_(61, 18), P_(60, 18), P_(60, 17.2)], stop: 1 * TS, fork: { d: 1 * TS, to: P_(60.5, 17) }, hideMark: true, edge: [57, 19] }),
+  i: RIBS(66, 6, 71, 18, [[67, 12], [70, 9]]), j: CLIMBER(68, 7, 17, 0, 1.7, 0), J: CLIMBER(70, 7, 17, 1, 1.5, 0.5), K: CLIMBER(69, 10, 16, 0, 1.3, 0.3),
+  x: ['decor', 'boneTellWallR'], X: ['anchor', 'tarOut']
+} };
+stamps.boneTarOld = oldRoom('cut@tarOut', ['oneup']);
+const L4 = { n: 4, name: 'Clean Break', mapLabel: 'Clean Break', arch: 'chisel', theme: 'bone_cut',
+  gimmick: 'Cracked replicas: stand on the mark, hold THROW to draw the chisel along the seam and let go where it forks: the unwanted half falls away. In the last cut the useful ankle is the smaller half',
+  hint: 'Let go AT the fork, not after it. The last seam stops just before the joint. Mouse whiskers poke out of a cracked plug at the foot of a cliff...',
+  postcard: 'Brady! You chiselled a dinosaur in half and it said thank you. The other half went off to start a new life as a bench. ♥ C',
+  enemies: [['boneMouse', 2], ['boneNewt', 2], ['boneBrush', 1], ['boneRook', 2]],
+  mapCell: [3, 0], mapFrom: 2,
+  exits: { main: { to: '37-5' } },
+  areas: [
+    { id: 'cut', gen: 'room', theme: 'bone_cut', stamp: 'boneCut', bone: { chisel: true, ribs: true }, bottomKill: true },
+    { id: 'tar', gen: 'room', role: 'secret', room: 'boneFish', theme: 'bone_room_tar', stamp: 'boneTarOld', bone: { room: true } }
+  ] };
+
+Tour.amend('bone', { stamps, levels: [L1, L2, L3, L4] });
 
 /* ---------------- the land's map: the quarry seen from the rim ---------------- */
 // the tipped crate where the arrival trail starts (left), the trackway terraces, the scree slope with the ribs, the

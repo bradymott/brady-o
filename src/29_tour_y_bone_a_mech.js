@@ -552,7 +552,7 @@ class BoneChisel extends Ent {
       ctx.fillStyle = '#d8c8a4'; for (let q = -w / 2 + 10; q < w / 2 - 6; q += 22) { ctx.beginPath(); ctx.arc(q, -h / 2 + 10 + (q % 3), 2.4, 0, TAU); ctx.fill(); }
       ctx.restore();
     };
-    for (const r of s.body) { if (this.inDrop(r[0], r[1])) continue; paint(r, [0, 0], 0); }
+    for (const r of s.keep || []) paint(r, [0, 0], 0);
     if (this.fallK < 1) for (const r of s.drop) { const k = this.fallK; paint(r, [k * 40, k * k * 260], k * 1.2); }
     // the seam: a dark dashed crack along the replica, its fork, and the persimmon joint (37-4's twist)
     if (!this.done) {
@@ -570,17 +570,19 @@ class BoneChisel extends Ent {
     }
     // the mark where Brady stands to chisel
     const mx = s.mark[0] * TS + TS / 2, my = s.mark[1] * TS;
-    if (!this.done) { ctx.fillStyle = 'rgba(240,106,42,0.5)'; ctx.beginPath(); ctx.ellipse(mx, my + 2, 14, 4, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = PERS; ctx.lineWidth = 2; ctx.stroke(); }
-    throwHint(this, ctx, mx, my - 70, 'HOLD THROW, LET GO AT THE MARK');
+    if (!this.done && !s.hideMark) { ctx.fillStyle = 'rgba(240,106,42,0.5)'; ctx.beginPath(); ctx.ellipse(mx, my + 2, 14, 4, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = PERS; ctx.lineWidth = 2; ctx.stroke(); }
+    if (!s.hideMark) throwHint(this, ctx, mx, my - 104, 'HOLD THROW... LET GO AT THE FORK');
     ctx.restore();
   }
 }
 ENTITY_TYPES.boneChisel = BoneChisel;
 Tour.pieces['bone.chisel'] = function (st, o) {
   const B = st.B;
+  o = Object.assign({}, o, { body: (o.keep || []).concat(o.drop) });
   B.spawn('boneChisel', st.x, st.gy - 1, o);
   for (const r of o.body) for (let y = r[1]; y <= r[3]; y++) for (let x = r[0]; x <= r[2]; x++) { B.set(x, y, T.HARD); B.setHide(x, y, 1); }
-  B.toggle(o.g, o.drop.map(r => r.slice(0, 4)), [], { kind: 'boneChisel' }); B.switchAt(o.g, o.mark[0], o.mark[1] - 1);
+  if (o.g != null) { B.toggle(o.g, o.drop.map(r => r.slice(0, 4)), [], { kind: 'boneChisel' }); B.switchAt(o.g, o.mark[0], o.mark[1] - 1); }
+  else if (o.edge) B.edge([o.mark[0], o.mark[1] - 1], o.edge);
   return st.x;
 };
 

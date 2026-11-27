@@ -76,6 +76,12 @@ async function session(viewport, fn) {
       for (let k = 0; k < 120 * 3 && pr.st !== 'up'; k++) sim(1 / 120, crouch ? { down: true } : {});
       sim(0.8); return { done: pr.done, bad: pr.bad };
     };
+    // hold THROW at a cracked replica's mark and let go when the chisel has run d pixels along the seam
+    window.chiselTo = (d) => {
+      const c = ents('BoneChisel').sort((a, b) => Math.abs(a.s.mark[0] * 32 - P().cx) - Math.abs(b.s.mark[0] * 32 - P().cx))[0];
+      for (let k = 0; k < 120 * 8 && c.prog < d && !c.done && !(c.failT > 0); k++) sim(1 / 120, { action: true });
+      sim(0.1); const out = { done: c.done, prog: Math.round(c.prog), fail: c.failT > 0 }; sim(0.9); return out;
+    };
     /* ---------------- the autopilot ----------------
        A program is a little input plan: hold `dir` for `run` s on the ground, press jump and hold it `hold` s, then
        steer in the air (air: 'dir' | 'none' | 'rev' at revAt | 'late' (none, then dir from lateAt)), or walk off
@@ -468,6 +474,50 @@ LEVELS.clay = async (page, shot, run, pano) => {
     r = await page.evaluate(() => { const w = pressCast(false); const a = AP.route([[172, 16], [176, 13], [192, 13]]); if (!a.ok) return { w, a }; sim(3, { right: true }); return { w, state: S().state }; });
     check('37-3: then stand tall for the last cast, up the wall to the gate', r.w.done && r.state && r.state !== 'play', r);
     await page.evaluate(() => { play('37-3'); }); await pano('39-37-3-panorama.png', 0.25);
+  });
+};
+
+// ---------------- 37-4 Clean Break ----------------
+LEVELS.cut = async (page, shot, run, pano) => {
+  await run('cut', async () => {
+    await page.evaluate(() => { fresh(); play('37-4'); place(5, 18); sim(0.6); freeze(); });
+    await shot('40-37-4-start.png');
+    let r = await page.evaluate(() => { thaw(); const a = AP.go([11, 19]); const f = chiselTo(14); return { ok: a.ok, f, block: tileT(12, 14) }; });
+    check('37-4: let go too early: CRUNCH, nothing splits (try again)', r.ok && !r.f.done && r.f.fail && r.block === 'HARD', r);
+    await page.evaluate(() => { const c = ents('BoneChisel').find(e => e.s.mark[0] === 11); for (let k = 0; k < 60; k++) sim(1 / 120, { action: true }); freeze(); }); await shot('41-37-4-chisel-on-the-seam.png'); await page.evaluate(() => { thaw(); sim(0.6); });
+    r = await page.evaluate(() => { const f = chiselTo(48); return { f, top: tileT(12, 14), stump: tileT(12, 17) }; });
+    check('37-4: hold THROW, let go at the fork: a clean break, the top half falls away, the stump is a hop', r.f.done && r.top === 'EMPTY' && r.stump === 'HARD', r);
+    await page.evaluate(() => { sim(0.4); freeze(); }); await shot('42-37-4-clean-break.png'); await page.evaluate(() => thaw());
+    r = await page.evaluate(() => { const a = AP.route([[13, 17], [20, 19], [30, 19]]); const f = chiselTo(128); const b = AP.route([[31, 17], [33, 15], [37, 13], [55, 13], [62, 19]]); return { a: a.ok, f, b: b.ok, b2: b }; });
+    check('37-4: played: over the stump (P1), the tall slab\'s stepped seam leaves a staircase up the cliff, along it, down', r.a && r.f.done && r.b, r);
+    // the tar pool: the cracked plug at the foot of the cliff (no mark: the whiskers and the seam are the tell)
+    await page.evaluate(() => { place(63, 18); sim(0.4); freeze(); }); await shot('43-37-4-tell-plug.png');
+    r = await page.evaluate(() => { thaw(); const a = AP.go([61, 19]); const f = chiselTo(32); const b = AP.go([57, 19]); for (let k = 0; k < 20 && S().area.aid !== 'tar'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.5); return { a: a.ok, f, b: b.ok, area: S().area.aid }; });
+    check('37-4: chisel the cracked plug at the foot of the cliff: a tunnel, a door into the tar pool', r.f.done && r.area === 'tar', r);
+    await page.evaluate(() => { sim(0.5); freeze(); }); await shot('44-37-4-room-no-fishing.png');
+    r = await page.evaluate(() => { thaw(); place(5, 6); sim(2.5); const R = S().area.roomState; const p = P(); place(11, 6); sim(0.6); const backX = Math.floor(p.cx / 32); return { won: R.won, backX }; });
+    check('37-4 tar pool: step into the tar: SPLOSH, the fish spits Brady back to the dry end (nothing lost)', !r.won && r.backX <= 5, r);
+    r = await page.evaluate(() => { const R = S().area.roomState; AP.go([7, 7]); sim(1 / 120, { jump: true, jumpPressed: true, right: true }); sim(0.28, { right: true }); sim(0.4); sim(2.5); return { won: R.won, x: Math.floor(P().cx / 32) }; });
+    check('37-4 tar pool: jump on the float from the dry end: the fish reels Brady in to the island: the prize', r.won && r.x >= 14, r);
+    await page.evaluate(() => freeze()); await shot('45-37-4-room-no-fishing-won.png'); await page.evaluate(() => thaw());
+    r = await page.evaluate(() => { place(3, 6); sim(0.2); return { reel: false }; });
+    r = await page.evaluate(() => { const R = S().area.roomState; const p = P(); p.x = 3 * 32 + 16 - p.w / 2; sim(0.3); for (let k = 0; k < 20 && S().area.aid !== 'cut'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.6); return { area: S().area.aid, x: Math.floor(P().cx / 32) }; });
+    check('37-4 tar pool: its door takes Brady back out by the plug', r.area === 'cut', r);
+    r = await page.evaluate(() => {
+      play('37-4'); place(66, 18); sim(0.3); const p = P(), out = {};
+      out.a = climbTo(67, 12); out.c1 = cross(); out.b = climbTo(70, 9); out.c2 = cross(); out.c = climbTo(71, 6);
+      sim(0.5, { up: true, right: true }); sim(0.8, { right: true }); out.row = p.groundTy; return out;
+    });
+    check('37-4: climbed the cage past three critters on two faces onto the shelf', r.row === 7, r);
+    r = await page.evaluate(() => { const a = AP.route([[90, 7], [103, 7]]); const f = chiselTo(32); const b = AP.route([[106, 7], [112, 7], [124, 19], [129, 19]]); return { a: a.ok, f, b: b.ok, wall: tileT(104, 4) }; });
+    check('37-4: the replica wall standing on the bone bridge: cut along its foot, it falls into the pit; across', r.f.done && r.wall === 'EMPTY' && r.b, r);
+    // the twist: the obvious fork is past the joint (it takes the ankle); the safe seam ends just before it
+    r = await page.evaluate(() => { const f1 = chiselTo(176); const f2 = chiselTo(112); return { f1, f2, ankle: tileT(134, 17), rest: tileT(130, 17) }; });
+    check('37-4: the twist: let go at the big fork: CRUNCH, that took the ankle; let go at the tick before the joint: the ankle stays as a step', !r.f1.done && r.f2.done && r.ankle === 'HARD' && r.rest === 'EMPTY', r);
+    await page.evaluate(() => { sim(0.4); freeze(); }); await shot('46-37-4-the-ankle.png'); await page.evaluate(() => thaw());
+    r = await page.evaluate(() => { const a = AP.route([[134, 17], [138, 14], [148, 14], [156, 14]]); if (!a.ok) return a; sim(3, { right: true }); return { ok: true, state: S().state }; });
+    check('37-4: played: up the ankle onto the last cliff, over the pit (P3), to the gate', r.ok && r.state !== 'play', r);
+    await page.evaluate(() => { play('37-4'); }); await pano('49-37-4-panorama.png', 0.25);
   });
 };
 

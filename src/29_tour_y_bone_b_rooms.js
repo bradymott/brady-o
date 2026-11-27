@@ -45,8 +45,8 @@ const hud = (play, ctx, str) => { if (play.bannerT > 0) return; TourRooms.hudTex
 }
 // the room's own props take THROW where Brady touches them (the land's claim in 29_tour_y_bone_a_mech.js)
 class BoneRoomProp extends Ent {
-  constructor(g, s) { super(g, s, (s.w || 1) * TS, (s.h || 2) * TS); this.x = s.x - this.w / 2; this.y = s.y - this.h; this.friendly = true; this.role = s.role; this.k = s.k || 0; this.back = true; this.anim = 0; this.flip = 0; }
-  boneClaim(p) { return !!this.claims && overlap(p, { x: this.x - 6, y: this.y, w: this.w + 12, h: this.h }); }
+  constructor(g, s) { super(g, s, (s.w || 1) * TS, (s.h || 2) * TS); this.x = s.x - this.w / 2; this.y = s.y - this.h; this.friendly = true; this.role = s.role; this.k = s.k || 0; this.back = true; this.anim = 0; this.flip = 0; this.claims = ['counter', 'cutout', 'machine', 'jar'].indexOf(s.role) >= 0; }
+  boneClaim(p) { return !!this.claims && overlap(p, { x: this.x - 14, y: this.y, w: this.w + 28, h: this.h }); }
   update(dt) { this.t += dt; this.anim = Math.max(0, this.anim - dt); }
   touchPlayer() {}
   draw(ctx) { const R = this.g.area && this.g.area.roomState; const D = DRAW[this.role]; if (D) D(ctx, this, R || {}); }
@@ -211,7 +211,7 @@ DRAW.placard = (ctx, e, R) => {
 /* ================= boneFish: NO FISHING ================= */
 const DRY1 = 7, POOL0 = 8, POOL1 = 13, ISLE0 = 14;
 TourRooms.def('boneFish', {
-  title: 'NO FISHING', rule: 'THE TAR WON\'T HOLD YOU. JUMP ON THE FLOAT AND LET THE FISH REEL YOU IN', need: 'GET REELED IN FIRST!',
+  title: 'NO FISHING', rule: 'THE TAR WON\'T HOLD YOU, AND IT\'S TOO LOW TO JUMP. HOP ON THE FLOAT: LET THE FISH REEL YOU IN', need: 'GET REELED IN FIRST!',
   make(o, keep, ctx, A, rng) {
     const { g } = frame(keep, A, o);
     // a low rock ceiling over the pool: no jumping across it
@@ -233,8 +233,8 @@ TourRooms.def('boneFish', {
     }
     if (!p.onGround || p.groundTy !== F) { R.wasAir = !p.onGround; return; }
     const tx = Math.floor(p.cx / TS);
-    if (tx === POOL0 && R.wasAir) { R.reel = 0; TourKit.sfx('reel', 'select', { vol: 0.5, pitch: 1.6 }); play.parts.text(p.cx, p.y - 20, 'A BITE!', '#ffd88a'); }
-    else if (tx > POOL0 && tx <= POOL1) { play.burst(p.cx, p.y + p.h, 10, '#2a1a10', 'dust'); fail(play, 'SPLOSH! THE FISH SPITS YOU BACK'); RK.raspberry(play, 'SPLOSH!'); p.x = 4 * TS + TS / 2 - p.w / 2; p.y = F * TS - p.h; p.vx = p.vy = 0; }
+    if (tx === POOL0 || tx === POOL0 + 1) { R.reel = 0; TourKit.sfx('reel', 'select', { vol: 0.5, pitch: 1.6 }); play.parts.text(p.cx, p.y - 20, 'A BITE!', '#ffd88a'); }
+    else if (tx > POOL0 + 1 && tx <= POOL1) { play.burst(p.cx, p.y + p.h, 10, '#2a1a10', 'dust'); fail(play, 'SPLOSH! THE FISH SPITS YOU BACK'); RK.raspberry(play, 'SPLOSH!'); p.x = 4 * TS + TS / 2 - p.w / 2; p.y = F * TS - p.h; p.vx = p.vy = 0; }
     R.wasAir = false;
   }
 });
@@ -331,7 +331,7 @@ TourRooms.kinds.boneOrder.testWin = function (g, A, R, kit, frame) {
 };
 TourRooms.kinds.boneFish.testWin = function (g, A, R, kit, frame) {
   stand(g, 11); steps(g, frame, 4); steps(g, frame, 30);
-  stand(g, 6); steps(g, frame, 10); frame(g, { jump: true, jumpPressed: true, right: true }); steps(g, frame, 14, { jump: true, right: true }); for (let q = 0; q < 240 && R.reel == null; q++) frame(g, {}); steps(g, frame, 260);
+  stand(g, 7); steps(g, frame, 10); frame(g, { jump: true, jumpPressed: true, right: true }); steps(g, frame, 34, { right: true }); for (let q = 0; q < 240 && R.reel == null; q++) frame(g, {}); steps(g, frame, 260);
 };
 TourRooms.kinds.boneJar.testWin = function (g, A, R, kit, frame) {
   const odd = kit.data.odd, wrong = (odd + 1) % 3;
