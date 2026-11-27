@@ -479,6 +479,26 @@ LEVELS.coast = async (page, shot, run, pano) => {
   });
 };
 
+// ---------------- the six secret rooms: each entered, played (a miss, then the win) with the buttons, and left ----------------
+const ROOMS = [['27-1', 'press', 'perf', 'pressOut'], ['27-2', 'bureau', 'stamp', 'bureauOut'], ['27-3', 'cellar', 'blot', 'cellarOut'], ['27-4', 'pens', 'fold', 'pensOut'], ['27-5', 'chutes', 'coast', 'chutesOut'], ['27-6', 'den', 'return', 'denOut']];
+LEVELS.rooms = async (page, shot, run) => {
+  let n = 0;
+  for (const [id, aid, main, out] of ROOMS) {
+    n++;
+    await run('rooms', async () => {
+      await page.evaluate(helpers);
+      await page.evaluate(([id, aid]) => { fresh(); playP(id); toArea(aid); sim(0.7); freeze(); }, [id, aid]); await shot(`6${n}-room-${id}-${aid}-entry.png`);
+      await page.evaluate(() => { thaw(); sim(2.6); freeze(); }); await shot(`6${n}-room-${id}-${aid}-rule.png`);
+      const r = await page.evaluate(() => { thaw(); const g = S(), A = g.area, R = A.roomState, kit = A.roomKit; const fails = []; const pill0 = ents('PostPill').length; window.TT = window.BRADY_TOUR.TourRooms || null; const K = window.BRADY_TOUR && window.BRADY_TOUR.TourRooms; return { kind: kit.kind }; });
+      const w = await page.evaluate(() => { const g = S(), A = g.area, R = A.roomState, kit = A.roomKit, K = window.__roomKinds[kit.kind]; let pills = 0; const frame = (g2, keys) => { const before = ents('PostPill').length; sim(1 / 120, keys); if (ents('PostPill').length > before) pills++; }; K.testWin(g, A, R, kit, frame); sim(0.6); const cage = g.entities.find(e => e.constructor.name === 'TourRoomCage'); return { won: R.won, pills, cage: cage ? cage.tiles.every(([x, y]) => tileName(x, y) === 'EMPTY') : null }; });
+      check(`room ${id} ${aid} (${r.kind}): a miss (a pill says so, the turn resets), then won with the buttons; the cage opens`, w.won && w.pills >= 1 && w.cage !== false, w);
+      await page.evaluate(() => freeze()); await shot(`6${n}-room-${id}-${aid}-won.png`);
+      const o = await page.evaluate(([main, out]) => { thaw(); toDoor(); sim(0.1, { up: true, upPressed: true }); for (let k = 0; k < 300 && S().area.aid !== main; k++) sim(1 / 60); sim(0.5); const g = S(), an = g.area.anchors[out]; return { area: g.area.aid, x: Math.floor(P().cx / 32), ax: an ? Math.floor(an.x / 32) : null }; }, [main, out]);
+      check(`room ${id} ${aid}: the way out leads on, further along the stage (not back to the entrance)`, o.area === main && o.ax != null && Math.abs(o.x - o.ax) <= 2, o);
+    });
+  }
+};
+
 (async () => {
   await session({ width: 844, height: 390 }, async (page, shot, run, pano) => {
     for (const k of Object.keys(LEVELS).filter(k => k !== 'entry' && k !== 'map' && k !== 'bot').concat(['entry', 'map', 'bot'])) if (LEVELS[k]) await LEVELS[k](page, shot, run, pano);

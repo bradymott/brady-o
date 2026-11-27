@@ -240,8 +240,8 @@ TourHats.NOT = new Set([].concat(
   // rib rungs, clay presses, soft floors, chisels, limb sockets, the rooms' props, the fossil slab's way in
   'bonePill boneBrush boneTail boneTrack boneVert boneRibs bonePress boneSoft boneChisel boneLimbGate boneRoomProp boneSlabGate'.split(' '),
   // Postmark Sound (world 27, hidden land A2): floating lines, pawprints, the islands, stamps, blotters, folds, map
-  // scales, torn addresses, the rooms' props, the postcard rack's way in, the boss's stamp impressions
-  'postPill postPaw postIsland postStamp postBlotter postFold postScale postAddress postRoomProp postRackGate postImpress'.split(' '),
+  // scales, torn addresses, the rooms' props, the postcard rack's way in
+  'postPill postPaw postIsland postStamp postBlotter postFold postScale postAddress postRoomProp postRackGate'.split(' '),
   // Morocco: tagines, teapots, oranges, storms, pots, mirages, gales, lanterns, slabs, lines, portcullises, hooks, chains, grilles, winds
   'maTagine maTeapot maOrange maStorm maPot maMirage maGale maKickPot maShopLantern maMirageSlab maPhaseLine maPortcullis maLidHook maChain maRoofGrille maDownWind'.split(' '),
   // Mexico: peppers, elotes, popcorn, the piñata burro, lava blobs, salsa, melon carts, swingers, cannons, rails, sunbeams, bubbles, the Casa's gates

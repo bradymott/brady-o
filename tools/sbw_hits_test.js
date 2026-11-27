@@ -280,7 +280,10 @@ const BOSS_SAFE = {
   ke_kiboko: ['swim', 'dive', 'rise'],                         // 29_tour_ke_boss.js: under the water (only her eyes show)
   // The Spare Bone Quarry (37): a bone lies loose to be seated (paddleDown, heelDown, curlDown), it shudders after one
   // is seated (seated, recover), it sits down at the end (sit): 29_tour_y_bone_c_boss.js touch()
-  bone_animal: ['paddleDown', 'heelDown', 'curlDown', 'seated', 'recover', 'sit']
+  bone_animal: ['paddleDown', 'heelDown', 'curlDown', 'seated', 'recover', 'sit'],
+  // Postmark Sound (27): touching the Postmaster's Thumb never hurts; only its stamp's impact under its ring and its
+  // rolling ink stripe do (29_tour_y_post_c_boss.js touch())
+  post_thumb: ['hover', 'rise', 'ring', 'stamp', 'down', 'edge', 'roll', 'rings', 'double', 'mailed']
 };
 const ENEMY_SAFE_TOKENS = ['wait', 'sleep', 'under', 'hide', 'stunned', 'stun', 'friendly', 'friendT', 'harmless', 'perch', 'disguise', 'fade', 'gone', 'dead', 'snatch', 'flee', 'grab'];
 const ENEMY_SAFE_TYPES = {

@@ -74,7 +74,7 @@ TourRooms.def('postGap', {
   title: 'MIND THE GAP', rule: 'FOUR STAMPS PRINT IN A ROW, THEN AGAIN WITH A GAP: JUMP ON THE STAMP THAT FILLS IT. TWICE', need: 'FILL THE GAP FIRST!',
   make(o, keep, ctx, A, rng) {
     const { g } = frame(keep, A, o, {});
-    g.spawn(10, 3, 'postRoomProp', { role: 'press', w: 10, h: 3 });
+    g.spawn(10, 5, 'postRoomProp', { role: 'press', w: 10, h: 2 });
     GAP_PADS.forEach((x, k) => g.spawn(x, Y, 'postRoomProp', { role: 'gapPad', k, w: 2, h: 2 }));
     g.winSpot(A.id, GAP_PADS[1], Y);
     return g;
@@ -100,14 +100,14 @@ DRAW.press = (ctx, e, R) => {
   ctx.fillStyle = '#5a6478'; ctx.fillRect(x0 - 8, y0 - 10, e.w + 16, 10); ctx.strokeRect(x0 - 8, y0 - 10, e.w + 16, 10);
   if (!R.seq) { ctx.restore(); return; }
   for (let i = 0; i < 4; i++) {
-    const sx = x0 + 22 + i * 72, sy = y0 + 14;
+    const sx = x0 + 34 + i * 70, sy = y0 + 10;
     let show = false, blank = false;
     if (R.won || R.phase === 'pick') { show = true; blank = !R.won && i === R.blank; }
     else if (t < 2.2) show = t > 0.4 + i * 0.45;
     else if (t > 2.6) { show = t > 2.8 + i * 0.45; blank = i === R.blank; }
-    if (!show) { ctx.strokeStyle = 'rgba(26,22,48,0.3)'; ctx.setLineDash([4, 4]); ctx.strokeRect(sx, sy, 46, 56); ctx.setLineDash([]); continue; }
-    if (blank) { ctx.fillStyle = 'rgba(244,122,90,0.25)'; ctx.fillRect(sx, sy, 46, 56); ctx.strokeStyle = CORAL; ctx.lineWidth = 3; ctx.setLineDash([6, 4]); ctx.strokeRect(sx, sy, 46, 56); ctx.setLineDash([]); ctx.fillStyle = CORAL; ctx.font = '20px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('?', sx + 23, sy + 36); continue; }
-    PA.stamp(ctx, sx, sy, 46, 56, R.seq[i], [COBALT, CORAL, '#3a8a5a', '#8a5ac8'][i]);
+    if (!show) { ctx.strokeStyle = 'rgba(26,22,48,0.3)'; ctx.setLineDash([4, 4]); ctx.strokeRect(sx, sy, 36, 44); ctx.setLineDash([]); continue; }
+    if (blank) { ctx.fillStyle = 'rgba(244,122,90,0.25)'; ctx.fillRect(sx, sy, 36, 44); ctx.strokeStyle = CORAL; ctx.lineWidth = 3; ctx.setLineDash([6, 4]); ctx.strokeRect(sx, sy, 36, 44); ctx.setLineDash([]); ctx.fillStyle = CORAL; ctx.font = '18px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('?', sx + 18, sy + 29); continue; }
+    PA.stamp(ctx, sx, sy, 36, 44, R.seq[i], [COBALT, CORAL, '#3a8a5a', '#8a5ac8'][i]);
   }
   ctx.restore();
 };
@@ -115,7 +115,7 @@ DRAW.gapPad = (ctx, e, R) => {
   const x = e.cx, y = e.y + e.h, c = R.choices ? R.choices[e.k] : null;
   pad(ctx, x, y, false);
   if (c == null) return;
-  ctx.save(); PA.stamp(ctx, x - 16, y - 46, 32, 38, c, '#5a6478'); if (R.phase === 'pick' && !R.won) { ctx.strokeStyle = `rgba(255,224,138,${0.5 + 0.5 * Math.sin(e.t * 6)})`; ctx.lineWidth = 3; ctx.strokeRect(x - 20, y - 50, 40, 46); } ctx.restore();
+  ctx.save(); PA.stamp(ctx, x - 12, y - 34, 24, 28, c, '#5a6478'); if (R.phase === 'pick' && !R.won) { ctx.strokeStyle = `rgba(255,224,138,${0.5 + 0.5 * Math.sin(e.t * 6)})`; ctx.lineWidth = 3; ctx.strokeRect(x - 16, y - 38, 32, 36); } ctx.restore();
 };
 
 /* ================= postFake: COUNTERFEIT POSTMARK (the inspector's bureau) ================= */
@@ -124,7 +124,7 @@ TourRooms.def('postFake', {
   title: 'COUNTERFEIT POSTMARK', rule: 'STUDY THE THREE POSTMARKS. THE CARD TURNS OVER AND BACK: STAND UNDER THE ONE THAT CHANGED AND THROW', need: 'SPOT THE FAKE FIRST!',
   make(o, keep, ctx, A, rng) {
     const { g } = frame(keep, A, o, { doorRight: true, cageLeft: true, plinth: true, cageH: 3 });
-    g.spawn(11, 3, 'postRoomProp', { role: 'card', w: 14, h: 3 });
+    g.spawn(11, 4, 'postRoomProp', { role: 'card', w: 14, h: 2 });
     FAKE_X.forEach((x, k) => g.spawn(x, Y, 'postRoomProp', { role: 'lens', k, w: 2, h: 2 }));
     g.winSpot(A.id, FAKE_X[1], Y);
     return g;
@@ -150,7 +150,7 @@ DRAW.card = (ctx, e, R) => {
   if (!back) for (let i = 0; i < 3; i++) {
     const cx = (FAKE_X[i] + 1) * TS - 4, cy = y0 + e.h / 2, changed = !R.won && t >= 4.2 && i === R.odd;
     ctx.strokeStyle = BLACK; ctx.lineWidth = 3; const rings = changed && R.changeTo === 'ring' ? 1 : 2;
-    for (let q = 0; q < rings; q++) { ctx.beginPath(); ctx.arc(cx - 16, cy, 20 - q * 6, 0, TAU); ctx.stroke(); }
+    for (let q = 0; q < rings; q++) { ctx.beginPath(); ctx.arc(cx - 14, cy, 18 - q * 6, 0, TAU); ctx.stroke(); }
     const bars = changed && R.changeTo === 'bars' ? 2 : 3;
     for (let q = 0; q < bars; q++) { ctx.beginPath(); for (let k = 0; k <= 8; k++) ctx.lineTo(cx + 8 + k * 5, cy - 12 + q * 12 + Math.sin(k) * 3); ctx.stroke(); }
   } else { ctx.fillStyle = 'rgba(26,22,48,0.4)'; ctx.font = '12px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('POST CARD', x0 + e.w / 2, y0 + e.h / 2 + 4); }
@@ -202,7 +202,7 @@ TourRooms.def('postDrop', {
   title: 'THE LAST DROP', rule: 'TWO NIBS DRIP INTO ONE BOTTLE. STAND AT THE CAP AND THROW WHEN THE INK MEETS THE ETCHED LINE', need: 'CAP IT AT THE LINE FIRST!',
   make(o, keep, ctx, A, rng) {
     const { g } = frame(keep, A, o, { doorRight: true, cageLeft: true });
-    g.spawn(BOT_X, Y, 'postRoomProp', { role: 'bottle', w: 3, h: 5 });
+    g.spawn(BOT_X, Y, 'postRoomProp', { role: 'bottle', w: 3, h: 4 });
     g.spawn(CAP_X, Y, 'postRoomProp', { role: 'capper', w: 1, h: 2 });
     g.winSpot(A.id, CAP_X, Y);
     return g;
@@ -220,10 +220,10 @@ TourRooms.def('postDrop', {
   draw(play, ctx, A, R) { hud(play, ctx, R.won ? 'THE LAST DROP!' : 'CAP IT AT THE LINE'); }
 });
 DRAW.bottle = (ctx, e, R) => {
-  const x = e.cx, y = e.y + e.h, w = 56, h = 110, lv = clamp(R.lvl || 0, 0, 1);
+  const x = e.cx, y = e.y + e.h, w = 50, h = 72, lv = clamp(R.lvl || 0, 0, 1);
   ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2.5;
   // the two nibs above, dripping
-  for (const dx of [-12, 12]) { ctx.fillStyle = '#c8c8d0'; ctx.beginPath(); ctx.moveTo(x + dx - 6, y - h - 40); ctx.lineTo(x + dx + 6, y - h - 40); ctx.lineTo(x + dx, y - h - 22); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = BLACK; ctx.fillRect(x + dx - 4, y - h - 70, 8, 30); const d = ((R.drip || 0) / 0.42); ctx.beginPath(); ctx.arc(x + dx, y - h - 20 + d * 30, 3, 0, TAU); ctx.fill(); }
+  for (const dx of [-12, 12]) { ctx.fillStyle = '#c8c8d0'; ctx.beginPath(); ctx.moveTo(x + dx - 6, y - h - 38); ctx.lineTo(x + dx + 6, y - h - 38); ctx.lineTo(x + dx, y - h - 22); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = BLACK; ctx.fillRect(x + dx - 4, y - h - 60, 8, 22); const d = ((R.drip || 0) / 0.42); ctx.beginPath(); ctx.arc(x + dx, y - h - 20 + d * 20, 3, 0, TAU); ctx.fill(); }
   ctx.fillStyle = 'rgba(220,235,255,0.5)'; rr(ctx, x - w / 2, y - h, w, h, 8); ctx.fill(); ctx.stroke();
   ctx.save(); rr(ctx, x - w / 2, y - h, w, h, 8); ctx.clip(); ctx.fillStyle = '#1e1e48'; ctx.fillRect(x - w / 2, y - h * lv, w, h * lv); ctx.restore();
   const ly = y - h * LINE; ctx.strokeStyle = CORAL; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x - w / 2 - 8, ly); ctx.lineTo(x + w / 2 + 8, ly); ctx.stroke();
@@ -259,14 +259,14 @@ DRAW.tray = (ctx, e, R) => {
   const x = e.cx, y = e.y + e.h, a = R.a || 0, up = Math.cos(a) > 0.35;
   ctx.save(); pad(ctx, x, y, !R.won);
   // the tumbling card over the tray: it squashes as it turns; picture (sea and sun) or blank back
-  const cy = y - 120 + Math.sin(a * 0.5) * 8, sx = Math.cos(a);
+  const cy = y - 96 + Math.sin(a * 0.5) * 6, sx = Math.cos(a);
   ctx.translate(x, cy); ctx.scale(Math.max(0.05, Math.abs(sx)), 1); ctx.rotate(Math.sin(a * 0.7) * 0.15);
   ctx.strokeStyle = INK; ctx.lineWidth = 2.5;
   if (sx > 0) { ctx.fillStyle = WHITE; rr(ctx, -34, -24, 68, 48, 4); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#9ad0f0'; ctx.fillRect(-29, -19, 58, 38); ctx.fillStyle = CORAL; ctx.beginPath(); ctx.arc(10, -4, 8, 0, TAU); ctx.fill(); PA.scallops(ctx, -29, 22, 6, 5, COBALT); }
   else { ctx.fillStyle = '#e8dcc0'; rr(ctx, -34, -24, 68, 48, 4); ctx.fill(); ctx.stroke(); ctx.strokeStyle = 'rgba(26,22,48,0.4)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(0, -18); ctx.lineTo(0, 18); ctx.stroke(); }
   ctx.restore();
   ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#c8a04a'; rr(ctx, x - 40, y - 20, 80, 12, 3); ctx.fill(); ctx.stroke(); ctx.restore();
-  if (up && !R.won) { ctx.save(); ctx.strokeStyle = 'rgba(255,224,138,0.7)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x, y - 120, 46, 34, 0, 0, TAU); ctx.stroke(); ctx.restore(); }
+  if (up && !R.won) { ctx.save(); ctx.strokeStyle = 'rgba(255,224,138,0.7)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x, y - 96, 46, 34, 0, 0, TAU); ctx.stroke(); ctx.restore(); }
 };
 
 /* ================= postPeel: PEEL HERE (the collector's den) ================= */
@@ -277,7 +277,7 @@ TourRooms.def('postPeel', {
   make(o, keep, ctx, A, rng) {
     const { g } = frame(keep, A, o, { doorRight: true, cageLeft: true, plinth: true, cageH: 3 });
     g.spawn(PEEL_X, Y, 'postRoomProp', { role: 'peel', w: 2, h: 2 });
-    g.spawn(11, 4, 'postRoomProp', { role: 'bigstamp', w: 6, h: 3 });
+    g.spawn(11, 5, 'postRoomProp', { role: 'bigstamp', w: 6, h: 2 });
     g.winSpot(A.id, PEEL_X, Y);
     return g;
   },
@@ -300,7 +300,7 @@ TourRooms.def('postPeel', {
 DRAW.peel = (ctx, e, R) => { pad(ctx, e.cx, e.y + e.h, !R.on && !R.won); };
 DRAW.bigstamp = (ctx, e, R) => {
   // the big stamp on the velvet: the peeled part lifts away along its edge; the curl and an arrow show where next
-  const x0 = e.x - 20, y0 = e.y - 10, w = e.w + 40, h = e.h + 30, P = clamp(R.prog || 0, 0, 4);
+  const x0 = e.x - 10, y0 = e.y - 4, w = e.w + 20, h = e.h + 6, P = clamp(R.prog || 0, 0, 4);
   ctx.save(); PA.stamp(ctx, x0, y0, w, h, 5, CORAL, false);
   const pt = q => { const s = Math.min(3, Math.floor(q)), f = q - s; return s === 0 ? [x0 + w * f, y0] : s === 1 ? [x0 + w, y0 + h * f] : s === 2 ? [x0 + w * (1 - f), y0 + h] : [x0, y0 + h * (1 - f)]; };
   ctx.strokeStyle = '#ffe08a'; ctx.lineWidth = 5; ctx.beginPath(); for (let q = 0; q <= P; q += 0.05) { const [x, y] = pt(q); q ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke();
@@ -318,14 +318,23 @@ const steps = (g, frame, n, keys) => { for (let k = 0; k < n; k++) frame(g, keys
 const stand = (g, tx) => { const p = g.player; p.x = tx * TS + TS / 2 - p.w / 2; p.y = F * TS - p.h; p.vx = p.vy = 0; };
 const hop = (g, frame, tx) => { stand(g, tx); steps(g, frame, 20); frame(g, { jump: true, jumpPressed: true }); steps(g, frame, 30, { jump: true }); steps(g, frame, 60); };
 const press = (g, frame) => { frame(g, { action: true, actionPressed: true }); steps(g, frame, 10); };
+const until = (g, frame, fn, sec) => { for (let k = 0; k < 120 * (sec || 10) && !fn(); k++) frame(g, {}); };
 TourRooms.kinds.postGap.testWin = function (g, A, R, kit, frame) {
-  for (let round = 0; round < 3 && !R.won; round++) { steps(g, frame, 60 * 5); const ok = R.choices.indexOf(R.seq[R.blank]); if (round === 0) { hop(g, frame, GAP_PADS[(ok + 1) % 3]); steps(g, frame, 60 * 5); } hop(g, frame, GAP_PADS[R.choices.indexOf(R.seq[R.blank])]); }
+  let missed = false;
+  for (let round = 0; round < 6 && !R.won; round++) {
+    until(g, frame, () => R.phase === 'pick');
+    const ok = R.choices.indexOf(R.seq[R.blank]);
+    if (!missed) { missed = true; hop(g, frame, GAP_PADS[(ok + 1) % 3]); continue; }
+    hop(g, frame, GAP_PADS[ok]);
+  }
 };
 TourRooms.kinds.postFake.testWin = function (g, A, R, kit, frame) {
-  steps(g, frame, 60 * 5); stand(g, FAKE_X[(R.odd + 1) % 3]); steps(g, frame, 10); press(g, frame); steps(g, frame, 60 * 5); stand(g, FAKE_X[R.odd]); steps(g, frame, 10); press(g, frame); steps(g, frame, 20);
+  until(g, frame, () => R.t0 >= 4.3); stand(g, FAKE_X[(R.odd + 1) % 3]); steps(g, frame, 10); press(g, frame);
+  until(g, frame, () => R.t0 >= 4.3); stand(g, FAKE_X[R.odd]); steps(g, frame, 10); press(g, frame); steps(g, frame, 20);
 };
 TourRooms.kinds.postEcho.testWin = function (g, A, R, kit, frame) {
-  steps(g, frame, 60 * 4); stand(g, WELL_X[(R.seq[0] + 1) % 3]); steps(g, frame, 10); press(g, frame); steps(g, frame, 60 * 4);
+  until(g, frame, () => R.play >= 3.6); stand(g, WELL_X[(R.seq[0] + 1) % 3]); steps(g, frame, 10); press(g, frame);
+  until(g, frame, () => R.play >= 3.6);
   for (let i = 0; i < 3; i++) { stand(g, WELL_X[R.seq[i]]); steps(g, frame, 10); press(g, frame); steps(g, frame, 20); }
 };
 TourRooms.kinds.postDrop.testWin = function (g, A, R, kit, frame) {
@@ -349,4 +358,5 @@ for (const k of ['postGap', 'postFake', 'postEcho', 'postDrop', 'postFlip', 'pos
   Kd.update = function (play, dt, A, R, kit) { if (R.ruleAt && !(play.bannerT > 0)) { R.ruleAt = false; if (!R.won) { play.toast(kit.rule); play.toastT = 4; } } if (u0) return u0.apply(this, arguments); };
 }
 Tour.postKit.ROOMS = { GAP_PADS, FAKE_X, WELL_X, CAP_X, TRAY_X, PEEL_X, LINE };
+try { if (typeof window !== 'undefined') window.__roomKinds = TourRooms.kinds; } catch (e) { /* not in a browser */ }
 })();
