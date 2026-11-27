@@ -135,7 +135,7 @@ const quiet = (() => {
   G.pit(51, 60); G.put(51, 14, '3'); G.coins(52, 59, 11);
   G.ground(61, 70, F); G.put(66, 13, 'r');
   G.ground(71, 72, 11); G.pit(73, 80); G.put(73, 11, '4'); G.ground(81, 84, 11); G.coins(74, 79, 8);
-  G.ground(85, 120, F); G.put(88, 13, 'l');
+  G.ground(85, 120, F); G.put(104, 13, 'l');   // (the clam waits past the hut, clear of the landing off the ledge)
   // the hut: plank steps up onto its roof; its front panel is false, sand puffing at its foot; the nook, the hatch, P2
   G.put(90, 11, '----'); G.fill(95, 10, 100, 13, 'H'); G.fill(96, 11, 99, 13, '.'); G.fill(95, 11, 95, 13, 'F');
   G.put(94, 13, 'E'); G.put(98, 13, 'D'); G.put(92, 13, 'p'); G.put(97, 11, 'P');
@@ -358,7 +358,7 @@ const storm = (() => {
   G.put(34, 13, 'k'); G.put(38, 13, 'c');
   // ② the hail
   G.put(44, 13, 'i'); G.put(48, 13, '4'); G.put(52, 13, '5'); G.put(56, 13, '6');
-  G.pit(64, 67); G.put(65, 9, '*'); G.put(72, 13, 'r'); G.put(76, 13, 'c'); G.put(78, 10, '?');
+  G.pit(64, 67); G.put(65, 9, '*'); G.put(81, 13, 'r'); G.put(76, 13, 'c'); G.put(78, 10, '?');   // (the ray tiptoes past the checkpoint, clear of the landing)
   // ③ the quiet: the tin and the windcloth take turns; the cardboard pea speaks in the quiet after them
   G.put(84, 13, 'd'); G.put(88, 13, '7'); G.put(92, 13, '8'); G.put(96, 13, '9'); G.put(103, 13, 'R');
   G.put(106, 13, 'k'); G.put(110, 13, 'c');

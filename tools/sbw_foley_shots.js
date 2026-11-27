@@ -619,11 +619,11 @@ const botRun = async (page, id, legs) => {
       if (g.state !== 'play') break;
       P().invuln = 0; i++;
     }
-    sim(3, { right: true });
-    return { id, deaths: deaths.length, where: deaths.slice(0, 6), legsOk: out.filter(x => x !== true), state: g.state };
+    if (id !== '29-6') sim(3, { right: true });
+    return { id, deaths: deaths.length, where: deaths.slice(0, 6), legsOk: out.filter(x => x !== true), state: g.state, area: S().area && S().area.aid };
   }, [id, legs]);
   console.log('BOT ' + JSON.stringify(r));
-  check(`bot ${id}: played start to finish with enemies on and no invulnerability (at most one death)`, /clear|tally|results/.test(r.state) && r.deaths <= 1, r);
+  check(`bot ${id}: played start to finish with enemies on and no invulnerability (at most one death)${id === '29-6' ? ' (the lead-in, through the stage door to Mr. Thunder)' : ''}`, (id === '29-6' ? r.state === 'play' && r.area === 'stage' && !r.legsOk.length : /clear|tally|results/.test(r.state)) && r.deaths <= 1, r);
 };
 LEVELS.bot = async (page) => {
   if (!BOT) return;
@@ -650,7 +650,7 @@ LEVELS.botMore = async (page, botRun) => {
     for (let q = 0; q < 1200 && !(B() && B().state === 'fight'); q++) { sim(1 / 120, { right: P().cx < M().cx - 4 }); t += 1 / 120; }
     const dead = () => S() !== g || !P() || P().dead || g.state !== 'play';
     const step = inp => { sim(1 / 120, inp || {}); t += 1 / 120; };
-    const log = [];
+    const log = [], t0 = t + run * 0.7;   // each run idles a different while after he wakes, so the three runs meet him at different points of his cycle
     while (t < 300) {
       if (dead()) { deaths++; log.push({ ph: B() && B().phase, hp: B() && B().hp, at: P() ? tileOf() : null }); for (let q = 0; q < 400 && (!S().player || S().player.dead || S().state !== 'play'); q++) { sim(0.05); t += 0.05; } g = S(); if (!g.player) break; if (g.area.aid !== 'stage') toArea('stage'); P().invuln = 0; sim(1); continue; }
       const b = B(), m = M(), p = P(); if (!b || b.remove || b.state === 'dying' || b.hp <= 0) break;
@@ -659,6 +659,7 @@ LEVELS.botMore = async (page, botRun) => {
       const shadow = (b.hailList || []).some(h => !h.fell && Math.abs(h.x - p.cx) < 26);
       if (sh && p.onGround) { step({ jump: true, jumpPressed: true }); for (let q = 0; q < 40; q++) step({ jump: true }); continue; }
       if (shadow && p.onGround) { const d = (b.hailList.find(h => !h.fell && Math.abs(h.x - p.cx) < 26).x < p.cx) ? 1 : -1; for (let q = 0; q < 30; q++) step({ right: d > 0, left: d < 0 }); continue; }
+      if (t < t0) { step(); continue; }
       const ph = b.phase || 1, want = ph === 1 ? 0 : ph === 2 ? 1 : 3;
       // to the mic, take it
       if (!m.fTouch(p)) { const dx = m.cx - p.cx; step({ right: dx > 6, left: dx < -6 }); continue; }

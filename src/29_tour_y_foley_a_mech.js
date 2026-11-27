@@ -609,7 +609,7 @@ const TAKES = { door: { word: 'CREEEAK', noise: 'jag', col: '#c8a070' }, gull: {
 class FoleyDesk extends Ent {
   constructor(g, s) {
     super(g, s, TS, TS); this.x = s.x - TS / 2; this.y = s.y - TS; this.friendly = true; this.back = true; this.fProp = true; this.tx = Math.round(this.x / TS); this.fy = Math.round(s.y / TS);
-    this.lockId = s.lock; this.prop = s.prop || 'door'; this.band = s.band || [0.3, 0.6]; this.P = s.period || 3.2; this.ph = 0; this.rec = null; this.done = false; this.win = s.win || 0.075; this.spk = s.spk; this.playT = 0;
+    this.lockId = s.lock; this.prop = s.prop || 'door'; this.band = s.band || [0.3, 0.6]; this.P = s.period || 3.2; this.ph = 0; this.rec = null; this.done = false; this.win = s.win || 0.26 / this.P; this.spk = s.spk; this.playT = 0;
   }
   u() { return mod(this.ph, this.P) / this.P; }
   fTouch(p) { return !this.done && onMark(p, this.tx, this.fy, 0.9); }
