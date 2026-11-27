@@ -100,7 +100,7 @@ const L1 = { n: 1, name: 'Peg Legwork', mapLabel: 'Peg Legwork', arch: 'netclimb
   exits: { main: { to: '26-2' } },
   areas: [
     { id: 'roofs', gen: 'room', theme: 'wash_roofs', stamp: 'washPeg', camera: 'free', bottomKill: true },
-    { id: 'basket', gen: 'room', role: 'secret', theme: 'wash_room_wicker', stamp: 'washBasket' }
+    { id: 'basket', gen: 'room', role: 'secret', theme: 'wash_room_wicker', stamp: 'washBasket', room: 'washCups' }
   ] };
 
 Tour.amend('wash', { stamps, levels: [L1] });
