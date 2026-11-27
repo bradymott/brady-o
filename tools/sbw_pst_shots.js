@@ -343,12 +343,211 @@ LEVELS.s1 = async (page, shot, run, pano) => {
   });
 };
 
+
+// a secret room: the win (the kind's own scripted play, with the game's real buttons), a miss first, the cage, the
+// way out (it must lead somewhere else than the way in)
+const ROOM_FAIL = {
+  pstKnock: `(() => { const R = S().area.roomState, k = S().area.roomKit, p = P(); place(k.data.mark, 10); sim(0.3); sim(1 / 120, { action: true, actionPressed: true }); sim(0.3); const K0 = window.BRADY_TOUR.TourRooms || null; R.aim = -Math.PI * 0.5; for (let q = 0; q < 1440 && window.ROOMK.pstKnock.lamb(k, R.lambT).at === 1; q++) sim(1 / 120); sim(1 / 120, { action: true, actionPressed: true }); sim(1.2); return { won: R.won, next: R.next }; })()`,
+  pstCore: `(() => { const R = S().area.roomState, k = S().area.roomKit; place(k.data.mark, 10); sim(0.3); sim(1 / 120, { action: true, actionPressed: true }); sim(0.2); const B = window.ROOMK.pstCore.bubbles(k, R); const far = Math.max(...B.map(b => b.x)) + 60; for (let q = 0; q < 600 && R.px < far; q++) sim(1 / 120, { right: true }); sim(1 / 120, { action: true, actionPressed: true }); sim(1.5); return { won: R.won }; })()`,
+  pstTray: `(() => { const R = S().area.roomState, k = S().area.roomKit; place(k.data.mark, 10); sim(0.3); sim(1 / 120, { action: true, actionPressed: true }); let reset = false; for (let q = 0; q < 1440 && !reset; q++) { const m0 = R.mugs; sim(1 / 120, { right: true }); if (R.mugs !== m0) reset = true; } sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.3); return { won: R.won, reset }; })()`,
+  pstCaps: `(() => { const R = S().area.roomState, k = S().area.roomKit; place(k.data.mark, 10); sim(0.3); sim(1 / 120, { action: true, actionPressed: true }); let missed = false; for (let q = 0; q < 1440 && !missed; q++) { sim(1 / 120, { left: true }); if (S().bannerT > 0 && /MISSED|TOPPLED/.test(S().bannerText || '')) missed = true; } sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.3); return { won: R.won, missed }; })()`,
+  pstPour: `(() => { const R = S().area.roomState, k = S().area.roomKit; place(k.data.mark, 10); sim(0.3); sim(1 / 120, { action: true, actionPressed: true }); let spilt = false; for (let q = 0; q < 1440 && !spilt; q++) { sim(1 / 120, { right: true }); if (R.done != null) spilt = true; } sim(1.6); sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.3); return { won: R.won, spilt }; })()`,
+  pstPrivacy: `(() => { const R = S().area.roomState, k = S().area.roomKit; place(k.data.mark, 10); sim(0.3); let woke = false; for (let q = 0; q < 900 && !woke; q++) { sim(1 / 120, { action: true, right: R.pstGrip != null }); if (R.wake > 0) woke = true; } sim(1.5); return { won: R.won, woke }; })()`
+};
+async function roomRun(page, shot, label, enter) {
+  const r0 = await page.evaluate(enter);
+  check(label + ': the way in, played: ' + (r0.how || ''), r0.ok, r0);
+  if (!r0.ok) return;
+  const info = await page.evaluate(() => { sim(1.2); const A = S().area; return { aid: A.aid, kind: A.roomKit && A.roomKit.kind, banner: S().bannerText }; });
+  await page.evaluate(() => freeze()); await shot(label + '-room.png'); await page.evaluate(() => thaw());
+  const f = await page.evaluate(ROOM_FAIL[info.kind]);
+  check(label + ' (' + info.kind + '): a miss resets that turn, no prize', !f.won && (f.next === 0 || f.reset || f.missed || f.spilt || f.woke || f.won === false), f);
+  const w = await page.evaluate(() => { const g = S(), A = g.area, R = A.roomState, kit = A.roomKit; window.ROOMK[kit.kind].testWin(g, A, R, kit, (g2, keys) => sim(1 / 120, keys || {})); sim(0.6); const cage = g.entities.find(e => e.constructor.name === 'TourRoomCage'); return { won: R.won, cageOpen: cage ? cage.tiles.every(([x, y]) => g.area.tiles[y * g.area.W + x] === window.BRADY.T.EMPTY) : null }; });
+  check(label + ' (' + info.kind + '): won once with the real buttons; the prize cage opens at the win', w.won && w.cageOpen !== false, w);
+  await page.evaluate(() => freeze()); await shot(label + '-room-won.png'); await page.evaluate(() => thaw());
+  const out = await page.evaluate(([inX]) => { const g = S(), d = g.entities.find(e => e.constructor.name === 'Portal' && e.target); const k0 = g.area.idx; place(Math.floor(d.cx / 32), Math.floor((d.y + d.h - 1) / 32)); sim(0.2); const aid = door(); return { aid, x: tileOf()[0], inX, elsewhere: aid !== g.level.areas[k0].aid && Math.abs(tileOf()[0] - inX) > 3 }; }, [r0.inX]);
+  check(label + ': its door takes Brady back out somewhere else than where he came in', out.elsewhere, out);
+}
+const ROOMK = `(() => { window.ROOMK = {}; const L = window.BRADY_TOUR.TourRooms || null; })()`;
+
+// ---------------- 32-1's room: up through the gap in the cushion fort ----------------
+LEVELS.r1 = async (page, shot) => { await run0(page, 'r1', () => roomRun(page, shot, '16-32-1-B31', () => {
+  play('32-1'); place(119, 18); sim(0.3); const r = AP.route([[123, 19]]); if (!r.ok) return { ok: false, r };
+  const l = lift({ walk: 0, air: 1, airAt: 0.3, to: [127, 14], tol: 3 }); if (!l.ok) return { ok: false, l, how: 'lift' };
+  const r2 = AP.route([[140, 14], [150, 14]]); if (!r2.ok) return { ok: false, r2 };
+  const aid = door(); return { ok: aid === 'forts', aid, inX: 150, how: 'a thought lifts Brady up through the gap; along the fort roof to the nook' }; })); };
+// ---------------- 32-2's room: down the gap in the soft pit's floor ----------------
+LEVELS.r2 = async (page, shot) => { await run0(page, 'r2', () => roomRun(page, shot, '26-32-2-B32', () => {
+  play('32-2'); place(56, 20); sim(0.3); const A = S().area; const E = window.BRADY_PST.kit.blinkState;
+  // wait for the lid to be open, then walk off the edge into the pit and into the gap
+  for (let q = 0; q < 1200 && E(A, 0, A.pstBlinkT || 0).shut; q++) sim(1 / 120);
+  const r = AP.route([[60, 24], [61, 27]]); if (!r.ok) return { ok: false, r };
+  const aid = door(); return { ok: aid === 'lab', aid, inX: 61, how: 'into the pit while the lid is open, down the gap in its floor' }; })); };
+// ---------------- 32-3's room: walk into the soft patch in the cushion wall ----------------
+LEVELS.r3 = async (page, shot) => { await run0(page, 'r3', () => roomRun(page, shot, '36-32-3-B33', () => {
+  play('32-3'); place(112, 18); sim(0.3); sim(1.5, { right: true }); walkTo(119, 2); const t = tileOf(); const aid = door(); return { ok: aid === 'kitchen', aid, t, inX: 119, how: 'walk into the soft patch in the wall' }; })); };
+// ---------------- 32-4's room: hold the very quick lift at its top ----------------
+LEVELS.r4 = async (page, shot) => { await run0(page, 'r4', () => roomRun(page, shot, '46-32-4-B34', () => {
+  play('32-4'); place(121, 18); sim(0.3); const p = P();
+  sim(0.9, { action: true }); const banked = !!p.pstSecond;
+  const lift = ents('mplat').find(e => Math.abs(e.x / 32 - 124) < 1.5); if (!lift) return { ok: false, why: 'no lift' };
+  // hop on at the bottom, ride up, spend the second at the top, step off onto the nook
+  for (let q = 0; q < 1200 && !(lift.y > 18.4 * 32); q++) sim(1 / 120);
+  const r = AP.go([125, 19], { tol: 1 }); let rode = 0; for (let q = 0; q < 600 && !(lift.y < 10.6 * 32); q++) { sim(1 / 120); rode++; }
+  sim(1 / 120, { action: true, actionPressed: true }); const held = lift.freeze > 0;
+  sim(0.1); const r2 = AP.route([[129, 9]]); walkTo(130, 2); const aid = door();
+  return { ok: banked && held && aid === 'nursery', banked, held, aid, r, r2, inX: 130, how: 'bank a second, ride the quick lift, hold it at the top' }; })); };
+// ---------------- 32-5's room: think of the ladder, climb it through the ceiling gap ----------------
+LEVELS.r5 = async (page, shot) => { await run0(page, 'r5', () => roomRun(page, shot, '56-32-5-B35', () => {
+  play('32-5'); place(91, 18); sim(0.3); const p = P();
+  // jump into the ladder bubble (a real jump)
+  sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.5, { jump: true }); sim(0.8); const on = S().toggleBit(2);
+  const r = AP.route([[96, 17], [97, 15], [96, 13], [97, 11], [101, 11], [110, 19], [116, 17], [117, 15], [116, 13], [117, 11], [119, 9]]); walkTo(120, 2); const aid = door();
+  return { ok: on && aid === 'pantry', on, r, aid, inX: 120, how: 'think of the ladder, climb it up through the gap in the ceiling' }; })); };
+// ---------------- 32-6's room: drop through the soft patch in the study floor ----------------
+LEVELS.r6 = async (page, shot) => { await run0(page, 'r6', () => roomRun(page, shot, '66-32-6-PRIVACY', () => {
+  play('32-6'); place(27, 15); sim(0.3); const r = AP.route([[30, 19]]); const aid = door(); return { ok: aid === 'bedroom', aid, r, inX: 30, how: 'drop through the soft patch in the floor' }; })); };
+async function run0(page, name, f) { if (want.length && !want.some(w => name.startsWith(w))) return; try { await page.evaluate(HELPERS); await page.evaluate(() => { window.ROOMK = window.BRADY_TOUR.TourRooms ? window.BRADY_TOUR.TourRooms.kinds : (window.TourRoomsKinds || {}); }); await f(); } catch (e) { check(name + ' runs', false, String(e.message).slice(0, 300)); } }
+
+
+// ---------------- 32-2 The Long Blink ----------------
+LEVELS.s2 = async (page, shot, run, pano) => {
+  await run('s2', async () => {
+    await page.evaluate(HELPERS);
+    const r = await page.evaluate(() => {
+      fresh(); play('32-2'); place(12, 20); sim(0.3); const A = S().area, E = window.BRADY_PST.kit.blinkState;
+      // the lid bridge: walk across while the eye is shut (wait for a fresh blink)
+      for (let q = 0; q < 1500 && E(A, 0, A.pstBlinkT).shut; q++) sim(1 / 120);
+      for (let q = 0; q < 1500 && !E(A, 0, A.pstBlinkT).shut; q++) sim(1 / 120);
+      const shutTiles = A.tiles[21 * A.W + 17] === window.BRADY.T.SEMI;
+      const a = AP.route([[22, 21]]);
+      // the ladder: climb the lashes while shut
+      const b = AP.route([[27, 21]]); for (let q = 0; q < 1500 && E(A, 0, A.pstBlinkT).shut; q++) sim(1 / 120); for (let q = 0; q < 1500 && !E(A, 0, A.pstBlinkT).shut; q++) sim(1 / 120);
+      const c = AP.route([[28, 19], [29, 17], [28, 15], [31, 13]]);
+      return { shutTiles, a, b, c, at: tileOf() };
+    });
+    check('32-2 played: across the shut lid, up the lash ladder while the eye is shut, onto the wall (P1 above)', r.shutTiles && r.a.ok && r.c.ok, r);
+    await page.evaluate(() => { play('32-2'); place(26, 20); const A = S().area, E = window.BRADY_PST.kit.blinkState; for (let q = 0; q < 1500 && !E(A, 0, A.pstBlinkT).shut; q++) sim(1 / 120); sim(0.6); freeze(); }); await shot('20-32-2-ladder-shut.png');
+    const o = await page.evaluate(() => { thaw(); const A = S().area, E = window.BRADY_PST.kit.blinkState; let warnLead = null; for (let q = 0; q < 1500 && E(A, 0, A.pstBlinkT).shut; q++) { if (warnLead == null && E(A, 0, A.pstBlinkT).warn) warnLead = S().t; sim(1 / 120); } const t1 = S().t; return { lead: warnLead == null ? null : +(t1 - warnLead).toFixed(2), gone: A.tiles[17 * A.W + 28] !== window.BRADY.T.SEMI }; });
+    check('32-2: the inner lashes tremble at least half a second before the eye opens, then let go', o.lead >= 0.5 && o.gone, o);
+    await page.evaluate(() => { play('32-2'); place(78, 20); const A = S().area, E = window.BRADY_PST.kit.blinkState; for (let q = 0; q < 1500 && E(A, 1, A.pstBlinkT).shut; q++) sim(1 / 120); sim(0.3); freeze(); }); await shot('21-32-2-lid-open.png');
+    await page.evaluate(() => { thaw(); play('32-2'); place(150, 8); sim(0.4); freeze(); }); await shot('22-32-2-last-blink.png');
+    // the twist: down the outer lashes, across the last lid before it opens
+    const t = await page.evaluate(() => { thaw(); play('32-2'); place(150, 8); sim(0.3); const A = S().area, E = window.BRADY_PST.kit.blinkState;
+      const d = AP.route([[153, 11], [154, 13], [153, 15], [154, 17]]); if (!d.ok) return { d };
+      for (let q = 0; q < 1500 && E(A, 1, A.pstBlinkT).shut; q++) sim(1 / 120); for (let q = 0; q < 1500 && !E(A, 1, A.pstBlinkT).shut; q++) sim(1 / 120);
+      const e = AP.route([[157, 19], [166, 19]]); if (!e.ok) return { d, e }; sim(4, { right: true }); return { d, e, state: S().state }; });
+    check('32-2 played: the twist: down the short outer lashes, across the long lid before it opens, to the gate', t.e && t.e.ok && t.state !== 'play', t);
+    await page.evaluate(() => { play('32-2'); }); await pano('23-32-2-panorama.png', 0.3);
+  });
+};
+// ---------------- 32-3 Half a Yawn ----------------
+LEVELS.s3 = async (page, shot, run, pano) => {
+  await run('s3', async () => {
+    await page.evaluate(HELPERS);
+    const r = await page.evaluate(() => {
+      fresh(); play('32-3'); place(18, 18); sim(0.3); const m = ents('PstMouth')[0], g = S();
+      sim(0.2); const sel = m.sel; for (let q = 0; q < 900 && m.own !== 1; q++) sim(1 / 120); const own = m.own;
+      const a = AP.route([[23, 16], [27, 13]]);
+      return { sel, own, a };
+    });
+    check('32-3 played: stand on the right corner, the next yawn sends the feather right; onto it and up the wall', r.sel === 1 && r.own === 1 && r.a.ok, r);
+    await page.evaluate(() => { play('32-3'); place(18, 18); sim(0.2); const m = ents('PstMouth')[0]; for (let q = 0; q < 900 && !m.fly; q++) sim(1 / 120); sim(0.5); freeze(); }); await shot('30-32-3-feather-flies.png');
+    const t = await page.evaluate(() => { thaw(); play('32-3'); place(154, 18); sim(0.3); const m = ents('PstMouth').find(e => e.stuck);
+      sim(4); const stuckStill = m.own == null;
+      const b = AP.route([[150, 19]]); sim(0.3); const free = m.free; const c = AP.route([[154, 19]]); for (let q = 0; q < 900 && m.own !== 1; q++) sim(1 / 120);
+      const d = AP.route([[161, 17], [168, 19], [176, 19]]); sim(3, { right: true }); return { stuckStill, free, own: m.own, d, state: S().state };
+    });
+    check('32-3 played: the twist: the caught feather stays put until the far cheek is stretched; then out over the pit and on to the gate', t.stuckStill && t.free && t.own === 1 && t.d.ok, t);
+    await page.evaluate(() => { play('32-3'); place(151, 18); sim(1); freeze(); }); await shot('31-32-3-caught-feather.png');
+    await page.evaluate(() => { thaw(); play('32-3'); }); await pano('32-32-3-panorama.png', 0.3);
+  });
+};
+// ---------------- 32-4 Borrow a Second ----------------
+LEVELS.s4 = async (page, shot, run, pano) => {
+  await run('s4', async () => {
+    await page.evaluate(HELPERS);
+    const r = await page.evaluate(() => {
+      fresh(); play('32-4'); place(12, 18); sim(0.3); const p = P();
+      sim(0.3, { action: true }); const early = !!p.pstSecond; sim(0.5, { action: true }); const banked = !!p.pstSecond;
+      const jaw = ents('PstJaw')[0]; walkTo(15, 2); sim(1 / 120, { action: true, actionPressed: true }); const held = jaw.freeze > 0, spent = !p.pstSecond;
+      return { early, banked, held, spent };
+    });
+    check('32-4: holding THROW by the flower banks one second (not instantly); a tap by the jaw spends it: the jaw holds still', !r.early && r.banked && r.held && r.spent, r);
+    await page.evaluate(() => { sim(0.4); freeze(); }); await shot('40-32-4-jaw-held.png');
+    const t = await page.evaluate(() => { thaw(); play('32-4'); place(152, 18); sim(0.3); const p = P(); sim(0.9, { action: true }); const banked = !!p.pstSecond; const ru = ents('PstRuler')[0];
+      const nob = (() => { const g = S(); return g.toggleBit(0); })(); walkTo(155, 2); sim(1 / 120, { action: true, actionPressed: true }); for (let q = 0; q < 240 && !S().toggleBit(0); q++) sim(1 / 120); const bridge = S().toggleBit(0);
+      const a = AP.route([[166, 19], [170, 19]]); return { banked, nob, bridge, a };
+    });
+    check('32-4 played: the twist: a second spent on the ruler\'s near elbow lets its far end finish; across the bridge', t.banked && !t.nob && t.bridge && t.a.ok, t);
+    await page.evaluate(() => { play('32-4'); place(152, 18); sim(0.3); sim(0.9, { action: true }); walkTo(155, 2); sim(1 / 120, { action: true, actionPressed: true }); sim(0.8); freeze(); }); await shot('41-32-4-ruler-bridge.png');
+    await page.evaluate(() => { thaw(); play('32-4'); place(100, 18); sim(0.5); freeze(); }); await shot('42-32-4-ferry-lift.png');
+    await page.evaluate(() => { thaw(); play('32-4'); }); await pano('43-32-4-panorama.png', 0.3);
+  });
+};
+// ---------------- 32-5 One Thought at a Time ----------------
+LEVELS.s5 = async (page, shot, run, pano) => {
+  await run('s5', async () => {
+    await page.evaluate(HELPERS);
+    const r = await page.evaluate(() => {
+      fresh(); play('32-5'); place(12, 18); sim(0.3); const g = S();
+      sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.5, { jump: true }); sim(0.8); const stool = g.toggleBit(0) && !g.toggleBit(1);
+      const a = AP.route([[24, 16], [29, 13]]); return { stool, a };
+    });
+    check('32-5 played: jump into the stool bubble: a step stool fills the next room; up it to the ledge', r.stool && r.a.ok, r);
+    await page.evaluate(() => { freeze(); }); await shot('50-32-5-stool.png');
+    const t = await page.evaluate(() => { thaw(); play('32-5'); place(135, 18); sim(0.3); const g = S();
+      sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.5, { jump: true }); sim(0.8); const tub = g.toggleBit(0);
+      const a = AP.route([[141, 16]]); if (!a.ok) return { tub, a };
+      sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.4, { jump: true }); sim(0.8); const towel = g.toggleBit(1) && !g.toggleBit(0), at = tileOf();
+      const b = AP.route([[146, 10], [150, 10]]); return { tub, towel, at, b };
+    });
+    check('32-5 played: the twist: the tub as a step, jump through the towel\'s bubble: the towel replaces the tub as the landing; on to the top', t.tub && t.towel && t.at[1] === 13 && t.b && t.b.ok, t);
+    await page.evaluate(() => { freeze(); }); await shot('51-32-5-towel.png');
+    await page.evaluate(() => { thaw(); play('32-5'); }); await pano('52-32-5-panorama.png', 0.3);
+  });
+};
+// ---------------- 32-6: the lead-in (push the full stop), the arena ----------------
+LEVELS.s6 = async (page, shot, run, pano) => {
+  await run('s6', async () => {
+    await page.evaluate(HELPERS);
+    const r = await page.evaluate(() => {
+      fresh(); play('32-6'); place(55, 15); sim(0.3); const g = S(), st = ents('PstStop')[0];
+      for (let q = 0; q < 1200 && st.slotIn < 0; q++) sim(1 / 120, { right: true });
+      sim(0.4); return { slot: st.slotIn, key: g.keys.has('pst:stop'), x: Math.round(st.cx / 32) };
+    });
+    check('32-6 played: the full stop pushed along the sentence clicks into the slot after "MORE": the door unlocks', r.slot === 0 && r.key, r);
+    await page.evaluate(() => freeze()); await shot('60-32-6-full-stop.png');
+    const d = await page.evaluate(() => { thaw(); const st = ents('PstStop')[0]; walkTo(Math.floor(st.cx / 32) - 2, 3); sim(1 / 120, { jump: true, jumpPressed: true, right: true }); sim(0.7, { jump: true, right: true }); sim(2.5, { right: true }); walkTo(92, 3); const aid = door(); return { aid, at: tileOf() }; });
+    check('32-6: through the unlocked door into the arena', d.aid === 'stage', d);
+    await page.evaluate(() => { sim(3); freeze(); }); await shot('61-32-6-arena.png');
+    await page.evaluate(() => { thaw(); play('32-6'); }); await pano('62-32-6-panorama.png', 0.4);
+  });
+};
+// ---------------- the map, the route-map pin ----------------
+const openPst = `(() => { fresh(); const B = window.BRADY, T = window.BRADY_TOUR, d = B.Save.data; T.TourProgress.data().lands.pst = true; d.unlocked['32-1'] = true; d.seenEncoreIntro = true; })()`;
+LEVELS.map = async (page, shot, run) => {
+  await run('map', async () => {
+    const r = await page.evaluate(o => { eval(o); window.BRADY.goToMap('world', 32, '32-1'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } const s = S(); return { mode: s.mode, cc: s.ow && s.ow.C && s.ow.C.id }; }, openPst);
+    check('Pupo Standard Time has its own walkable map', r.cc === 'pst', r);
+    await page.evaluate(() => freeze()); await shot('70-pst-overworld-map.png');
+    await page.evaluate(() => { thaw(); const s = S(); if (s.openRoute) s.openRoute({ dest: 'pst' }); for (let k = 0; k < 30; k++) sim(0.2); freeze(); }); await shot('71-route-map-pst-pin.png');
+    const h = await page.evaluate(() => { thaw(); fresh(); const T = window.BRADY_TOUR; return { shut: !T.TourProgress.countryUnlocked(T.Tour.countries.pst), tot: T.TourProgress.totals().total }; });
+    check('before the entrance is used, the land is shut and out of the totals', h.shut, h);
+  });
+};
+
 (async () => {
   await session({ width: 844, height: 390 }, async (page, shot, run, pano) => {
-    for (const k in LEVELS) if (k !== 'entrance') await LEVELS[k](page, shot, run, pano);
+    for (const k in LEVELS) if (k !== 'entrance') { if (k.startsWith('r')) await LEVELS[k](page, shot); else await LEVELS[k](page, shot, run, pano); }
   });
   // (Nepal's atlas sprites taint the canvas for panoramas: the entrance gets its own browser)
   await session({ width: 844, height: 390 }, async (page, shot, run, pano) => { await LEVELS.entrance(page, shot, run, pano); });
+  await session({ width: 390, height: 844 }, async (page, shot, run) => {
+    await run('p-s1', async () => { await page.evaluate(HELPERS); await page.evaluate(() => { fresh(); play('32-1'); place(42, 18); sim(0.4); freeze(); }); await shot('90-portrait-32-1.png'); });
+    await run('p-boss', async () => { await page.evaluate(() => { thaw(); play('32-6'); toArea('stage', 8, 13); sim(3); freeze(); }); await shot('91-portrait-32-6-arena.png'); });
+    await run('p-map', async () => { await page.evaluate(o => { thaw(); eval(o); window.BRADY.goToMap('world', 32, '32-1'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } freeze(); }, openPst); await shot('92-portrait-pst-map.png'); });
+  });
   console.log(failures ? `${failures} PST CHECK(S) FAILED` : 'ALL PST CHECKS PASSED');
   process.exit(failures ? 1 : 0);
 })();

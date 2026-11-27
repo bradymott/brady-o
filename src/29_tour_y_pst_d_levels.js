@@ -59,10 +59,10 @@ const dreamRows = (() => {
   put(Gr, 96, 18, '4'); ground(Gr, 99, 103, 14); put(Gr, 100, 13, '5'); ground(Gr, 104, 109, 9); put(Gr, 106, 4, '?'); put(Gr, 99, 9, 'w'); put(Gr, 105, 7, 'o.o.o');
   ground(Gr, 110, 160, 19); put(Gr, 112, 18, 'c');
   // the cushion fort: a ceiling slab with one gap (the tell), cushions under it; its roof is the run to the forts
-  fillG(Gr, 114, 13, 136, 15, 'H'); fillG(Gr, 123, 13, 124, 15, '.');
+  fillG(Gr, 114, 14, 136, 15, 'H'); fillG(Gr, 123, 14, 124, 15, '.');
   put(Gr, 116, 18, '6'); put(Gr, 123, 18, '7'); put(Gr, 129, 18, '8'); put(Gr, 124, 16, 'Z'); put(Gr, 133, 18, 'l');
-  put(Gr, 115, 11, 'o.o.o.o'); put(Gr, 127, 11, 'o.o.o.o'); put(Gr, 131, 12, 'm');
-  fillG(Gr, 137, 13, 152, 14, 'H'); put(Gr, 140, 10, 'A'); put(Gr, 142, 12, 'e'); put(Gr, 146, 11, 'o.o.o'); put(Gr, 150, 12, 'K');
+  put(Gr, 115, 12, 'o.o.o.o'); put(Gr, 127, 12, 'o.o.o.o'); put(Gr, 131, 13, 'm');
+  fillG(Gr, 137, 14, 152, 15, 'H'); put(Gr, 140, 11, 'A'); put(Gr, 142, 13, 'e'); put(Gr, 146, 12, 'o.o.o'); put(Gr, 150, 13, 'K');
   put(Gr, 154, 18, 'a'); put(Gr, 158, 18, 'c'); put(Gr, 156, 18, 'k');
   // ③ the twist: think inside the low tunnel, walk out, the lift fires on the far side
   put(Gr, 159, 18, 'M');
@@ -84,7 +84,7 @@ stamps.pstDream = { floor: 19, rows: dreamRows, gold: { '*': 'must', R: 'risky',
   k: ['decor', 'pstPillowPile'],
   '1': CUSH(4, [[5, -5]]), '2': CUSH(3, [[4, -6]]), '3': CUSH(3, [[12, -6]]),
   '4': CUSH(3, [[4, -5]]), '5': CUSH(3, [[5, -5]]),
-  '6': CUSH(3), '7': CUSH(2, [[-2, -6], [3, -6]]), '8': CUSH(3),
+  '6': CUSH(3), '7': CUSH(2, [[-2, -5], [3, -5]]), '8': CUSH(3),
   '9': CUSH(3, [[12, -6]]), E: CUSH(3, [[12, -6]]),
   Z: ['piece', 'pst.z', {}],
   K: ['spawn', 'portal', { kind: 'door', look: 'pstNook', targetRef: 'forts@in' }], a: ['anchor', 'fortsOut']

@@ -22,7 +22,7 @@
 const K = Tour.pstKit; if (!K) return;
 const { PstArt, INK, HONEY, HONEY_HI, HONEY_LO, PLUM, PLUM_HI, PLUM_LO, MINT, MINT_HI, MINT_LO, CREAM, CREAM_LO } = K;
 const PST_CUSH = SURF.PST_CUSH = 9;
-const LIFT_T = 1.4, STRETCH_T = 0.9, LIFT_V = 35 * TS;   // a breath, its tell, a lift of about six tiles
+const LIFT_T = 1.4, STRETCH_T = 0.9, LIFT_V = 36 * TS;   // a breath, its tell, a lift of about six tiles
 const FREEZE_T = 3.2, BANK_T = 0.6;
 
 /* ======================= DELAY: the dream cushion ======================= */
