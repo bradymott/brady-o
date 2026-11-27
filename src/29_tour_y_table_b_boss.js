@@ -181,7 +181,7 @@ const brain = {
 };
 const boss = { id: 'table_manners', name: 'Madame Manners', hp: 6, dims: [50, 132], floats: true, music: 'tour_table_boss', country: 'table', brain };
 Tour.boss(boss);
-if (typeof BOSS_INK_REACH !== 'undefined') BOSS_INK_REACH.table_manners = [40, 40, 50, 6];
+if (typeof BOSS_INK_REACH !== 'undefined') BOSS_INK_REACH.table_manners = [70, 70, 40, 10];
 
 // the booth: the table's top, two saucers (one at each end), the sugar bowl with Chinka-O's live postcard against
 // it at the far end, candles

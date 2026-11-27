@@ -251,6 +251,9 @@ TourHats.NOT = new Set([].concat(
   // World 22: alarm clocks, envelopes, hourglasses, echoes, loops, mirrors, panes, strikes, pendulums, copies, slabs, lakes, doors, keys, ink, falling time; 22-6's pages and stamps
   // Iceland (17): aurora ribbons, icebergs, rift slabs, organ pipes, lava blobs, the hidden folk's planks / gates / eye, the sun shields, the secret rooms' bells / organ keys / lanterns, the steam tell
   'isRibbon isBerg isPlate isPipe isEmber isShyEye isShyPlat isShyWall isSunShield isBell isOrganKey isFolkLight isSteamTell'.split(' '),
+  // Table for Two (36, a hidden land): the crouton butler (bread), the plates, napkins, creases, cloths, rafts, gates, the
+  // bread plate, the hostess and Madame Manners' saucers (cutlery), soup bubbles, room marks, the live postcard, the shadow
+  'tabCrumb tabBubble tabPlate tabNapkin tabCrease tabCloth tabRaft tabGate tabBreadPlate tabHostess tabSaucer tabPostcardLive tabRoomMark tabShadowDoor'.split(' '),
   'w22Alarm w22Envelope w22Hourglass w22Echo w22Loop w22Mirror w22Pane w22Strike w22Pendulum w22Copy w22Slab w22Lake w22ReflectDoor w22Key w22Ink w22TimeFall w22NumDoorE rbPage rbStamp rbTornPage'.split(' ')
 ));
 
@@ -308,7 +311,9 @@ Object.assign(TourHats.HEADS, {
   // Italy (14): the city pigeon, the alley cat
   itPigeon: [0.39, 0.4, -1.5, 0], itCat: [0.53, 0.53, -1.25, 0], itPigeonTell: [0.39, 0.4, -1.5, 0],
   // The Moon (world 18): the moon bunny, the dust mite, the luna moth
-  moonBunny: [0.3, 0.3, -1.3, 0], moonMite: [0.2, 0.2, -1.05, 0], moonMoth: [0.02, 0.02, -0.95, 0]
+  moonBunny: [0.3, 0.3, -1.3, 0], moonMite: [0.2, 0.2, -1.05, 0], moonMoth: [0.02, 0.02, -0.95, 0],
+  // Table for Two (36): the pepper flea, the knife-rest dachshund, the butter-curl snail
+  tabPepper: [0.15, 0.15, -1.55, 0], tabRest: [0.62, 0.62, -1.3, 0], tabButter: [0.45, 0.45, -1.0, 0]
 
 });
 
