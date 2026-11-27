@@ -236,7 +236,7 @@ const borrowRows = (() => {
   // the ferry and the lift over the long pit
   put(Gr, 91, 18, 'V'); put(Gr, 93, 18, 'f'); put(Gr, 96, 18, 'm'); put(Gr, 105, 18, 'E'); put(Gr, 100, 13, 'w');
   ground(Gr, 109, 116, 13); put(Gr, 112, 12, 'c');
-  ground(Gr, 117, 156, 19); put(Gr, 119, 18, 'p'); put(Gr, 136, 18, 'u');
+  ground(Gr, 117, 156, 19); put(Gr, 146, 18, 'p'); put(Gr, 136, 18, 'u');
   // the very quick lift to the high nook
   put(Gr, 121, 18, 'f'); put(Gr, 124, 18, 'U'); fillG(Gr, 127, 9, 132, 10, '#'); put(Gr, 130, 8, 'K'); put(Gr, 128, 8, 'Z'); put(Gr, 142, 18, 'a');
   // ③ the folding rulers

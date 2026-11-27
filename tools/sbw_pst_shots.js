@@ -263,7 +263,8 @@ const HELPERS = `(() => {
     const g = S(); let t = 0, jt = 0;
     while (t < (maxT || 14)) {
       const p = P(); if (S() !== g || !p || p.dead) return { ok: false, why: 'died', at: p ? tileOf() : null };
-      if (g.state !== 'play') return { ok: true, state: g.state };
+      if (/clear|tally|results/.test(g.state)) return { ok: true, state: g.state };
+      if (g.state !== 'play') { sim(1 / 120); t += 1 / 120; continue; }
       const dx = tx * 32 + 16 - p.cx, d = Math.sign(dx);
       if (Math.abs(dx) < 12 && p.onGround) { sim(0.15); return { ok: true, at: tileOf() }; }
       const en = g.entities.find(e => e.enemy && !e.dead && !e.remove && (e.cx - p.cx) * d > -4 && (e.cx - p.cx) * d < 3.2 * 32 && Math.abs(e.cy - p.cy) < 1.6 * 32);
@@ -274,6 +275,41 @@ const HELPERS = `(() => {
     }
     return { ok: false, why: 'slow', at: tileOf() };
   };
+  // 32-4: bank a second at a flower (THROW held, standing still); time a jaw (go just as it lifts after a snap), or
+  // freeze it with the second; ride a moving cushion (board it at its home end, ride to the far end, optionally hold
+  // it there with the second, jump off toward a spot); spend the second on a ruler's elbow mark and cross the bridge
+  window.bankAt = tx => { walkTo(tx, 4); sim(0.9, { action: true }); sim(0.1); return { ok: !!P().pstSecond, at: tileOf() }; };
+  window.passJaw = (jx, freeze) => {
+    const J = ents('PstJaw').sort((a, b) => Math.abs(a.x - jx * 32) - Math.abs(b.x - jx * 32))[0], p = P();
+    walkTo(jx - 1, 4); let t = 0;
+    if (freeze && p.pstSecond) { while (t < 4 && !(J.drop === 0 && !J.tell && J.c < J.period - 1.4)) { sim(1 / 120); t += 1 / 120; } sim(1 / 120, { action: true, actionPressed: true }); if (!(J.freeze > 0)) return { ok: false, why: 'no freeze' }; }
+    else { while (t < 4 && !(J.drop > 0.9)) { sim(1 / 120); t += 1 / 120; } while (t < 6 && !(J.drop < 0.25)) { sim(1 / 120); t += 1 / 120; } }
+    const r = walkTo(jx + 3, 3); return { ok: !r.dead && tileOf()[0] >= jx + 2, at: tileOf() };
+  };
+  window.liftRide = (lx, o) => {
+    const m = S().entities.filter(e => e.isPlatform && e.hx != null).sort((a, b) => Math.abs(a.hx - lx * 32) - Math.abs(b.hx - lx * 32))[0], p = P();
+    const at = (ex, ey) => Math.abs(m.x - ex) < 3 && Math.abs(m.y - ey) < 3;
+    if (o.from != null) walkTo(o.from, 4);
+    let t = 0; while (t < 8 && !at(m.hx, m.hy)) { sim(1 / 120); t += 1 / 120; }
+    // hop on
+    sim(1 / 120, { jump: true, jumpPressed: true, right: m.cx > p.cx, left: m.cx < p.cx }); let ta = 0;
+    while (ta < 2 && !(p.onGround && ta > 0.1)) { const dx = m.cx - p.cx; sim(1 / 120, { jump: ta < 0.25, right: dx > 6, left: dx < -6 }); ta += 1 / 120; }
+    if (p.ride !== m) return { ok: false, why: 'missed the cushion', at: tileOf() };
+    t = 0; while (t < 8 && !at(m.hx + m.ax, m.hy + m.ay) && !p.dead) { const dx = m.cx - p.cx; sim(1 / 120, { right: dx > 8, left: dx < -8 }); t += 1 / 120; }
+    if (o.freeze && p.pstSecond) sim(1 / 120, { action: true, actionPressed: true });
+    if (!o.to) return { ok: p.ride === m, frozen: m.freeze > 0 };
+    sim(1 / 120, { jump: true, jumpPressed: true, right: o.dir > 0, left: o.dir < 0 }); ta = 0;
+    while (ta < 2.5 && !(p.onGround && ta > 0.1)) { const dx = o.to[0] * 32 + 16 - p.cx; sim(1 / 120, { jump: ta < 0.35, right: dx > 8, left: dx < -8 }); ta += 1 / 120; }
+    sim(0.2); const tl = tileOf(); return { ok: tl[1] === o.to[1] && Math.abs(tl[0] - o.to[0]) <= 3, at: tl };
+  };
+  window.rulerCross = (mark, endTx, gi) => {
+    walkTo(mark, 4); sim(0.1); sim(1 / 120, { action: true, actionPressed: true }); let t = 0;
+    while (t < 3 && !S().toggleBit(gi)) { sim(1 / 120); t += 1 / 120; }
+    if (!S().toggleBit(gi)) return { ok: false, why: 'no bridge' };
+    return safeWalk(endTx, 6);
+  };
+  // 32-5: jump up into the picture bubble over tile tx (from standing under it, or from wherever he stands)
+  window.picAt = (tx, gi, here) => { if (!here) walkTo(tx, 4); sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.5, { jump: true }); sim(0.8); return { ok: S().toggleBit(gi), at: tileOf() }; };
   window.yawnAt = (tx, side, maxT) => {
     walkTo(tx, 4); const m = ents('PstMouth').sort((a, b) => Math.abs(a.cx - tx * 32) - Math.abs(b.cx - tx * 32))[0]; let t = 0;
     while (t < (maxT || 10) && m.own !== side && !P().dead) { sim(1 / 120); t += 1 / 120; }
@@ -565,7 +601,7 @@ const BOT = args.includes('--bot');
 const botRun = async (page, id, legs) => {
   if (want.length && !want.includes(id)) return;
   const r = await page.evaluate(([id, legs]) => {
-    fresh(); play(id); let g = S(); let deaths = [];
+    fresh(); play(id); let g = S(); let deaths = []; for (let k = 0; k < 600 && g.state !== 'play'; k++) sim(1 / 60); const st0 = g.state;
     const p0 = () => { const p = P(); p.invuln = 0; return p; };
     p0(); const out = [];
     // a leg is [startX, code]: after a death Brady goes back to the last checkpoint, and the bot goes back to the
@@ -587,7 +623,7 @@ const botRun = async (page, id, legs) => {
       P().invuln = 0; i++;
     }
     sim(2);
-    return { id, deaths: deaths.length, where: deaths.slice(0, 6), legsOk: out, state: g.state };
+    return { id, st0, deaths: deaths.length, where: deaths.slice(0, 6), legsOk: out, state: g.state };
   }, [id, legs]);
   console.log('BOT ' + JSON.stringify(r));
   check(`bot ${id}: played start to finish with enemies on and no invulnerability (at most one death)`, /clear|tally|results/.test(r.state) && r.deaths <= 1, r);
@@ -608,6 +644,17 @@ LEVELS.bot = async (page) => {
     [134, "AP.route([[137, 16], [141, 13]])"], [141, "safeWalk(147)"], [147, "AP.route([[150, 19]])"],
     [150, "(() => { walkTo(150); const m = ents('PstMouth').find(e => e.stuck); for (let q = 0; q < 1200 && !m.free; q++) sim(1 / 120); return { ok: !!m.free }; })()"],
     [150, "yawnAt(154, 1)"], [154, "AP.route([[161, 17], [168, 19]])"], [168, "safeWalk(200)"]]);
+  await botRun(page, '32-4', [
+    [3, "bankAt(12)"], [12, "passJaw(16)"], [18, "liftRide(24, { from: 21, to: [31, 13], dir: 1, freeze: true })"], [29, "AP.route([[38, 19]])"],
+    [37, "safeWalk(61)"], [61, "bankAt(62)"], [62, "passJaw(68)"], [70, "passJaw(75, true)"], [77, "passJaw(82)"], [84, "safeWalk(92)"],
+    [92, "bankAt(93)"], [93, "liftRide(96, { from: 94, freeze: true })"], [96, "liftRide(105, { to: [111, 13], dir: 1 })"], [109, "AP.route([[118, 19]])"],
+    [117, "safeWalk(152)"], [152, "bankAt(152)"], [152, "rulerCross(155, 169, 0)"], [167, "safeWalk(178)"], [178, "bankAt(178)"],
+    [178, "rulerCross(181, 191, 1)"], [190, "passJaw(193)"], [195, "safeWalk(216)"]]);
+  await botRun(page, '32-5', [
+    [3, "picAt(12, 0)"], [12, "AP.route([[24, 16], [29, 13], [36, 19]])"], [35, "safeWalk(65)"], [65, "picAt(65, 1)"], [65, "safeWalk(86)"],
+    [86, "picAt(91, 2)"], [91, "AP.route([[96, 17], [96, 15], [96, 13], [98, 11]])"], [98, "safeWalk(103)"], [103, "AP.route([[106, 19]])"],
+    [105, "safeWalk(135)"], [135, "picAt(135, 0)"], [135, "AP.route([[141, 16]])"], [141, "picAt(141, 1, true)"], [141, "AP.route([[146, 10]])"],
+    [146, "safeWalk(152)"], [152, "AP.route([[155, 19]])"], [154, "safeWalk(192)"]]);
   // the boss with damage on, three runs in a row from a fresh start: push the stop into each phase's slot and wait
   // for the tell, jumping whatever flies at Brady; phase 3: stand behind the stop beside the blank, wait for PLEASE,
   // then walk the stop into the last slot
