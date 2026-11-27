@@ -68,12 +68,22 @@ async function session(viewport, fn) {
         bx.drawImage(G.canvas, gx, gy, VW * Sc, VH * Sc, g.camX * k, g.camY * k, VW * k, VH * k);
       }
       g.drawHUD = save.hud; g.drawToast = save.toast; g.drawTutorial = save.tut; B.Input.drawControls = save.ctl; g.camX = save.camX; g.camY = save.camY; g.shakeAmt = save.shake;
-      return big.toDataURL('image/png');
+      // (the page's images are file:// so the canvas can't be exported: it is shown over the page and photographed)
+      big.id = '__pano'; big.style.cssText = `position:fixed;left:0;top:0;width:${W}px;height:${H}px;z-index:99999;background:#000`; document.body.appendChild(big);
+      return { W, H };
     };
   });
   const pin = () => page.evaluate(() => { const G = window.BRADY.Game; G.slowT = -1e9; G.lowered = 0; G.dprCap = null; G.quality = 1; G.resize(); });
   const shot = async name => { await pin(); if (checksOnly) return; await page.waitForTimeout(250); await page.screenshot({ path: path.join(out, name) }); };
-  const pano = async (name, k) => { if (checksOnly) return; await pin(); const url = await page.evaluate(kk => { freeze(); const u = panorama(kk); thaw(); return u; }, k || 0.4); fs.writeFileSync(path.join(out, name), Buffer.from(url.split(',')[1], 'base64')); };
+  const pano = async (name, k) => {
+    if (checksOnly) return; await pin();
+    const vp = page.viewportSize();
+    const d = await page.evaluate(kk => { freeze(); const u = panorama(kk); thaw(); return u; }, k || 0.4);
+    await page.setViewportSize({ width: d.W, height: d.H }); await page.waitForTimeout(200);
+    await page.screenshot({ path: path.join(out, name), clip: { x: 0, y: 0, width: d.W, height: d.H } });
+    await page.evaluate(() => { const c = document.getElementById('__pano'); if (c) c.remove(); });
+    await page.setViewportSize(vp); await page.waitForTimeout(300); await pin();
+  };
   const run = async (name, f) => { if (want.length && !want.some(w => name.startsWith(w))) return; try { await pin(); await f(); } catch (e) { check(name + ' runs', false, String(e.message).slice(0, 300)); } };
   const ev = (f, a) => page.evaluate(f, a);
   await fn({ page, ev, shot, run, pano });
@@ -307,23 +317,23 @@ STAGES.cling = async ({ ev, shot, run, pano }) => {
       fresh(); play('26-4'); place(20, 22); sim(0.3); const p = P();
       scuff(17, 23); const charge = p.wash && p.wash.charge;
       walkTo(24 * 32 + 14, 6); sim(0.7, { right: true, jump: true, jumpPressed: true }); const s1 = !!(p.wash && p.wash.stick);
-      sim(0.15); press('jump', { right: true }); sim(0.7, { right: true }); const s2 = !!(p.wash && p.wash.stick);
-      sim(0.1); press('jump', { right: true }); sim(0.7, { right: true }); sim(0.4);
+      sim(0.15); sim(0.7, { jump: true, jumpPressed: true, right: true }); const s2 = !!(p.wash && p.wash.stick);
+      sim(0.1); sim(0.7, { jump: true, jumpPressed: true, right: true }); sim(0.4);
       return { charge, s1, s2, at: at() };
     });
     check('26-4: scuff the wool (the socks crackle), leap at the felt: stick; spring up, stick again; up onto the wall', r.charge === 2 && r.s1 && r.s2 && r.at.y === 12 && r.at.x >= 25 && r.at.x <= 27, r);
     await ev(() => { place(21, 22); scuff(18, 23); walkTo(24 * 32 + 14, 6); sim(0.7, { right: true, jump: true, jumpPressed: true }); freeze(); }); await shot('40-26-4-stuck-on-felt.png');
     // the label: it doesn't hold
-    r = await ev(() => { thaw(); place(30, 22); sim(0.2); const p = P(); p.x = 79 * 32 + 16 - p.w / 2; p.y = 16.5 * 32 - p.h; p.vy = 0; if (p.wash) { p.wash.charge = 2; p.wash.stick = null; } sim(0.4, { right: true }); return { stuck: !!(p.wash && p.wash.stick) }; });
+    r = await ev(() => { thaw(); place(30, 22); sim(0.2); const p = P(); p.x = 79 * 32 + 16 - p.w / 2; p.y = 18.85 * 32 - p.h; p.vy = 0; if (p.wash) { p.wash.charge = 2; p.wash.stick = null; } sim(0.06, { right: true }); return { stuck: !!(p.wash && p.wash.stick) }; });
     check('26-4: a bare white washing label does not hold', !r.stuck, r);
     // the last climb: stick, spring to the wool sill, a fresh charge, the last felt, the top
     r = await ev(() => {
       thaw(); place(124, 22); sim(0.3); const p = P();
       scuff(122, 126); walkTo(127 * 32 + 14, 6); sim(0.7, { right: true, jump: true, jumpPressed: true }); const s1 = !!(p.wash && p.wash.stick);
-      sim(0.1); press('jump', { left: true }); sim(0.9, { left: true }); sim(0.3); const sill = at();
+      sim(0.1); sim(0.9, { jump: true, jumpPressed: true, left: true }); sim(0.3); const sill = at();
       scuff(121, 124); walkTo(124 * 32 + 20, 6); sim(0.75, { right: true, jump: true, jumpPressed: true }); const s2 = !!(p.wash && p.wash.stick);
-      sim(0.1); press('jump', { right: true }); sim(0.7, { right: true }); const s3 = !!(p.wash && p.wash.stick);
-      sim(0.1); press('jump', { right: true }); sim(0.8, { right: true }); sim(0.3);
+      sim(0.1); sim(0.7, { jump: true, jumpPressed: true, right: true }); const s3 = !!(p.wash && p.wash.stick);
+      sim(0.1); sim(0.8, { jump: true, jumpPressed: true, right: true }); sim(0.3);
       return { s1, sill, s2, s3, at: at() };
     });
     check('26-4: the twist: out of sparks halfway, down to the wool sill for a fresh charge, then the last felt and the top', r.s1 && r.sill.y === 15 && r.s2 && r.at.y === 5 && r.at.x >= 128, r);
@@ -332,7 +342,7 @@ STAGES.cling = async ({ ev, shot, run, pano }) => {
     r = await ev(() => {
       thaw(); place(81, 10); sim(0.3); const p = P();
       scuff(80, 82); walkTo(82 * 32 + 20, 6); sim(0.8, { right: true, jump: true, jumpPressed: true }); const s1 = !!(p.wash && p.wash.stick);
-      sim(0.1); press('jump', { left: true }); sim(0.8, { left: true }); sim(0.3); return { s1, at: at() };
+      sim(0.1); sim(0.8, { jump: true, jumpPressed: true, left: true }); sim(0.3); return { s1, at: at() };
     });
     check('26-4 B4: from the rug on the wall\'s top, stick to the hanging felt and hop up to the window ledge (only the felt reaches it)', r.s1 && r.at.y === 5 && r.at.x >= 81 && r.at.x <= 84, r);
     await ev(() => freeze()); await shot('42-26-4-room-window-ledge.png');
@@ -354,7 +364,7 @@ STAGES.pockets = async ({ ev, shot, run, pano }) => {
     await ev(() => { window.intoPocket = x => { walkTo((x - 2) * 32 + 16, 6); sim(0.55, { jump: true, jumpPressed: true, right: true }); sim(0.4); for (let k = 0; k < 600 && (S().fade.a > 0.05 || P().state !== 'play'); k++) sim(1 / 120); sim(0.3); return at(); }; });
     let r = await ev(() => { fresh(); play('26-5'); place(10, 20); sim(0.3); return intoPocket(16); });
     check('26-5: jump into a pocket: out of the one with the same lining (up on the high shelf)', r.x >= 39 && r.x <= 43 && r.y === 8, r);
-    await ev(() => { place(14, 20); const pk = ents('WashPocket')[0]; pk.t = 3.4 - pk.ph + 0.45; sim(0.01); freeze(); }); await shot('50-26-5-pocket-lip-open.png');
+    await ev(() => { place(14, 20); const pk = ents('WashPocketSpot').filter(e => e.main)[0]; pk.t = 3.4 - pk.ph + 0.45; sim(0.01); freeze(); }); await shot('50-26-5-pocket-lip-open.png');
     // the wrong pocket: the sock heap in the basin, the way back
     r = await ev(() => { thaw(); place(53, 20); sim(0.3); const a = intoPocket(56); sim(1.5); const b = at(); walkTo(90 * 32 - 40, 6); const c = intoPocket(90); return { a, b, c }; });
     check('26-5: a wrong pocket drops Brady in the basin of socks (in sight of the right lining); a pocket there brings him back', r.a.y === 7 && r.b.y === 20 && r.b.x >= 75 && r.c.x <= 50, r);
@@ -382,19 +392,19 @@ STAGES.bed = async ({ ev, shot, run, pano }) => {
   await run('bed', async () => {
     await ev(ROOM_HELPERS);
     let r = await ev(() => {
-      fresh(); play('26-6'); place(4, 15); sim(0.3); const p = P(); const sh = ents('WashLooseSheet')[0];
-      walkTo(20 * 32 + 16, 6); let aim = 0; for (let k = 0; k < 600 && sh.state !== 'aim'; k++) sim(1 / 120);
-      while (sh.state === 'aim' && sh.st < 0.7) { sim(1 / 120); aim = sh.st; }
-      sim(0.5, { jump: true, jumpPressed: true }); sim(0.6);
+      fresh(); play('26-6'); place(4, 15); sim(0.3); const p = P(); const sh = ents('WashLooseSheet').sort((a, b) => a.x - b.x)[0];
+      walkTo(20 * 32 + 16, 6); let aim = 0;
+      for (let k = 0; k < 120 * 8 && !sh.open; k++) { if (sh.state === 'aim') aim = Math.max(aim, sh.st); if (sh.state === 'aim' && sh.st > 0.7 && p.onGround) sim(0.5, { jump: true, jumpPressed: true }); else sim(1 / 120); }
+      sim(0.6);
       return { aim: +aim.toFixed(2), open: sh.open, tile: tile(16, 15) };
     });
     check('26-6: a loose sheet\'s corner aims (a tell), snaps: jumped in front of the post, it hooks the post and the way opens', r.aim >= 0.5 && r.open && r.tile === 0, r);
     await ev(() => { place(19, 15); sim(0.1); const sh = ents('WashLooseSheet')[1]; freeze(); }); await shot('60-26-6-loose-sheet.png');
     // room: up through the hole in the shelf, along the top shelf (jaws), the sock drawer
-    r = await ev(() => { thaw(); place(26, 15); sim(0.2); sim(0.5, { jump: true, jumpPressed: true }); sim(0.4); const a = at(); return a; });
-    check('26-6 Sock Divorce: up through the hole in the shelf by the hanky, onto the top shelf', r.y === 10, r);
+    r = await ev(() => { thaw(); place(26, 14); sim(0.3); sim(0.2, { jump: true, jumpPressed: true }); sim(0.4, { jump: true, right: true }); sim(0.4); const a = at(); return a; });
+    check('26-6 Sock Divorce: off the crate, up through the hole in the shelf by the hanky, onto the top shelf', r.y === 11, r);
     await ev(() => { walkTo(40 * 32, 8); freeze(); }); await shot('61-26-6-top-shelf.png');
-    r = await ev(() => { thaw(); P().invuln = 999; walkTo(64 * 32 + 16, 6); sim(0.1, { up: true, upPressed: true }); for (let k = 0; k < 600 && (S().fade.a > 0.05 || P().state !== 'play'); k++) sim(1 / 120); return { area: S().area.aid }; });
+    r = await ev(() => { thaw(); P().invuln = 999; walkTo(64 * 32 + 16, 6); sim(0.1, { up: true, upPressed: true });  for (let k = 0; k < 600 && (S().fade.a > 0.05 || P().state !== 'play'); k++) sim(1 / 120); return { area: S().area.aid }; });
     check('26-6 Sock Divorce: the sock drawer at the shelf\'s end', r.area === 'drawer', r);
     await ev(() => { sim(0.7); freeze(); }); await shot('62-26-6-room-sock-divorce-entry.png');
     r = await ev(() => {
@@ -416,6 +426,123 @@ STAGES.bed = async ({ ev, shot, run, pano }) => {
     await ev(() => { sim(1.5); freeze(); }); await shot('64-26-6-boss-her-fitted-majesty.png');
     await ev(() => { thaw(); play('26-6'); }); await pano('pano-26-6.png', 0.3);
   });
+};
+
+/* ---------------- --bot: each stage start to finish, enemies ON, damage ON, the way a careful player would ---------------- */
+// The bot holds only the stick and the two buttons. It walks on, hops gaps and walls, jumps critters in its way,
+// waits for a net critter on its face to move off, and does each stage's thing (grip and climb, squeeze through,
+// squeeze the peg, stretch, unzip, scuff and leap, pockets, the sheets, the boss). A death is counted where it
+// happens; it then carries on from the checkpoint (the route rewinds to the step after the last checkpoint marker).
+const BOT_PAGE = () => {
+  const B = window.BRADY;
+  const T = window.BOT = { deaths: [], scene: null, cp: 0 };
+  const p = () => S().player;
+  T.died = () => S() !== T.scene || p().dead || p().state === 'dying' || S().state === 'gameover';
+  // one frame of input; returns false when Brady has died (then waits for the respawn)
+  T.f = inp => {
+    sim(1 / 120, inp || {});
+    if (!T.died()) return true;
+    const q = p(); T.deaths.push({ id: T.id, step: T.step, x: Math.floor(q.cx / 32), y: Math.floor((q.y + q.h) / 32) });
+    for (let k = 0; k < 120 * 8 && !(S() !== T.scene && S().state === 'play' && S().player && !S().player.dead); k++) sim(1 / 120);
+    T.scene = S(); B.Save.data.lives = 9; S().player.invuln = 0; return false;
+  };
+  T.wait = sec => { for (let k = 0; k < sec * 120; k++) if (!T.f()) return false; return true; };
+  const tileAt = (x, y) => { const A = S().area; return x < 0 || x >= A.W ? 99 : y < 0 || y >= A.H ? 0 : A.tiles[y * A.W + x]; };
+  const solid = (x, y) => { const t = tileAt(x, y); return t === 99 || (window.BRADY_TOUR.washKit.SOLID[t]); };
+  T.solid = solid;
+  // walk to pixel x (careful: hop gaps and walls, jump a critter that comes at him)
+  T.walk = (x, o) => {
+    o = o || {};
+    for (let k = 0; k < 120 * 25; k++) {
+      const q = p(); if (Math.abs(q.cx - x) < (o.tol || 8) && q.onGround) return true;
+      const dir = q.cx < x ? 1 : -1, tx = Math.floor((q.cx + dir * 20) / 32), fy = Math.floor((q.y + q.h + 4) / 32);
+      let jump = false;
+      if (q.onGround) {
+        const gapAhead = !solid(tx, fy) && !solid(tx, fy + 1) && tileAt(tx, fy) !== 2;
+        const wall = solid(Math.floor((q.cx + dir * 18) / 32), fy - 1);
+        const crit = S().entities.some(e => e.enemy && !e.dead && !e.remove && !e.boss && !e.isWashCrawler && (e.cx - q.cx) * dir > 0 && Math.abs(e.cx - q.cx) < 90 && Math.abs((e.y + e.h) - (q.y + q.h)) < 40);
+        if ((gapAhead || wall || crit || q.hitWall) && (o.noHop !== true)) jump = true;
+      }
+      const ok = jump ? T.hop(dir, o.action) : T.f({ right: dir > 0, left: dir < 0, action: !!o.action });
+      if (!ok) return false;
+    }
+    return 'stuck';
+  };
+  T.hop = (dir, action, hold) => { if (!T.f({ jump: true, jumpPressed: true, right: dir > 0, left: dir < 0, action: !!action })) return false; for (let k = 0; k < (hold || 0.45) * 120; k++) if (!T.f({ jump: true, right: dir > 0, left: dir < 0, action: !!action })) return false; for (let k = 0; k < 120 * 2 && !p().onGround; k++) if (!T.f({ right: dir > 0, left: dir < 0, action: !!action })) return false; return true; };
+  T.grip = (dir) => { if (!T.f({ jump: true, jumpPressed: true, up: true, right: dir > 0, left: dir < 0 })) return false; for (let k = 0; k < 60 && !(p().wash && p().wash.grip); k++) if (!T.f({ up: true, jump: true, right: dir > 0, left: dir < 0 })) return false; return !!(p().wash && p().wash.grip); };
+  // climb to a cell (grip row y): wait while a critter on his face is close in the way
+  T.climb = (x, y) => {
+    for (let k = 0; k < 120 * 30; k++) {
+      const q = p(), W = q.wash; if (!W || !W.grip) return 'lost grip';
+      const gx = x * 32 + 16, gy = y * 32 + 16, dx = gx - q.cx, dy = gy - (q.y + 8);
+      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return true;
+      const near = S().entities.some(e => e.isWashCrawler && !e.dead && e.face === W.face && Math.hypot(e.cx - (q.cx + Math.sign(dx) * 30), e.cy - (q.cy + Math.sign(dy) * 30)) < 50);
+      if (!T.f(near ? {} : { right: dx > 4, left: dx < -4, down: dy > 4 && Math.abs(dx) < 20, up: dy < -4 && Math.abs(dx) < 20 })) return false;
+    }
+    return 'stuck';
+  };
+  T.cross = () => { const f0 = p().wash.face; if (!T.f({ jump: true, jumpPressed: true })) return false; T.wait(0.45); return p().wash && p().wash.face !== f0; };
+  T.letGo = dir => T.hop(dir, false, 0.5);
+  T.press = k => T.f({ [k]: true, [k + 'Pressed']: true });
+  T.holdThrow = (x) => { if (!T.press('action')) return false; for (let k = 0; k < 120 * 15; k++) { const q = p(); if (q.cx >= x) return true; const hop = q.onGround && q.hitWall; if (!(hop ? T.f({ action: true, right: true, jump: true, jumpPressed: true }) : T.f({ action: true, right: true }))) return false; if (hop) for (let j = 0; j < 25; j++) if (!T.f({ action: true, right: true, jump: true })) return false; } return 'stuck'; };
+  T.scuff = (x0, x1) => { for (let n = 0; n < 4; n++) { if (!T.walk(x1 * 32 + 16, { noHop: true, tol: 12 })) return false; if (!T.walk(x0 * 32 + 16, { noHop: true, tol: 12 })) return false; } return true; };
+  T.leap = (dir, hold) => { if (!T.f({ jump: true, jumpPressed: true, right: dir > 0, left: dir < 0 })) return false; for (let k = 0; k < 120 * 1.5 && !(p().wash && p().wash.stick) && !(k > 20 && p().onGround); k++) if (!T.f({ jump: k < (hold || 0.5) * 120, right: dir > 0, left: dir < 0 })) return false; return !!(p().wash && p().wash.stick); };
+  T.pocket = x => { if (!T.walk((x - 2) * 32 + 16, { noHop: true })) return false; if (!T.hop(1, false, 0.5)) return false; for (let k = 0; k < 600 && (S().fade.a > 0.05 || p().state !== 'play'); k++) sim(1 / 120); return T.wait(0.3); };
+  T.sheet = () => { const sh = S().entities.filter(e => e.constructor.name === 'WashLooseSheet' && !e.open).sort((a, b) => Math.abs(a.cx - p().cx) - Math.abs(b.cx - p().cx))[0]; if (!sh) return true; for (let k = 0; k < 120 * 6 && !(sh.state === 'aim' && sh.st > 0.7) && !sh.open; k++) if (!T.f()) return false; if (!T.hop(0, false, 0.5)) return false; return T.wait(0.6) && sh.open; };
+  T.door = () => { if (!T.f({ up: true, upPressed: true })) return false; for (let k = 0; k < 600 && (S().fade.a > 0.05 || p().state !== 'play'); k++) sim(1 / 120); T.scene = S(); return true; };
+  T.finished = () => ['clear', 'tally', 'results'].includes(S().state);
+  // a route: a list of steps [fn, ...args] and 'cp' markers; on a death the route goes back to the last 'cp'
+  T.run = (id, route) => {
+    fresh(); T.id = id; const [w, i] = id.split('-').map(Number); B.Save.data.lives = 9;
+    const g = new B.Play(B.getLevel(w, i), {}); B.Game.setScene(g); sim(1.6); T.scene = S(); p().invuln = 0;
+    let k = 0, lastCp = 0, tries = 0, fails = [];
+    while (k < route.length && tries < 40) {
+      if (T.finished()) break;
+      const st = route[k]; T.step = k;
+      if (st === 'cp') { lastCp = k + 1; k++; continue; }
+      const r = T[st[0]](...st.slice(1));
+      if (r === false || T.died()) { tries++; if (!T.died() || S() === T.scene) { fails.push(k + ':' + st[0]); } k = lastCp; T.scene = S(); continue; }
+      if (r === 'stuck' || r === 'lost grip') { fails.push(k + ':' + st[0] + ' ' + r); tries++; k++; continue; }
+      k++;
+    }
+    for (let n = 0; n < 120 * 6 && !T.finished(); n++) sim(1 / 120);
+    return { id, finished: T.finished(), deaths: T.deaths.filter(d => d.id === id), fails };
+  };
+};
+const BOT_ROUTES = {
+  '26-1': [['walk', 19 * 32], ['grip', 1], ['climb', 31, 17], ['letGo', 1], 'cp', ['walk', 53 * 32 + 8], ['grip', 1], ['climb', 55, 15], ['climb', 57, 15], ['cross'], ['climb', 66, 15], ['cross'], ['climb', 70, 14], ['letGo', 1], 'cp',
+    ['walk', 84 * 32 + 16], ['grip', 1], ['climb', 86, 12], ['climb', 100, 12], ['letGo', 1], 'cp', ['walk', 140 * 32 + 8], ['grip', 1], ['climb', 143, 14], ['climb', 147, 14], ['cross'], ['climb', 155, 9], ['press', 'action'], ['wait', 0.6],
+    ['climb', 167, 12], ['letGo', 1], 'cp', ['walk', 186 * 32 + 8], ['grip', 1], ['climb', 189, 12], ['climb', 192, 12], ['cross'], ['climb', 201, 9], ['press', 'action'], ['wait', 0.6], ['climb', 214, 13], ['letGo', 1], 'cp', ['walk', 234 * 32]],
+  '26-2': [['walk', 18 * 32], ['walk', 26 * 32 + 16, { noHop: true }], ['walk', 34 * 32, { noHop: true }], ['hop', 1], 'cp', ['walk', 60 * 32 + 16], ['hop', 1], ['walk', 76 * 32, { noHop: true }], ['hop', 1], 'cp', ['walk', 115 * 32], ['hop', 1],
+    ['walk', 129 * 32, { noHop: true }], ['hop', 1], ['walk', 145 * 32, { noHop: true }], ['hop', 1], 'cp', ['walk', 165 * 32], ['walk', 170 * 32 + 20, { noHop: true }], ['wait', 1], ['walk', 167 * 32 + 12, { noHop: true }], ['walk', 182 * 32, { noHop: true }], 'cp', ['walk', 215 * 32]],
+  '26-3': [['walk', 18 * 32 + 16, { noHop: true }], ['holdThrow', 30 * 32], 'cp', ['walk', 55 * 32 + 16, { noHop: true }], ['holdThrow', 69 * 32], 'cp', ['walk', 95 * 32 + 16, { noHop: true }], ['holdThrow', 109 * 32], 'cp', ['walk', 140 * 32 + 16, { noHop: true }], ['holdThrow', 156 * 32], 'cp',
+    ['walk', 172 * 32], ['hop', 1], ['walk', 176 * 32 + 16, { noHop: true }], ['holdThrow', 190 * 32], 'cp', ['walk', 208 * 32]],
+  '26-4': [['walk', 20 * 32], ['scuff', 17, 23], ['walk', 24 * 32 + 14, { noHop: true }], ['leap', 1], ['leap', 1], ['leap', 1, 0.6], ['walk', 33 * 32], 'cp', ['walk', 46 * 32], ['scuff', 45, 49], ['walk', 50 * 32 + 20, { noHop: true }], ['leap', 1], ['leap', 1], ['leap', 1, 0.6], ['walk', 62 * 32], 'cp',
+    ['walk', 75 * 32], ['scuff', 74, 78], ['walk', 79 * 32 + 14, { noHop: true }], ['leap', 1], ['leap', 1], ['leap', 1, 0.6], ['walk', 98 * 32], 'cp', ['walk', 124 * 32], ['scuff', 122, 126], ['walk', 127 * 32 + 14, { noHop: true }], ['leap', 1], ['leap', -1], ['scuff', 121, 124], ['walk', 124 * 32 + 20, { noHop: true }], ['leap', 1], ['leap', 1], ['leap', 1, 0.6], 'cp', ['walk', 183 * 32]],
+  '26-5': [['pocket', 16], ['walk', 46 * 32], 'cp', ['pocket', 61], ['walk', 99.5 * 32, { noHop: true }], ['walk', 104 * 32], 'cp', ['walk', 143 * 32], ['pocket', 146], ['walk', 163.5 * 32, { noHop: true }], ['walk', 172 * 32], 'cp', ['walk', 193 * 32]],
+  '26-6': [['walk', 20 * 32 + 16], ['sheet'], ['walk', 47 * 32 + 16], ['sheet'], ['walk', 56 * 32], 'cp', ['walk', 72 * 32 + 16], ['door'], ['bossFight']]
+};
+// the boss, damage on: the land's trick each phase (stand before a free post and jump the arrow; duck the wide ring
+// and jump the low one; into the pocket and jump on the shake)
+const BOT_BOSS = () => {
+  const T = window.BOT, p = () => S().player;
+  T.bossFight = () => {
+    for (let k = 0; k < 120 * 5 && !S().boss; k++) if (!T.f({ right: true })) return false;
+    for (let guard = 0; guard < 120 * 150; guard++) {
+      const b = S().boss; if (!b || b.remove || b.state === 'dying') return T.wait(3) && true;
+      if (!b.posts) { if (!T.f()) return false; continue; }
+      const q = p(), free = b.posts.filter(x => !x.hooked);
+      let target = null, inp = {};
+      if (b.phase === 1 || b.phase == null) { const L = free.filter(x => x.x < b.cx); const post = (L.length ? L : free).sort((a, c) => Math.abs(a.x - b.cx) - Math.abs(c.x - b.cx))[0]; if (post) target = post.x + (post.x < b.cx ? 64 : -64); if (b.act === 'aim' && b.at > 0.7 && q.onGround) inp = { jump: true, jumpPressed: true }; else if (b.act === 'snap' || b.act === 'aim' && b.at > 0.7) inp = { jump: true }; }
+      else if (b.phase === 2) {
+        const post = free.sort((a, c) => Math.abs(a.x - b.cx) - Math.abs(c.x - b.cx))[0]; if (post) target = post.x + (post.x < b.cx ? 64 : -64);
+        if (b.act === 'sweep' && b.hoops) { const [wide, low] = b.hoops; const lowNear = low && !low.done && b.at >= low.go && Math.abs(low.x - q.cx) < 70, wideNear = wide && !wide.done && !wide.passed && b.at >= wide.go && Math.abs(wide.x - q.cx) < 90; target = null; inp = lowNear && q.onGround ? { jump: true, jumpPressed: true } : { down: wideNear && !lowNear, jump: !q.onGround }; }
+      } else { if ((b.act === 'balloon' || b.act === 'shake') && b.pocket != null) target = b.pocket; if (b.act === 'shake' && q.onGround) inp = { jump: true, jumpPressed: true }; else if (b.act === 'balloon' && b.at > 1.55 && q.onGround && Math.abs(q.cx - b.pocket) < 20) inp = { jump: true, jumpPressed: true }; }
+      if (target != null && !inp.jump && !inp.down && Math.abs(q.cx - target) > 10) { inp.right = q.cx < target; inp.left = q.cx > target; }
+      if (!T.f(inp)) return false;
+    }
+    return 'stuck';
+  };
 };
 
 /* ---------------- the secret rooms: shared moves ---------------- */
@@ -443,6 +570,21 @@ async function roomGame({ ev, shot }, tag, pickWrong, pickRight, rounds) {
 }
 
 (async () => {
+  if (args.includes('--bot')) {
+    // the bot: every stage start to finish, enemies on, no invulnerability; deaths per stage and where
+    await session({ width: 874, height: 402 }, async ({ ev }) => {
+      await ev(BOT_PAGE); await ev(BOT_BOSS);
+      for (const id of Object.keys(BOT_ROUTES)) {
+        if (want.length && !want.includes(id)) continue;
+        const r = await ev(([i, route]) => window.BOT.run(i, route), [id, BOT_ROUTES[id]]);
+        const spots = {}; for (const d of r.deaths) { const k = d.x + ',' + d.y; spots[k] = (spots[k] || 0) + 1; }
+        console.log(`BOT ${id}: ${r.finished ? 'FINISHED' : 'DID NOT FINISH'}, ${r.deaths.length} death(s) ${JSON.stringify(spots)}${r.fails.length ? ' fails ' + r.fails.join(' ') : ''}`);
+        check(`bot ${id}: played start to finish (enemies on, damage on)`, r.finished, { deaths: r.deaths.length, spots, fails: r.fails });
+      }
+    });
+    console.log(failures ? `${failures} WASH BOT CHECK(S) FAILED` : 'ALL WASH BOT CHECKS PASSED');
+    process.exit(failures ? 1 : 0);
+  }
   await session({ width: 874, height: 402 }, async (o) => {
     for (const k of Object.keys(STAGES)) await STAGES[k](o);
   });

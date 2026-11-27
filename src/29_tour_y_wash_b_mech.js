@@ -146,7 +146,7 @@ class WashSeam extends Ent {
     // holding the thread: the seam unzips two cells ahead of him as he walks along it
     const dir = this.cells.length && this.cells[0][0] < this.tx ? -1 : 1, front = p.cx / TS + dir * 2.2;
     while (this.n < this.cells.length && (dir > 0 ? this.cells[this.n][0] <= front : this.cells[this.n][0] >= front)) {
-      const [x, y] = this.cells[this.n]; g.setTile(x, y, T.SEMI); this.n++;
+      const [x, y] = this.cells[this.n]; g.setTile(x, y, T.HARD); if (g.area.hide) g.area.hide[y * g.area.W + x] = 1; this.n++;
       if (this.n % 2 === 0) TourKit.sfx('zip', 'select', { vol: 0.2, pitch: 1.6 + (this.n % 6) * 0.05 });
       g.burst(x * TS + 16, y * TS + 4, 2, WA.CREAM, 'spark');
     }
@@ -226,7 +226,7 @@ const onWool = (A, p) => { if (!p.onGround) return false; for (const z of A.zone
     const wasG = p.onGround, ev = ppf(p, inp, A, dt, platforms, opts);
     if (W.unstickT > 0) W.unstickT -= dt;
     if (p.onGround) {
-      if (onWool(A, p)) { W.scuff = (W.scuff || 0) + Math.abs(p.vx) * dt; if (W.scuff >= CLING.scuff && W.charge < CLING.sparks) { W.charge = CLING.sparks; W.fresh = 0.6; } }
+      if (onWool(A, p)) { W.scuff = (W.scuff || 0) + Math.abs(p.vx) * dt; if (W.scuff >= CLING.scuff && (W.charge || 0) < CLING.sparks) { W.charge = CLING.sparks; W.fresh = 0.6; } }
       else if (!wasG || W.charge) { W.charge = 0; W.scuff = 0; }
     } else if (W.charge > 0 && !(W.unstickT > 0) && p.vy >= -CLING.apex && zoneHit(A, 'washFelt', p, 2)) {
       W.stick = { at: [p.x, p.y] }; W.charge--; p.vx = 0; p.vy = 0; p.jumping = false; W.stuckT = 0.3;
@@ -402,7 +402,8 @@ Tour.pieces['wash.pocket'] = function (st, o) {
 // the spawn's box is the two cells; the twin is invisible (its x is a cell along)
 {
   const C0 = WashPocket;
-  ENTITY_TYPES.washPocket = class extends C0 { constructor(g, s) { super(g, s); if (s.main === false) { this.x = s.x - TS / 2 - TS; } } };
+  class WashPocketSpot extends C0 { constructor(g, s) { super(g, s); if (s.main === false) { this.x = s.x - TS / 2 - TS; } } }
+  ENTITY_TYPES.washPocket = WashPocketSpot;
 }
 
 /* ======================= the land's hazard: spring-loaded peg jaws (hung on a wire, they snap down) ======================= */

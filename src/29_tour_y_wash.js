@@ -737,6 +737,6 @@ Tour.country({
   levels: []
 });
 // for the land's other files and the tests
-Tour.washKit = { say: WashSay, COL, INK, WashArt, beetleArt, lambArt, heronArt, mothArt, lintArt };
+Tour.washKit = { SOLID, say: WashSay, COL, INK, WashArt, beetleArt, lambArt, heronArt, mothArt, lintArt };
 try { if (typeof window !== 'undefined') { window.BRADY_TOUR = window.BRADY_TOUR || {}; window.BRADY_TOUR.washKit = Tour.washKit; if (typeof TourMap !== 'undefined' && !window.BRADY_TOUR.TourMap) window.BRADY_TOUR.TourMap = TourMap; } } catch (e) { /* not in a browser */ }
 })();

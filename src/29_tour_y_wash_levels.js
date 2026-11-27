@@ -333,13 +333,13 @@ const L5 = { n: 5, name: 'Pocket Address', mapLabel: 'Pocket Address', arch: 'po
 // Divorce); the drawer lets you out by the bedroom door. Then the bed.
 const cupRows = (() => {
   const W = 76, H = 20, Gr = grid(W, H, '#');
-  fillG(Gr, 1, 12, W - 2, 15, '.'); fillG(Gr, 1, 1, 11, 15, '.'); fillG(Gr, 12, 6, W - 6, 10, '.');
-  put(Gr, 3, 15, '@'); put(Gr, 6, 15, 'k'); put(Gr, 9, 12, '?'); put(Gr, 5, 8, 'o.o.o');
+  fillG(Gr, 1, 13, W - 2, 15, '.'); fillG(Gr, 1, 1, 11, 15, '.'); fillG(Gr, 12, 6, W - 6, 11, '.');
+  put(Gr, 3, 15, '@'); put(Gr, 6, 15, 'k'); put(Gr, 9, 11, '?'); put(Gr, 5, 8, 'o.o.o');
   put(Gr, 16, 15, '1'); put(Gr, 30, 14, '*'); put(Gr, 34, 15, 'l');
   // the hole up to the top shelf run, the hanky by it
-  fillG(Gr, 26, 11, 27, 11, '.'); put(Gr, 28, 14, 'u');
-  put(Gr, 31, 10, 'BB'); put(Gr, 38, 9, 'BBB'); put(Gr, 36, 6, 'j'); put(Gr, 44, 8, 'R'); put(Gr, 48, 6, 'J'); put(Gr, 52, 10, 'BB'); put(Gr, 33, 7, 'o.o.o'); put(Gr, 60, 7, 'P'); put(Gr, 64, 10, 'A');
-  put(Gr, 42, 15, '2'); put(Gr, 56, 15, 'c'); put(Gr, 60, 12, '?'); put(Gr, 62, 15, 'a'); put(Gr, 66, 15, 'r'); put(Gr, 72, 15, 'E');
+  fillG(Gr, 26, 12, 27, 12, '.'); put(Gr, 26, 15, 'H'); put(Gr, 28, 14, 'u');
+  put(Gr, 31, 10, 'BB'); put(Gr, 38, 9, 'BBB'); put(Gr, 36, 6, 'j'); put(Gr, 44, 8, 'R'); put(Gr, 48, 6, 'J'); put(Gr, 52, 10, 'BB'); put(Gr, 33, 7, 'o.o.o'); put(Gr, 60, 7, 'P'); put(Gr, 64, 11, 'A');
+  put(Gr, 42, 15, '2'); put(Gr, 56, 15, 'c'); put(Gr, 58, 9, '?'); put(Gr, 62, 15, 'a'); put(Gr, 66, 15, 'r'); put(Gr, 72, 15, 'E');
   return rowsOf(Gr);
 })();
 const CUP = {

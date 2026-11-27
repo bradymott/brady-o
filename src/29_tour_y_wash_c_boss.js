@@ -24,7 +24,7 @@ const say = (g, b, text, col) => { if (b && b.y != null && b.boss) Tour.washKit.
 // snaps to the right) } with the lock (B.lock: the hanging sheet's column) and the post as decor
 class WashLooseSheet extends Ent {
   constructor(g, s) {
-    super(g, s, TS, 4 * TS); this.id = s.id; this.dir = s.side || 1; this.postX = s.post * TS + TS / 2; this.floorY = (s.y + 1) * TS; this.back = true;
+    super(g, s, TS, 4 * TS); this.id = s.id; this.dir = s.side || 1; this.postX = s.post * TS + TS / 2; this.floorY = (s.ty + 1) * TS; this.back = true;
     this.x = s.sx * TS; this.y = this.floorY - 5 * TS; this.w = TS; this.h = 5 * TS;
     this.tiles = s.tiles || []; this.state = 'wait'; this.st = 0; this.head = 0; this.open = false; this.cool = 0;
   }
@@ -79,9 +79,9 @@ ENTITY_TYPES.washLooseSheet = WashLooseSheet;
 // side, id }. The sheet is a lock across the way (four rows); the checker's key: the spot just before the post
 Tour.pieces['wash.looseSheet'] = function (st, o) {
   const B = st.B, x = st.x, y = st.gy - 1, side = o.side || 1, post = x + side * (o.post || 6), id = 'wash:' + (o.id || 'sheet' + x);
-  B.lock(x, y - 3, y, id, 'washSheet');
-  const s = B.spawns[B.spawns.length - 1]; const tiles = []; for (let yy = y - 3; yy <= y; yy++) tiles.push([x, yy]);
-  Object.assign(s, { type: 'washLooseSheet', sx: x, post, y, side, tiles });
+  B.lock(x, y - 2, y, id, 'washSheet');
+  const s = B.spawns[B.spawns.length - 1]; const tiles = []; for (let yy = y - 2; yy <= y; yy++) tiles.push([x, yy]);
+  Object.assign(s, { type: 'washLooseSheet', sx: x, post, ty: y, side, tiles });
   B.decorAt('washPost', post, y + 1, 1);
   // the key: standing on the bed between the sheet and the post, on its line (a jump there and the corner hooks)
   const v = []; for (let k = 1; k < Math.abs(post - x); k++) v.push([x + side * k, y]);
