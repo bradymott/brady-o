@@ -277,7 +277,10 @@ TourHats.NOT = new Set([].concat(
   'orchTrellis orchFork orchCrawler orchBite orchBlossom orchBell orchBud orchSleeve orchGraft orchLoaded orchBasket orchHedgeGate orchRoomMark orchPerchMark orchJpTree'.split(' '),
   // The Umbrella Repair District (31): the canopies and their critters (drawn through the cloth on the far face), the
   // seated tick, the tickets, drips, gutters, hooks, panels, puddled canopies, jams, room stations, the stand in 8-1
-  'umbCanopy umbCrawler umbTickSeat umbTicket umbDrip umbGutter umbSluice umbHook umbPanel umbPanelRain umbShutter umbShake umbCupGate umbJam umbStation umbStandDoor'.split(' ')
+  'umbCanopy umbCrawler umbTickSeat umbTicket umbDrip umbGutter umbSluice umbHook umbPanel umbPanelRain umbShutter umbShake umbCupGate umbJam umbStation umbStandDoor'.split(' '),
+  // Foley Beach (hidden land A4): props, shell flocks, tin panels, prop banks, screens, the cargo net and its crabs
+  // (on the ropes), trumpets, ears, platters, desks, clapper gates, machines, mics, room marks, the riser and flap (3-1)
+  'foleyProp foleyFlock foleyPanel foleyBank foleyScreen foleyNet foleyNetCrab foleyTrumpet foleyEar foleyPlatter foleyDesk foleyClapGate foleyMachine foleyMic foleyRoomMark foleyBossMic foleyBossMachine foleyRiser foleyFlap'.split(' ')
 ));
 
 /* ---------- the animals: [fx, fxFlip, fy, size] (see the header) ---------- */
@@ -350,7 +353,9 @@ Object.assign(TourHats.HEADS, {
   // The Umbrella Repair District (31): the rivet tick, the puddle mule, the drip finch, the ferrule ferret
   umbTick: [0.45, 0.45, -1.25, 0], umbMule: [0.55, 0.55, -1.35, 0], umbFinch: [0.25, 0.25, -1.3, 0], umbFerret: [0.62, 0.62, -1.2, 0],
   // The Unflattering Gallery (world 30): the gilt gnat, the profile pigeon, the varnish toad, the velvet rope
-  galGnat: [-0.2, -0.2, -0.95, 0], galPigeon: [0.3, 0.3, -1.15, 0], galVarnish: [0.3, 0.3, -1.0, 0], galVelvet: [0.2, 0.2, -1.2, 0]
+  galGnat: [-0.2, -0.2, -0.95, 0], galPigeon: [0.3, 0.3, -1.15, 0], galVarnish: [0.3, 0.3, -1.0, 0], galVelvet: [0.2, 0.2, -1.2, 0],
+  // Foley Beach (hidden land A4): the clapper clam, the hiss kettle, the rubbersole ray, the boom crab
+  foleyClam: [0.1, 0.1, -0.95, 0], foleyKettle: [0.0, 0.0, -1.25, 0], foleyRay: [0.25, 0.25, -1.15, 0], foleyCrab: [0.05, 0.05, -1.05, 0]
 
 });
 

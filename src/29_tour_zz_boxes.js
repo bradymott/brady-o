@@ -531,6 +531,19 @@ const BoxArt = (() => {
       // the coral J latch: hanging down over the front, flipped up on the hit
       const fl = seg(p, 0, 0.3);
       rot(c, 16, 14, -fl * PI * 0.9, () => { R(c, 14, 12, 4, 5, 1, Co, 1.2); L(c, [[16, 17], [16, 22]], K, 3.2); L(c, [[16, 17], [16, 22]], Co, 1.8); c.beginPath(); c.arc(14, 22, 2, 0, PI); c.strokeStyle = K; c.lineWidth = 3.2; c.stroke(); c.strokeStyle = Co; c.lineWidth = 1.8; c.stroke(); });
+    // ---- Foley Beach (29, hidden land A4): a felt-lined petrol-blue prop tin, a burgundy felt band and an apricot
+    //      scallop-shell clasp; hit, the shell clasp flips up and the lid swings open on its back hinge; empty, the
+    //      lid stands open over the burgundy felt lining ----
+    foley: { name: 'Foley Beach', draw(c, p) {
+      const T1 = '#2e6a80', T2 = '#1e4a5e', T3 = '#5a9ab0', Fe = '#7a2236', Fe2 = '#561428', Ap = '#f2a65a', Ap2 = '#d8813a';
+      const q = ease(seg(p, 0.2, 1)), flip = io(seg(p, 0, 0.4));
+      lidBack(c, q, 3, 13, 26, Fe2, 10);
+      R(c, 3, 13, 26, 17, 2.5, T1); shine(c, 6, 15, 20, 1.1);
+      O(c, 6, 27, 1, '#9ad0e0', 0); O(c, 26, 27, 1, '#9ad0e0', 0);
+      if (q > 0) R(c, 5, 13, 22, 3 + q * 3, 1.2, Fe, 1.1);
+      if (q <= 0.5) { R(c, 2, 8, 28, 7, 2.5, T3); R(c, 3, 13.5, 26, 3, 1, Fe, 0.9); }
+      // the shell clasp: on the front at the lid's edge; hit, it flips up and over
+      rot(c, 16, 14, -flip * 2.4, () => { c.beginPath(); c.moveTo(16 - 4, 16); for (let k = 0; k <= 6; k++) { const a = PI + k * PI / 6, r = k % 2 ? 6 : 5.4; c.lineTo(16 + Math.cos(a) * r, 16 + Math.sin(a) * r); } c.lineTo(16 + 4, 16); c.closePath(); fs(c, Ap, 1.1); L(c, [[16, 15.6], [13, 11.5]], Ap2, 0.8); L(c, [[16, 15.6], [19, 11.5]], Ap2, 0.8); });
     } }
   };
 

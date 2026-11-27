@@ -310,6 +310,9 @@ Object.assign(ENEMY_SAFE_TYPES, { umbCrawler: 'on a canopy: touches only Brady o
 // cord rack's gnat touches only Brady on its own face (customCollide)
 Object.assign(BOSS_SAFE, { gal_retoucher: ['raise', 'drip', 'pullback', 'sweep', 'pause1', 'flourish', 'fling', 'pause2', 'chin', 'lunge', 'pause3', 'sold'] });
 Object.assign(ENEMY_SAFE_TYPES, { galGnat: 'harmless while it slips on the shine (29_tour_y_gal.js harmlessWhen)', galPigeon: 'harmless while it hides in profile (29_tour_y_gal.js harmlessWhen)', galCrawler: 'on a cord rack: touches only Brady on its own face (customCollide)' });
+// Foley Beach (29): a hiss kettle that has startled itself silent is harmless for two seconds (its joke); a boom crab on the
+// cargo net touches only Brady on its own side of the ropes (customCollide)
+Object.assign(ENEMY_SAFE_TYPES, { foleyKettle: 'silent and harmless after it startles itself (29_tour_y_foley.js harmlessWhen)', foleyNetCrab: 'on the cargo net: touches only Brady on its own side (customCollide)' });
 const OLD_TYPES = { greeter: 1, pony: 1 };   // the old Black Rock City enemies (08a_chunks.js / 10b_burners.js): in no tour level
 if (!noSweep) {
   const noHurt = [];
