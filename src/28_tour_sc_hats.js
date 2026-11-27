@@ -280,7 +280,10 @@ TourHats.NOT = new Set([].concat(
   'umbCanopy umbCrawler umbTickSeat umbTicket umbDrip umbGutter umbSluice umbHook umbPanel umbPanelRain umbShutter umbShake umbCupGate umbJam umbStation umbStandDoor'.split(' '),
   // Foley Beach (hidden land A4): props, shell flocks, tin panels, prop banks, screens, the cargo net and its crabs
   // (on the ropes), trumpets, ears, platters, desks, clapper gates, machines, mics, room marks, the riser and flap (3-1)
-  'foleyProp foleyFlock foleyPanel foleyBank foleyScreen foleyNet foleyNetCrab foleyTrumpet foleyEar foleyPlatter foleyDesk foleyClapGate foleyMachine foleyMic foleyRoomMark foleyBossMic foleyBossMachine foleyRiser foleyFlap'.split(' ')
+  'foleyProp foleyFlock foleyPanel foleyBank foleyScreen foleyNet foleyNetCrab foleyTrumpet foleyEar foleyPlatter foleyDesk foleyClapGate foleyMachine foleyMic foleyRoomMark foleyBossMic foleyBossMachine foleyRiser foleyFlap'.split(' '),
+  // Below the Cheap Seats (33): scaffolds, their critters, the mirror crab, the bolt board, the tell, flats, seats, the
+  // house, backdrops, curtains, follow-spots, the encore's actor, paddles and baskets, room marks, the Festival stand
+  'seatsScaffold seatsCrawler seatsMirrorCrab seatsBoltBoard seatsTell seatsFlat seatsSeat seatsHouse seatsBackdrop seatsCurtainLock seatsSpot seatsActor seatsLeadPaddle seatsLeadBasket seatsLeadCurtain seatsPaddleMark seatsRoomMark seatsFestStand'.split(' ')
 ));
 
 /* ---------- the animals: [fx, fxFlip, fy, size] (see the header) ---------- */
@@ -355,7 +358,9 @@ Object.assign(TourHats.HEADS, {
   // The Unflattering Gallery (world 30): the gilt gnat, the profile pigeon, the varnish toad, the velvet rope
   galGnat: [-0.2, -0.2, -0.95, 0], galPigeon: [0.3, 0.3, -1.15, 0], galVarnish: [0.3, 0.3, -1.0, 0], galVelvet: [0.2, 0.2, -1.2, 0],
   // Foley Beach (hidden land A4): the clapper clam, the hiss kettle, the rubbersole ray, the boom crab
-  foleyClam: [0.1, 0.1, -0.95, 0], foleyKettle: [0.0, 0.0, -1.25, 0], foleyRay: [0.25, 0.25, -1.15, 0], foleyCrab: [0.05, 0.05, -1.05, 0]
+  foleyClam: [0.1, 0.1, -0.95, 0], foleyKettle: [0.0, 0.0, -1.25, 0], foleyRay: [0.25, 0.25, -1.15, 0], foleyCrab: [0.05, 0.05, -1.05, 0],
+  // Below the Cheap Seats (33): the bolt crab, the seat shrew, the cable hen, the sandbag stoat
+  seatsCrab: [0.42, 0.42, -1.55, 0], seatsShrew: [0.55, 0.55, -1.2, 0], seatsHen: [0.4, 0.4, -1.4, 0], seatsStoat: [0.45, 0.45, -1.45, 0]
 
 });
 
