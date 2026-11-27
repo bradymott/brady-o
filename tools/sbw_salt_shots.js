@@ -198,18 +198,18 @@ STAGES.s3 = async ({ ev, shot, run, pano }) => {
   await run('s3', async () => {
     await ev(KITS);
     await ev(() => { fresh(); play('34-3'); place(4, 17); sim(0.5); freeze(); }); await shot('30-34-3-start.png');
-    let r = await ev(() => { thaw(); place(19, 16); sim(0.4); const c = byId('SaltCrystal', 'c1'); sim(1.0, { action: true }); return { n: c.n }; });
+    let r = await ev(() => { thaw(); place(18, 16); sim(0.4); const c = byId('SaltCrystal', 'c1'); sim(1.0, { action: true }); return { n: c.n }; });
     check('34-3: holding THROW on the crystal grows cubes out of its face (the dashed square shows the next)', r.n >= 2, r);
     await ev(() => freeze()); await shot('31-34-3-growing.png');
     r = await ev(() => { thaw(); const c = byId('SaltCrystal', 'c1'); sim(4, { action: true }); sim(0.2); walkX(30); return { n: c.n, at: at() }; });
-    check('34-3: a bridge of nine cubes across the gap; Brady walks over it', r.n === 9 && r.at.x >= 29 && !r.at.dead, r);
+    check('34-3: a bridge of ten cubes across the gap; Brady walks over it', r.n === 10 && r.at.x >= 29 && !r.at.dead, r);
     r = await ev(() => { place(49, 17); sim(0.3); sim(0.4, { jump: true, jumpPressed: true, right: true }); walkX(50); sim(0.2); const y0 = at().y; sim(3, { action: true }); return { y0, y1: at().y }; });
     check('34-3: a crystal that grows UP lifts Brady with each cube (to the shelf)', r.y1 <= 11, r);
-    r = await ev(() => { place(150, 11); sim(0.3); const c = byId('SaltCrystal', 'c5'); sim(2.2, { action: true }); return { n: c.n, lvl: +c.lvl.toFixed(2) }; });
+    r = await ev(() => { place(149, 11); sim(0.3); const c = byId('SaltCrystal', 'c5'); sim(2.2, { action: true }); return { n: c.n, lvl: +c.lvl.toFixed(2) }; });
     check('34-3 twist: the corner crystal: once it starts, the brine rises in the trough', r.n >= 3 && r.lvl > 0.05, r);
     await ev(() => freeze()); await shot('32-34-3-corner-brine.png');
     r = await ev(() => { thaw(); const c = byId('SaltCrystal', 'c5'); sim(5, { action: true }); sim(0.2); walkX(156); sim(0.6); walkX(166); return { n: c.n, at: at() }; });
-    check('34-3 twist: sideways, down, along: off the tip onto the lower bridge, under the beam, to the far ledge', r.n === 13 && r.at.x >= 164 && !r.at.dead, r);
+    check('34-3 twist: sideways, down, along: off the tip onto the lower bridge, under the beam, to the far ledge', r.n === 14 && r.at.x >= 164 && !r.at.dead, r);
     await ev(() => { place(152, 14); sim(0.2); freeze(); }); await shot('33-34-3-corner-done.png');
     await ev(() => thaw());
     await pano('39-34-3-panorama.png', 0.3);
@@ -368,7 +368,7 @@ const BOT_SALT = () => {
   // step right onto the cork, ride it to the far side, step off
   T.ride = id => { const B = ent('SaltBasin', id); for (let k = 0; k < 120 * 3 && !B.cork.afloat(); k++) if (!T.f()) return false; for (let k = 0; k < 120 * 2 && p().ride !== B.cork; k++) if (!T.f({ right: true })) return false; for (let k = 0; k < 120 * 8 && Math.abs(B.cork.x - B.cork.far) > 4; k++) if (!T.f()) return false; for (let k = 0; k < 120 * 2 && p().cx < (B.x1 + 2) * 32; k++) if (!T.f({ right: true })) return false; return true; };
   // stand on the crystal at column x and hold THROW until it has grown all its cubes
-  T.grow = (x, id) => { if (T.to(x) === false) return false; const c = ent('SaltCrystal', id); for (let k = 0; k < 120 * 10 && c.n < c.plan.length; k++) if (!T.f({ action: true })) return false; return T.wait(0.2); };
+  T.grow = (x, id) => { const c = ent('SaltCrystal', id); if (!c.saltTouch(p())) { if (!T.hopTo(x, 0.3)) return false; if (!T.wait(0.2)) return false; } for (let k = 0; k < 120 * 10 && c.n < c.plan.length; k++) if (!T.f({ action: true })) return false; return T.wait(0.2); };
   // stand at pixel X on a cap's disc until its gate's key is in
   T.plug = (X, lock) => { if (T.toPx(X) === false) return false; for (let k = 0; k < 120 * 14 && !S().keys.has(lock); k++) if (!T.f()) return false; return T.wait(0.5); };
   // a weighing spoon at column x: stand on it, hop off when the needle reads `at`
@@ -397,7 +397,7 @@ const BOT_SALT = () => {
 const BOT_ROUTES = {
   '34-1': [['scuff', 16, 'n1'], ['walk', 31 * 32], 'cp', ['walk', 52 * 32], ['scuff', 69, 'n2'], ['walk', 91 * 32], ['walk', 101 * 32], 'cp', ['scuff', 118, 'n3'], ['scuff', 118, 'n4'], ['walk', 152 * 32], 'cp', ['walk', 186 * 32], ['gate']],
   '34-2': [['spoon', 17, 'b1'], ['ride', 'b1'], ['walk', 33 * 32], 'cp', ['spoon', 41, 'b2'], ['ride', 'b2'], ['walk', 84 * 32], 'cp', ['spoon', 91, 'b3'], ['ride', 'b3'], ['walk', 136 * 32], 'cp', ['spoon', 148, 'b4'], ['ride', 'b4'], ['walk', 178 * 32], ['gate']],
-  '34-3': [['to', 17], ['hopTo', 19, 0.45], ['grow', 19, 'c1'], ['walk', 30 * 32], 'cp', ['to', 48], ['hopTo', 50, 0.45], ['grow', 50, 'c2'], ['walk', 62 * 32], ['hopTo', 64, 0.45], ['grow', 64, 'c3'], ['walk', 81 * 32], 'cp', ['walk', 99 * 32], ['walk', 120 * 32], 'cp', ['walk', 145 * 32], ['to', 148], ['hopTo', 150, 0.45], ['grow', 150, 'c5'], ['walk', 158 * 32, { noHop: true }], ['walk', 178 * 32], ['gate']],
+  '34-3': [['to', 16], ['grow', 18, 'c1'], ['walk', 30 * 32], 'cp', ['to', 48], ['grow', 50, 'c2'], ['walk', 61 * 32], ['grow', 63, 'c3'], ['walk', 81 * 32], 'cp', ['walk', 99 * 32], ['walk', 120 * 32], 'cp', ['walk', 145 * 32], ['to', 147], ['grow', 149, 'c5'], ['walk', 158 * 32, { noHop: true }], ['walk', 178 * 32], ['gate']],
   '34-4': [['plug', 18 * 32 + 16, 'gate1'], ['walk', 32 * 32], 'cp', ['plug', 62 * 32 + 16, 'gate2'], ['walk', 78 * 32], 'cp', ['plug', 110 * 32 + 16, 'gate3'], ['walk', 120 * 32], 'cp', ['plug', 134 * 32, 'gate4'], ['walk', 150 * 32], ['gate']],
   '34-5': [['weigh', 13, 'w1', 0.95], ['walk', 24 * 32], 'cp', ['weigh', 48, 'w2', 1.38], ['walk', 76 * 32 + 16, { noHop: true }], ['door'], ['bossFight'], ['gate']]
 };
