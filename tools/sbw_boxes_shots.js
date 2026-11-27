@@ -53,7 +53,7 @@ const save = (name, dataUrl) => fs.writeFileSync(path.join(out, name), Buffer.fr
         let L; try { L = B.getLevel(world, i); } catch (e) { break; } if (!L) break;
         const A = L.areas[0], all = [], boxes = [];
         for (let y = 1; y < A.H - 1; y++) for (let x = 1; x < A.W - 1; x++) {
-          if (A.tiles[y * A.W + x] !== T.QBLOCK || (A.hide && A.hide[y * A.W + x])) continue;
+          if (A.tiles[y * A.W + x] !== T.QBLOCK || (A.hide && A.hide[y * A.W + x]) || A.contents[x + ',' + y] === 'pupo') continue;   // (Pupo's nap boxes have their own look)
           all.push({ x, y });
           let fy = -1; for (let yy = y + 2; yy <= Math.min(A.H - 1, y + 6); yy++) { const t = A.tiles[yy * A.W + x]; if (solid(t)) { fy = yy; break; } }
           if (fy < 0) continue;
@@ -163,16 +163,20 @@ const save = (name, dataUrl) => fs.writeFileSync(path.join(out, name), Buffer.fr
     if (checksOnly || r.none) continue;
     // the phone shot: Brady in front of the empty box and the closed one
     await ev((r) => {
-      const B = window.BRADY, g = S(), p = P(), A = g.area, [bx] = r.box, ox = r.other ? r.other[0] : bx;
+      const B = window.BRADY, g = S(), p = P(), A = g.area, [bx] = r.box; let ox = r.other ? r.other[0] : bx;
+      // a land whose levels put one box per screen (no closed box within 16 tiles of a hittable one): for the picture
+      // only, a closed box of the same land is set 4 tiles along the same row (the level itself is not changed)
+      if (!r.other) { const y = r.box[1]; for (const d of [4, -4, 5, -5, 3, -3]) { const x = bx + d; if (A.tiles[y * A.W + x] === B.T.EMPTY) { A.tiles[y * A.W + x] = B.T.QBLOCK; ox = x; r.staged = true; break; } } }
       const mid = (bx + ox) / 2, stand = bx < ox ? bx - 1 : bx + 1;
       // the floor under the empty box, one tile to the side
       let fy = -1; for (let y = r.box[1] + 2; y < A.H; y++) { const t = A.tiles[y * A.W + stand]; if (B.SOLID[t] || t === B.T.SEMI) { fy = y; break; } }
-      for (const e of g.entities) if (e.item && !e.remove) e.remove = true;
+      for (const e of g.entities) { if (e.item && !e.remove) e.remove = true; if (typeof e.drawBubble === 'function' && 'text' in e) e.drawBubble = () => {}; }   // (no hint bubbles over the boxes)
       if (fy > 0) { p.x = stand * 32 + 16 - p.w / 2; p.y = fy * 32 - p.h; } p.vx = p.vy = 0; p.facing = ox >= bx ? 1 : -1;
       sim(0.25);
       g.camX = Math.max(0, Math.min(A.W * 32 - B.Game.viewW, mid * 32 + 16 - B.Game.viewW * 0.5)); g.camY = g.camTargetY(true);
       g.player.invuln = 0;
-    }, r);
+      return !!r.staged;
+    }, r).then(st => { if (st) console.log('NOTE ' + L.name + ': picture staged (the closed box beside the hit one is added for the picture only)'); });
     await page.waitForTimeout(300);
     await page.screenshot({ path: path.join(out, String(n).padStart(2, '0') + '-' + L.id + '.png') });
   }

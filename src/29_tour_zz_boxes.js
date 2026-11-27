@@ -318,7 +318,7 @@ const BoxArt = (() => {
     } },
     // ---- Antarctica: blue insulated sample case, a white ice core in its riveted porthole; the core tips the hatch ----
     aq: { name: 'Antarctica', draw(c, p) {
-      const I1 = '#a9dcf4', I2 = '#6fb3da', I3 = '#e3f6ff', St = '#9aa6b5', St2 = '#5f6b7a';
+      const I1 = '#86c9ef', I2 = '#4f9acb', I3 = '#d4f0ff', St = '#9aa6b5', St2 = '#5f6b7a';
       const rise = ease(seg(p, 0, 0.6)), q = ease(seg(p, 0.35, 1));
       lidBack(c, q, 1, 9, 30, I2, 10);
       R(c, 2, 8, 28, 23.5, 2.5, I1);
