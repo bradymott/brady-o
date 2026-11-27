@@ -266,7 +266,11 @@ TourHats.NOT = new Set([].concat(
   'washNet washCrawler washBeetleGate washPeep washSweater washSeam washFeltArt washPocket washJaws washLooseSheet washHem'.split(' '),
   // Pupo Standard Time (hidden land A7): thought bubbles, cushions, lashes, lids, mouths, flowers, jaws, rulers, things,
   // pictures, the tell, the bench and hollow (12-1), the full stop, the sentence, Pupo at his lectern, the parrot's echo
-  'pstThought pstCushionPad pstLashes pstLid pstMouth pstFlower pstJaw pstRuler pstThing pstPic pstZ pstBench pstHollow pstStop pstStrip pstSpeaker pstEcho'.split(' ')
+  'pstThought pstCushionPad pstLashes pstLid pstMouth pstFlower pstJaw pstRuler pstThing pstPic pstZ pstBench pstHollow pstStop pstStrip pstSpeaker pstEcho'.split(' '),
+  // The Orchard After Closing (28): trellises, forks, trellis critters (drawn behind the slats on the far face), the bitten
+  // pear tell, blossoms, bells, buds, sleeves, grafts, loaded branches, the basket, the hedge gate, room and perch marks,
+  // Japan's last pear tree
+  'orchTrellis orchFork orchCrawler orchBite orchBlossom orchBell orchBud orchSleeve orchGraft orchLoaded orchBasket orchHedgeGate orchRoomMark orchPerchMark orchJpTree'.split(' ')
 ));
 
 /* ---------- the animals: [fx, fxFlip, fy, size] (see the header) ---------- */
@@ -333,7 +337,9 @@ Object.assign(TourHats.HEADS, {
   // Pupo Standard Time (hidden land A7): the pillow louse, the secondhand slug, the napkin bat, the snore pea
   pstLouse: [0.4, 0.4, -1.1, 0], pstSlug: [0.55, 0.55, -1.45, 0], pstBat: [0.02, 0.02, -1.2, 0], pstPea: [0.02, 0.02, -1.15, 0],
   // Postmark Sound (world 27): the gum gull, the margin crab, the blot pup, the crease eel
-  postGull: [0.33, 0.33, -1.05, 0], postCrab: [0, 0, -1.2, 0], postPup: [0.43, 0.43, -1.0, 0], postEel: [0.4, 0.4, -0.9, 0]
+  postGull: [0.33, 0.33, -1.05, 0], postCrab: [0, 0, -1.2, 0], postPup: [0.43, 0.43, -1.0, 0], postEel: [0.4, 0.4, -0.9, 0],
+  // The Orchard After Closing (28): the pear fly, the tie worm, the pip finch, the bark snail
+  orchFly: [0.3, 0.3, -1.1, 0], orchWorm: [0.4, 0.4, -0.9, 0], orchFinch: [0.3, 0.3, -1.3, 0], orchSnail: [0.5, 0.5, -1.15, 0]
 
 });
 

@@ -480,6 +480,23 @@ const BoxArt = (() => {
         c.fillStyle = Rd2; c.fillRect(13.8, py - 2, 4.4, 1);
         O(c, 16, py, 2, '#e8e2d4', 1);
       });
+    } },
+    // ---- The Orchard After Closing (28, hidden land): a slatted ivory fruit punnet with a leaf on its lid and a plum
+    //      pear-shaped clasp; the hit flips the clasp up and the lid swings back; empty, the lid stands open behind ----
+    orch: { name: 'The Orchard After Closing', draw(c, p) {
+      const Iv = '#f4ecd4', Iv2 = '#d8ccaa', Pl = '#7a2e4a', Lf = '#5a8a3a';
+      const q = io(seg(p, 0.2, 0.9)), flip = seg(p, 0, 0.3);
+      // the lid, hinged at the back top edge: closed it lies flat (y 9..14); open it stands up behind
+      const lh = 6 + 8 * q;
+      R(c, 4, 13 - lh, 24, lh, 1.5, Iv, 1.2);
+      c.fillStyle = Iv2; for (const x of [10, 16, 22]) c.fillRect(x - 0.6, 14 - lh, 1.2, lh - 2);
+      if (q < 0.6) rot(c, 16, 8, -0.5, () => G(c, [[16, 8], [22, 5], [27, 8], [22, 10]], Lf));
+      // the body: slats
+      R(c, 3, 14, 26, 16, 1.5, Iv, 1.3);
+      c.fillStyle = Iv2; for (const x of [9, 15, 21]) c.fillRect(x, 16, 1.4, 12);
+      if (q > 0.5) R(c, 5, 15, 22, 3, 0.8, '#a8987a', 0);
+      // the plum pear clasp: hanging over the lid's edge, flipped up by the hit, dangling once open
+      rot(c, 16, 14, q > 0.5 ? 0 : -flip * 2.6, () => { G(c, [[16, 14], [13, 17], [13.5, 21], [16, 22.5], [18.5, 21], [19, 17]], Pl); });
     } }
   };
 
