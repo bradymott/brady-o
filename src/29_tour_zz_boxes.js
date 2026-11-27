@@ -433,6 +433,22 @@ const BoxArt = (() => {
       const tx = px - Math.sin(a) * len, ty = py + Math.cos(a) * len;
       L(c, [[px, py], [tx, ty]], '#3a2a1a', 0.8);
       rot(c, tx, ty, -a * 0.25 + (q > 0.9 ? 0.1 : 0), () => { R(c, tx - 3.5, ty - 1, 7, 9, 1.5, Cr, 1.2); O(c, tx, ty + 0.8, 0.8, '#3a2a1a', 0); });
+    } },
+    // ---- Pupo Standard Time (hidden land A7): a quilted honey cushion-chest with a mint clock-hand clasp; the hand
+    //      swings down to half past, the cushion yawns open ----
+    pst: { name: 'Pupo Standard Time', draw(c, p) {
+      const H1 = '#f2b632', H2 = '#c98a1a', H3 = '#ffd673', Mi = '#8fdcaa', Ml = '#4fa878', Cr = '#fbefd2';
+      const sw = io(seg(p, 0, 0.45)), op = ease(seg(p, 0.35, 1));
+      R(c, 2, 6.5, 28, 25, 7, H1);
+      c.save(); rr(c, 2, 6.5, 28, 25, 7); c.clip(); c.strokeStyle = H2; c.lineWidth = 0.9;
+      for (let k = -24; k < 34; k += 8) { c.beginPath(); c.moveTo(2 + k, 6.5); c.lineTo(2 + k + 25, 31.5); c.moveTo(2 + k + 25, 6.5); c.lineTo(2 + k, 31.5); c.stroke(); }
+      c.fillStyle = H3; c.globalAlpha = 0.6; rr(c, 5, 8, 22, 3, 1.5); c.fill(); c.globalAlpha = 1; c.restore();
+      // the mouth: a cream-rimmed dark yawn opening in the upper half
+      if (op > 0) { E(c, 16, 15 - op * 1.5, 11 * (0.5 + op * 0.5), 6 * op + 0.5, 0, Cr, 1.2); E(c, 16, 15 - op * 1.5, 9 * (0.5 + op * 0.5), 4.6 * op + 0.2, 0, HOLE, 0); }
+      L(c, [[3, 18.5], [29, 18.5]], Cr, 2.2); L(c, [[3, 18.5], [29, 18.5]], H2, 0.6);
+      // the clock-hand clasp: two-ended across the seam, it swings down to hang
+      rot(c, 16, 18.5, sw * PI / 2, () => { c.beginPath(); c.moveTo(16 - 11, 18.5); c.lineTo(16 - 4, 17); c.lineTo(16 + 9, 17.6); c.lineTo(16 + 12, 18.5); c.lineTo(16 + 9, 19.4); c.lineTo(16 - 4, 20); c.closePath(); fs(c, Mi, 1.1); });
+      O(c, 16, 18.5, 2.6, Mi, 1.1); O(c, 16, 18.5, 1.1, Ml, 0);
     } }
     ,
     // ---- Wrong Side of the Wash (26, hidden land): a folded cream handkerchief parcel clamped by one red clothes
