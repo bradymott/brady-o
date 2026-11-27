@@ -46,7 +46,7 @@ const pegRows = (() => {
   fillG(Gr, 139, 4, 172, 6, 'H');
   put(Gr, 141, 7, '5'); put(Gr, 156, 7, 'Y'); put(Gr, 145, 11, 'w'); put(Gr, 151, 10, 'z'); put(Gr, 158, 18, 'R');
   put(Gr, 144, 15, 'o.o.o'); put(Gr, 160, 10, 'o.o.o'); put(Gr, 163, 16, 'o.o.o');
-  ground(Gr, 169, 186, 23); put(Gr, 172, 22, 'c'); put(Gr, 176, 19, '?'); put(Gr, 182, 22, 'l');
+  ground(Gr, 169, 186, 23); put(Gr, 172, 22, 'c'); put(Gr, 176, 19, '?');
   // the last net: a second beetle, critters on both faces
   fillG(Gr, 185, 4, 218, 7, 'H');
   put(Gr, 187, 8, '6'); put(Gr, 202, 8, 'J'); put(Gr, 195, 10, 'U'); put(Gr, 199, 13, 'V'); put(Gr, 208, 9, 'E'); put(Gr, 211, 17, 'N');
@@ -288,7 +288,7 @@ const pocketRows = (() => {
   // the drying room's pocket: gold lining, by the hanky
   put(Gr, 122, 19, '9'); put(Gr, 120, 17, 'u'); put(Gr, 130, 20, 'a');
   // ③ the shared stripe: two mint pockets; beyond the wall a basin, and the scalloped one's shelf by the third wall's top
-  put(Gr, 136, 20, 'K'); put(Gr, 138, 20, 't'); put(Gr, 141, 19, 'M'); put(Gr, 144, 20, 'x'); put(Gr, 146, 19, 'X'); put(Gr, 149, 20, 'V'); fillG(Gr, 151, 3, 154, 20, 'H');
+  put(Gr, 136, 20, 'K'); put(Gr, 138, 20, 't'); put(Gr, 141, 22, 'M'); put(Gr, 144, 20, 'x'); put(Gr, 146, 22, 'X'); put(Gr, 149, 20, 'V'); fillG(Gr, 151, 3, 154, 20, 'H');
   ground(Gr, 155, 170, 21); fillG(Gr, 155, 10, 162, 10, 'H'); put(Gr, 156, 8, 'Y'); put(Gr, 160, 9, 'm'); put(Gr, 161, 6, 'R');
   fillG(Gr, 157, 15, 161, 15, 'H'); put(Gr, 159, 13, 'Z'); put(Gr, 157, 14, 'n'); put(Gr, 166, 19, 'E'); put(Gr, 168, 20, 'j');
   fillG(Gr, 163, 10, 164, 20, 'H');
