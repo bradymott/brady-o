@@ -60766,15 +60766,16 @@ const operaRows = (() => {
   fillG(G, 44, 22, 77, H - 1, '.');                   // the pit (bottomless)
   put(G, 50, 25, 'U');
   fillG(G, 54, 10, 59, 10, '-'); put(G, 56, 9, 'o.o');
-  put(G, 63, 25, 'V'); fillG(G, 66, 3, 71, 3, '#'); put(G, 67, 2, 'O'); put(G, 69, 2, 'f');
-  fillG(G, 68, 9, 77, 9, '-'); put(G, 70, 8, 'o.o.o'); put(G, 60, 15, 'q');
+  put(G, 63, 25, 'V'); fillG(G, 69, 3, 74, 3, '#'); put(G, 70, 2, 'O'); put(G, 72, 2, 'f');   // her box sits clear of the column's top: Brady drifts off the song onto the balcony with nothing beside his head
+  fillG(G, 66, 9, 77, 9, '-'); put(G, 70, 8, 'o.o.o');   // the balcony starts right beside the column (it began two tiles off: Brady drifted off the top of the song and dropped just short)
+  put(G, 60, 15, 'q');
   fillG(G, 76, 12, 78, 21, '#');                      // the far side of the pit: a box tier down to the stalls
   // ③ the duet: two divas take turns; column X then column Y
   put(G, 82, 21, 'c'); put(G, 83, 17, 'o.o.o');
   fillG(G, 86, 22, 113, H - 1, '.');
   put(G, 88, 25, 'J'); put(G, 99, 25, 'K');
   fillG(G, 82, 4, 86, 4, '#'); put(G, 84, 3, 'm');
-  fillG(G, 102, 3, 106, 3, '#'); put(G, 104, 2, 'i');
+  fillG(G, 105, 3, 109, 3, '#'); put(G, 107, 2, 'i');                     // (was at 102: it walled Brady in at the top of column K)
   fillG(G, 91, 12, 95, 12, '-'); put(G, 92, 11, 'o.o');
   fillG(G, 103, 8, 113, 8, '-'); put(G, 108, 7, '!'); put(G, 110, 7, 'o.o');
   fillG(G, 114, 9, 117, 21, '#'); fillG(G, 118, 12, 123, 21, '#');
@@ -60782,8 +60783,8 @@ const operaRows = (() => {
   put(G, 120, 11, 'c'); put(G, 121, 7, '?');
   fillG(G, 124, 22, 146, H - 1, '.');
   put(G, 128, 2, 'w'); put(G, 136, 2, 'w');
-  put(G, 140, 25, 'Z'); fillG(G, 143, 5, 147, 5, '#'); put(G, 145, 4, 'k');
-  fillG(G, 144, 9, 151, 9, '-'); put(G, 132, 14, 'q');
+  put(G, 140, 25, 'Z'); fillG(G, 146, 5, 150, 5, '#'); put(G, 148, 4, 'k');   // her box was at 143, hard against the column: it stopped Brady stepping off the top
+  fillG(G, 143, 9, 151, 9, '-'); put(G, 132, 14, 'q');
   put(G, 150, 21, 'G'); put(G, 147, 21, 'r'); put(G, 153, 21, 'r');
   return rowsOf(G);
 })();
@@ -62379,7 +62380,23 @@ TourSeams.TELLS.itSackTell = true; TourSeams.TELLS.itRopeTell = true;
   };
 }
 // the shell game's cups in the opera: top hats
-if (typeof TourRoomArt !== 'undefined' && TourRoomArt.CUPS) TourRoomArt.CUPS.tophat = { body: '#2a2236', band: '#c8283a', w: 30, h: 32 };
+// (the cups live on TourRoomCritters: registered on TourRoomArt they fell back to the shared white cup)
+if (typeof TourRoomCritters !== 'undefined' && TourRoomCritters.CUPS) {
+  TourRoomCritters.CUPS.tophat = { body: '#2a2236', band: '#c8283a', w: 30, h: 32 };
+  const cup0 = TourRoomCritters.cup;
+  TourRoomCritters.cup = function (c, look, x, y, t, glow) {
+    if (look !== 'tophat') return cup0.call(this, c, look, x, y, t, glow);
+    const w = 26, h = 30, brim = 42;
+    if (glow) { c.save(); c.globalAlpha = 0.25 + 0.15 * Math.sin(t * 6); c.fillStyle = '#fff4a0'; c.beginPath(); c.ellipse(x, y - h / 2, brim * 0.6, h * 0.8, 0, 0, TAU); c.fill(); c.restore(); }
+    Ink.around(c, x - brim / 2 - 4, y - h - 8, brim + 8, h + 12, g => {
+      g.fillStyle = '#2a2236';
+      g.beginPath(); g.moveTo(x - w / 2 + 2, y - 3); g.lineTo(x - w / 2, y - h); g.quadraticCurveTo(x, y - h - 5, x + w / 2, y - h); g.lineTo(x + w / 2 - 2, y - 3); g.closePath(); g.fill();   // the crown
+      g.beginPath(); g.ellipse(x, y - 2, brim / 2, 4.5, 0, 0, TAU); g.fill();                                                                                                    // the brim
+      g.fillStyle = '#c8283a'; g.fillRect(x - w / 2 + 2, y - 12, w - 4, 6);                                                                                                       // the silk band
+      g.fillStyle = 'rgba(255,255,255,0.3)'; g.fillRect(x - w / 2 + 5, y - h + 3, 3, h - 18);
+    }, { pad: 6 });
+  };
+}
 // the bean store's tokens: coffee beans
 TourMaze.addKeys({ tokBean: { name: 'COFFEE BEAN', col: '#6a3a1e', toast: 'BEAN!', icon: (c, x, y) => { c.fillStyle = '#6a3a1e'; c.beginPath(); c.ellipse(x, y, 7, 10, 0.4, 0, TAU); c.fill(); c.strokeStyle = INK; c.lineWidth = 1.5; c.stroke(); c.strokeStyle = '#c8945a'; c.lineWidth = 1.6; c.beginPath(); c.moveTo(x - 3, y - 7); c.quadraticCurveTo(x + 3, y, x - 2, y + 8); c.stroke(); } } });
 
