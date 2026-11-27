@@ -50,7 +50,9 @@ const mountStep = (play, A, R, kit, dt) => {
   };
 }
 // the mark on the floor (a honey cushion pad with the prop's icon) and the hint over it
+const drawRule = (play, ctx, R, kit) => { const K0 = TourRooms.kinds[kit.kind]; if (!R.won && !R.pstMount && R.t > 1.8 && R.t < 9 && K0.ruleText) TourRooms.hudText(play, ctx, K0.ruleText, '#ffffff', 12); };
 const drawMark = (play, ctx, A, R, kit, label) => {
+  drawRule(play, ctx, R, kit);
   const x = kit.data.mark * TS + TS / 2, y = (kit.data.markRow + 1) * TS;
   ctx.save(); PstArt.cushion(ctx, x - 20, y - 8, 40, 10, HONEY, HONEY_LO, HONEY_HI);
   if (!R.pstMount && !R.won && R.near) { ctx.fillStyle = '#ffffff'; ctx.font = '9px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText(label || 'THROW: TAKE IT', x, y - 70); }
@@ -70,7 +72,8 @@ const makeRoom = (keep, A, o, extra) => {
 /* ================= pstKnock: KNOCK KNOCK ================= */
 const FORT_DX = [-6, 0, 6];
 TourRooms.def('pstKnock', {
-  title: 'KNOCK KNOCK', rule: 'STAND ON THE MARK, THROW TO TAKE THE POPGUN. AIM WITH THE STICK AND LOB A CORK INTO EACH WINDOW IN TURN AS THE LAMB PASSES IT', need: 'KNOCK AT ALL THREE FIRST!',
+  defaults: { mid: 12 },
+  title: 'KNOCK KNOCK', rule: '', ruleText: 'LOB A CORK INTO EACH WINDOW AS THE LAMB PASSES', need: 'KNOCK AT ALL THREE FIRST!',
   make(o, keep, ctx, A, rng) { return makeRoom(keep, A, o, (g, mid) => { g.hline(mid - 8, mid + 8, 8, '-'); g.coins(mid - 2, mid + 2, 6); }); },
   enter(play, A, R, kit) { R.next = 0; R.aim = -Math.PI / 2; R.cork = null; R.lambT = 0; },
   lamb(kit, t) {
@@ -155,8 +158,8 @@ TourRooms.kinds.pstKnock.testWin = function (g, A, R, kit, frame) {
 
 /* ================= pstCore: THE PILLOW SAMPLE ================= */
 TourRooms.def('pstCore', {
-  defaults: { mid: 13 },
-  title: 'THE PILLOW SAMPLE', rule: 'TAKE THE PUNCH ON THE MARK (THROW). STEER IT WITH THE STICK, THROW TO PUNCH: ONE CORE THROUGH ALL THREE SLEEP BUBBLES', need: 'TAKE A PERFECT CORE FIRST!',
+  defaults: { mid: 11 },
+  title: 'THE PILLOW SAMPLE', rule: '', ruleText: 'ONE CORE THROUGH ALL THREE BUBBLES', need: 'TAKE A PERFECT CORE FIRST!',
   make(o, keep, ctx, A, rng) { return makeRoom(keep, A, o, (g, mid) => { g.coins(mid - 3, mid + 3, 4); }); },
   enter(play, A, R, kit) { R.px = kit.data.mark * TS + TS / 2; R.drop = null; R.st = 0; this.layout(R); },
   layout(R) { const r = Math.random; R.base = (r() - 0.5) * 4 * TS; R.d = [(r() - 0.5) * 14, (r() - 0.5) * 14, (r() - 0.5) * 14]; R.sample = null; },
@@ -199,7 +202,7 @@ TourRooms.def('pstCore', {
     ctx.fillStyle = '#1a0a14'; ctx.fillRect(R.px - 4, py + 4, 8, 6);
     if (!R.drop && R.pstMount) { ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(R.px, top); ctx.lineTo(R.px, top + h); ctx.stroke(); ctx.setLineDash([]); }
     // the sample just taken: a little column with the bubbles it caught
-    if (R.sample) { const sx = kit.data.mark * TS + TS / 2 + 9 * TS, sy = top + 10; ctx.fillStyle = '#fff4e0'; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(sx - 8, sy, 16, h); ctx.strokeRect(sx - 8, sy, 16, h); R.sample.forEach((hit, q) => { ctx.fillStyle = hit ? 'rgba(160,220,255,0.95)' : 'rgba(200,200,200,0.4)'; ctx.beginPath(); ctx.arc(sx, sy + 22 + q * 28, 6, 0, TAU); ctx.fill(); }); }
+    if (R.sample) { const sx = kit.data.mark * TS + TS / 2 - 6.5 * TS, sy = top + 10; ctx.fillStyle = '#fff4e0'; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(sx - 8, sy, 16, h); ctx.strokeRect(sx - 8, sy, 16, h); R.sample.forEach((hit, q) => { ctx.fillStyle = hit ? 'rgba(160,220,255,0.95)' : 'rgba(200,200,200,0.4)'; ctx.beginPath(); ctx.arc(sx, sy + 22 + q * 28, 6, 0, TAU); ctx.fill(); }); }
     ctx.restore();
     drawMark(play, ctx, A, R, kit, 'THROW: TAKE THE PUNCH');
     if (!R.won && R.pstMount) TourRooms.hudText(play, ctx, 'ONE CORE THROUGH ALL THREE', '#ffd84a', 13);
@@ -222,8 +225,8 @@ TourRooms.kinds.pstCore.testWin = function (g, A, R, kit, frame) {
 
 /* ================= pstTray: ONE TRIP, THREE COCOAS ================= */
 TourRooms.def('pstTray', {
-  defaults: { mid: 17 },
-  title: 'ONE TRIP, THREE COCOAS', rule: 'TAKE THE TRAY ON THE MARK (THROW). TILT IT AGAINST THE WOBBLE WITH THE STICK. WHEN THE WAITER\'S HANDS REACH THE COUNTER: THROW TO SERVE', need: 'SERVE ALL THREE FIRST!',
+  defaults: { mid: 12 },
+  title: 'ONE TRIP, THREE COCOAS', rule: '', ruleText: 'KEEP THE TRAY LEVEL, SERVE AT THE COUNTER', need: 'SERVE ALL THREE FIRST!',
   make(o, keep, ctx, A, rng) { return makeRoom(keep, A, o, (g, mid) => { g.coins(mid - 6, mid - 4, 8); g.coins(mid + 4, mid + 6, 8); }); },
   enter(play, A, R, kit) { this.reset(R); R.st = 0; },
   reset(R) { R.mugs = [-0.4, 0, 0.4].map(u => ({ u, v: 0, off: 0 })); R.tilt = 0; R.ctl = 0; R.prog = 0; R.serveT = null; },
@@ -245,10 +248,15 @@ TourRooms.def('pstTray', {
     const cx = kit.data.mark * TS + TS / 2, ty = 6.6 * TS, half = 2.6 * TS;
     ctx.save(); ctx.lineJoin = 'round';
     // the counter at the right and the waiter's clock-hand arms reaching for it
-    const kx = cx + 8 * TS; ctx.fillStyle = '#8a5a3a'; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(kx - 30, 7 * TS, 60, 4 * TS); ctx.strokeRect(kx - 30, 7 * TS, 60, 4 * TS); ctx.fillStyle = CREAM; ctx.fillRect(kx - 34, 7 * TS - 6, 68, 8); ctx.strokeRect(kx - 34, 7 * TS - 6, 68, 8);
-    const wx = cx - 8 * TS; ctx.fillStyle = PLUM_HI; ctx.beginPath(); ctx.ellipse(wx, 8.2 * TS, 22, 34, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = CREAM; ctx.beginPath(); ctx.arc(wx, 6.6 * TS, 16, 0, TAU); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(wx - 8, 6.6 * TS); ctx.lineTo(wx - 3, 6.6 * TS); ctx.moveTo(wx + 3, 6.6 * TS); ctx.lineTo(wx + 8, 6.6 * TS); ctx.stroke();
+    const kx = cx + 6 * TS; ctx.fillStyle = '#8a5a3a'; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(kx - 30, 7 * TS, 60, 4 * TS); ctx.strokeRect(kx - 30, 7 * TS, 60, 4 * TS); ctx.fillStyle = CREAM; ctx.fillRect(kx - 34, 7 * TS - 6, 68, 8); ctx.strokeRect(kx - 34, 7 * TS - 6, 68, 8);
+    const wx = cx - 6 * TS, wy = 8 * TS;
+    ctx.fillStyle = '#ffffff'; ctx.lineWidth = 2; ctx.beginPath(); for (let k = 0; k < 9; k++) ctx.arc(wx - 14 + (k % 3) * 14, wy - 22 + Math.floor(k / 3) * 14, 10, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#3a2a3a'; ctx.beginPath(); ctx.ellipse(wx, wy - 44, 13, 15, 0, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(wx - 7, wy - 46); ctx.lineTo(wx - 2, wy - 45); ctx.moveTo(wx + 2, wy - 45); ctx.lineTo(wx + 7, wy - 46); ctx.stroke(); ctx.strokeStyle = INK;
+    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(wx - 8, wy - 58, 7, 0, TAU); ctx.arc(wx + 8, wy - 58, 7, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = PLUM; ctx.beginPath(); ctx.moveTo(wx, wy - 30); ctx.lineTo(wx - 9, wy - 35); ctx.lineTo(wx - 9, wy - 25); ctx.closePath(); ctx.moveTo(wx, wy - 30); ctx.lineTo(wx + 9, wy - 35); ctx.lineTo(wx + 9, wy - 25); ctx.closePath(); ctx.fill(); ctx.stroke();
     const reach = (R.prog || 0) * (kx - wx - 50);
-    PstArt.hand(ctx, wx + 16, 7.6 * TS, 30 + reach, 0, MINT, 4); PstArt.hand(ctx, wx + 16, 8.2 * TS, 26 + reach, 0.04, HONEY, 4);
+    PstArt.hand(ctx, wx + 20, wy - 22, 30 + reach, 0, MINT, 4); PstArt.hand(ctx, wx + 20, wy - 14, 26 + reach, 0.04, HONEY, 4);
     // the tray and its three mugs
     ctx.save(); ctx.translate(cx, ty); ctx.rotate(R.tilt || 0);
     ctx.fillStyle = '#c8c8d4'; ctx.strokeStyle = INK; ctx.lineWidth = 2.5; rr(ctx, -half - 8, 0, 2 * half + 16, 8, 4); ctx.fill(); ctx.stroke();
@@ -274,8 +282,8 @@ TourRooms.kinds.pstTray.testWin = function (g, A, R, kit, frame) {
 
 /* ================= pstCaps: NIGHTCAP STAND ================= */
 TourRooms.def('pstCaps', {
-  defaults: { mid: 16 },
-  title: 'NIGHTCAP STAND', rule: 'TAKE THE BEDPOST ON THE MARK (THROW). STEER IT UNDER EACH FALLING NIGHTCAP: THEY LAND CROOKED. STACK FOUR AND HOLD THEM FOR ONE FULL WOBBLE', need: 'STACK FOUR NIGHTCAPS FIRST!',
+  defaults: { mid: 12 },
+  title: 'NIGHTCAP STAND', rule: '', ruleText: 'CATCH FOUR CAPS, HOLD ONE FULL WOBBLE', need: 'STACK FOUR NIGHTCAPS FIRST!',
   make(o, keep, ctx, A, rng) { return makeRoom(keep, A, o, (g, mid) => { g.coins(mid - 7, mid - 5, 4); g.coins(mid + 5, mid + 7, 4); }); },
   enter(play, A, R, kit) { R.post = kit.data.mark * TS + TS / 2; this.reset(R); R.st = 0; },
   reset(R) { R.caps = []; R.fall = null; R.holdT = 0; R.waitT = 0.8; },
@@ -338,8 +346,8 @@ TourRooms.kinds.pstCaps.testWin = function (g, A, R, kit, frame) {
 
 /* ================= pstPour: THE EVEN POUR ================= */
 TourRooms.def('pstPour', {
-  defaults: { mid: 14 },
-  title: 'THE EVEN POUR', rule: 'TAKE THE JUG ON THE MARK (THROW). TILT IT WITH THE STICK TOWARD WHICHEVER MUG IS LOWER. EMPTY IT WITH BOTH MUGS IN THE MARKED BAND', need: 'POUR IT EVENLY FIRST!',
+  defaults: { mid: 11 },
+  title: 'THE EVEN POUR', rule: '', ruleText: 'TILT TOWARD THE LOWER MUG: FILL BOTH TO THE BAND', need: 'POUR IT EVENLY FIRST!',
   make(o, keep, ctx, A, rng) { return makeRoom(keep, A, o, (g, mid) => { g.coins(mid - 2, mid + 2, 2); }); },
   enter(play, A, R, kit) { this.reset(R); R.st = 0; },
   reset(R) { R.jug = 1; R.L = 0; R.Rv = 0; R.tau = 0; R.ph = Math.random() * 6; R.done = null; },
@@ -396,8 +404,8 @@ TourRooms.kinds.pstPour.testWin = function (g, A, R, kit, frame) {
 
 /* ================= pstPrivacy: A LITTLE PRIVACY ================= */
 TourRooms.def('pstPrivacy', {
-  defaults: { mid: 10 },
-  title: 'A LITTLE PRIVACY', rule: 'HOLD THROW ON THE QUILT\'S EDGE AND WALK IT UP OVER PUPO UNTIL ONLY HIS NOSE SHOWS. THEN STAY QUITE STILL FOR THREE SNORES', need: 'TUCK HIM IN FIRST!',
+  defaults: { mid: 8 },
+  title: 'A LITTLE PRIVACY', rule: '', ruleText: 'HOLD THROW, TUCK HIM IN TO THE NOSE, KEEP STILL', need: 'TUCK HIM IN FIRST!',
   make(o, keep, ctx, A, rng) { return makeRoom(keep, A, o, (g, mid) => { g.coins(mid - 1, mid + 1, 3); }); },
   enter(play, A, R, kit) { R.cov = 0.25; R.pstGrip = null; R.snores = 0; R.stillT = 0; R.st = 0; R.wake = 0; },
   // the bed lies on the floor from the mark: the quilt's edge starts at the mark, Pupo's nose is 5.2 tiles on
@@ -444,7 +452,8 @@ TourRooms.def('pstPrivacy', {
     const nx0 = x0 + (0.8 - 0.25) / 0.75 * span, nx1 = x0 + (0.95 - 0.25) / 0.75 * span; ctx.strokeStyle = 'rgba(143,220,170,0.8)'; ctx.lineWidth = 2; ctx.setLineDash([3, 4]); ctx.strokeRect(nx0, y - 32, nx1 - nx0, 24); ctx.setLineDash([]);
     if (R.pstGrip != null) { const p = play.player; ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(p.cx, p.y + 22); ctx.lineTo(edge, qy + 14); ctx.stroke(); }
     ctx.restore();
-    if (!R.won) TourRooms.hudText(play, ctx, R.cov >= 0.8 && R.pstGrip == null ? 'SHHH... SNORES ' + (R.snores || 0) + ' / 3' : 'TUCK HIM IN', '#ffd84a', 13);
+    drawRule(play, ctx, R, kit);
+    if (!R.won && R.t > 9) TourRooms.hudText(play, ctx, R.cov >= 0.8 && R.pstGrip == null ? 'SHHH... SNORES ' + (R.snores || 0) + ' / 3' : 'TUCK HIM IN', '#ffd84a', 13);
   }
 });
 TourRooms.kinds.pstPrivacy.testWin = function (g, A, R, kit, frame) {

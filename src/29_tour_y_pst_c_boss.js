@@ -32,7 +32,8 @@ class PstStop extends Ent {
     const A = this.g.area;
     // roll and slow down; never past a wall or off the edge of its strip
     if (this.slotIn < 0) {
-      const nx = clamp(this.x + this.vx * dt, this.min, this.max - this.w);
+      const last = this.slots.length ? this.slots[this.slots.length - 1] * TS + TS / 2 - this.w / 2 : this.max - this.w;
+      const nx = clamp(this.x + this.vx * dt, this.min, Math.min(this.max - this.w, last));
       const ahead = Math.floor((this.vx > 0 ? nx + this.w : nx) / TS), row = Math.floor((this.y + this.h - 4) / TS);
       if (!SOLID[tileAt(A, ahead, row)]) { this.rot += (nx - this.x) / 14; this.x = nx; } else this.vx = 0;
       this.vx = approach(this.vx, 0, 7 * TS * dt);
@@ -45,7 +46,7 @@ class PstStop extends Ent {
     const d = sign(this.cx - p.cx);
     if (p.y + p.h <= this.y + 8) { if (p.vy >= 0) { p.y = this.y - p.h; p.vy = 0; p.onGround = true; } return; }
     // pushed from the side: it rolls ahead of Brady (out of a slot too, if he pushes it on)
-    if (p.vx * d > 0 && !(this.lockT > 0)) { if (this.slotIn >= 0) { this.slotIn = -1; this.leftT = 0.35; } this.vx = p.vx * 1.05; }
+    if (p.vx * d > 0 && !(this.lockT > 0) && !(d > 0 && this.slotIn === this.slots.length - 1)) { if (this.slotIn >= 0) { this.slotIn = -1; this.leftT = 0.35; } this.vx = p.vx * 1.05; }
     p.x = d > 0 ? Math.min(p.x, this.x - p.w + 2) : Math.max(p.x, this.x + this.w - 2);
   }
   draw(ctx) {
@@ -170,7 +171,7 @@ const brain = {
     if ((b.phase || 1) >= 3 && !b.please) {
       const blank = (b.arenaX0 / TS + 15) * TS + TS / 2, near = p && p.onGround && Math.abs(p.cx - blank) < 1.6 * TS && Math.abs(p.vx) < 3 * TS;
       b.quietT = near ? (b.quietT || 0) + dt : 0;
-      if (b.quietT > 2.4) { b.please = true; b.pleaseT = 5; pupo.say('PLEASE', 5); Sound.play('select', { vol: 0.6, pitch: 1.5 }); }
+      if (b.quietT > 1.8) { b.please = true; b.pleaseT = 8; pupo.say('PLEASE', 8); Sound.play('select', { vol: 0.6, pitch: 1.5 }); }
     }
     if (b.please) { b.pleaseT -= dt; if (b.pleaseT <= 0) { b.please = false; b.quietT = 0; } }
   },
@@ -187,18 +188,18 @@ const brain = {
     } else if (b.act === 'suck') {
       // phase 1's tell: the cheeks puff up (0.8 s)
       b.pose = 'suck'; if (b.first) TourKit.sfx('inhale', 'float', { vol: 0.4, pitch: 0.6 });
-      if (b.at > 0.8) {
+      if (b.at > 1.1) {
         if (this.inSlot(b)) { for (let k = 0; k < 5; k++) g.burst(b.cx - 30 - k * 12, b.floorY - 4, 3, '#1a1430', 'dust'); PSAY(g, b.cx, b.y - 34, 'PTOO- ...OH.', '#c4f2d2'); b.damage(1, { text: 'FULL STOP!' }); return; }
         const dx = p ? p.cx - b.cx : -200;
-        for (let k = 0; k < 5; k++) tourFire(g, b.cx - 20, b.y + 40, { vx: dx * 0.9 + (k - 2) * 60, vy: -260 - k * 20, grav: 700, w: 14, h: 14, life: 3, art: commaArt });
+        for (let k = 0; k < 5; k++) tourFire(g, b.cx - 20, b.y + 40, { vx: dx * 0.6 + (k - 2) * 50, vy: -220 - k * 15, grav: 620, w: 14, h: 14, life: 3, art: commaArt });
         TourKit.sfx('ptoo', 'bump', { vol: 0.5, pitch: 1.4 }); b.go('perch');
       }
     } else if (b.act === 'wing') {
       // phase 2's tell: a wing goes up (0.8 s), then a whole clause sweeps along the floor
       b.pose = 'wing'; if (b.first) PSAY(g, b.cx, b.y - 34, 'TO SWEEP THAT ASIDE-', '#c4f2d2');
-      if (b.at > 0.8) {
+      if (b.at > 1.1) {
         if (this.inSlot(b)) { PSAY(g, b.cx, b.y - 34, 'TO SWEEP- ...OH.', '#c4f2d2'); g.shake(4); b.damage(1, { text: 'FULL STOP!' }); return; }
-        tourFire(g, b.arenaX1 - 20, b.floorY - 13, { vx: -4.2 * TS, vy: 0, w: 50, h: 26, life: 7, thru: true, art: clauseArt, text: 'AND ANOTHER THING' });
+        tourFire(g, b.arenaX1 - 20, b.floorY - 13, { vx: -3.4 * TS, vy: 0, w: 50, h: 26, life: 7, thru: true, art: clauseArt, text: 'AND ANOTHER THING' });
         TourKit.sfx('swoosh', 'float', { vol: 0.5, pitch: 0.7 }); b.go('perch');
       }
     } else if (b.act === 'beak') {
@@ -207,7 +208,7 @@ const brain = {
       if (b.at > 1.0) {
         if (this.inSlot(b) && b.please) { PSAY(g, b.cx, b.y - 34, '...', '#c4f2d2'); b.damage(1, { text: 'THANK YOU!' }); return; }
         if (this.inSlot(b)) { const { stop } = this.parts(b); if (stop) { stop.slotIn = -1; stop.vx = -7 * TS; stop.leftT = 0.8; } PSAY(g, b.cx, b.y - 34, 'NOT UNTIL HE SAYS IT!', '#c4f2d2'); }
-        tourFire(g, b.cx - 30, b.floorY - 40, { vx: -4.6 * TS, vy: 0, w: 26, h: 44, life: 6, thru: true, art: shoutArt });
+        tourFire(g, b.cx - 30, b.floorY - 40, { vx: -3.6 * TS, vy: 0, w: 26, h: 44, life: 6, thru: true, art: shoutArt });
         TourKit.sfx('squawk', 'bump', { vol: 0.6, pitch: 0.5 }); g.shake(3); b.go('perch');
       }
     } else b.go('perch');

@@ -277,10 +277,10 @@ class PstMouth extends Ent {
     const x = this.x, w = this.n * TS, y = this.floorY, t = this.t;
     ctx.save(); ctx.lineJoin = 'round';
     // the lips on the cushion: stretched toward the selected corner
-    const cx = x + w / 2 + this.stretch * w * 0.12, mw = w * (0.5 + Math.abs(this.stretch) * 0.12), mh = 6 + this.wide * 18;
+    const cx = x + w / 2 + this.stretch * w * 0.12, mw = w * (0.78 + Math.abs(this.stretch) * 0.12), mh = 14 + this.wide * 22;
     ctx.fillStyle = PLUM; ctx.strokeStyle = INK; ctx.lineWidth = 2.5;
     ctx.beginPath(); ctx.ellipse(cx, y - 14, mw / 2 + 6, mh / 2 + 6, 0, 0, TAU); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#3a0e24'; ctx.beginPath(); ctx.ellipse(cx, y - 14, mw / 2, mh / 2, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#3a0e24'; ctx.beginPath(); ctx.ellipse(cx, y - 14, mw / 2, mh / 2, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#e0789e'; ctx.beginPath(); ctx.ellipse(cx, y - 14 + mh * 0.22, mw * 0.3, mh * 0.22, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = '#b04a70'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(cx, y - 14 + mh * 0.05); ctx.lineTo(cx, y - 14 + mh * 0.38); ctx.stroke(); ctx.strokeStyle = INK; ctx.lineWidth = 2.5;
     // cream teeth top and bottom
     ctx.fillStyle = CREAM; ctx.lineWidth = 1.4;
     for (let k = 0; k < 4; k++) { const tx = cx - mw * 0.36 + k * mw * 0.24; ctx.beginPath(); ctx.moveTo(tx - 5, y - 14 - mh / 2); ctx.lineTo(tx + 5, y - 14 - mh / 2); ctx.lineTo(tx, y - 14 - mh / 2 + 6); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(tx - 5, y - 14 + mh / 2); ctx.lineTo(tx + 5, y - 14 + mh / 2); ctx.lineTo(tx, y - 14 + mh / 2 - 6); ctx.closePath(); ctx.fill(); ctx.stroke(); }
@@ -509,7 +509,7 @@ class PstThing extends Ent {
 ENTITY_TYPES.pstThing = PstThing;
 // a picture bubble: bump it from below and its subject is the one Pupo is thinking of
 class PstPic extends Ent {
-  constructor(g, s) { super(g, s, 40, 30); this.y = s.y - 4 * TS; this.kind = s.kind; this.gi = s.g; this.set = s.set || [s.g]; this.friendly = false; this.bumpT = 0; }
+  constructor(g, s) { super(g, s, 64, 50); this.y = s.y - 4 * TS - 16; this.kind = s.kind; this.gi = s.g; this.set = s.set || [s.g]; this.friendly = false; this.bumpT = 0; }
   update(dt) { this.t += dt; if (this.bumpT > 0) this.bumpT -= dt; }
   touchPlayer(p) {
     if (p.dead || this.bumpT > 0) return;
@@ -523,10 +523,14 @@ class PstPic extends Ent {
   draw(ctx) {
     const on = this.g.toggleBit(this.gi), b = this.bumpT > 0 ? -Math.sin(this.bumpT / 0.4 * Math.PI) * 6 : Math.sin(this.t * 2) * 2;
     ctx.save(); ctx.translate(0, b);
-    PstArt.bubble(ctx, this.x, this.y, this.w, this.h, on ? '#fff8e0' : CREAM);
-    PstArt.tail(ctx, this.x + 8, this.y + this.h + 4, this.x - 6, this.y + this.h + 22, 3, 4);
-    ctx.save(); ctx.translate(this.cx, this.y + 15); ctx.scale(0.42, 0.42); (THINGS[this.kind] || THINGS.stool)(ctx, -26, -18, 52, 36, this.t); ctx.restore();
-    if (on) { ctx.strokeStyle = HONEY; ctx.lineWidth = 2; ctx.setLineDash([3, 3]); ctx.strokeRect(this.x - 3, this.y - 3, this.w + 6, this.h + 6); ctx.setLineDash([]); }
+    ctx.globalAlpha = on ? 1 : 0.6;
+    if (on) { ctx.fillStyle = 'rgba(255,214,115,0.35)'; ctx.beginPath(); ctx.ellipse(this.cx, this.cy, this.w * 0.75, this.h * 0.8, 0, 0, TAU); ctx.fill(); }
+    PstArt.bubble(ctx, this.x, this.y, this.w, this.h, on ? '#fff8e0' : '#d8ccd8');
+    PstArt.tail(ctx, this.x + 10, this.y + this.h + 4, this.x - 6, this.y + this.h + 22, 3, 4);
+    ctx.save(); ctx.beginPath(); ctx.rect(this.x + 6, this.y + 4, this.w - 12, this.h - 8); ctx.clip();
+    const sz = this.kind === 'ladder' ? [22, 40] : this.kind === 'towel' ? [44, 24] : this.kind === 'stool' ? [28, 32] : [48, 28];
+    (THINGS[this.kind] || THINGS.stool)(ctx, this.cx - sz[0] / 2, this.cy - sz[1] / 2 + 2, sz[0], sz[1], this.t); ctx.restore();
+    if (on) { ctx.strokeStyle = HONEY; ctx.lineWidth = 3; ctx.setLineDash([5, 4]); ctx.strokeRect(this.x - 4, this.y - 4, this.w + 8, this.h + 8); ctx.setLineDash([]); }
     ctx.restore();
   }
 }

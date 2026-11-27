@@ -588,7 +588,7 @@ const slugThink = (e, dt) => {
   if (e.pointT > 0) { e.vx = 0; e.mode = 'notice'; return; }
   if (e.pcool <= 0 && p && TourKit.near(e, p, 6, 3)) {
     e.pointT = 1.4; e.pcool = 4; e.vx = 0; e.dir = sign(p.cx - e.cx) || e.dir;
-    pstSay(e.g, e.cx, e.y - 34, pick(['SHORTCUT! THAT WAY!', 'IT\'S QUICKER UP THERE!', 'I\'VE HEARD IT\'S FASTER!', 'TAKE THE LONG WAY ROUND!']), '#c4f2d2');
+    pstSay(e.g, e.cx, e.y - 50, pick(['SHORTCUT!', 'QUICKER UP THERE!', 'THAT WAY!']), '#c4f2d2');
     return;
   }
   e.mode = 'walk'; if (!e.vx) e.vx = e.dir * e.speed;

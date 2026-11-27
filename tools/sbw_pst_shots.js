@@ -582,8 +582,8 @@ LEVELS.bot = async (page) => {
       if (P().dead) { deaths++; for (let q = 0; q < 600 && (P().dead || g.state !== 'play'); q++) sim(0.05); toArea('stage', 6, 13); sim(1); }
       if (st.slotIn !== k) { walkTo(Math.floor(st.cx / 32) - 1, 3); for (let q = 0; q < 900 && st.slotIn !== k; q++) { sim(1 / 120, { right: true }); if (st.cx > sx + 20) break; } }
       if (k === 2) { walkTo((b.arenaX0 / 32) + 15, 3); for (let q = 0; q < 900 && !b.please; q++) { sim(1 / 120); } walkTo(Math.floor(st.cx / 32) - 1, 3); for (let q = 0; q < 900 && st.slotIn !== k; q++) sim(1 / 120, { right: true }); }
-      walkTo(Math.floor(st.cx / 32) - 2, 2);
-      const hp = b.hp; for (let q = 0; q < 120 * 10 && b.hp === hp && !P().dead; q++) { const sh = g.entities.find(e => e.constructor.name === 'TourShot' && Math.abs(e.cx - P().cx) < 70 && Math.abs(e.cy - P().cy) < 60); sim(1 / 120, sh && P().onGround ? { jump: true, jumpPressed: true } : {}); }
+      walkTo(k === 2 ? Math.floor(st.cx / 32) - 2 : Math.floor(b.arenaX0 / 32) + 1, 3);
+      const hp = b.hp; for (let q = 0; q < 120 * 12 && b.hp === hp && !P().dead; q++) { const sh = g.entities.find(e => e.constructor.name === 'TourShot' && e.cx > P().cx - 10 && e.cx - P().cx < 75 && Math.abs(e.cy - P().cy) < 60); sim(1 / 120, sh && P().onGround ? { jump: true, jumpPressed: true } : { jump: !P().onGround }); }
     }
     return { hp: b ? b.hp : null, deaths, dead: P().dead };
   });
