@@ -276,6 +276,8 @@ const helpers = () => {
   window.pushSurf = () => { const e = ents('PostBlotter').sort((a, b) => Math.abs(a.cxF - P().cx) - Math.abs(b.cxF - P().cx))[0]; rollTo('PostBlotter', e.s.rail[1]); sim(0.3, { right: true }); sim(0.3); return { pad: e.pad, drunk: e.drunk, done: e.done }; };
   // stand on a crease mark, hold THROW and walk back until the flap meets (or, the last one, then step onto it and let go)
   window.foldAt = (mx, o) => { o = o || {}; AP.go([mx, 19]); AP.exec({ walkTo: mx * 32 + 16, dir: 0 }, 2); const e = ents('PostFold').find(q => q.s.mark[0] === mx); for (let k = 0; k < 60 * 4 && e.st !== 'down' && !e.temp; k++) sim(1 / 60, { action: true, left: !o.stop || e.ang < o.stop }); if (o.stop) { sim(0.3); return { st: e.st, ang: e.ang }; } if (e.temp && !o.release) { for (let k = 0; k < 60 * 4 && !(P().cx > e.Bt[0] * 32 + 40 && P().onGround); k++) sim(1 / 60, { action: true, right: true }); } sim(0.2); return { st: e.st, temp: e.temp, tuck: e.tuck }; };
+  // walk a ruler to its end (big: right, small: left), wait for the harbour to reach that size, then step off the end
+  window.scaleEnd = (x0, x1, end, wait) => { const tx = end === 'big' ? x1 : x0, d = end === 'big' ? 1 : -1; AP.go([tx, 19]); AP.exec({ walkTo: tx * 32 + 16, dir: 0 }, 2); sim(wait || 3.4); const e = ents('PostScale').find(q => q.s.bars.some(b => b[0] === x0)); const live = e.sc; AP.exec({ walkTo: (tx + d * 2) * 32 + 16, dir: 0 }, 2); sim(0.3); return { live: Math.round(live * 100) / 100, lock: e.lockS }; };
   window.throwN = (n, gap) => { for (let k = 0; k < n; k++) { sim(1 / 120, { action: true, actionPressed: true }); sim(gap || 0.45); } };
   window.isl = x => ents('PostIsland').find(e => e.r[0] <= x && e.r[2] >= x);
   window.tileName = (x, y) => { const A = S().area, T = window.BRADY.T; const t = A.tiles[y * A.W + x]; return Object.keys(T).find(k => T[k] === t); };
@@ -283,7 +285,7 @@ const helpers = () => {
 };
 const shotAt = async (page, shot, name, fn, arg) => { await page.evaluate(fn, arg); await page.evaluate(() => freeze()); await shot(name); await page.evaluate(() => thaw()); };
 
-LEVELS.dbg = async (page, shot, run) => { await run('dbg', async () => { await page.evaluate(helpers); const r = await page.evaluate(() => { fresh(); playP('27-1'); place(145, 16); const p = P(); const r1 = AP.exec({ walkTo: 151 * 32 + 16, dir: 0 }, 3); const a = [tileOf(), isl(148).st, p.dead, S().state]; playP('27-1'); place(160, 16); sim(0.2); const b = AP.go([180, 17]); return { r1, a, b, t: tileOf() }; }); console.log(JSON.stringify(r)); }); };
+LEVELS.dbg = async (page, shot, run) => { await run('dbg', async () => { await page.evaluate(helpers); const r = await page.evaluate(() => { fresh(); playP('27-5'); place(40, 18); sim(0.3); const a = scaleEnd(43, 48, 'small'); const p = P(); const rows = []; for (let y = 15; y <= 19; y++) { let l = ''; for (let x = 38; x <= 58; x++) l += (tileName(x, y) || '?')[0]; rows.push(l); } return { a, rows, cx: p.cx / 32, y: p.y / 32, on: p.onGround, gt: p.groundTy, st: p.state, dead: p.dead, plan: AP.plan([50, 19]) ? 1 : 0, w: P().w, h: P().h }; }); console.log(JSON.stringify(r)); }); };
 // ---------------- the hidden entrance: Vietnam 10-3, the river steps under the night market ----------------
 LEVELS.entry = async (page, shot, run, pano) => {
   await run('entry', async () => {
@@ -444,6 +446,36 @@ LEVELS.fold = async (page, shot, run, pano) => {
     r = await page.evaluate(o => { thaw(); const a = AP.route([[144, 19], [150, 19]]); sim(3, { right: true }); return { a: a.ok, state: S().state, bridge: o }; }, r);
     check('27-4: twist: still holding, onto the printed side, then let go: it stays; on to the gate', r.a && r.state !== 'play' && r.bridge.a.st === 'down', r);
     await page.evaluate(() => { playP('27-4'); }); await pano('49-27-4-panorama.png', 0.35);
+  });
+};
+
+// ---------------- 27-5 Mismeasured Coast ----------------
+LEVELS.coast = async (page, shot, run, pano) => {
+  await run('coast', async () => {
+    await page.evaluate(helpers);
+    await page.evaluate(() => { fresh(); playP('27-5'); place(4, 18); sim(0.6); freeze(); }); await shot('50-27-5-start.png');
+    let r = await page.evaluate(() => { thaw(); AP.go([11, 19]); sim(0.2, { right: true }); sim(0.9); freeze(); const e = ents('PostScale')[0]; return { live: e.live, sc: e.sc }; });
+    await shot('51-27-5-ruler-live.png');
+    check('27-5: on the ruler the harbour starts to change size slowly (live)', r.live && r.sc > 1 && r.sc < 1.6, r);
+    r = await page.evaluate(() => { thaw(); const a = scaleEnd(9, 14, 'big'); return { a, t: [tileName(21, 19), tileName(32, 19)] }; });
+    check('27-5: wait at the right end and step off: the quay block locks at ×2 around its pin', r.a.lock === 2 && r.t[0] === 'GROUND' && r.t[1] === 'GROUND', r);
+    await shotAt(page, shot, '52-27-5-locked-big.png', () => { sim(0.2); });
+    r = await page.evaluate(() => AP.route([[16, 19], [22, 19], [31, 19], [38, 19]]));
+    check('27-5: two short hops across the enlarged quay', r.ok, r);
+    r = await page.evaluate(() => { const a = scaleEnd(43, 48, 'small'); return { a, wall: tileName(53, 12), stub: tileName(54, 17), b: (place(50, 18), sim(0.2), AP.route([[57, 19]])) }; });
+    check('27-5: the tall card wall shrinks to a stub (×0.25) and Brady hops over it', r.a.lock === 0.25 && r.wall === 'EMPTY' && r.stub === 'GROUND' && r.b.ok, r);
+    await shotAt(page, shot, '53-27-5-secret-tell.png', () => { place(60, 18); sim(0.3); });
+    r = await page.evaluate(() => AP.route([[63, 19], [64, 16], [67, 16]]));
+    check('27-5: up through the gap in the tunnel roof to the chute room\'s letterbox', r.ok, r);
+    r = await page.evaluate(() => { place(74, 18); const a = scaleEnd(78, 84, 'big'); freeze(); return { a, under: [tileName(90, 18), tileName(90, 17), tileName(85, 16)] }; });
+    await shot('54-27-5-twist-wall-raised.png');
+    check('27-5: twist: the first ruler enlarges the hanging wall: room to walk under it', r.a.lock === 2 && r.under[0] === 'EMPTY' && r.under[1] === 'EMPTY' && r.under[2] === 'GROUND', r);
+    r = await page.evaluate(() => { thaw(); const a = AP.route([[88, 19], [93, 19]]); const b = scaleEnd(94, 99, 'small'); return { a: a.ok, b, q: tileName(101, 16), c: AP.route([[100, 19], [102, 16], [108, 13]]) }; });
+    check('27-5: twist: under it, then the second ruler shrinks the high far quay to a step; up to the cliff', r.a && r.b.lock === 0.5 && r.q === 'GROUND' && r.c.ok, r);
+    await shotAt(page, shot, '55-27-5-twist-quay-step.png', () => { place(99, 18); sim(0.2); });
+    r = await page.evaluate(() => { place(108, 12); const a = AP.route([[125, 13], [135, 13]]); sim(3, { right: true }); return { a: a.ok, state: S().state }; });
+    check('27-5: on to the gate', r.a && r.state !== 'play', r);
+    await page.evaluate(() => { playP('27-5'); }); await pano('59-27-5-panorama.png', 0.35);
   });
 };
 

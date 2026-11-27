@@ -495,72 +495,81 @@ const scaleRect = (r, s, pin) => { const f = v => Math.round(v); return [f(pin[0
 class PostScale extends Ent {
   constructor(g, s) {
     super(g, s, 4, 4); this.friendly = true; this.back = true; this.s = s;
-    this.sc = 1; this.lockS = 1; this.live = false; this.offT = 0; this.set = [];
+    this.sc = 1; this.lockS = 1; this.live = false; this.offT = 0; this.set = null;
     const pts = [s.pin];
     for (const b of s.bars) pts.push([b[0], b[2]], [b[1], b[2]]);
-    for (const r of s.pieces) for (const k of [s.smin, s.smax]) { const q = scaleRect(r, k, s.pin); pts.push([q[0], q[1]], [q[2], q[3]]); }
+    for (const r of s.pieces) for (const k of [s.smin, s.smax]) { const q = scaleRect(r, k, s.pin); pts.push([q[0], Math.max(0, q[1])], [q[2], q[3]]); }
     fitBox(this, pts, 3, 4, 3);
-    this.placed = false;
   }
   onBar(p) { for (let k = 0; k < this.s.bars.length; k++) { const b = this.s.bars[k]; if (p.groundTy === b[2] && p.cx >= b[0] * TS - 4 && p.cx <= (b[1] + 1) * TS + 4) return k; } return -1; }
   target(p, k) { const b = this.s.bars[k], f = clamp((p.cx - b[0] * TS) / ((b[1] - b[0] + 1) * TS), 0, 1), s = this.s; return f < 0.5 ? lerp(s.smin, 1, f * 2) : lerp(1, s.smax, (f - 0.5) * 2); }
+  // the printed harbour is the tiles of the locked size (hidden: this entity draws them as card quays)
   setTiles(sc) {
-    const g = this.g, p = g.player, s = this.s, ty = s.tile ? T[s.tile] : T.GROUND;
-    for (const [x, y] of this.set) if (tileAt(g.area, x, y) === ty) g.setTile(x, y, T.EMPTY);
+    const g = this.g, p = g.player, s = this.s, ty = T.GROUND, A = g.area;
+    for (const [x, y] of this.set) if (tileAt(A, x, y) === ty) { g.setTile(x, y, T.EMPTY); if (A.hide) A.hide[y * A.W + x] = 0; }
     this.set = [];
-    for (const r0 of s.pieces) { const r = scaleRect(r0, sc, s.pin); for (let y = r[1]; y <= r[3]; y++) for (let x = r[0]; x <= r[2]; x++) { if (tileAt(g.area, x, y) !== T.EMPTY) continue; if (p && p.x < (x + 1) * TS && p.x + p.w > x * TS && p.y < (y + 1) * TS && p.y + p.h > y * TS) continue; g.setTile(x, y, ty); this.set.push([x, y]); } }
+    for (const r0 of s.pieces) { const r = scaleRect(r0, sc, s.pin); for (let y = Math.max(0, r[1]); y <= Math.min(A.H - 1, r[3]); y++) for (let x = r[0]; x <= r[2]; x++) { if (tileAt(A, x, y) !== T.EMPTY) continue; if (p && p.x < (x + 1) * TS && p.x + p.w > x * TS && p.y < (y + 1) * TS && p.y + p.h > y * TS) continue; g.setTile(x, y, ty); if (A.hide) A.hide[y * A.W + x] = 1; this.set.push([x, y]); } }
     g.refreshPlatforms && g.refreshPlatforms();
   }
   update(dt) {
     this.t += dt; const g = this.g, p = g.player, s = this.s;
-    if (!this.placed) { this.placed = true; for (const r0 of s.pieces) for (let y = r0[1]; y <= r0[3]; y++) for (let x = r0[0]; x <= r0[2]; x++) this.set.push([x, y]); }
+    if (!this.set) { this.set = []; for (const r0 of s.pieces) for (let y = Math.max(0, r0[1]); y <= r0[3]; y++) for (let x = r0[0]; x <= r0[2]; x++) this.set.push([x, y]); }
     if (!p || p.dead) return;
     const k = p.onGround ? this.onBar(p) : (this.live ? this.bar : -1);
     if (k >= 0) {
-      if (!this.live) { this.live = true; this.bar = k; for (const [x, y] of this.set) g.setTile(x, y, T.EMPTY); this.set = []; g.refreshPlatforms && g.refreshPlatforms(); TourKit.sfx('ruler', 'select', { vol: 0.3, pitch: 1.2 }); }
+      if (!this.live) { this.live = true; this.bar = k; this.sc = this.lockS; TourKit.sfx('ruler', 'select', { vol: 0.3, pitch: 1.2 }); }
       if (p.onGround) { this.bar = k; const tg = this.target(p, k); const d = tg - this.sc; this.sc += clamp(d, -0.55 * dt, 0.55 * dt); }
+      g.postLook = s.pin[0] * TS;
       this.offT = 0;
     } else if (this.live) {
       this.offT += dt;
       if (this.offT > 0.05) {
         const opts = [s.smin, 1, s.smax]; let best = 1; for (const o of opts) if (Math.abs(o - this.sc) < Math.abs(best - this.sc)) best = o;
-        this.live = false; this.lockS = best; this.sc = best; this.setTiles(best);
-        g.shake(2); Sound.play('stomp', { pitch: 1.1, vol: 0.4 }); say(g, p.cx, p.y - 26, best === 1 ? 'LOCKED AT ×1' : best > 1 ? 'LOCKED: ×' + best + ' BIGGER' : 'LOCKED: ×' + best + ' SMALLER', '#ffe08a');
+        this.live = false; const was = this.lockS; this.lockS = best; this.sc = best;
+        if (best !== was) { this.setTiles(best); g.shake(2); Sound.play('stomp', { pitch: 1.1, vol: 0.4 }); }
+        say(g, p.cx, p.y - 26, best === 1 ? 'LOCKED AT ×1' : best > 1 ? 'LOCKED: ×' + best + ' BIGGER' : 'LOCKED: ×' + best + ' SMALLER', '#ffe08a');
       }
     }
   }
   touchPlayer() {}
+  quay(ctx, x0, y0, x1, y1) {
+    ctx.fillStyle = PAPER; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(x0, y0, x1 - x0, y1 - y0); ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+    ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, x1 - x0, y1 - y0); ctx.clip();
+    ctx.strokeStyle = 'rgba(150,110,40,0.5)'; ctx.lineWidth = 1.2; for (let y = y0 + 16; y < y1; y += 16) { ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke(); }
+    ctx.fillStyle = COBALT; ctx.fillRect(x0, y0, x1 - x0, 8); ctx.fillStyle = COBALT_HI; ctx.fillRect(x0, y0, x1 - x0, 2.5);
+    ctx.restore();
+  }
   draw(ctx) {
-    const s = this.s, t = this.t, sc = this.live ? this.sc : this.lockS, pin = s.pin, px = pin[0] * TS, py = pin[1] * TS;
+    const s = this.s, t = this.t, sc = this.sc, pin = s.pin, px = pin[0] * TS, py = pin[1] * TS;
     ctx.save();
-    // the printed harbour: card quays (drawn at the live scale while Brady walks the ruler; the tiles do the rest)
     for (const r of s.pieces) {
-      let x0, y0, x1, y1;
-      if (this.live) { x0 = px + (r[0] * TS - px) * sc; y0 = py + (r[1] * TS - py) * sc; x1 = px + ((r[2] + 1) * TS - px) * sc; y1 = py + ((r[3] + 1) * TS - py) * sc; }
-      else { const q = scaleRect(r, sc, pin); x0 = q[0] * TS; y0 = q[1] * TS; x1 = (q[2] + 1) * TS; y1 = (q[3] + 1) * TS; }
-      if (this.live) { ctx.globalAlpha = 0.85; ctx.fillStyle = PAPER; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(x0, y0, x1 - x0, y1 - y0); ctx.strokeRect(x0, y0, x1 - x0, y1 - y0); ctx.fillStyle = COBALT; ctx.fillRect(x0, y0, x1 - x0, Math.min(8, y1 - y0)); ctx.globalAlpha = 1; }
-      // the dotted rays from the pin to each piece's corners (how the scale works, at a glance)
-      if (this.live) { ctx.strokeStyle = 'rgba(200,140,40,0.55)'; ctx.lineWidth = 1.2; ctx.setLineDash([2, 5]); ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(x0, y0); ctx.moveTo(px, py); ctx.lineTo(x1, y0); ctx.stroke(); ctx.setLineDash([]); }
+      // the harbour as it is now (solid), and while Brady walks the ruler, its outline at the size he is choosing
+      const q = scaleRect(r, this.lockS, pin); this.quay(ctx, q[0] * TS, Math.max(0, q[1]) * TS, (q[2] + 1) * TS, (q[3] + 1) * TS);
+      if (this.live) {
+        const x0 = px + (r[0] * TS - px) * sc, y0 = py + (r[1] * TS - py) * sc, x1 = px + ((r[2] + 1) * TS - px) * sc, y1 = py + ((r[3] + 1) * TS - py) * sc, k = 0.5 + 0.5 * Math.sin(t * 6);
+        ctx.fillStyle = `rgba(47,79,200,${0.12 + 0.1 * k})`; ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+        ctx.strokeStyle = `rgba(30,52,144,${0.6 + 0.35 * k})`; ctx.lineWidth = 3; ctx.setLineDash([7, 5]); ctx.strokeRect(x0, y0, x1 - x0, y1 - y0); ctx.setLineDash([]);
+        ctx.strokeStyle = 'rgba(200,140,40,0.6)'; ctx.lineWidth = 1.4; ctx.setLineDash([2, 5]); ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(x0, y0); ctx.moveTo(px, py); ctx.lineTo(x1, y0); ctx.moveTo(px, py); ctx.lineTo(x1, y1); ctx.stroke(); ctx.setLineDash([]);
+      }
     }
     // the brass pin
     ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(px + 4, py + 4, 9, 4, 0, 0, TAU); ctx.fill();
-    ctx.fillStyle = '#d8b04a'; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(px, py, 8, 0, TAU); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#fff0a0'; ctx.beginPath(); ctx.arc(px - 2.5, py - 2.5, 2.5, 0, TAU); ctx.fill();
-    // the rulers: a long wooden scale with ticks, x½ / x1 / x2 marks, a coral slider where Brady stands
+    ctx.fillStyle = '#d8b04a'; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(px, py, 9, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#fff0a0'; ctx.beginPath(); ctx.arc(px - 3, py - 3, 3, 0, TAU); ctx.fill();
+    // the rulers: a long wooden scale with ticks, its x-min / x1 / x-max marks, a coral slider where Brady stands
     for (let k = 0; k < s.bars.length; k++) {
       const b = s.bars[k], x0 = b[0] * TS, x1 = (b[1] + 1) * TS, y = b[2] * TS;
       ctx.fillStyle = '#f2d890'; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(x0, y - 8, x1 - x0, 10); ctx.strokeRect(x0, y - 8, x1 - x0, 10);
       ctx.fillStyle = INK; for (let x = x0; x <= x1; x += 8) ctx.fillRect(x, y - 8, 1.2, (x - x0) % 32 ? 3 : 6);
-      ctx.font = '8px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillStyle = COBALT_LO;
-      ctx.fillText('×' + s.smin, x0 + 10, y - 12); ctx.fillText('×1', (x0 + x1) / 2, y - 12); ctx.fillText('×' + s.smax, x1 - 10, y - 12);
+      ctx.font = '9px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillStyle = COBALT_LO;
+      ctx.fillText('×' + s.smin, x0 + 12, y - 13); ctx.fillText('×1', (x0 + x1) / 2, y - 13); ctx.fillText('×' + s.smax, x1 - 12, y - 13);
       if (this.live && this.bar === k) { const p = this.g.player; ctx.fillStyle = CORAL; ctx.beginPath(); ctx.moveTo(p.cx, y - 8); ctx.lineTo(p.cx - 6, y - 16); ctx.lineTo(p.cx + 6, y - 16); ctx.closePath(); ctx.fill(); ctx.stroke(); }
     }
-    // the readout: the harbour's scale now, on a pill under the HUD (in world space over the ruler being walked)
     if (this.live) {
-      const b = s.bars[this.bar], x = ((b[0] + b[1] + 1) / 2) * TS, y = b[2] * TS - 96, str = 'HARBOUR ×' + sc.toFixed(2).replace(/0$/, '');
-      ctx.font = '12px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; const w = ctx.measureText(str).width + 22;
-      const yy = Math.max(y, this.g.camY + 70);
-      ctx.fillStyle = 'rgba(22,20,40,0.88)'; rr(ctx, x - w / 2, yy - 12, w, 24, 12); ctx.fill(); ctx.fillStyle = '#ffe08a'; ctx.fillText(str, x, yy + 1);
+      const b = s.bars[this.bar], x = ((b[0] + b[1] + 1) / 2) * TS, str = 'HARBOUR ×' + (Math.round(sc * 100) / 100) + ' · STEP OFF TO LOCK';
+      ctx.font = '11px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; const w = ctx.measureText(str).width + 22;
+      const yy = Math.max(b[2] * TS - 120, this.g.camY + 70), xx = clamp(x, this.g.camX + w / 2 + 8, this.g.camX + Game.viewW - w / 2 - 8);
+      ctx.fillStyle = 'rgba(22,20,40,0.88)'; rr(ctx, xx - w / 2, yy - 12, w, 24, 12); ctx.fill(); ctx.fillStyle = '#ffe08a'; ctx.fillText(str, xx, yy + 1);
     }
     ctx.restore();
   }
@@ -568,7 +577,7 @@ class PostScale extends Ent {
 ENTITY_TYPES.postScale = PostScale;
 Tour.pieces['post.scale'] = function (st, o) {
   const B = st.B; B.spawn('postScale', st.x, st.gy - 1, o);
-  for (const r of o.pieces) for (let y = r[1]; y <= r[3]; y++) for (let x = r[0]; x <= r[2]; x++) B.set(x, y, T.GROUND);
+  for (const r of o.pieces) for (let y = Math.max(0, r[1]); y <= r[3]; y++) for (let x = r[0]; x <= r[2]; x++) { B.set(x, y, T.GROUND); B.setHide(x, y, 1); }
   for (const c of o.checks || []) {
     const b = o.bars[c.bar], s = c.end === 'big' ? o.smax : o.smin, A = [], Bt = [];
     for (const i of c.idx) { const r = o.pieces[i]; A.push(r.slice(0, 4)); const q = scaleRect(r, s, o.pin); Bt.push([q[0], q[1], q[2], q[3], T.GROUND]); }

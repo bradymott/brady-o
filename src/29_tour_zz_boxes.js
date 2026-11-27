@@ -387,6 +387,17 @@ const BoxArt = (() => {
     // ---- The Spare Bone Quarry (hidden land A12): a petrol-green fossil specimen case, bone-white strap latch, a bone
     // across the front pinned by a persimmon knob; hit: the knob pops, the bone swings down and the lid flips up;
     // empty: the lid stands open over a dark case, the bone hangs from the front ----
+    // ---- Postmark Sound (hidden land A2): a butter-yellow envelope parcel with cobalt airmail stripes and a coral wax
+    // seal; hit: the seal pops off and the flap flips up; empty: the flap stands open over a dark envelope ----
+    post: { name: 'Postmark Sound', draw(c, p) {
+      const Y1 = '#fbe6a2', Y2 = '#e8c870', Cb = '#2f4fc8', Co = '#f47a5a';
+      const pop = ease(seg(p, 0, 0.4)), q = ease(seg(p, 0.3, 1));
+      R(c, 3, 10, 26, 20, 2.5, Y1); shine(c, 6, 12, 20, 1.1);
+      if (q > 0.5) { G(c, [[4, 11], [28, 11], [16, 11 - (q - 0.5) * 18]], Y2); R(c, 5, 11, 22, 6, 1, HOLE, 1.1); }
+      L(c, [[4, 29], [16, 20], [28, 29]], Cb, 2.2);
+      if (q <= 0.5) { const k = q * 2; G(c, [[3, 10], [29, 10], [16, 22 - k * 10]], Y2); L(c, [[4, 11], [16, 21 - k * 10]], Cb, 2); L(c, [[28, 11], [16, 21 - k * 10]], Cb, 2); }
+      if (pop < 1) { const x = 16 + pop * 6, y = 20 - pop * 14; c.save(); c.globalAlpha = 1 - pop * 0.6; for (let k = 0; k < 8; k++) O(c, x + Math.cos(k * PI / 4) * 3.6, y + Math.sin(k * PI / 4) * 3.6, 1.8, Co, 0); O(c, x, y, 3.6, Co, 1.1); c.restore(); }
+    } },
     bone: { name: 'The Spare Bone Quarry', draw(c, p) {
       const G1 = '#2e6a5a', G2 = '#1e4a40', G3 = '#3e8a74', Bn = '#f4ead2', Pe = '#f06a2a';
       const sw = io(seg(p, 0, 0.45)), q = ease(seg(p, 0.25, 1));

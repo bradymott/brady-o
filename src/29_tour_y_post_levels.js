@@ -6,6 +6,7 @@
    27-2 STAMP DUTY (stampduty)        roll a loose stamp, THROW prints a mirrored foothold; the last is an L
    27-3 BLOTTER BAY (blotter)         a pad drinks a bead, then a gap in the surf; the last needs two and a slap
    27-4 FORWARDING FOLD (fold)        hold THROW and walk back: the far bank folds over; the last needs you on it
+   27-5 MISMEASURED COAST (scale)     walk a ruler to grow or shrink the harbour round a pin; the last pin has two
    ============================================================ */
 (function () {
 const C = Tour.countries.post;
@@ -227,7 +228,51 @@ const L4 = { n: 4, name: 'Forwarding Fold', mapLabel: 'Forwarding Fold', arch: '
     { id: 'pens', gen: 'room', role: 'secret', theme: 'post_room_pens', stamp: 'postPensOld', post: { room: true } }
   ] };
 
-Tour.amend('post', { stamps, levels: [L1, L2, L3, L4] });
+/* ---------------- 27-5 Mismeasured Coast ---------------- */
+// ① the teach: a map scale on the quay and a brass pin in a quay block out in the ink: walk right on the ruler and the
+// block grows around the pin (its outline shows the size, slowly), step off the end and it locks: two short hops;
+// ② the test: a tall card wall in the way: shrink it to a stub; a low tunnel roof beyond it (a corner curls down from
+// a gap: the chute room); ③ the twist, at the last pin: one ruler enlarges a hanging wall until there is room to walk
+// under it, a second ruler past it shrinks the high far quay down to jumping distance.
+const coastRows = (() => {
+  const W = 150, H = 24, Gr = grid(W, H, '.');
+  ground(Gr, 0, 16, 19); put(Gr, 3, 18, '@'); put(Gr, 5, 18, 'n'); put(Gr, 7, 15, '?'); put(Gr, 11, 18, '1');
+  ink(Gr, 17, 36, 20); put(Gr, 27, 14, '*');
+  ground(Gr, 37, 101, 19); put(Gr, 40, 18, 'c'); put(Gr, 42, 18, 'N'); put(Gr, 46, 18, '2'); put(Gr, 50, 15, '?');
+  // the chute room: a low tunnel roof with a gap (a corner curls down), the run on top, the letterbox
+  fillG(Gr, 60, 16, 68, 16, 'H'); fillG(Gr, 59, 8, 59, 16, 'H'); fillG(Gr, 69, 8, 69, 16, 'H'); fillG(Gr, 63, 16, 64, 16, '.'); put(Gr, 62, 17, 'x');
+  put(Gr, 61, 14, 'o.o'); put(Gr, 65, 13, 'A'); put(Gr, 67, 15, 'D'); put(Gr, 61, 18, 'o.o.o');
+  put(Gr, 72, 18, 'c'); put(Gr, 74, 18, 'a'); put(Gr, 70, 18, 'q'); put(Gr, 66, 18, 'e'); put(Gr, 56, 18, 'q'); put(Gr, 54, 18, 'u');
+  put(Gr, 77, 18, 'O'); put(Gr, 78, 18, '3'); put(Gr, 97, 18, '4');
+  ink(Gr, 101, 105, 20); put(Gr, 103, 11, 'R');
+  ground(Gr, 106, W - 1, 13); put(Gr, 110, 12, 'c'); put(Gr, 116, 12, 'u'); put(Gr, 124, 12, 'k'); put(Gr, 120, 9, 'o.o.o'); put(Gr, 128, 6, 'M'); put(Gr, 140, 12, 'G'); fillG(Gr, W - 1, 0, W - 1, 12, '#');
+  return rowsOf(Gr);
+})();
+const SCALE = o => ['piece', 'post.scale', Object.assign({ smin: 0.5, smax: 2 }, o)];
+stamps.postCoast = { floor: 19, rows: coastRows, gold: { '*': 'must', A: 'hidden', R: 'risky' }, items: ['power', 'power'], doors: [{ to: 'chutes@in', look: 'postFlap' }], legend: Object.assign({}, COMMON, {
+  n: SIGN('A MAP SCALE! WALK RIGHT ON THE RULER TO ENLARGE THE HARBOUR AROUND ITS BRASS PIN, LEFT TO SHRINK IT. STEP OFF THE END TO LOCK IT'),
+  N: SIGN('SHRINKING PULLS EVERYTHING IN TOWARD THE PIN. BIG THINGS GET SMALL'),
+  O: SIGN('THE LAST PIN HAS TWO RULERS: ONE BEFORE THE HANGING WALL, ONE AFTER IT'),
+  '1': SCALE({ bars: [[9, 14, 19]], pin: [27, 19], pieces: [[24, 19, 29, 20]], checks: [{ bar: 0, end: 'big', idx: [0], g: 0 }] }),
+  '2': SCALE({ bars: [[43, 48, 19]], pin: [54, 19], pieces: [[52, 9, 55, 18]], smin: 0.25, smax: 1.5, checks: [{ bar: 0, end: 'small', idx: [0], g: 1 }] }),
+  '3': SCALE({ bars: [[78, 84, 19]], pin: [100, 19], pieces: [[90, 3, 93, 17]], checks: [{ bar: 0, end: 'big', idx: [0], g: 2 }] }),
+  '4': SCALE({ bars: [[94, 99, 19]], pin: [100, 19], pieces: [[102, 13, 105, 13]], checks: [{ bar: 0, end: 'small', idx: [0], g: 3 }] }),
+  x: ['decor', 'postTellCeil'], a: ['anchor', 'chutesOut']
+}) };
+stamps.postChutesOld = oldRoom('coast@chutesOut', ['oneup']);
+const L5 = { n: 5, name: 'Mismeasured Coast', mapLabel: 'Mismeasured Coast', arch: 'scale', theme: 'post_chart',
+  gimmick: 'A map scale on the quay: walk either way on the ruler to enlarge or shrink the printed harbour around its brass pin, step off the end to lock it. At the last pin, enlarge a hanging wall to walk under it, then shrink the far quay down to jumping distance',
+  hint: 'The dashed outline is the size you are choosing; it changes slowly, so wait at the end before stepping off. A corner curls down from a tunnel roof...',
+  postcard: 'Brady! This coast was drawn by someone who measured it with a teaspoon. You made the harbour bigger just by walking. Please don\'t try it on the hotel. ♥ C',
+  enemies: [['postCrab', 1], ['postPup', 2], ['postGull', 1]],
+  mapCell: [4, 0], mapFrom: 3,
+  exits: { main: { to: '27-6' } },
+  areas: [
+    { id: 'coast', gen: 'room', theme: 'post_chart', stamp: 'postCoast', post: { scale: true }, bottomKill: true },
+    { id: 'chutes', gen: 'room', role: 'secret', theme: 'post_room_chutes', stamp: 'postChutesOld', post: { room: true } }
+  ] };
+
+Tour.amend('post', { stamps, levels: [L1, L2, L3, L4, L5] });
 
 /* ---------------- the land's map: the postcard's printed harbour ---------------- */
 if (typeof TOUR_OW_MAPS !== 'undefined') TOUR_OW_MAPS.post = {
