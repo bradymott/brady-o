@@ -58,10 +58,19 @@ const drawMark = (play, ctx, A, R, kit, label) => {
   if (!R.pstMount && !R.won && R.near) { ctx.fillStyle = '#ffffff'; ctx.font = '9px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText(label || 'THROW: TAKE IT', x, y - 70); }
   ctx.restore();
 };
-// the common room: the way in on the left, the game's mark in the middle of the band, the cage at the right
+// the common room: the way in on the left, the game's mark in the middle of the band, the cage at the right (or up
+// on a shelf: see cageAt)
+// (o.cageAt: [x, y]: the prize cage up on a one-way shelf instead, its nook 2 rows tall standing on row y + 1, the
+// shelf reaching two tiles past the lock so Brady can jump up through it and wait by the cage door; all of it inside
+// the room's first view, clear of the top bar and the corner controls)
 const makeRoom = (keep, A, o, extra) => {
-  const W = 30 + RK.eastW(keep, o), g = RK.room(W), Y = RK.Y;
-  const x0 = g.west(keep), x1 = RK.east(g, keep, A, o);
+  const W = 30 + RK.eastW(keep, o, o.cageAt ? false : undefined), g = RK.room(W), Y = RK.Y;
+  const x0 = g.west(keep), x1 = RK.east(g, keep, A, o, o.cageAt ? { cage: false } : undefined);
+  if (o.cageAt) {
+    const [cx, cy] = o.cageAt, items = RK.prize(o, keep), w = Math.max(3, items.length + 2);
+    g.hline(cx - 2, cx + w + 1, cy + 1, '-');
+    g.cage(A.id, cx, cy, items, { w, h: 2 });
+  }
   const mid = Math.max(x0 + 6, Math.min(x1 - 4, o.mid || 15));
   g.winSpot(A.id, mid, Y);
   g.data.mark = mid; g.data.markRow = Y; g.data.x0 = x0; g.data.x1 = x1;
@@ -158,9 +167,9 @@ TourRooms.kinds.pstKnock.testWin = function (g, A, R, kit, frame) {
 
 /* ================= pstCore: THE PILLOW SAMPLE ================= */
 TourRooms.def('pstCore', {
-  defaults: { mid: 11 },
+  defaults: { mid: 11, cageAt: [4, 7] },
   title: 'THE PILLOW SAMPLE', rule: '', ruleText: 'ONE CORE THROUGH ALL THREE BUBBLES', need: 'TAKE A PERFECT CORE FIRST!',
-  make(o, keep, ctx, A, rng) { return makeRoom(keep, A, o, (g, mid) => { g.coins(mid - 3, mid + 3, 4); }); },
+  make(o, keep, ctx, A, rng) { return makeRoom(keep, A, o, (g, mid) => { g.coins(mid + 2, mid + 6, 9); }); },
   enter(play, A, R, kit) { R.px = kit.data.mark * TS + TS / 2; R.drop = null; R.st = 0; this.layout(R); },
   layout(R) { const r = Math.random; R.base = (r() - 0.5) * 4 * TS; R.d = [(r() - 0.5) * 14, (r() - 0.5) * 14, (r() - 0.5) * 14]; R.sample = null; },
   pillowX(kit, R) { return kit.data.mark * TS + TS / 2 + Math.sin((R.st || 0) * 0.5) * TS; },
@@ -282,9 +291,9 @@ TourRooms.kinds.pstTray.testWin = function (g, A, R, kit, frame) {
 
 /* ================= pstCaps: NIGHTCAP STAND ================= */
 TourRooms.def('pstCaps', {
-  defaults: { mid: 12 },
+  defaults: { mid: 12, cageAt: [15, 7] },
   title: 'NIGHTCAP STAND', rule: '', ruleText: 'CATCH FOUR CAPS, HOLD ONE FULL WOBBLE', need: 'STACK FOUR NIGHTCAPS FIRST!',
-  make(o, keep, ctx, A, rng) { return makeRoom(keep, A, o, (g, mid) => { g.coins(mid - 7, mid - 5, 4); g.coins(mid + 5, mid + 7, 4); }); },
+  make(o, keep, ctx, A, rng) { return makeRoom(keep, A, o, (g, mid) => { g.coins(mid - 7, mid - 4, 6); }); },
   enter(play, A, R, kit) { R.post = kit.data.mark * TS + TS / 2; this.reset(R); R.st = 0; },
   reset(R) { R.caps = []; R.fall = null; R.holdT = 0; R.waitT = 0.8; },
   lean(R) { let x = 0, s = 0; for (const c of R.caps) { x += c.off; s += x; } return R.caps.length ? s / R.caps.length : 0; },
@@ -348,7 +357,7 @@ TourRooms.kinds.pstCaps.testWin = function (g, A, R, kit, frame) {
 TourRooms.def('pstPour', {
   defaults: { mid: 11 },
   title: 'THE EVEN POUR', rule: '', ruleText: 'TILT TOWARD THE LOWER MUG: FILL BOTH TO THE BAND', need: 'POUR IT EVENLY FIRST!',
-  make(o, keep, ctx, A, rng) { return makeRoom(keep, A, o, (g, mid) => { g.coins(mid - 2, mid + 2, 2); }); },
+  make(o, keep, ctx, A, rng) { return makeRoom(keep, A, o, (g, mid) => { g.coins(mid - 2, mid + 2, 5); }); },
   enter(play, A, R, kit) { this.reset(R); R.st = 0; },
   reset(R) { R.jug = 1; R.L = 0; R.Rv = 0; R.tau = 0; R.ph = Math.random() * 6; R.done = null; },
   update(play, dt, A, R, kit) {
@@ -404,9 +413,9 @@ TourRooms.kinds.pstPour.testWin = function (g, A, R, kit, frame) {
 
 /* ================= pstPrivacy: A LITTLE PRIVACY ================= */
 TourRooms.def('pstPrivacy', {
-  defaults: { mid: 8 },
+  defaults: { mid: 8, cageAt: [12, 7] },
   title: 'A LITTLE PRIVACY', rule: '', ruleText: 'HOLD THROW, TUCK HIM IN TO THE NOSE, KEEP STILL', need: 'TUCK HIM IN FIRST!',
-  make(o, keep, ctx, A, rng) { return makeRoom(keep, A, o, (g, mid) => { g.coins(mid - 1, mid + 1, 3); }); },
+  make(o, keep, ctx, A, rng) { return makeRoom(keep, A, o, (g, mid) => { g.coins(mid - 1, mid + 1, 6); }); },
   enter(play, A, R, kit) { R.cov = 0.25; R.pstGrip = null; R.snores = 0; R.stillT = 0; R.st = 0; R.wake = 0; },
   // the bed lies on the floor from the mark: the quilt's edge starts at the mark, Pupo's nose is 5.2 tiles on
   update(play, dt, A, R, kit) {
