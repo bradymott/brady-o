@@ -570,7 +570,7 @@ class KeHerd extends Ent {
 
 /* the thorn thicket drawn over its tiles: a tangle of whistling-thorn branches, white thorns, a few galls */
 class KeThicket extends Ent {
-  constructor(g, s) { super(g, s, (s.w || 2) * TS, (s.h || 6) * TS); this.x = s.x - TS / 2; this.y = s.y + TS - this.h; this.friendly = true; this.seed = s.x; }
+  constructor(g, s) { super(g, s, (s.w || 2) * TS, (s.h || 6) * TS); this.x = s.x - TS / 2; this.y = s.y - this.h; this.friendly = true; this.seed = s.x; }
   update(dt) { this.t += dt; }
   draw(ctx) {
     const x = this.x - 8, y = this.y - 6, w = this.w + 16, h = this.h + 6, R = mulberry32(this.seed | 0);
