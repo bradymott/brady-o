@@ -135,19 +135,29 @@ const TabArt = {
     ctx.fillStyle = RED; ctx.beginPath(); ctx.ellipse(x + r * 0.45, y - r * 0.1, r * 0.3, r * 0.26, 0, 0, TAU); ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.ellipse(x - r * 0.35, y - r * 0.35, r * 0.25, r * 0.12, -0.4, 0, TAU); ctx.fill(); ctx.restore();
   },
-  // the shadow of two joined hands (the entrance's clue, and the land's emblem): two forearms meeting in the middle,
-  // the fingers laced together, the thumbs crossed over the top. About 64 x 34 at s = 1
+  // the shadow of two joined hands (the entrance's clue, and the land's emblem): a forearm comes in from each side, the
+  // two hands meet palm to palm, their fingers laced (the fingertips of each hand show past the back of the other,
+  // alternately), the thumbs crossed over the top. One soft shadow tone, no outline: drawn once as a solid silhouette
+  // into its own canvas (so overlaps never darken) and laid down with the colour's alpha. About 100 x 34 at s = 1
   hands(ctx, x, y, s, col) {
-    ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.fillStyle = col || 'rgba(30,14,20,0.42)';
-    for (const d of [-1, 1]) {
-      ctx.beginPath(); ctx.moveTo(d * 34, 10); ctx.lineTo(d * 12, 2); ctx.quadraticCurveTo(d * 8, -8, d * 14, -12); ctx.lineTo(d * 34, -1); ctx.closePath(); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(d * 8, -4, 9, 10, d * 0.3, 0, TAU); ctx.fill();
+    col = col || 'rgba(30,14,20,0.42)';
+    const m = /rgba\(([^,]+),([^,]+),([^,]+),([^)]+)\)/.exec(col.replace(/ /g, '')), alpha = m ? +m[4] : 0.45, solid = m ? `rgb(${m[1]},${m[2]},${m[3]})` : col;
+    const C = TabArt._hc || (TabArt._hc = {}), key = solid;
+    if (!C[key] && typeof makeCanvas === 'function') {
+      const cv = makeCanvas(240, 90), c = cv.getContext('2d'); c.translate(120, 50); c.scale(2, 2); c.fillStyle = solid; c.strokeStyle = solid; c.lineCap = 'round';
+      for (const d of [-1, 1]) {
+        c.beginPath(); c.moveTo(d * 52, 11); c.quadraticCurveTo(d * 32, 9, d * 15, 6); c.lineTo(d * 14, -7); c.quadraticCurveTo(d * 32, -6, d * 52, -3); c.closePath(); c.fill();
+        c.beginPath(); c.ellipse(d * 8, -1, 9, 8.5, 0, 0, TAU); c.fill();
+      }
+      // the laced fingers: four rows, alternately the left hand's (tips out on the right) and the right hand's
+      c.lineWidth = 3.6;
+      for (let k = 0; k < 4; k++) { const yy = -6.5 + k * 3.6, d = k % 2 ? -1 : 1; c.beginPath(); c.moveTo(-d * 6, yy); c.quadraticCurveTo(d * 8, yy - 1.5, d * 20, yy + 1.5); c.stroke(); }
+      // the thumbs crossed over the top
+      c.lineWidth = 4; c.beginPath(); c.moveTo(-12, -7); c.quadraticCurveTo(-4, -15, 5, -12); c.moveTo(12, -7); c.quadraticCurveTo(4, -16, -5, -13); c.stroke();
+      C[key] = cv;
     }
-    // the laced fingers: a row of knuckles across the top, alternating sides
-    for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.ellipse(-6 + k * 4, -14 + (k % 2) * 2, 2.6, 4.2, (k % 2 ? 0.4 : -0.4), 0, TAU); ctx.fill(); }
-    // the two thumbs crossed
-    ctx.beginPath(); ctx.ellipse(-3, -15, 2.2, 5, 0.9, 0, TAU); ctx.ellipse(3, -15, 2.2, 5, -0.9, 0, TAU); ctx.fill();
-    ctx.restore();
+    const cv = C[key]; if (!cv) return;
+    ctx.save(); ctx.globalAlpha *= alpha; ctx.drawImage(cv, x - 60 * s, y - 25 * s, 120 * s, 45 * s); ctx.restore();
   },
   // a wisp of steam curling up (the land's tell for a hidden way: something warm is through there)
   steam(ctx, x, y, t, a) {
@@ -166,8 +176,10 @@ const TabArt = {
    Every line the land's critters, props and boss say is drawn on a dark rounded pill, kept inside the middle band of
    the view (clear of the HUD at the top and the stick and buttons at the bottom), moved off Brady and the boss, and
    stacked so two never overlap. */
-const tabSay = (g, x, y, text, col) => { if (!g) return; (g.tabPills || (g.tabPills = [])).push({ x, y, text: String(text), col: col || '#ffffff', t0: g.t || 0 }); if (g.tabPills.length > 6) g.tabPills.shift(); };
-const tabSayAt = (g, e, text, col) => tabSay(g, e.cx, e.y - 12, text, col);
+// key: one line per speaker (a new line replaces the speaker's last); fixed: the boss's lines, in one spot under the
+// boss bar, each replacing the last
+const tabSay = (g, x, y, text, col, key, fixed) => { if (!g) return; const L = g.tabPills || (g.tabPills = []); if (key) for (let k = L.length - 1; k >= 0; k--) if (L[k].key === key) L.splice(k, 1); L.push({ x, y, text: String(text), col: col || '#ffffff', t0: g.t || 0, key, fixed }); if (L.length > 6) L.shift(); };
+const tabSayAt = (g, e, text, col) => tabSay(g, e.cx, e.y - 12, text, col, e.boss ? 'boss' : e.id || e, !!e.boss);
 TourHooks.on('afterEntities', (play, ctx) => {
   const L = play.tabPills; if (!L || !L.length) return;
   const now = play.t || 0, VW = Game.viewW, VH = Game.viewH, k = Game.gameRect && Game.gameRect.h ? VH / Game.gameRect.h : 1;
@@ -176,6 +188,13 @@ TourHooks.on('afterEntities', (play, ctx) => {
   ctx.save(); ctx.font = '11px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   for (const q of play.tabPills.slice().reverse()) {
     const age = now - q.t0, w = ctx.measureText(q.text).width + 18, h = 20;
+    if (q.fixed) {
+      // the boss's line: under the boss bar, top middle; nothing else is stacked there
+      const x = play.camX + VW / 2, y = play.camY + 112 * k + h / 2, a = Math.min(1, (2.2 - age) * 3);
+      ctx.globalAlpha = a; ctx.fillStyle = 'rgba(14,8,26,0.88)'; rr(ctx, x - w / 2, y - h / 2, w, h, h / 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,216,140,0.6)'; ctx.lineWidth = 1.2; ctx.stroke(); ctx.fillStyle = q.col; ctx.fillText(q.text, x, y + 1); ctx.globalAlpha = 1;
+      continue;
+    }
     let x = clamp(q.x, play.camX + w / 2 + 8, play.camX + VW - w / 2 - 8), y = q.y - Math.min(age, 0.6) * 18;
     const top = play.camY + 70 * k + h / 2, bot = play.camY + VH * 0.6;
     const hit = (o, pad) => o && x + w / 2 > o.x - pad && x - w / 2 < o.x + o.w + pad && y + h / 2 > o.y - pad && y - h / 2 < o.y + o.h + pad;
@@ -695,5 +714,5 @@ Tour.country({
   levels: []
 });
 // for the other table files and the tests
-Tour.tableKit = { say: tabSay, sayAt: tabSayAt, COL, INK, RED, RED2, IVORY, IVORY2, OLIVE, OLIVE2, NAVY, NAVY2, WOOD, WOOD2, GOLD, TabArt, gingham };
+Tour.tableKit = { say: tabSay, sayAt: tabSayAt, bossLine: (g, text, col) => tabSay(g, 0, 0, text, col, 'boss', true), COL, INK, RED, RED2, IVORY, IVORY2, OLIVE, OLIVE2, NAVY, NAVY2, WOOD, WOOD2, GOLD, TabArt, gingham };
 })();

@@ -17,14 +17,23 @@ const TK = Tour.tableKit, INK = TK.INK, TabArt = TK.TabArt;
 Object.assign(Decor, {
   // the café front: a cream wall with a dark doorway, the red-and-cream striped awning (its scalloped hem), a lamp
   tabCafeFront(ctx, x, y, t) {
-    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
-    ctx.fillStyle = '#f4e6c8'; ctx.fillRect(x - 150, y - 200, 300, 200); ctx.strokeRect(x - 150, y - 200, 300, 200);
-    ctx.fillStyle = '#d8a84a'; ctx.fillRect(x - 150, y - 30, 300, 30);
-    ctx.fillStyle = '#3a2a2a'; rr(ctx, x - 120, y - 120, 56, 120, 26); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#6a4a3a'; ctx.fillRect(x + 20, y - 150, 90, 70); ctx.strokeRect(x + 20, y - 150, 90, 70);
-    ctx.strokeStyle = '#3a2a2a'; ctx.lineWidth = 3; for (let k = 1; k < 4; k++) { ctx.beginPath(); ctx.moveTo(x + 20 + k * 22, y - 150); ctx.lineTo(x + 20 + k * 22, y - 80); ctx.stroke(); }
-    ctx.fillStyle = '#e8424a'; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.arc(x + 32 + k * 30, y - 84, 8, 0, TAU); ctx.fill(); }
-    ctx.fillStyle = '#4a8a3a'; ctx.fillRect(x + 20, y - 80, 90, 8);
+    // painted like the street's own houses: a whitewashed wall with a little shading and wear, a terracotta tiled gable
+    // roof, green shutters, a dark arched doorway; the same soft line as the town behind it
+    ctx.save(); ctx.strokeStyle = '#5a4a44'; ctx.lineWidth = 1.6; ctx.lineJoin = 'round';
+    const l = x - 150, r = x + 150, top = y - 190;
+    ctx.fillStyle = '#f6eedc'; ctx.fillRect(l, top, 300, 190);
+    ctx.fillStyle = 'rgba(120,90,60,0.08)'; ctx.fillRect(l, top, 300, 24); ctx.fillStyle = 'rgba(120,90,60,0.12)'; ctx.fillRect(l, y - 36, 300, 36);
+    ctx.fillStyle = 'rgba(160,130,100,0.18)'; for (const [px, py, w] of [[l + 40, top + 60, 26], [r - 70, top + 110, 30], [l + 150, top + 40, 18]]) { ctx.beginPath(); ctx.ellipse(px, py, w, w * 0.35, 0, 0, TAU); ctx.fill(); }
+    ctx.strokeRect(l, top, 300, 190);
+    // the gable roof of round terracotta tiles
+    ctx.fillStyle = '#c8603a'; ctx.beginPath(); ctx.moveTo(l - 12, top + 2); ctx.lineTo(x, top - 44); ctx.lineTo(r + 12, top + 2); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = '#9a4428'; ctx.lineWidth = 1.2; for (let k = 1; k < 4; k++) { const yy = top + 2 - k * 11, hw = 162 - k * 40; ctx.beginPath(); for (let xx = x - hw; xx < x + hw; xx += 12) ctx.arc(xx + 6, yy, 6, Math.PI, 0); ctx.stroke(); }
+    ctx.strokeStyle = '#5a4a44'; ctx.lineWidth = 1.6;
+    // the arched doorway
+    ctx.fillStyle = '#3a2a2a'; ctx.beginPath(); ctx.moveTo(l + 32, y); ctx.lineTo(l + 32, y - 80); ctx.quadraticCurveTo(l + 60, y - 116, l + 88, y - 80); ctx.lineTo(l + 88, y); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // two windows with green shutters (one over the awning, one high)
+    const win = (wx, wy) => { ctx.fillStyle = '#4a3a3a'; ctx.fillRect(wx, wy, 26, 34); ctx.strokeRect(wx, wy, 26, 34); ctx.fillStyle = '#2a7a4a'; ctx.fillRect(wx - 13, wy, 12, 34); ctx.fillRect(wx + 27, wy, 12, 34); ctx.strokeRect(wx - 13, wy, 12, 34); ctx.strokeRect(wx + 27, wy, 12, 34); ctx.fillStyle = '#e8424a'; ctx.fillRect(wx - 3, wy + 34, 32, 5); };
+    win(x + 10, top + 22); win(x + 90, top + 22);
     ctx.restore();
   },
   // the awning: its top edge is the walking line (the semi tiles), the striped canvas hangs below with a scalloped hem

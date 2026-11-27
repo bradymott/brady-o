@@ -299,8 +299,8 @@ class TabCloth extends Ent {
   }
   fail(why) {
     const g = this.g, p = g.player;
-    if (why === 'tip') { this.tipT = 1.4; TourKit.sfx('crash', 'break', { vol: 0.6 }); g.burst((this.cx0 + this.dir * (this.o.glass || 5)) * TS, (this.fy - 2) * TS, 14, '#d8f0ff', 'spark'); if (p) TK.say(g, p.cx, p.y - 14, 'THE GLASS TIPPED! (A SHORT, CLEAN PULL)', '#ff9a9a'); }
-    else { this.rattle = 0.8; TourKit.sfx('rattle', 'bump', { vol: 0.5, pitch: 1.6 }); if (p) TK.say(g, p.cx, p.y - 14, 'TOO SHORT! RUN FURTHER BEFORE YOU LET GO', '#ff9a9a'); }
+    if (why === 'tip') { this.tipT = 1.4; TourKit.sfx('crash', 'break', { vol: 0.6 }); g.burst((this.cx0 + this.dir * (this.o.glass || 5)) * TS, (this.fy - 2) * TS, 14, '#d8f0ff', 'spark'); if (p) TK.say(g, p.cx, p.y - 14, 'THE GLASS TIPPED! (A SHORT, CLEAN PULL)', '#ff9a9a', 'brady'); }
+    else { this.rattle = 0.8; TourKit.sfx('rattle', 'bump', { vol: 0.5, pitch: 1.6 }); if (p) TK.say(g, p.cx, p.y - 14, 'TOO SHORT! RUN FURTHER BEFORE YOU LET GO', '#ff9a9a', 'brady'); }
     this.d = 0;
   }
   update(dt) {
@@ -482,21 +482,21 @@ class TabHostess extends Ent {
     const g = this.g, p = g.player, near = p && Math.abs(p.cx - this.cx) < 14 * TS && Math.abs(p.cy - this.cy) < 6 * TS;
     if (this.done) { this.st = 'eat'; return; }
     if (this.st === 'wait') { if (this.at > this.wait && near) this.go('lift'); }
-    else if (this.st === 'lift') { if (this.at > 0.65) { this.go('offer'); this.n++; const real = !this.feint || this.n % 2 === 0; this.real = real; TK.say(g, this.cx, this.y - 16, real && this.feint ? 'NO, REALLY. AFTER YOU!' : 'THE LAST BITE?', '#fff4e0'); } }
-    else if (this.st === 'offer') { if (this.at > 1.7) { this.go('wait'); this.wait = 1.0 + Math.random() * 0.8; if (this.feint && !this.real) this.wait = 0.5; else TK.say(g, this.cx, this.y - 16, '...THEN I SHALL.', '#fff4e0'); } }
+    else if (this.st === 'lift') { if (this.at > 0.65) { this.go('offer'); this.n++; const real = !this.feint || this.n % 2 === 0; this.real = real; TK.say(g, this.cx, this.y - 16, real && this.feint ? 'NO, REALLY. AFTER YOU!' : 'THE LAST BITE?', '#fff4e0', this.id); } }
+    else if (this.st === 'offer') { if (this.at > 1.7) { this.go('wait'); this.wait = 1.0 + Math.random() * 0.8; if (this.feint && !this.real) this.wait = 0.5; else TK.say(g, this.cx, this.y - 16, '...THEN I SHALL.', '#fff4e0', this.id); } }
     else if (this.st === 'snatch') { if (this.at > 0.9) { this.go('wait'); this.wait = 1.2; this.n = 0; } }
   }
   go(st) { this.st = st; this.at = 0; }
   offered(plate) {
     const g = this.g, p = g.player;
     if (this.done) return;
-    if (this.st !== 'offer') { if (p) TK.say(g, p.cx, p.y - 14, this.st === 'lift' ? 'WAIT FOR HER TO OFFER...' : 'SHE HASN\'T OFFERED YET', '#ffd8a0'); return; }
+    if (this.st !== 'offer') { if (p) TK.say(g, p.cx, p.y - 14, this.st === 'lift' ? 'WAIT FOR HER TO OFFER...' : 'SHE HASN\'T OFFERED YET', '#ffd8a0', 'brady'); return; }
     if (this.feint && !this.real) {
       // the feint: her tines never opened; she keeps hold and the pair starts again
-      this.go('snatch'); TourKit.sfx('clink', 'bump', { vol: 0.5, pitch: 1.6 }); if (p) TK.say(g, p.cx, p.y - 14, 'SHE DIDN\'T LET GO! WAIT FOR HER SECOND OFFER', '#ff9a9a'); return;
+      this.go('snatch'); TourKit.sfx('clink', 'bump', { vol: 0.5, pitch: 1.6 }); if (p) TK.say(g, p.cx, p.y - 14, 'SHE DIDN\'T LET GO! WAIT FOR HER SECOND OFFER', '#ff9a9a', 'brady'); return;
     }
     this.done = true; this.happy = 2; plate.sliding = true; plate.done = true; (g.tabPlaces || (g.tabPlaces = {}))[this.id] = true;   // (not a key: the HUD would show it)
-    TourKit.sfx('clink', 'pick', { vol: 0.6, pitch: 1.3 }); TK.say(g, this.cx, this.y - 16, 'HOW KIND!', '#ffd84a');
+    TourKit.sfx('clink', 'pick', { vol: 0.6, pitch: 1.3 }); TK.say(g, this.cx, this.y - 16, 'HOW KIND!', '#ffd84a', this.id);
   }
   touchPlayer() {}
   draw(ctx) {

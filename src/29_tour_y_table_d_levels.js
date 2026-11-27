@@ -53,7 +53,7 @@ const china = (() => {
   G.put(30, 13, 'N');
   G.pit(33, 42); G.ground(33, 40, 17); G.ground(41, 41, 16); G.ground(42, 42, 15);
   G.put(33, 14, '2');                                   // plate 2 (x33-40, row 14) over the dip
-  G.ground(43, 57, F); G.fill(45, 11, 47, 11, 'B'); G.put(46, 8, '*'); G.coins(44, 48, 9); G.put(49, 13, 'c'); G.put(53, 13, 'f');
+  G.ground(43, 57, F); G.fill(45, 11, 47, 11, 'B'); G.put(46, 8, '*'); G.coins(44, 48, 9); G.put(49, 13, 'c'); G.put(98, 13, 'f');
   // ② up to the high shelf; plate 3 above plate 4; the pit beside plate 4; the bread basket wall over both
   G.ground(56, 57, 11); G.ground(58, 63, 8); G.put(60, 7, 'k');
   G.pit(64, 65);
@@ -99,7 +99,7 @@ const L1 = { n: 1, name: 'Mind the Good China', mapLabel: 'Good China', arch: 'c
   gimmick: 'The good china spins under Brady\'s feet: walk on a plate and it turns, and its chip comes round the rim. The chip is a doorway down to the next setting',
   hint: 'Walk on a plate to spin it; stop and it coasts to a stop. Hop the chip, or let it drop you where you want to go. Meshed plates open only when both bites meet. Steam rises where something is hidden...',
   postcard: 'Brady, they brought out the GOOD china. I am not allowed to touch it. Pupo licked a saucer. ♥ C',
-  enemies: [['tabCrumb', 2], ['tabPepper', 2], ['tabButter', 2], ['tabRest', 1]],
+  enemies: [['tabCrumb', 2], ['tabPepper', 2], ['tabButter', 1], ['tabRest', 1]],
   mapCell: [0, 1], mapFrom: -1,
   exits: { main: { to: '36-2' } },
   areas: [
@@ -219,7 +219,7 @@ const L3 = { n: 3, name: 'Tablecloth Service', mapLabel: 'Tablecloth', arch: 'cl
   gimmick: 'Hold THROW on the corner of a tablecloth, run, and let go: the cloth whips out from under the dishes and the cork place mat under it springs Brady up to the next tier',
   hint: 'Hold THROW on the corner tab and run away from the table; let go after three paces. The tall glass wobbles if you pull too long: a short, clean pull',
   postcard: 'Brady, a waiter pulled the tablecloth out from under our dinner. The dinner stayed. Piwi did not. ♥ C',
-  enemies: [['tabCrumb', 2], ['tabPepper', 2], ['tabButter', 2], ['tabRest', 1]],
+  enemies: [['tabCrumb', 2], ['tabPepper', 2], ['tabButter', 1], ['tabRest', 1]],
   mapCell: [2, 1], mapFrom: 1,
   exits: { main: { to: '36-4' } },
   areas: [

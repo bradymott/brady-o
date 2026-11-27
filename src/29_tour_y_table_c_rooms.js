@@ -27,18 +27,19 @@ const chime = (k, ok) => Sound.play('select', { vol: 0.5, pitch: ok === false ? 
 // (the room is 28 wide for the room kit, but its last two columns are rock: 26 columns fit a landscape phone's view)
 const ST = 8, W = 28, R1 = 24;
 function stageRoom(keep, A, o, items, L) {
-  L = Object.assign({ st: 8, s0: 6, s1: R1, steps: [[4, 5, 9]], cage: 'stage', hatch: 'cage' }, L || {});
+  L = Object.assign({ st: 8, s0: 6, s1: R1, cage: 'mid', cx: 19, hatch: 'cage' }, L || {});
   const g = RK.room(W), Y = RK.Y, st = L.st;
   g.west(keep);
+  // the way in is raised onto a ledge at the top left (rows 6-10 solid), clear of the stick at the bottom left: the
+  // arrival spot and the door back move up onto it
+  for (let x = 1; x < 6; x++) for (let y = 1; y <= 10; y++) { const c = g.get(x, y); if (c === '@' || c === 'D') { g.put(x, 5, c); if (c === 'D') { g.doorsAt[x + ',5'] = g.doorsAt[x + ',' + y]; delete g.doorsAt[x + ',' + y]; } g.put(x, y, '.'); } }
+  g.fill(1, 6, 5, 10, '#');
   g.fill(R1 + 1, 1, W - 2, 10, '#');
-  // the stage (rows st..10 between s0 and s1) and the steps up to it
-  g.fill(L.s0, st, L.s1, 10, '#'); for (const [a, b, top] of L.steps) g.fill(a, top, b, 10, '#');
-  const cw = Math.max(3, items.length + 2);
-  let cx, cy;
-  if (L.cage === 'floor') { cx = R1 - cw; cy = 10; }
-  else if (L.cage === 'mid') { cx = L.cx; cy = st - 1; g.fill(cx + cw + 1, 1, R1, st - 1, '#'); }
-  else { cx = R1 - cw; cy = st - 1; }
-  g.cage(A.id, cx, cy, items, { w: cw, h: 4 });
+  // the stage (rows st..10 between s0 and s1)
+  g.fill(L.s0, st, L.s1, 10, '#');
+  const cw = Math.max(3, items.length + 2), cx = L.cx, cy = st - 1;
+  // the prize cage stands on the stage, well inside the view and above the buttons; rock fills in behind it
+  g.cage(A.id, cx, cy, items, { w: cw, h: 4 }); g.fill(cx + cw + 1, 1, R1, st - 1, '#');
   if (o.exit) { if (L.hatch === 'cage') g.door(cx - 2, cy, { to: o.exit, look: 'tabHatch' }); else g.door(L.hatch[0], L.hatch[1], { to: o.exit, look: 'tabHatch' }); }
   g.data.st = st;
   return { g, Y, x0: 7, x1: cx - (o.exit ? 4 : 2), cx, st };
@@ -64,12 +65,12 @@ const marks = play => play.entities.filter(e => e instanceof TabRoomMark);
 TourRooms.def('tabSpoons', {
   title: 'BAD REFLECTION', rule: 'WATCH PIWI SHUT HIS MOUTH: ONE SPOON KEEPS GRINNING. THROW AT THAT SPOON', need: 'FIND THE BAD REFLECTION FIRST!',
   make(o, keep, ctx, A, rng) {
-    const S = stageRoom(keep, A, o, prizeOf(o, keep)), g = S.g;
-    const xs = [9, 12, 15];
+    const S = stageRoom(keep, A, o, prizeOf(o, keep), { cx: 19 }), g = S.g;
+    const xs = [10, 12, 14];
     xs.forEach((x, k) => { g.spawn(x, ST - 1, 'tabRoomMark', { k }); g.need('spoon ' + k, x, ST - 1); });
     g.winSpot(A.id, 12, ST - 1);
     g.data.spoons = xs;
-    g.coins(7, 8, ST - 2);
+    g.coins(15, 16, ST - 2);
     return g;
   },
   enter(play, A, R, kit) { if (!R.won) { R.round = R.round || 0; R.odd = R.odd != null ? R.odd : 1; R.cyc = 0; } },
@@ -86,9 +87,11 @@ TourRooms.def('tabSpoons', {
   draw(play, ctx, A, R, kit) {
     const t = play.t, ph = this.phase(R), jawP = ph === 'talk' ? 2.5 + Math.sin(t * 14) * 2.5 : 0, p = play.player;
     // Piwi himself, up on the drawer's edge, talking: his jaw flaps, then he shuts it and grins at you
-    // (his head on the drawer's back wall, left of the spoons, clear of the HUD)
-    if (typeof Piwi !== 'undefined') Ink.around(ctx, 2 * TS, 2.6 * TS, 4 * TS, 3.4 * TS, c => Piwi.head(c, 4 * TS, 4.4 * TS, 2.4, t, { jaw: jawP, look: 1 }), { pad: 4 });
-    if (!R.won && ph === 'shut') { ctx.save(); ctx.fillStyle = '#ffd84a'; ctx.font = '10px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('MMM-HMM.', 4 * TS, 2.9 * TS); ctx.restore(); }
+    // (his head on the drawer's back wall, above the stage left of the spoons, clear of the HUD); his line, once the
+    // room's title and rule have gone, on a pill beside him
+    const px = 7.6 * TS, py = 5.2 * TS;
+    if (typeof Piwi !== 'undefined') Ink.around(ctx, px - 2 * TS, py - 1.7 * TS, 4 * TS, 3.4 * TS, c => Piwi.head(c, px, py, 2.2, t, { jaw: jawP, look: 1 }), { pad: 4 });
+    if (!R.won && ph === 'shut' && !(play.bannerT > 0) && !(play.toastT > 0) && !R.ruleWait) { ctx.save(); ctx.font = '10px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; const w = ctx.measureText('MMM-HMM.').width + 16; ctx.fillStyle = 'rgba(14,8,26,0.84)'; rr(ctx, px - w / 2, py - 2.3 * TS, w, 18, 9); ctx.fill(); ctx.fillStyle = '#ffd84a'; ctx.fillText('MMM-HMM.', px, py - 2.3 * TS + 9.5); ctx.restore(); }
     // the three spoons on stands; a spoon tilts up toward Brady when he stands at it (a closer look)
     kit.data.spoons.forEach((x, k) => {
       const near = p && Math.abs(p.cx - (x * TS + TS / 2)) < TS && p.groundTy === ST, sc = near ? 1.35 : 1, cx = x * TS + TS / 2, cy = (ST - 1) * TS - 34;
@@ -105,7 +108,7 @@ TourRooms.def('tabSpoons', {
       ctx.restore();
       ctx.restore();
     });
-    if (!R.won && !(play.bannerT > 0)) { const n = R.round || 0; hud(play, ctx, 'SPOON ' + (n + 1) + ' OF 2'); }
+    if (!R.won && !(play.bannerT > 0) && !R.ruleWait) { const n = R.round || 0; hud(play, ctx, 'SPOON ' + (n + 1) + ' OF 2'); }
   },
   testWin(g, A, R, kit, frame) { for (let k = 0; k < 2 && !R.won; k++) { const m = marks(g).find(e => e.k === R.odd); this.mark(g, A, R, kit, m); frame(g); } }
 });
@@ -117,14 +120,14 @@ const tornPath = (ctx, x, y, h, edge, dir) => { const seg = h / edge.length; ctx
 TourRooms.def('tabTear', {
   title: 'MATCH THE TEAR', rule: 'WHICH SCRAP WAS TORN OFF THIS CARD? STAND AT IT AND THROW TO SLIDE IT INTO THE EDGE', need: 'MEND THE CARD FIRST!',
   make(o, keep, ctx, A, rng) {
-    const ST = 7, S = stageRoom(keep, A, o, prizeOf(o, keep), { st: 7, s0: 7, s1: 17, steps: [[4, 5, 9], [6, 6, 8]], cage: 'floor' }), g = S.g;
-    const xs = [10, 13, 16];
+    const ST = 7, S = stageRoom(keep, A, o, prizeOf(o, keep), { st: 7, cx: 18 }), g = S.g;
+    const xs = [9, 12, 15];
     xs.forEach((x, k) => { g.spawn(x, ST - 1, 'tabRoomMark', { k }); g.need('scrap ' + k, x, ST - 1); });
-    g.winSpot(A.id, 13, ST - 1);
+    g.winSpot(A.id, 12, ST - 1);
     // two cards, each a torn edge; the scraps: the match and two that are nearly right (one bite different)
     const rounds = [0, 1].map(() => { const e = tearOf(rng), wrong = [1, 2].map(j => { const w = e.slice(); const i = Math.floor(rng() * 5); w[i] = (w[i] + j) % 3; return w; }), at = Math.floor(rng() * 3), sc = []; let wi = 0; for (let k = 0; k < 3; k++) sc.push(k === at ? e : wrong[wi++]); return { edge: e, scraps: sc, at }; });
     g.data.rounds = rounds; g.data.xs = xs;
-    g.coins(7, 8, ST - 2);
+    g.coins(16, 17, ST - 2);
     return g;
   },
   enter(play, A, R, kit) { if (!R.won) { R.round = R.round || 0; R.slide = -1; R.slideT = 0; } },
@@ -136,7 +139,7 @@ TourRooms.def('tabTear', {
     else { RK.raspberry(play, 'NOT THAT BITE'); }
   },
   draw(play, ctx, A, R, kit) {
-    const ST = kit.data.st, t = play.t, rd = kit.data.rounds[Math.min(1, R.round || 0)], cxL = 3.2 * TS, cy = 3 * TS, h = 2.6 * TS;
+    const ST = kit.data.st, t = play.t, rd = kit.data.rounds[Math.min(1, R.round || 0)], cxL = 6.2 * TS, cy = 2.4 * TS, h = 2.4 * TS;
     // the coat rack's card, torn down its right edge
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
     ctx.fillStyle = '#3a2a1a'; ctx.fillRect(cxL + 30, cy - 12, 4, 14);
@@ -166,7 +169,7 @@ TourRooms.def('tabTear', {
 TourRooms.def('tabStar', {
   title: 'THE SPARE STAR', rule: 'THE COASTER HAS ONE STAR THE SKY HASN\'T. STAND ON ITS NUMBER AND THROW TO COVER IT', need: 'COVER THE SPARE STAR FIRST!',
   make(o, keep, ctx, A, rng) {
-    const ST = 9, S = stageRoom(keep, A, o, prizeOf(o, keep), { st: 9, s0: 5, steps: [], hatch: [6, 8] }), g = S.g;
+    const ST = 9, S = stageRoom(keep, A, o, prizeOf(o, keep), { st: 9, cx: 19, hatch: [6, 8] }), g = S.g;
     const xs = [9, 11, 13, 15, 17];
     xs.forEach((x, k) => { g.spawn(x, ST - 1, 'tabRoomMark', { k, cue: 'COVER' }); g.need('star pad ' + k, x, ST - 1); });
     g.winSpot(A.id, 13, ST - 1);
@@ -196,9 +199,9 @@ TourRooms.def('tabStar', {
       });
       ctx.restore();
     };
-    box(4.4 * TS, 3.5 * TS, 3.1 * TS, 3.1 * TS, true);
-    box(12.4 * TS, 3.5 * TS, 3.1 * TS, 3.1 * TS, false);
-    ctx.save(); ctx.fillStyle = '#ffe8c8'; ctx.font = '9px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('THE SKY', 5.95 * TS, 3.2 * TS); ctx.fillText('THE COASTER', 13.95 * TS, 3.2 * TS); ctx.restore();
+    box(7.6 * TS, 3.8 * TS, 3.1 * TS, 3.1 * TS, true);
+    box(13.4 * TS, 3.8 * TS, 3.1 * TS, 3.1 * TS, false);
+    ctx.save(); ctx.fillStyle = '#ffe8c8'; ctx.font = '9px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('THE SKY', 9.15 * TS, 3.5 * TS); ctx.fillText('THE COASTER', 14.95 * TS, 3.5 * TS); ctx.restore();
     // the numbered star pads on the stage
     kit.data.xs.forEach((x, k) => { const cx = x * TS + TS / 2, cy = kit.data.st * TS - 3; ctx.save(); ctx.fillStyle = '#1e2a5a'; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(cx, cy, 14, 4, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#ffe28a'; ctx.font = '10px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText(String(k + 1), cx, cy - 6); ctx.restore(); });
     if (!R.won && !(play.bannerT > 0)) hud(play, ctx, 'SKY ' + ((R.round || 0) + 1) + ' / 2');
@@ -210,7 +213,7 @@ TourRooms.def('tabStar', {
 TourRooms.def('tabScope', {
   title: 'WRONG END', rule: 'A GIANT PRIZE IN THE LENS! ...OR IS IT? THE REAL PRIZE IS AT THE OTHER END', need: 'FIND THE REAL PRIZE FIRST!',
   make(o, keep, ctx, A, rng) {
-    const S = stageRoom(keep, A, o, prizeOf(o, keep), { s1: 19, cage: 'floor', hatch: [8, 7] }), g = S.g;
+    const S = stageRoom(keep, A, o, prizeOf(o, keep), { cx: 20, hatch: [8, 7] }), g = S.g;
     // the tripod: a tall stack (books under its feet) to climb over, the lens end facing the way in, the eyepiece
     // end (and the tiny prize) on the far side
     g.fill(14, 4, 15, ST - 1, '#'); g.hline(11, 13, 5, '-'); g.hline(16, 18, 5, '-');
@@ -252,7 +255,7 @@ TourRooms.def('tabScope', {
 TourRooms.def('tabPull', {
   title: 'PULL TO ENTER', rule: 'IT SAYS PUSH. IT NEVER BUDGES. HOLD THROW ON THE PULL RING AND WALK BACKWARDS', need: 'PULL!',
   make(o, keep, ctx, A, rng) {
-    const S = stageRoom(keep, A, o, prizeOf(o, keep), { cage: 'mid', cx: 14 }), g = S.g;
+    const S = stageRoom(keep, A, o, prizeOf(o, keep), { cx: 14 }), g = S.g;
     // the door is the cage's own bars, dressed as a grand door; its pull ring mark just in front of it
     const rx = S.cx - 1;
     g.spawn(rx, ST - 1, 'tabRoomMark', { k: 0, cue: 'HOLD THROW' }); g.need('the pull ring', rx, ST - 1);
@@ -301,6 +304,22 @@ TourRooms.def('tabPull', {
   }
 });
 
+// a table room's words in turn: the title alone (about 1.5 s), then the rule's pill; the room's own lines after that
+{
+  const en0 = TourRooms.enter;
+  TourRooms.enter = function (play, A) {
+    en0.apply(this, arguments);
+    const kit = A.roomKit; if (!(kit && /^tab/.test(kit.kind))) return;
+    const R = this.state(play, A);
+    play.toastT = 0; play.bannerT = Math.max(play.bannerT || 0, 1.5); R.ruleWait = !R.won && !!kit.rule;
+  };
+  const up0 = TourRooms.update;
+  TourRooms.update = function (play, dt) {
+    const A = play.area, kit = A && A.roomKit;
+    if (kit && /^tab/.test(kit.kind)) { const R = this.state(play, A); if (R.ruleWait && !(play.bannerT > 0)) { R.ruleWait = false; play.toast(kit.rule); } }
+    return up0.apply(this, arguments);
+  };
+}
 // the camera in a table room: the whole room's width in view (when the screen is wide enough), the stage band in the
 // middle
 TourHooks.on('camera', (play, dt) => {

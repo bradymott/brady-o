@@ -549,7 +549,7 @@ LEVELS.rooms = async (page, shot, run) => {
     });
     check('B52: a scrap with the wrong bite falls off; the right scrap twice (the card, then the menu): won, the cage opens', b.failed && b.won && b.cage, b);
     await page.evaluate(() => freeze()); await shot('63-B52-won.png');
-    const c = await page.evaluate(() => { thaw(); AP.go([3, 11]); const aid = TB.door(); return { aid, x: Math.floor(P().cx / 32) }; });
+    const c = await page.evaluate(() => { thaw(); AP.go([3, 6]); const aid = TB.door(); return { aid, x: Math.floor(P().cx / 32) }; });
     check('B52: its door takes Brady back to the ledge', c.aid === 'fold', c);
   });
   // B53 THE SPARE STAR (36-3): a fake panel in the first tier's far wall, steam at its foot
@@ -604,7 +604,7 @@ LEVELS.rooms = async (page, shot, run) => {
     });
     check('B55: pushing the door does nothing; hold THROW on the pull ring and walk backwards: it opens, the cage with it', b.pushed && b.won && b.cage, b);
     await page.evaluate(() => freeze()); await shot('69-B55-won.png');
-    const c = await page.evaluate(() => { thaw(); AP.go([3, 11]); const aid = TB.door(); return { aid, x: Math.floor(P().cx / 32) }; });
+    const c = await page.evaluate(() => { thaw(); AP.go([3, 6]); const aid = TB.door(); return { aid, x: Math.floor(P().cx / 32) }; });
     check('B55: its door takes Brady back up beside the booth\'s door (before the boss)', c.aid === 'courses' && c.x < 92, c);
   });
 };
