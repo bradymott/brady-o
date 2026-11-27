@@ -427,8 +427,14 @@ class UmbShake extends Ent {
     const x = this.x, w = this.w, fy = this.fy * TS, t = this.t, p = this.g.player, sx = this.scoopX(), dx = this.dryX();
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
     // the canopy laid flat: marigold wedges; the scallop end dips; the dry end has a coral stamp patch
-    ctx.fillStyle = UA.GOLD; ctx.beginPath(); ctx.moveTo(x, fy - 2); for (let q = 0; q <= w; q += TS) ctx.lineTo(x + q, fy - 2 + Math.sin(q / w * Math.PI) * 3); ctx.lineTo(x + w, fy + 8); ctx.lineTo(x, fy + 8); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.strokeStyle = UA.NAVY; for (let q = TS; q < w; q += TS) { ctx.beginPath(); ctx.moveTo(x + q, fy - 1); ctx.lineTo(x + q, fy + 7); ctx.stroke(); }
+    // (its tiles are hidden: the canopy is the floor) the wedges laid out flat, shaded underneath, ink-blue ribs, the
+    // scalloped hem along the bottom with coral ferrules
+    ctx.fillStyle = UA.GOLD_D; ctx.fillRect(x, fy + 6, w, TS - 6);
+    for (let q = 0; q < w; q += TS) { ctx.fillStyle = (q / TS) % 2 ? UA.GOLD : UA.GOLD_L; ctx.beginPath(); ctx.moveTo(x + q, fy - 2); ctx.lineTo(x + q + TS, fy - 2); ctx.lineTo(x + q + TS, fy + TS - 8); ctx.quadraticCurveTo(x + q + TS / 2, fy + TS - 1, x + q, fy + TS - 8); ctx.closePath(); ctx.fill(); }
+    ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(x, fy - 2, w, TS - 6);
+    ctx.strokeStyle = UA.NAVY; ctx.lineWidth = 2.4; for (let q = TS; q < w; q += TS) { ctx.beginPath(); ctx.moveTo(x + q, fy - 1); ctx.lineTo(x + q, fy + TS - 8); ctx.stroke(); }
+    ctx.fillStyle = UA.CORAL; for (let q = 0; q <= w; q += TS) { ctx.beginPath(); ctx.arc(x + q, fy + TS - 7, 3, 0, TAU); ctx.fill(); }
+    ctx.strokeStyle = INK; ctx.lineWidth = 2;
     ctx.fillStyle = 'rgba(31,42,86,0.4)'; ctx.beginPath(); ctx.ellipse(sx, fy + 1, 0.9 * TS, 5, 0, 0, TAU); ctx.fill();
     ctx.fillStyle = UA.CORAL; ctx.strokeStyle = INK; rr(ctx, dx - 14, fy - 5, 28, 5, 2); ctx.fill(); ctx.stroke();
     // the puddles
@@ -464,7 +470,7 @@ Object.assign(ENTITY_TYPES, { umbShake: UmbShake, umbCupGate: UmbCupGate });
 // gate (columns past the end), h, id }. The canopy's tiles are floor (HARD).
 Tour.pieces['umb.shake'] = function (st, o) {
   const B = st.B, x = st.x, y = st.gy - 1, w = o.w || 8, tx1 = x + w - 1, wet = o.wet || 1, id = 'umb:' + (o.id || 'cup' + x), h = o.h || 4;
-  for (let k = x; k <= tx1; k++) B.set(k, y + 1, T.HARD);
+  for (let k = x; k <= tx1; k++) { B.set(k, y + 1, T.HARD); B.setHide(k, y + 1, 1); }
   B.spawn('umbShake', x, y, { tx0: x, tx1, fy: y + 1, wet, n: o.n || 1, need: o.need || 1, cupH: o.cup || 4, id });
   const gx = wet > 0 ? tx1 + (o.gate || 2) : x - (o.gate || 2);
   lockAs(B, gx, y - h + 1, y, id, 'umbCupGate', { h });

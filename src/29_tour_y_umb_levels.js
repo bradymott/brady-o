@@ -260,10 +260,10 @@ const shakeRows = (() => {
 const SHAKEL = Object.assign({}, ENEMY, {
   k: SIGN('A PUDDLED CANOPY! WALK ALONG IT TO HERD THE WATER INTO THE SCALLOP AT THE FAR END. THEN JUMP ON THE DRY END TO FLING IT INTO THE CUP'),
   K: SIGN('THIS CUP IS HIGH: THREE LITTLE PUDDLES HAVE TO LEAVE TOGETHER'),
-  '1': ['piece', 'umb.shake', { w: 8, n: 1, need: 1, cup: 4, gate: 2, h: 4, id: 'cup1' }],
+  '1': ['piece', 'umb.shake', { w: 8, n: 1, need: 1, cup: 3.5, gate: 2, h: 4, id: 'cup1' }],
   '2': ['piece', 'umb.shake', { w: 10, n: 2, need: 2, cup: 5, gate: 2, h: 4, id: 'cup2' }],
   '3': ['piece', 'umb.shake', { w: 11, n: 2, need: 2, cup: 5, gate: 2, h: 4, id: 'cup3' }],
-  '4': ['piece', 'umb.shake', { w: 12, n: 3, need: 3, cup: 7, gate: 2, h: 4, id: 'cup4' }],
+  '4': ['piece', 'umb.shake', { w: 12, n: 3, need: 3, cup: 5, gate: 2, h: 4, id: 'cup4' }],
   z: ['seam', 'bottom', 'slice@in'], u: TICKET({}), a: ['anchor', 'sliceOut']
 });
 stamps.umbShake = { floor: 21, rows: shakeRows, legend: SHAKEL, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power'] };
