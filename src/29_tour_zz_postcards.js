@@ -65,6 +65,7 @@ const NOTES = {
   orch: 'Every card from the orchard! I tied a pear to the bedpost with your red sock so it would stop rolling off. It worked so well you will need scissors.',   // The Orchard After Closing (28)
   // The Umbrella Repair District (31, hidden land A6)
   umb: 'Every card from the repair district! I sent you a spare rib in a paper sleeve. Not for the umbrella, darling: for the next time you open one indoors and swear it was already like that.',
+  gal: 'Every postcard from the gallery! I hung the worst Piwi portrait in the hall so the coats have something to laugh at. Mind the hook, darling: it is where your hat used to go.'   // The Unflattering Gallery (hidden land A5)
 };
 const noteOf = C => (NOTES[C.id] || ('Every postcard from ' + C.name + '! I keep them all in a shoebox.')) + ' ♥ C';
 

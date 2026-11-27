@@ -242,6 +242,10 @@ TourHats.NOT = new Set([].concat(
   // Postmark Sound (world 27, hidden land A2): floating lines, pawprints, the islands, stamps, blotters, folds, map
   // scales, torn addresses, the rooms' props, the postcard rack's way in
   'postPill postPaw postIsland postStamp postBlotter postFold postScale postAddress postRoomProp postRackGate'.split(' '),
+  // The Unflattering Gallery (world 30, hidden land A5): floating lines, portraits to pose in, viewing frames, top-coat
+  // ridges, tumbling frames, auction lots and paddles, posing marks, the cord rack (and its crawling gnat), the rooms'
+  // props, the fountain's way in
+  'galPill galSitter galViewer galRidge galTumble galLot galPaddle galSitting galRack galCrawler galRoomProp galFountainGate'.split(' '),
   // Morocco: tagines, teapots, oranges, storms, pots, mirages, gales, lanterns, slabs, lines, portcullises, hooks, chains, grilles, winds
   'maTagine maTeapot maOrange maStorm maPot maMirage maGale maKickPot maShopLantern maMirageSlab maPhaseLine maPortcullis maLidHook maChain maRoofGrille maDownWind'.split(' '),
   // Mexico: peppers, elotes, popcorn, the piñata burro, lava blobs, salsa, melon carts, swingers, cannons, rails, sunbeams, bubbles, the Casa's gates
@@ -345,6 +349,8 @@ Object.assign(TourHats.HEADS, {
   orchFly: [0.3, 0.3, -1.1, 0], orchWorm: [0.4, 0.4, -0.9, 0], orchFinch: [0.3, 0.3, -1.3, 0], orchSnail: [0.5, 0.5, -1.15, 0],
   // The Umbrella Repair District (31): the rivet tick, the puddle mule, the drip finch, the ferrule ferret
   umbTick: [0.45, 0.45, -1.25, 0], umbMule: [0.55, 0.55, -1.35, 0], umbFinch: [0.25, 0.25, -1.3, 0], umbFerret: [0.62, 0.62, -1.2, 0],
+  // The Unflattering Gallery (world 30): the gilt gnat, the profile pigeon, the varnish toad, the velvet rope
+  galGnat: [-0.2, -0.2, -0.95, 0], galPigeon: [0.3, 0.3, -1.15, 0], galVarnish: [0.3, 0.3, -1.0, 0], galVelvet: [0.2, 0.2, -1.2, 0]
 
 });
 

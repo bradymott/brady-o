@@ -305,6 +305,11 @@ Object.assign(ENEMY_SAFE_TYPES, { orchCrawler: 'on a trellis: touches only Brady
 // 29_tour_y_umb_c_boss.js touch()); a canopy critter touches only Brady on its own face (customCollide)
 Object.assign(BOSS_SAFE, { umb_inspector: ['back', 'tell', 'poke', 'scoop', 'jab', 'caught', 'drop'] });
 Object.assign(ENEMY_SAFE_TYPES, { umbCrawler: 'on a canopy: touches only Brady on its own face (customCollide)' });
+// The Unflattering Gallery (30): touching the Retoucher never hurts; only his paint sweep, his blot and his lunge do
+// (29_tour_y_gal_c_boss.js touch()); the gilt gnat is harmless while it slips, the profile pigeon while it hides, the
+// cord rack's gnat touches only Brady on its own face (customCollide)
+Object.assign(BOSS_SAFE, { gal_retoucher: ['raise', 'drip', 'pullback', 'sweep', 'pause1', 'flourish', 'fling', 'pause2', 'chin', 'lunge', 'pause3', 'sold'] });
+Object.assign(ENEMY_SAFE_TYPES, { galGnat: 'harmless while it slips on the shine (29_tour_y_gal.js harmlessWhen)', galPigeon: 'harmless while it hides in profile (29_tour_y_gal.js harmlessWhen)', galCrawler: 'on a cord rack: touches only Brady on its own face (customCollide)' });
 const OLD_TYPES = { greeter: 1, pony: 1 };   // the old Black Rock City enemies (08a_chunks.js / 10b_burners.js): in no tour level
 if (!noSweep) {
   const noHurt = [];
