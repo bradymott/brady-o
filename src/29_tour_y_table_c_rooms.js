@@ -79,7 +79,7 @@ TourRooms.def('tabSpoons', {
   mark(play, A, R, kit, m) {
     if (R.won) return;
     if (m.k === R.odd) {
-      R.round++; chime(R.round, true); TK.say(play, m.cx, m.y - 40, 'THAT ONE\'S STILL GRINNING!', '#ffd84a');
+      R.round++; chime(R.round, true); TK.say(play, m.cx, m.y - 40, 'THAT ONE\'S STILL GRINNING!', '#ffd84a', 'room');
       if (R.round >= 2) TourRooms.win(play, A, R, { text: 'PIWI, REFLECTED!', coins: 4 });
       else { R.odd = (R.odd + 2) % 3; R.cyc = 0; }
     } else { RK.raspberry(play, 'A PERFECTLY NORMAL SPOON'); R.odd = (R.odd + 1 + (R.round % 2)) % 3; R.cyc = 0; }
@@ -135,7 +135,7 @@ TourRooms.def('tabTear', {
   mark(play, A, R, kit, m) {
     if (R.won || R.slide >= 0) return;
     const rd = kit.data.rounds[R.round]; R.slide = m.k; R.slideT = 0; R.slideOk = m.k === rd.at;
-    if (R.slideOk) { chime(R.round + 1, true); TK.say(play, m.cx, m.y - 40, 'A PERFECT FIT!', '#ffd84a'); }
+    if (R.slideOk) { chime(R.round + 1, true); TK.say(play, m.cx, m.y - 40, 'A PERFECT FIT!', '#ffd84a', 'room'); }
     else { RK.raspberry(play, 'NOT THAT BITE'); }
   },
   draw(play, ctx, A, R, kit) {
@@ -182,7 +182,7 @@ TourRooms.def('tabStar', {
   mark(play, A, R, kit, m) {
     if (R.won) return;
     const rd = kit.data.rounds[R.round];
-    if (m.k === rd.spare) { chime(R.round + 1, true); R.round++; TK.say(play, m.cx, m.y - 40, 'COVERED! THE SKY AGREES', '#ffd84a'); if (R.round >= 2) TourRooms.win(play, A, R, { text: 'STAR-SPOTTER!', coins: 4 }); }
+    if (m.k === rd.spare) { chime(R.round + 1, true); R.round++; TK.say(play, m.cx, m.y - 40, 'COVERED! THE SKY AGREES', '#ffd84a', 'room'); if (R.round >= 2) TourRooms.win(play, A, R, { text: 'STAR-SPOTTER!', coins: 4 }); }
     else RK.raspberry(play, 'THAT ONE IS IN THE SKY');
   },
   draw(play, ctx, A, R, kit) {
@@ -279,7 +279,7 @@ TourRooms.def('tabPull', {
       R.d = Math.max(0, (R.x0 - p.cx) / TS);
       const holding = p.tabHeld != null ? p.tabHeld : (In ? In.action : false);
       if (R.d >= 3) { R.held = false; TourRooms.win(play, A, R, { text: 'IT SAID PULL ALL ALONG', coins: 4 }); }
-      else if (!holding) { R.held = false; if (R.d > 0.3) TK.say(play, p.cx, p.y - 14, 'KEEP HOLDING AND WALK BACK', '#ffd8a0'); }
+      else if (!holding) { R.held = false; if (R.d > 0.3) TK.say(play, p.cx, p.y - 14, 'KEEP HOLDING AND WALK BACK', '#ffd8a0', 'room'); }
     }
   },
   draw(play, ctx, A, R, kit) {
@@ -312,6 +312,13 @@ TourRooms.def('tabPull', {
     const kit = A.roomKit; if (!(kit && /^tab/.test(kit.kind))) return;
     const R = this.state(play, A);
     play.toastT = 0; play.bannerT = Math.max(play.bannerT || 0, 1.5); R.ruleWait = !R.won && !!kit.rule;
+  };
+  // the room's own props stay faint behind the title, then come up as it goes
+  const dr0 = TourRooms.draw;
+  TourRooms.draw = function (play, ctx) {
+    const kit = play.area && play.area.roomKit;
+    if (!(kit && /^tab/.test(kit.kind)) || !(play.bannerT > 0)) return dr0.apply(this, arguments);
+    ctx.save(); ctx.globalAlpha = clamp(1 - play.bannerT * 3, 0.15, 1); try { return dr0.apply(this, arguments); } finally { ctx.restore(); }
   };
   const up0 = TourRooms.update;
   TourRooms.update = function (play, dt) {

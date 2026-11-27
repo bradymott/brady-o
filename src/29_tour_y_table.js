@@ -180,12 +180,12 @@ const TabArt = {
    stacked so two never overlap. */
 // key: one line per speaker (a new line replaces the speaker's last); fixed: the boss's lines, in one spot under the
 // boss bar, each replacing the last
-const tabSay = (g, x, y, text, col, key, fixed) => { if (!g) return; const L = g.tabPills || (g.tabPills = []); if (key) for (let k = L.length - 1; k >= 0; k--) if (L[k].key === key) L.splice(k, 1); L.push({ x, y, text: String(text), col: col || '#ffffff', t0: g.t || 0, key, fixed }); if (L.length > 6) L.shift(); };
+const tabSay = (g, x, y, text, col, key, fixed) => { if (!g) return; const L = g.tabPills || (g.tabPills = []); if (key) for (let k = L.length - 1; k >= 0; k--) if (L[k].key === key) L.splice(k, 1); L.push({ x, y, text: String(text), col: col || '#ffffff', t0: g.t || 0, key, fixed, A: g.area }); if (L.length > 6) L.shift(); };
 const tabSayAt = (g, e, text, col) => tabSay(g, e.cx, e.y - 12, text, col, e.boss ? 'boss' : e.id || e, !!e.boss);
 TourHooks.on('afterEntities', (play, ctx) => {
   const L = play.tabPills; if (!L || !L.length) return;
   const now = play.t || 0, VW = Game.viewW, VH = Game.viewH, k = Game.gameRect && Game.gameRect.h ? VH / Game.gameRect.h : 1;
-  play.tabPills = L.filter(q => now - q.t0 < 2.2);
+  play.tabPills = L.filter(q => now - q.t0 < 2.2 && (!q.A || q.A === play.area)); // a line stays in the area that said it
   const boxes = [], p = play.player, b = play.boss && !play.boss.remove ? play.boss : null;
   ctx.save(); ctx.font = '11px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   for (const q of play.tabPills.slice().reverse()) {
