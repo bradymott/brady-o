@@ -65,8 +65,8 @@ class PstStrip extends Ent {
   draw(ctx) {
     const y = this.y + 4;
     ctx.save(); ctx.fillStyle = '#fff8ec'; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.fillRect(this.x, y - 2, this.w, 8); ctx.strokeRect(this.x, y - 2, this.w, 8);
-    ctx.font = '11px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-    for (const [tx, wd, col] of this.words) { ctx.fillStyle = col || PLUM; ctx.fillText(wd, tx * TS + TS / 2, y - 4); }
+    ctx.font = '13px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.lineJoin = 'round';
+    for (const [tx, wd, col] of this.words) { ctx.strokeStyle = INK; ctx.lineWidth = 3.5; ctx.strokeText(wd, tx * TS + TS / 2, y - 6); ctx.fillStyle = col === CREAM_LO ? '#b8a8c8' : col === MINT_LO ? MINT : HONEY_HI; ctx.fillText(wd, tx * TS + TS / 2, y - 6); }
     for (const sx of this.slots) { const x = sx * TS + TS / 2; ctx.fillStyle = 'rgba(26,20,48,0.35)'; ctx.beginPath(); ctx.ellipse(x, y + 2, 13, 4, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]); }
     ctx.restore();
   }
