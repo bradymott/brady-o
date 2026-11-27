@@ -13,7 +13,7 @@
    29_tour_y_umb_levels.js.
    ============================================================ */
 (function () {
-Tour.addStop({ id: 'umb', world: 31, name: 'The Umbrella Repair District', sub: 'a hidden land', lon: 8.5, lat: 56.6, secret: true, bonus: true, d0: 0.8, pin: 'umbrella' });
+Tour.addStop({ id: 'umb', world: 31, name: 'The Umbrella Repair District', sub: 'a hidden land', lon: -5, lat: 61.6, secret: true, bonus: true, d0: 0.8, pin: 'umbrella' });
 const INK = '#1a1830';
 const NAVY = '#2e3f7a', NAVY_L = '#4a62a8', NAVY_D = '#1f2a56', GOLD = '#f4b32e', GOLD_L = '#ffd060', GOLD_D = '#c98a16', CORAL = '#ef6f5a', CORAL_D = '#c24a3a', CHALK = '#f4f1e8', RAIN = '#e8f0ff', SLATE = '#7d8fb0';
 const COL = { a: GOLD, b: NAVY, c: CORAL };
