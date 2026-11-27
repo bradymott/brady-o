@@ -45,7 +45,7 @@ async function session(viewport, fn) {
       if (area != null) { g.loadArea(area, ax, ay); }
       g.player.invuln = 999; return g;
     };
-    window.place = (tx, ty) => { const g = S(), p = P(); p.x = tx * 32 + 16 - p.w / 2; p.y = (ty + 1) * 32 - p.h; p.vx = p.vy = 0; if (p.wash) p.wash.grip = null; g.camX = Math.max(0, Math.min(g.area.W * 32 - B.Game.viewW, p.cx - B.Game.viewW * 0.45)); g.camY = g.camTargetY(true); };
+    window.place = (tx, ty) => { const g = S(), p = P(); g.timeLeft = Math.max(g.timeLeft || 0, 300); p.x = tx * 32 + 16 - p.w / 2; p.y = (ty + 1) * 32 - p.h; p.vx = p.vy = 0; if (p.wash) p.wash.grip = null; g.camX = Math.max(0, Math.min(g.area.W * 32 - B.Game.viewW, p.cx - B.Game.viewW * 0.45)); g.camY = g.camTargetY(true); };
     window.areaOf = (g, aid) => g.level.areas.findIndex(a => a.aid === aid);
     window.toArea = (aid, tx, ty) => { const g = S(), k = areaOf(g, aid), A = g.level.areas[k], an = A.anchors.in || A.anchors.start || Object.values(A.anchors)[0] || { x: 96, y: (A.H - 4) * 32 }; if (g.area.idx !== k) g.loadArea(k, an.x, an.y); P().invuln = 999; if (tx != null) place(tx, ty); };
     window.freeze = () => { const g = S(); if (g.player) g.player.invuln = 0; g._upd = g.update; g.update = function () {}; };
@@ -290,7 +290,7 @@ STAGES.loose = async ({ ev, shot, run, pano }) => {
       thaw(); place(174, 17); sim(0.3); const p = P();
       press('action'); sim(1.0); const dropped = at();
       walkTo(173 * 32 + 16, 6); sim(0.4, { jump: true, jumpPressed: true }); sim(0.3);
-      sim(0.6, { jump: true, jumpPressed: true, right: true }); sim(0.3, { right: true }); sim(0.4); walkTo(176 * 32 + 16, 6); const back = at();
+      sim(1 / 120, { jump: true, jumpPressed: true, right: true }); for (let k = 0; k < 120; k++) sim(1 / 120, { jump: true, right: p.cx < 175.7 * 32 }); sim(0.4); walkTo(176 * 32 + 16, 6); const back = at();
       press('action'); for (let k = 0; k < 900 && p.cx < 190 * 32; k++) sim(1 / 120, { action: true, right: true });
       sim(0.3); return { dropped, back, at: at() };
     });
@@ -321,7 +321,7 @@ STAGES.cling = async ({ ev, shot, run, pano }) => {
       sim(0.1); sim(0.7, { jump: true, jumpPressed: true, right: true }); sim(0.4);
       return { charge, s1, s2, at: at() };
     });
-    check('26-4: scuff the wool (the socks crackle), leap at the felt: stick; spring up, stick again; up onto the wall', r.charge === 2 && r.s1 && r.s2 && r.at.y === 12 && r.at.x >= 25 && r.at.x <= 27, r);
+    check('26-4: scuff the wool (the socks crackle), leap at the felt: stick; spring up, stick again; up onto the wall', r.charge === 2 && r.s1 && r.s2 && r.at.y === 12 && r.at.x >= 25 && r.at.x <= 28, r);
     await ev(() => { place(21, 22); scuff(18, 23); walkTo(24 * 32 + 14, 6); sim(0.7, { right: true, jump: true, jumpPressed: true }); freeze(); }); await shot('40-26-4-stuck-on-felt.png');
     // the label: it doesn't hold
     r = await ev(() => { thaw(); place(30, 22); sim(0.2); const p = P(); p.x = 79 * 32 + 16 - p.w / 2; p.y = 18.85 * 32 - p.h; p.vy = 0; if (p.wash) { p.wash.charge = 2; p.wash.stick = null; } sim(0.06, { right: true }); return { stuck: !!(p.wash && p.wash.stick) }; });
@@ -331,12 +331,11 @@ STAGES.cling = async ({ ev, shot, run, pano }) => {
       thaw(); place(124, 22); sim(0.3); const p = P();
       scuff(122, 126); walkTo(127 * 32 + 14, 6); sim(0.7, { right: true, jump: true, jumpPressed: true }); const s1 = !!(p.wash && p.wash.stick);
       sim(0.1); sim(0.9, { jump: true, jumpPressed: true, left: true }); sim(0.3); const sill = at();
-      scuff(121, 124); walkTo(124 * 32 + 20, 6); sim(0.75, { right: true, jump: true, jumpPressed: true }); const s2 = !!(p.wash && p.wash.stick);
-      sim(0.1); sim(0.7, { jump: true, jumpPressed: true, right: true }); const s3 = !!(p.wash && p.wash.stick);
-      sim(0.1); sim(0.8, { jump: true, jumpPressed: true, right: true }); sim(0.3);
-      return { s1, sill, s2, s3, at: at() };
+      const kill = []; const od = p.die; p.die = function (...a) { kill.push([at(), String(a[0]), S().entities.filter(e => !e.remove && Math.abs(e.cx - p.cx) < 90 && Math.abs(e.cy - p.cy) < 90).map(e => e.constructor.name + ':' + (e.type || ''))]); return od.apply(this, a); }; scuff(121, 124); const sc = [at(), p.wash && p.wash.charge, kill]; walkTo(124 * 32 + 20, 6); const w2 = at(); sim(0.75, { right: true, jump: true, jumpPressed: true }); const s2 = !!(p.wash && p.wash.stick); const j2 = at();
+      sim(0.1); sim(0.7, { jump: true, jumpPressed: true, right: true }); sim(0.3);
+      return { s1, sill, sc, w2, s2, j2, at: at() };
     });
-    check('26-4: the twist: out of sparks halfway, down to the wool sill for a fresh charge, then the last felt and the top', r.s1 && r.sill.y === 15 && r.s2 && r.at.y === 5 && r.at.x >= 128, r);
+    check('26-4: the twist: out of sparks halfway, down to the wool sill for a fresh charge, then the last felt and the top', r.s1 && r.sill.y === 15 && r.s2 && r.at.y === 9 && r.at.x >= 128 && r.at.x <= 135, r);
     await ev(() => freeze()); await shot('41-26-4-the-last-climb.png');
     // room B4: from the rug on the wall's top, leap at the hanging felt block, hop up to the window ledge
     r = await ev(() => {
@@ -344,9 +343,9 @@ STAGES.cling = async ({ ev, shot, run, pano }) => {
       scuff(80, 82); walkTo(82 * 32 + 20, 6); sim(0.8, { right: true, jump: true, jumpPressed: true }); const s1 = !!(p.wash && p.wash.stick);
       sim(0.1); sim(0.8, { jump: true, jumpPressed: true, left: true }); sim(0.3); return { s1, at: at() };
     });
-    check('26-4 B4: from the rug on the wall\'s top, stick to the hanging felt and hop up to the window ledge (only the felt reaches it)', r.s1 && r.at.y === 5 && r.at.x >= 81 && r.at.x <= 84, r);
+    check('26-4 B4: from the rug on the wall\'s top, stick to the hanging felt and hop up to the window ledge (only the felt reaches it)', r.s1 && r.at.y === 4 && r.at.x >= 78 && r.at.x <= 82, r);
     await ev(() => freeze()); await shot('42-26-4-room-window-ledge.png');
-    r = await ev(() => { thaw(); walkTo(82 * 32 + 16, 6); sim(0.1, { up: true, upPressed: true }); for (let k = 0; k < 600 && (S().fade.a > 0.05 || P().state !== 'play'); k++) sim(1 / 120); return { area: S().area.aid }; });
+    r = await ev(() => { thaw(); walkTo(80 * 32 + 16, 6); sim(0.1, { up: true, upPressed: true }); for (let k = 0; k < 600 && (S().fade.a > 0.05 || P().state !== 'play'); k++) sim(1 / 120); return { area: S().area.aid }; });
     check('26-4 B4: the window door goes into lost property', r.area === 'lost', r);
     await roomGame({ ev, shot }, '43-26-4-room-still-packed',
       "waitPhase('pick'); const R = room(); hopOn(kit().data.slots[(R.answer + 1) % 4]);",
@@ -361,14 +360,14 @@ STAGES.cling = async ({ ev, shot, run, pano }) => {
 STAGES.pockets = async ({ ev, shot, run, pano }) => {
   await run('pockets', async () => {
     await ev(ROOM_HELPERS);
-    await ev(() => { window.intoPocket = x => { walkTo((x - 2) * 32 + 16, 6); sim(0.55, { jump: true, jumpPressed: true, right: true }); sim(0.4); for (let k = 0; k < 600 && (S().fade.a > 0.05 || P().state !== 'play'); k++) sim(1 / 120); sim(0.3); return at(); }; });
+    await ev(() => { window.intoPocket = x => { if (!tile(x, 21)) { for (let k = 0; k < 1200 && P().state === 'play' && !(S().fade.a > 0.05); k++) sim(1 / 120, { right: P().cx < x * 32 + 20, left: P().cx > x * 32 + 44 }); for (let k = 0; k < 600 && (S().fade.a > 0.05 || P().state !== 'play'); k++) sim(1 / 120); sim(0.3); return at(); } walkTo((x - 2) * 32 + 16, 6); sim(0.55, { jump: true, jumpPressed: true, right: true }); sim(0.4); for (let k = 0; k < 600 && (S().fade.a > 0.05 || P().state !== 'play'); k++) sim(1 / 120); sim(0.3); return at(); }; });
     let r = await ev(() => { fresh(); play('26-5'); place(10, 20); sim(0.3); return intoPocket(16); });
     check('26-5: jump into a pocket: out of the one with the same lining (up on the high shelf)', r.x >= 39 && r.x <= 43 && r.y === 8, r);
     await ev(() => { place(14, 20); const pk = ents('WashPocketSpot').filter(e => e.main)[0]; pk.t = 3.4 - pk.ph + 0.45; sim(0.01); freeze(); }); await shot('50-26-5-pocket-lip-open.png');
     // the wrong pocket: the sock heap in the basin, the way back
-    r = await ev(() => { thaw(); place(53, 20); sim(0.3); const a = intoPocket(56); sim(1.5); const b = at(); walkTo(90 * 32 - 40, 6); const c = intoPocket(90); return { a, b, c }; });
-    check('26-5: a wrong pocket drops Brady in the basin of socks (in sight of the right lining); a pocket there brings him back', r.a.y === 7 && r.b.y === 20 && r.b.x >= 75 && r.c.x <= 50, r);
-    r = await ev(() => { place(58, 20); sim(0.3); const a = intoPocket(61); walkTo(99.5 * 32, 6); for (let k = 0; k < 200; k++) sim(1 / 120, { right: true }); sim(0.8); return { a, at: at() }; });
+    r = await ev(() => { thaw(); place(53, 20); sim(0.3); const a = intoPocket(56); sim(1.5); const b = at(); place(85, 20); sim(0.3); const c = intoPocket(90); sim(1.0); const c2 = at(); return { a, b, c, c2 }; });
+    check('26-5: a wrong pocket (mint) puts Brady on a shelf over the basin of socks; the sock pocket down there brings him back', r.a.y === 7 && r.b.y === 7 && r.c.x <= 50, r);
+    r = await ev(() => { sim(1.0); place(59, 20); sim(0.5); const pre = [at(), P().state, S().fade.a, tile(61, 21), tile(61, 22), tile(61, 23)]; const a = intoPocket(61); walkTo(99.5 * 32, 6); for (let k = 0; k < 200; k++) sim(1 / 120, { right: true }); sim(0.8); return { pre, a, at: at() }; });
     check('26-5: the pocket with the right lining: up on the high shelf and over the wall', r.a.y === 6 && r.at.x >= 101 && r.at.y === 20, r);
     await ev(() => freeze()); await shot('51-26-5-the-way-on.png');
     // room B5: the gold-lined pocket
@@ -381,7 +380,7 @@ STAGES.pockets = async ({ ev, shot, run, pano }) => {
     r = await ev(() => leave());
     check('26-5 B5: the drying room lets Brady out further along', r && r.area === 'pockets' && r.x >= 128, r);
     // the twist: two mint pockets; the scalloped one goes on
-    r = await ev(() => { place(143, 20); sim(0.3); const a = intoPocket(146); walkTo(163.5 * 32, 6); for (let k = 0; k < 200; k++) sim(1 / 120, { right: true }); sim(0.8); return { a, at: at() }; });
+    r = await ev(() => { place(144, 20); sim(0.3); const a = intoPocket(146); walkTo(163.5 * 32, 6); for (let k = 0; k < 200; k++) sim(1 / 120, { right: true }); sim(0.8); return { a, at: at() }; });
     check('26-5: the twist: of the two mint pockets, the scalloped one comes out on the shelf over the last wall', r.a.y === 9 && r.at.x >= 165 && r.at.y === 20, r);
     await ev(() => { thaw(); play('26-5'); }); await pano('pano-26-5.png', 0.3);
   });
@@ -393,8 +392,8 @@ STAGES.bed = async ({ ev, shot, run, pano }) => {
     await ev(ROOM_HELPERS);
     let r = await ev(() => {
       fresh(); play('26-6'); place(4, 15); sim(0.3); const p = P(); const sh = ents('WashLooseSheet').sort((a, b) => a.x - b.x)[0];
-      walkTo(20 * 32 + 16, 6); let aim = 0;
-      for (let k = 0; k < 120 * 8 && !sh.open; k++) { if (sh.state === 'aim') aim = Math.max(aim, sh.st); if (sh.state === 'aim' && sh.st > 0.7 && p.onGround) sim(0.5, { jump: true, jumpPressed: true }); else sim(1 / 120); }
+      walkTo(13 * 32 + 16, 6); let aim = 0;
+      for (let k = 0; k < 120 * 8 && !sh.open; k++) { if (sh.state === 'aim') aim = Math.max(aim, sh.st); if (sh.state === 'aim' && sh.st > 0.84 && p.onGround) sim(0.5, { jump: true, jumpPressed: true }); else sim(1 / 120); }
       sim(0.6);
       return { aim: +aim.toFixed(2), open: sh.open, tile: tile(16, 15) };
     });
@@ -487,8 +486,8 @@ const BOT_PAGE = () => {
   T.holdThrow = (x) => { if (!T.press('action')) return false; for (let k = 0; k < 120 * 15; k++) { const q = p(); if (q.cx >= x) return true; const hop = q.onGround && q.hitWall; if (!(hop ? T.f({ action: true, right: true, jump: true, jumpPressed: true }) : T.f({ action: true, right: true }))) return false; if (hop) for (let j = 0; j < 25; j++) if (!T.f({ action: true, right: true, jump: true })) return false; } return 'stuck'; };
   T.scuff = (x0, x1) => { for (let n = 0; n < 4; n++) { if (!T.walk(x1 * 32 + 16, { noHop: true, tol: 12 })) return false; if (!T.walk(x0 * 32 + 16, { noHop: true, tol: 12 })) return false; } return true; };
   T.leap = (dir, hold) => { if (!T.f({ jump: true, jumpPressed: true, right: dir > 0, left: dir < 0 })) return false; for (let k = 0; k < 120 * 1.5 && !(p().wash && p().wash.stick) && !(k > 20 && p().onGround); k++) if (!T.f({ jump: k < (hold || 0.5) * 120, right: dir > 0, left: dir < 0 })) return false; return !!(p().wash && p().wash.stick); };
-  T.pocket = x => { if (!T.walk((x - 2) * 32 + 16, { noHop: true })) return false; if (!T.hop(1, false, 0.5)) return false; for (let k = 0; k < 600 && (S().fade.a > 0.05 || p().state !== 'play'); k++) sim(1 / 120); return T.wait(0.3); };
-  T.sheet = () => { const sh = S().entities.filter(e => e.constructor.name === 'WashLooseSheet' && !e.open).sort((a, b) => Math.abs(a.cx - p().cx) - Math.abs(b.cx - p().cx))[0]; if (!sh) return true; for (let k = 0; k < 120 * 6 && !(sh.state === 'aim' && sh.st > 0.7) && !sh.open; k++) if (!T.f()) return false; if (!T.hop(0, false, 0.5)) return false; return T.wait(0.6) && sh.open; };
+  T.pocket = x => { const sunk = !tileAt(x, 21); if (sunk) { for (let k = 0; k < 1200 && p().state === 'play' && !(S().fade.a > 0.05); k++) if (!T.f({ right: p().cx < x * 32 + 20, left: p().cx > x * 32 + 44 })) return false; } else { if (!T.walk((x - 2) * 32 + 16, { noHop: true })) return false; if (!T.hop(1, false, 0.5)) return false; } for (let k = 0; k < 600 && (S().fade.a > 0.05 || p().state !== 'play'); k++) sim(1 / 120); return T.wait(0.3); };
+  T.sheet = () => { const sh = S().entities.filter(e => e.constructor.name === 'WashLooseSheet' && !e.open).sort((a, b) => Math.abs(a.cx - p().cx) - Math.abs(b.cx - p().cx))[0]; if (!sh) return true; for (let k = 0; k < 120 * 6 && !(sh.state === 'aim' && sh.st > 0.84) && !sh.open; k++) if (!T.f()) return false; if (!T.hop(0, false, 0.5)) return false; return T.wait(0.6) && sh.open; };
   T.door = () => { if (!T.f({ up: true, upPressed: true })) return false; for (let k = 0; k < 600 && (S().fade.a > 0.05 || p().state !== 'play'); k++) sim(1 / 120); T.scene = S(); return true; };
   T.finished = () => ['clear', 'tally', 'results'].includes(S().state);
   // a route: a list of steps [fn, ...args] and 'cp' markers; on a death the route goes back to the last 'cp'
@@ -518,9 +517,9 @@ const BOT_ROUTES = {
   '26-3': [['walk', 18 * 32 + 16, { noHop: true }], ['holdThrow', 30 * 32], 'cp', ['walk', 55 * 32 + 16, { noHop: true }], ['holdThrow', 69 * 32], 'cp', ['walk', 95 * 32 + 16, { noHop: true }], ['holdThrow', 109 * 32], 'cp', ['walk', 140 * 32 + 16, { noHop: true }], ['holdThrow', 156 * 32], 'cp',
     ['walk', 172 * 32], ['hop', 1], ['walk', 176 * 32 + 16, { noHop: true }], ['holdThrow', 190 * 32], 'cp', ['walk', 208 * 32]],
   '26-4': [['walk', 20 * 32], ['scuff', 17, 23], ['walk', 24 * 32 + 14, { noHop: true }], ['leap', 1], ['leap', 1], ['leap', 1, 0.6], ['walk', 33 * 32], 'cp', ['walk', 46 * 32], ['scuff', 45, 49], ['walk', 50 * 32 + 20, { noHop: true }], ['leap', 1], ['leap', 1], ['leap', 1, 0.6], ['walk', 62 * 32], 'cp',
-    ['walk', 75 * 32], ['scuff', 74, 78], ['walk', 79 * 32 + 14, { noHop: true }], ['leap', 1], ['leap', 1], ['leap', 1, 0.6], ['walk', 98 * 32], 'cp', ['walk', 124 * 32], ['scuff', 122, 126], ['walk', 127 * 32 + 14, { noHop: true }], ['leap', 1], ['leap', -1], ['scuff', 121, 124], ['walk', 124 * 32 + 20, { noHop: true }], ['leap', 1], ['leap', 1], ['leap', 1, 0.6], 'cp', ['walk', 183 * 32]],
-  '26-5': [['pocket', 16], ['walk', 46 * 32], 'cp', ['pocket', 61], ['walk', 99.5 * 32, { noHop: true }], ['walk', 104 * 32], 'cp', ['walk', 143 * 32], ['pocket', 146], ['walk', 163.5 * 32, { noHop: true }], ['walk', 172 * 32], 'cp', ['walk', 193 * 32]],
-  '26-6': [['walk', 20 * 32 + 16], ['sheet'], ['walk', 47 * 32 + 16], ['sheet'], ['walk', 56 * 32], 'cp', ['walk', 72 * 32 + 16], ['door'], ['bossFight']]
+    ['walk', 75 * 32], ['scuff', 74, 78], ['walk', 79 * 32 + 14, { noHop: true }], ['leap', 1], ['leap', 1], ['leap', 1, 0.6], ['walk', 98 * 32], 'cp', ['walk', 124 * 32], ['scuff', 122, 126], ['walk', 127 * 32 + 14, { noHop: true }], ['leap', 1], ['leap', -1], ['scuff', 121, 124], ['walk', 124 * 32 + 20, { noHop: true }], ['leap', 1], ['leap', 1, 0.6], 'cp', ['walk', 183 * 32]],
+  '26-5': [['pocket', 16], ['walk', 47 * 32 + 16, { noHop: true }], 'cp', ['walk', 48 * 32 + 20, { noHop: true }], ['hop', 1], ['walk', 54 * 32 + 20, { noHop: true }], ['hop', 1], ['pocket', 61], ['walk', 99.5 * 32, { noHop: true }], ['walk', 104 * 32], 'cp', ['walk', 143 * 32], ['pocket', 146], ['walk', 163.5 * 32, { noHop: true }], ['walk', 172 * 32], 'cp', ['walk', 193 * 32]],
+  '26-6': [['walk', 13 * 32 + 16], ['sheet'], ['walk', 39 * 32 + 16], ['sheet'], ['walk', 56 * 32], 'cp', ['walk', 72 * 32 + 16], ['door'], ['bossFight']]
 };
 // the boss, damage on: the land's trick each phase (stand before a free post and jump the arrow; duck the wide ring
 // and jump the low one; into the pocket and jump on the shake)

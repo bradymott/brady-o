@@ -231,7 +231,7 @@ TourRooms.def('washWindows', {
 const PEG_COLS = ['#e8442e', '#ffd84a', '#4aa8e8', '#5ad86a', '#c86ad8', '#ff8a3a', '#f4ead2'];
 TourRooms.def('washPegs', {
   title: 'ONE MORE PEG', rule: 'THE TOWEL DROPS, THEN LIFTS WITH ONE NEW PEG ON THE LINE. JUMP ON THE STOOL UNDER THE NEW ONE. THREE TIMES!', need: 'SPOT THE NEW PEG FIRST!',
-  make(o, keep, ctx, A, rng) { const S = stageRoom(o, keep, A, 6, 2, { shelf: true, sh: 3 }); S.g.data.slots = S.slots; return S.g; },   // a plank shelf on posts over the loft floor
+  make(o, keep, ctx, A, rng) { const S = stageRoom(o, keep, A, 6, 2, { shelf: true, sh: 3 }); S.g.data.slots = S.slots; return mirrorRoom(S.g, ['slots']); },   // door right: a plank shelf on posts over the loft floor
   enter(play, A, R, kit) { if (!R.won) { R.round = 0; this.start(play, A, R); } },
   start(play, A, R) { const rng = ROOM_SEED(play, A); R.has = shuffle(rng, [0, 1, 2, 3, 4, 5]).slice(0, 2 + R.round); R.cols = shuffle(rng, PEG_COLS.slice()); R.phase = 'look'; R.pt = 0; R.newer = -1; },
   update(play, dt, A, R, kit) { const ON = kit.data.on, STAGE = kit.data.stage;
@@ -250,7 +250,7 @@ TourRooms.def('washPegs', {
     }
   },
   draw(play, ctx, A, R, kit) { const ON = kit.data.on, STAGE = kit.data.stage;
-    const t = play.t, xs = kit.data.slots, ly = 4.2 * TS, lx0 = xs[0] * TS - 20, lx1 = xs[5] * TS + TS + 20;
+    const t = play.t, xs = kit.data.slots, ly = 4.2 * TS, lx0 = Math.min(...xs) * TS - 20, lx1 = Math.max(...xs) * TS + TS + 20;
     WA.line(ctx, lx0, ly, lx1, ly, 8, '#8a7a62');
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#5a4a3a'; ctx.fillRect(lx0 - 6, ly - 6, 8, 2.6 * TS); ctx.strokeRect(lx0 - 6, ly - 6, 8, 2.6 * TS); ctx.fillRect(lx1 - 2, ly - 6, 8, 2.6 * TS); ctx.strokeRect(lx1 - 2, ly - 6, 8, 2.6 * TS); ctx.restore();
     xs.forEach((x, k) => {

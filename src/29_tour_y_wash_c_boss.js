@@ -17,7 +17,7 @@
 (function () {
 const WK = Tour.washKit, INK = WK.INK, WA = WK.WashArt;
 // her words come up under her (she floats high: over her they would sit on the HUD)
-const say = (g, b, text, col) => { if (b && b.y != null && b.boss) Tour.washKit.say(g, b.cx, b.y + b.h + 30, text, col || '#ffffff'); else TourKit.say(g, b, text, col); };
+const say = (g, b, text, col) => { if (b && b.y != null && b.boss) Tour.washKit.say(g, b.cx, b.y + b.h + 30, text, col || '#ffffff', 'boss'); else TourKit.say(g, b, text, col); };
 
 /* ---------------- the lead-in: a loose sheet across the way, its corner, the post behind ---------------- */
 // spawn { id, x0 (the corner's anchor column, on the wall), post (the post's column), y (the floor row), side (1: it
@@ -113,7 +113,7 @@ const brain = {
   phases: [4, 2],
   guardText: 'NOT ON THE SHEETS!',
   wake(b) {
-    b.phase = 1; b.loops = []; b.tucked = []; b.homeY = b.floorY - 7.2 * TS; b.y = b.homeY;
+    b.phase = 1; b.loops = []; b.tucked = []; b.homeY = b.floorY - 6.5 * TS; b.y = b.homeY;
     const x0 = b.arenaX0 / TS, w = (b.arenaX1 - b.arenaX0) / TS; b.posts = POSTS(w).map(k => ({ x: (x0 + k) * TS + TS / 2, hooked: false }));
     say(b.g, b, 'A VISITOR! AND I\'M NOT EVEN MADE!', '#ffffff');
   },

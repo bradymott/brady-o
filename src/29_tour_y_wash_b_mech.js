@@ -208,9 +208,9 @@ onCheck('washSeamEdges', function (a) {
 /* ======================= 26-4 CLING ======================= */
 // zones: kind 'washWool' (the rug: charges), kind 'washFelt' (a patch: sticks). Brady: p.wash.charge (sparks, 0-2),
 // p.wash.scuff (wool walked), p.wash.stick ({ z }) while stuck.
-const CLING = { scuff: 5 * TS, sparks: 2, apex: 1 * TS };   // a leap sticks where it comes to rest: rising slower than apex, or falling
+const CLING = { scuff: 4 * TS, sparks: 2, apex: 1 * TS };   // a leap sticks where it comes to rest: rising slower than apex, or falling
 const zoneHit = (A, kind, b, pad) => { for (const z of A.zones || []) if (z.kind === kind && b.x + b.w + pad > z.x && b.x - pad < z.x + z.w && b.y + b.h + pad > z.y && b.y - pad < z.y + z.h) return z; return null; };
-const onWool = (A, p) => { if (!p.onGround) return false; for (const z of A.zones || []) if (z.kind === 'washWool' && p.cx >= z.x && p.cx <= z.x + z.w && Math.abs(p.groundTy * TS - z.y) < 2) return true; return false; };
+const onWool = (A, p) => { if (!p.onGround) return false; for (const z of A.zones || []) if (z.kind === 'washWool' && p.x + p.w > z.x + 2 && p.x < z.x + z.w - 2 && Math.abs(p.groundTy * TS - z.y) < 2) return true; return false; };   // any foot on the rug
 {
   const ppf = playerPhysicsFlip;
   playerPhysicsFlip = function (p, inp, A, dt, platforms, opts) {

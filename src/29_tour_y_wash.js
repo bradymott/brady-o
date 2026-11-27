@@ -88,19 +88,24 @@ const WashArt = {
 
 /* ---------------- the land's floating words: always on a dark rounded pill, clear of the HUD and the thumbs ---------------- */
 // WashSay(g, x, y, text, col): a short line that rises and fades over ~1.2 s (instead of bare text over the sky)
-function WashSay(g, x, y, text, col) {
+// (a line with a `who` replaces that speaker's last line: a boss says one thing at a time)
+function WashSay(g, x, y, text, col, who) {
   if (!g) return; const L = g.__washSay || (g.__washSay = []);
   if (L.some(q => q.text === text && q.t < 0.4 && Math.abs(q.x - x) < 80)) return;
-  L.push({ x, y, text: String(text), col: col || '#ffffff', t: 0 }); if (L.length > 6) L.shift();
+  if (who) for (let i = L.length - 1; i >= 0; i--) if (L[i].who === who) L.splice(i, 1);
+  L.push({ x, y, text: String(text), col: col || '#ffffff', t: 0, who }); if (L.length > 4) L.shift();
 }
+TourHooks.on('areaLoaded', play => { play.__washSay = []; });
+// the lines age with the game (not the drawing), so a paused or stepped game keeps them in step
+TourHooks.on('playUpdate', (play, dt) => { const L = play.__washSay; if (!L || !L.length) return; for (let i = L.length - 1; i >= 0; i--) { L[i].t += dt; if (L[i].t > 1.4) L.splice(i, 1); } });
 TourHooks.on('afterEntities', (play, ctx) => {
   const L = play.__washSay; if (!L || !L.length) return;
-  const k = Game.viewH / Math.max(1, Game.gameRect ? Game.gameRect.h : Game.viewH), dt = 1 / 60;
+  const k = Game.viewH / Math.max(1, Game.gameRect ? Game.gameRect.h : Game.viewH);
   const top = play.camY + 74 * k, bot = play.camY + Game.viewH - 150 * k, x0 = play.camX + 12 * k, x1 = play.camX + Game.viewW - 12 * k;
   ctx.save(); ctx.font = `${Math.round(12 * k)}px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   const placed = [];
   for (let i = L.length - 1; i >= 0; i--) {
-    const q = L[i]; q.t += dt; if (q.t > 1.4) { L.splice(i, 1); continue; }
+    const q = L[i];
     const w = ctx.measureText(q.text).width + 18 * k, h = 22 * k;
     let x = clamp(q.x, x0 + w / 2, x1 - w / 2), y = clamp(q.y - q.t * 22, top + h / 2, Math.max(top + h / 2, bot - h / 2));
     for (const r of placed) if (Math.abs(r.x - x) < (r.w + w) / 2 && Math.abs(r.y - y) < h) y = r.y - h - 3 * k;

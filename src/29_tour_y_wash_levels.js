@@ -225,14 +225,14 @@ const clingRows = (() => {
   // the wall with a label between two felts; on its top a rug, and over there a felt block hung from above: stick on
   // it and hop up to the window ledge (only the felt reaches it: the hanky's peephole is by the window)
   fillG(Gr, 80, 11, 82, 22, 'H'); put(Gr, 80, 19, '3'); put(Gr, 80, 16, 'E'); put(Gr, 80, 12, '4'); put(Gr, 80, 10, 'V');
-  fillG(Gr, 86, 0, 88, 9, 'H'); put(Gr, 86, 5, '7');
-  fillG(Gr, 81, 6, 84, 6, 'H'); put(Gr, 82, 5, 'A'); put(Gr, 84, 4, 'u'); put(Gr, 81, 3, 'o.o');
+  fillG(Gr, 84, 0, 86, 8, 'H'); put(Gr, 84, 4, '7');
+  fillG(Gr, 78, 5, 82, 5, 'H'); put(Gr, 80, 4, 'A'); put(Gr, 82, 3, 'u'); put(Gr, 79, 2, 'o.o');
   ground(Gr, 93, 118, 23); put(Gr, 96, 22, 'c'); put(Gr, 102, 22, 'a'); put(Gr, 106, 18, '?'); put(Gr, 110, 22, 'r'); put(Gr, 100, 15, 'f');
   // ③ the last climb: two walls facing; the wool sill on the left wall
   fillG(Gr, 119, 6, 120, 19, 'H'); ground(Gr, 119, 127, 23); put(Gr, 122, 22, 'K'); put(Gr, 121, 22, 'Z');
   fillG(Gr, 121, 16, 124, 16, 'H'); put(Gr, 121, 15, 'U');
-  fillG(Gr, 128, 6, 130, 22, 'H'); put(Gr, 128, 18, '5'); put(Gr, 128, 12, 'N'); put(Gr, 128, 7, '6'); put(Gr, 125, 11, 'R');
-  ground(Gr, 131, W - 1, 23); fillG(Gr, 128, 6, 135, 6, 'H'); put(Gr, 134, 5, 'o.o');
+  fillG(Gr, 128, 10, 130, 22, 'H'); put(Gr, 128, 18, '5'); put(Gr, 128, 15, 'N'); put(Gr, 128, 11, '6'); put(Gr, 125, 11, 'R');
+  ground(Gr, 131, W - 1, 23); fillG(Gr, 128, 10, 135, 10, 'H'); put(Gr, 134, 9, 'o.o');
   put(Gr, 140, 22, 'c'); put(Gr, 150, 22, 'l'); fillG(Gr, 160, 20, 161, 22, 'H'); put(Gr, 160, 16, 'P'); put(Gr, 172, 22, 'r'); put(Gr, 182, 22, 'G');
   fillG(Gr, W - 1, 0, W - 1, 22, 'H');
   return rowsOf(Gr);
@@ -245,7 +245,7 @@ const CLINGL = {
   '3': ['piece', 'wash.felt', { w: 1, h: 4, col: '#6a7ad8' }], E: ['piece', 'wash.label', { w: 1, h: 3 }], '4': ['piece', 'wash.felt', { w: 1, h: 4, col: '#6a7ad8' }],
   U: ['piece', 'wash.wool', { w: 4 }],
   '7': ['piece', 'wash.felt', { w: 1, h: 5, col: '#e8a83a' }],
-  '5': ['piece', 'wash.felt', { w: 1, h: 5, col: '#4a9a6a' }], N: ['piece', 'wash.label', { w: 1, h: 5 }], '6': ['piece', 'wash.felt', { w: 1, h: 5, col: '#c8643a' }],
+  '5': ['piece', 'wash.felt', { w: 1, h: 5, col: '#4a9a6a' }], N: ['piece', 'wash.label', { w: 1, h: 3 }], '6': ['piece', 'wash.felt', { w: 1, h: 4, col: '#c8643a' }],
   l: ['enemy', 'washLamb'], r: ['enemy', 'washHeron'], f: ['enemy', 'washMoth'],
   A: ['spawn', 'portal', { kind: 'door', look: 'washCupboard', targetRef: 'lost@in' }], u: ['piece', 'wash.peep', {}], a: ['anchor', 'lostOut']
 };
@@ -275,20 +275,21 @@ const pocketRows = (() => {
   // the high shelf behind the wall: the teach pocket's twin
   fillG(Gr, 31, 9, 44, 9, 'H'); put(Gr, 38, 7, '2'); put(Gr, 41, 8, 'f'); put(Gr, 34, 7, '*');
   ground(Gr, 31, 70, 21); put(Gr, 46, 20, 'c'); put(Gr, 40, 20, 'l');
-  // ② three pockets before the tall wall (and the sock heap's twin), beyond it the basin of socks with three shelves:
+  // ② three pockets let into the waistband before the tall wall (and the sock heap's twin): jump over the wrong
+  // ones, drop into the right one; beyond it the basin of socks with three shelves:
   // only the check shelf is level with the second wall's top (the way on); the others drop you in the basin
-  put(Gr, 50, 19, '0'); put(Gr, 49, 20, 'p'); put(Gr, 56, 19, '3'); put(Gr, 61, 19, '4'); put(Gr, 66, 19, '5'); put(Gr, 59, 20, 'N'); put(Gr, 64, 20, 'O'); put(Gr, 69, 20, 'U'); fillG(Gr, 71, 3, 74, 20, 'H');
+  put(Gr, 50, 22, '0'); put(Gr, 45, 20, 'p'); put(Gr, 56, 22, '3'); put(Gr, 61, 22, '4'); put(Gr, 66, 22, '5'); put(Gr, 59, 20, 'N'); put(Gr, 64, 20, 'O'); put(Gr, 69, 20, 'U'); fillG(Gr, 71, 3, 74, 20, 'H');
   ground(Gr, 75, 98, 21); fillG(Gr, 75, 8, 80, 8, 'H'); put(Gr, 78, 6, '6'); put(Gr, 76, 7, 'd');
   fillG(Gr, 83, 13, 88, 13, 'H'); put(Gr, 86, 11, '7'); put(Gr, 84, 12, 'e');
   put(Gr, 90, 19, 'A'); put(Gr, 94, 20, 'j'); put(Gr, 81, 20, 'j'); put(Gr, 87, 20, 'w');
   fillG(Gr, 91, 7, 98, 7, 'H'); put(Gr, 95, 5, '8'); put(Gr, 92, 6, 'i'); put(Gr, 93, 4, 'o.o');
   fillG(Gr, 99, 7, 100, 20, 'H');
-  ground(Gr, 101, 136, 21); put(Gr, 104, 20, 'c'); put(Gr, 112, 20, 'r'); put(Gr, 110, 16, '?');
+  ground(Gr, 101, 150, 21); put(Gr, 104, 20, 'c'); put(Gr, 112, 20, 'r'); put(Gr, 110, 16, '?');
   // the drying room's pocket: gold lining, by the hanky
   put(Gr, 122, 19, '9'); put(Gr, 120, 17, 'u'); put(Gr, 130, 20, 'a');
   // ③ the shared stripe: two mint pockets; beyond the wall a basin, and the scalloped one's shelf by the third wall's top
   put(Gr, 136, 20, 'K'); put(Gr, 138, 20, 't'); put(Gr, 141, 19, 'M'); put(Gr, 144, 20, 'x'); put(Gr, 146, 19, 'X'); put(Gr, 149, 20, 'V'); fillG(Gr, 151, 3, 154, 20, 'H');
-  ground(Gr, 155, 170, 21); fillG(Gr, 155, 10, 162, 10, 'H'); put(Gr, 158, 8, 'Y'); put(Gr, 156, 9, 'm'); put(Gr, 160, 7, 'R');
+  ground(Gr, 155, 170, 21); fillG(Gr, 155, 10, 162, 10, 'H'); put(Gr, 156, 8, 'Y'); put(Gr, 160, 9, 'm'); put(Gr, 161, 6, 'R');
   fillG(Gr, 157, 15, 161, 15, 'H'); put(Gr, 159, 13, 'Z'); put(Gr, 157, 14, 'n'); put(Gr, 166, 19, 'E'); put(Gr, 168, 20, 'j');
   fillG(Gr, 163, 10, 164, 20, 'H');
   ground(Gr, 165, W - 1, 21); fillG(Gr, 165, 10, 166, 20, 'H'); put(Gr, 172, 20, 'c'); put(Gr, 180, 20, 'l'); fillG(Gr, 184, 18, 185, 20, 'H'); put(Gr, 184, 14, 'P'); put(Gr, 192, 20, 'G');
@@ -344,7 +345,7 @@ const cupRows = (() => {
 })();
 const CUP = {
   k: SIGN('LOOSE FITTED SHEETS! STAND BEFORE THE BEDPOST: THE CORNER AIMS AT YOU, THEN SNAPS. JUMP IT AND IT HOOKS THE POST'),
-  '1': ['piece', 'wash.looseSheet', { post: 6, side: 1, id: 'sheet1' }], '2': ['piece', 'wash.looseSheet', { post: 7, side: 1, id: 'sheet2' }],
+  '1': ['piece', 'wash.looseSheet', { post: 6, side: -1, id: 'sheet1' }], '2': ['piece', 'wash.looseSheet', { post: 6, side: -1, id: 'sheet2' }],
   l: ['enemy', 'washLamb'], r: ['enemy', 'washHeron'],
   j: ['piece', 'wash.jaws', { period: 2.6, reach: 3 }], J: ['piece', 'wash.jaws', { period: 2.6, phase: 1.3, reach: 3 }],
   u: ['piece', 'wash.peep', {}], A: ['spawn', 'portal', { kind: 'door', look: 'washCupboard', targetRef: 'drawer@in' }], a: ['anchor', 'drawerOut'],
