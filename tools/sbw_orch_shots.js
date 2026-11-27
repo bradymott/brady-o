@@ -247,7 +247,7 @@ STAGES.sleeve = async ({ ev, shot, run, pano }) => {
       return { y0: y0 / 32, down: down / 32, walkedOff, at: at() };
     });
     check('28-4: on the sleeve, walking against the seam unscrews it down (Brady stays put on it); at its stop he walks off onto the lower ledge', r.down >= 17.95 && r.walkedOff && r.at.y === 17, r);
-    await ev(() => { const sl = ents('OrchSleeve').sort((a, b) => a.x - b.x)[0]; place(22, 11); sim(0.2); sim(1.0, { right: true }); freeze(); }); await shot('41-28-4-unscrewing.png');
+    await ev(() => { play('28-4'); place(22, 11); sim(0.2); sim(1.2, { right: true }); freeze(); }); await shot('41-28-4-unscrewing.png');
     // the late sleeve: past its tie the seam turns; the old way winds back up
     r = await ev(() => {
       thaw(); const sl = ents('OrchSleeve').find(s2 => s2.join != null && s2.y < (s2.join + 1) * 32); place(Math.floor(sl.cx / 32) - 3, sl.top); sim(0.2); walkTo(sl.cx, 6);
@@ -537,7 +537,8 @@ async function roomGame({ ev, shot }, tag, pickWrong, pickRight, rounds) {
   });
   await session({ width: 402, height: 874 }, async ({ ev, shot, run }) => {
     await run('p-trellis', async () => { await ev(() => { fresh(); play('28-1'); place(13, 22); sim(0.2); sim(0.35, { jump: true, jumpPressed: true, up: true }); sim(0.4, { up: true }); freeze(); }); await shot('90-portrait-28-1-trellis.png'); });
-//PORTRAIT
+    await run('p-boss', async () => { await ev(() => { thaw(); fresh(); play('28-6'); const g = S(), k = areaOf(g, 'orchard'), A = g.level.areas[k]; g.loadArea(k, A.anchors.in.x, A.anchors.in.y); P().invuln = 999; sim(0.2); for (let n = 0; n < 300; n++) sim(1 / 120, { right: true }); sim(2.8); freeze(); }); await shot('91-portrait-28-6-boss.png'); });
+    await run('p-map', async () => { await ev(() => { thaw(); fresh(); const d = window.BRADY.Save.data; d.tour.lands.orch = true; d.unlocked['28-1'] = true; window.BRADY.goToMap('world', 1, '28-1'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } freeze(); }); await shot('92-portrait-orch-map.png'); });
   });
   console.log(failures ? `${failures} ORCH CHECK(S) FAILED` : 'ALL ORCH CHECKS PASSED');
   process.exit(failures ? 1 : 0);

@@ -54,7 +54,8 @@ function mirror(g, keys) {
   for (const k of keys || []) { const v = g.data[k]; if (Array.isArray(v)) g.data[k] = v.map(x => Wd - 1 - x); else if (typeof v === 'number') g.data[k] = Wd - 1 - v; }
   g.data.mirror = true; return g;
 }
-const hud = (play, ctx, str, col) => TourRooms.hudText(play, ctx, str, col, 15, 34);
+// the room's counter: one spot just under the top bar, never over the game band; not while the rule is up
+const hud = (play, ctx, str, col) => { if (play.toastT > 0) return; TourRooms.hudText(play, ctx, str, col, 13, 6); };
 const quiet = (play, R) => !(play.bannerT > 0) && !R.ruleWait;
 // a THROW mark on the stage: its orchInput calls the room kind's mark(...)
 class OrchRoomMark extends Ent {
@@ -103,17 +104,17 @@ TourRooms.def('orchUmbrella', {
   draw(play, ctx, A, R, kit) {
     const t = play.t, p = P(play), y8 = 8 * TS;
     // the shelves (pots on them) and the drips from the leaky roof between them
-    for (const [a, b] of SHELVES) { ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#8a6a4a'; ctx.fillRect(a * TS - 4, 4 * TS, (b - a + 1) * TS + 8, 10); ctx.strokeRect(a * TS - 4, 4 * TS, (b - a + 1) * TS + 8, 10);
-      for (let x = a * TS + 8; x < (b + 1) * TS; x += 22) { ctx.fillStyle = '#c86a3a'; ctx.beginPath(); ctx.moveTo(x - 8, 4 * TS); ctx.lineTo(x + 8, 4 * TS); ctx.lineTo(x + 6, 4 * TS - 16); ctx.lineTo(x - 6, 4 * TS - 16); ctx.closePath(); ctx.fill(); ctx.stroke(); OA.leaf(ctx, x - 2, 4 * TS - 18, 0.8, -1.4); } ctx.restore(); }
+    for (const [a, b] of SHELVES) { ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#8a6a4a'; ctx.fillRect(a * TS - 4, 5.2 * TS, (b - a + 1) * TS + 8, 10); ctx.strokeRect(a * TS - 4, 5.2 * TS, (b - a + 1) * TS + 8, 10);
+      for (let x = a * TS + 8; x < (b + 1) * TS; x += 22) { ctx.fillStyle = '#c86a3a'; ctx.beginPath(); ctx.moveTo(x - 8, 5.2 * TS); ctx.lineTo(x + 8, 5.2 * TS); ctx.lineTo(x + 6, 5.2 * TS - 16); ctx.lineTo(x - 6, 5.2 * TS - 16); ctx.closePath(); ctx.fill(); ctx.stroke(); OA.leaf(ctx, x - 2, 5.2 * TS - 18, 0.8, -1.4); } ctx.restore(); }
     for (const d of R.drops || []) {
       ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.fillStyle = 'rgba(120,190,255,0.9)';
-      const dy = d.fall > 0 ? lerp(2 * TS, y8 - 10, Math.min(1, d.fall)) : 2 * TS + d.swell * 8, r = d.fall > 0 ? 9 : 4 + d.swell * 6;
+      const dy = d.fall > 0 ? lerp(4.6 * TS, y8 - 10, Math.min(1, d.fall)) : 4.6 * TS + d.swell * 8, r = d.fall > 0 ? 9 : 4 + d.swell * 6;
       if (d.fall < 1) { ctx.beginPath(); ctx.moveTo(d.x, dy - r * 1.6); ctx.quadraticCurveTo(d.x + r, dy, d.x, dy + r); ctx.quadraticCurveTo(d.x - r, dy, d.x, dy - r * 1.6); ctx.fill(); ctx.stroke(); }
       if (d.splash) { ctx.strokeStyle = 'rgba(120,190,255,0.9)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(d.x, y8 - 2, 20, 5, 0, 0, TAU); ctx.stroke(); }
       ctx.restore();
     }
     // the roof's leak marks
-    ctx.save(); ctx.fillStyle = 'rgba(40,30,30,0.5)'; for (const [a, b] of GAPS) { ctx.beginPath(); ctx.ellipse((a + b + 1) / 2 * TS, 1.8 * TS, 14, 5, 0, 0, TAU); ctx.fill(); } ctx.restore();
+    ctx.save(); ctx.fillStyle = 'rgba(40,30,30,0.5)'; for (const [a, b] of GAPS) { ctx.beginPath(); ctx.ellipse((a + b + 1) / 2 * TS, 4.4 * TS, 14, 5, 0, 0, TAU); ctx.fill(); } ctx.restore();
     // the return stand (a little counter with a bell) at the end of the bench
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#b8945a'; ctx.fillRect(18 * TS - 2, y8 - 26, TS + 4, 26); ctx.strokeRect(18 * TS - 2, y8 - 26, TS + 4, 26); ctx.fillStyle = '#e8c840'; ctx.beginPath(); ctx.arc(18.5 * TS, y8 - 30, 6, Math.PI, 0); ctx.fill(); ctx.stroke(); ctx.restore();
     if (!R.won) OA.pill(ctx, 18.5 * TS, y8 - 50, 'RETURN', '#ffffff', 0.85);
@@ -126,7 +127,6 @@ TourRooms.def('orchUmbrella', {
       ctx.fillStyle = '#fff8e0'; ctx.fillRect(x + 8, y + 18, 9, 11); ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.strokeRect(x + 8, y + 18, 9, 11);
       ctx.restore();
     }
-    if (!R.won && quiet(play, R)) hud(play, ctx, 'DRY RECEIPT TO THE STAND');
   },
   testWin(g, A, R, kit, frame) {
     const p = g.player; p.x = 6.5 * TS - p.w / 2; p.y = 8 * TS - p.h; p.vx = p.vy = 0;
@@ -162,11 +162,11 @@ TourRooms.def('orchPeel', {
     if (R.won) return;
     const sx = (kit.data.snip + 0.5) * TS, J = this.joints(A, R, kit); R.cut = R.cut || [];
     const k = J.findIndex((x, i) => Math.abs(x - sx) < 16 && !R.cut.includes(i));
-    if (k >= 0) { R.cut.push(k); R.n++; chime(R.n, true); OK.say(play, sx, 3 * TS, R.n >= 3 ? 'THREE TIDY CURLS!' : 'SNIP! A CURL', '#ffd84a'); if (R.n >= 3) TourRooms.win(play, A, R, { text: 'A CLEAN CUT!', coins: 4 }); }
+    if (k >= 0) { R.cut.push(k); R.n++; chime(R.n, true); OK.say(play, sx, 4.6 * TS, R.n >= 3 ? 'THREE TIDY CURLS!' : 'SNIP! A CURL', '#ffd84a'); if (R.n >= 3) TourRooms.win(play, A, R, { text: 'A CLEAN CUT!', coins: 4 }); }
     else { R.fails = (R.fails || 0) + 1; RK.raspberry(play, 'RAGGED! NEW PEEL'); R.n = 0; R.u = 0; R.cut = []; }
   },
   draw(play, ctx, A, R, kit) {
-    const t = play.t, sx = (kit.data.snip + 0.5) * TS, y = 4 * TS, dir = kit.data.mirror ? 1 : -1;
+    const t = play.t, sx = (kit.data.snip + 0.5) * TS, y = 5.6 * TS, dir = kit.data.mirror ? 1 : -1;
     // the peel: a long pale-green ribbon with three dark notched joints
     if (!R.won) {
       const J = this.joints(A, R, kit), x0 = J[0] + dir * 1.5 * TS, x1 = J[2] - dir * 1.5 * TS;
@@ -219,7 +219,7 @@ TourRooms.def('orchOwl', {
     else { R.fails = (R.fails || 0) + 1; RK.raspberry(play, 'ALL WINGS. TRY AGAIN'); R.c = 3.6; }
   },
   draw(play, ctx, A, R) {
-    const t = play.t, ph = this.phase(R), x = 15 * TS, y = 4.2 * TS;
+    const t = play.t, ph = this.phase(R), x = 15 * TS, y = 5.0 * TS;
     // the beam, the owl (a carved wooden toy), its wings over its face, feathers lifting one by one
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#5a3e26'; ctx.fillRect(10 * TS, y + 30, 10 * TS, 10); ctx.strokeRect(10 * TS, y + 30, 10 * TS, 10);
     ctx.fillStyle = '#b8864a'; ctx.beginPath(); ctx.ellipse(x, y, 28, 32, 0, 0, TAU); ctx.fill(); ctx.stroke();
@@ -274,9 +274,9 @@ TourRooms.def('orchSorbet', {
   },
   update(play, dt, A, R) { if (R.won) return; const p = P(play); if (!(p && p.orchProp && p.orchProp.room)) R.piping = R.piping && false; },
   draw(play, ctx, A, R, kit) {
-    const t = play.t, x = (kit.data.nz + 0.5) * TS, base = 5.2 * TS;
+    const t = play.t, x = (kit.data.nz + 0.5) * TS, base = 6.6 * TS;
     // the dispenser on the counter wall: a plum box, a nozzle
-    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = OA.PLUM; rr(ctx, x - 26, 1.0 * TS, 52, 40, 6); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#c8ccd8'; ctx.beginPath(); ctx.moveTo(x - 7, 1.0 * TS + 40); ctx.lineTo(x + 7, 1.0 * TS + 40); ctx.lineTo(x + 3, 1.0 * TS + 52); ctx.lineTo(x - 3, 1.0 * TS + 52); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; const bx = x + (kit.data.mirror ? -34 : 34); ctx.fillStyle = '#f4ecd4'; ctx.beginPath(); ctx.moveTo(bx - 14, base - 74); ctx.lineTo(bx + 14, base - 74); ctx.lineTo(bx + (kit.data.mirror ? 14 : -14), base - 30); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = OA.PLUM; ctx.fillRect(bx - 14, base - 80, 28, 8); ctx.strokeRect(bx - 14, base - 80, 28, 8);
     // the cone on its turning stand, the curl growing in it, its tip swaying
     const h = R.won ? 1 : (R.h || 0), sw = R.won ? 0 : this.sway(R), up = Math.abs(sw) < 0.28 && h > 0.5;
     ctx.fillStyle = '#d8a860'; ctx.beginPath(); ctx.moveTo(x - 14, base - 20); ctx.lineTo(x + 14, base - 20); ctx.lineTo(x, base + 14); ctx.closePath(); ctx.fill(); ctx.stroke();
@@ -338,8 +338,8 @@ TourRooms.def('orchStamp', {
     // the tray of blank labels by the mark
     ctx.fillStyle = '#8a6a4a'; ctx.fillRect(6.6 * TS, 8 * TS - 16, 30, 16); ctx.strokeStyle = INK; ctx.strokeRect(6.6 * TS, 8 * TS - 16, 30, 16); ctx.fillStyle = IV; ctx.fillRect(6.6 * TS + 4, 8 * TS - 20, 22, 6);
     // the stamp on its column; the clerk (a Bark Snail in a visor) at the handle
-    const sy = by - 18 - h * 2.2 * TS;
-    ctx.fillStyle = '#5a5a6a'; ctx.fillRect(sx - 4, 1 * TS, 8, sy - 1 * TS); ctx.fillStyle = OA.PLUM; rr(ctx, sx - 22, sy - 26, 44, 26, 4); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = OA.RUST; ctx.fillRect(sx - 18, sy - 4, 36, 6);
+    const sy = by - 18 - h * 1.3 * TS;
+    ctx.fillStyle = '#5a5a6a'; ctx.fillRect(sx - 4, 3.6 * TS, 8, sy - 3.6 * TS); ctx.fillStyle = OA.PLUM; rr(ctx, sx - 22, sy - 26, 44, 26, 4); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = OA.RUST; ctx.fillRect(sx - 18, sy - 4, 36, 6);
     if (h > 0.98 && (R.c % 2.4) > 1.0) { ctx.strokeStyle = `rgba(255,216,74,${0.5 + 0.5 * Math.sin(t * 16)})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(sx - 26, sy - 30); ctx.lineTo(sx + 26, sy - 30); ctx.stroke(); }
     OK.snailArt(ctx, { dir: -1 }, sx + 2.2 * TS, 8 * TS - 2, h > 0.5 ? 'notice' : 'walk', t);
     ctx.restore();
@@ -382,13 +382,13 @@ TourRooms.def('orchPip', {
     const t = play.t;
     // the shaker: a lever on a post linked to the pears' rail
     const sx = (kit.data.shaker + 0.5) * TS; ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(sx, 8 * TS - 4); ctx.lineTo(sx + (R.st === 'shake' ? Math.sin(t * 40) * 12 : 8), 8 * TS - 54); ctx.stroke(); ctx.fillStyle = OA.RUST; ctx.beginPath(); ctx.arc(sx + (R.st === 'shake' ? Math.sin(t * 40) * 12 : 8), 8 * TS - 56, 7, 0, TAU); ctx.fill(); ctx.lineWidth = 1.6; ctx.stroke();
-    ctx.strokeStyle = '#6a5048'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(Math.min(...kit.data.pears) * TS - 10, 1.4 * TS); ctx.lineTo((Math.max(...kit.data.pears) + 1) * TS + 10, 1.4 * TS); ctx.stroke(); ctx.restore();
+    ctx.strokeStyle = '#6a5048'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(Math.min(...kit.data.pears) * TS - 10, 3.6 * TS); ctx.lineTo((Math.max(...kit.data.pears) + 1) * TS + 10, 3.6 * TS); ctx.stroke(); ctx.restore();
     kit.data.pears.forEach((x, k) => {
-      const cx = (x + 0.5) * TS, shake = R.st === 'shake' ? Math.sin(t * 30 + k) * 0.18 : 0, py = 4.6 * TS;
-      ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx, 1.4 * TS); ctx.lineTo(cx, py - 2.1 * TS); ctx.stroke();
-      OA.pear(ctx, cx, py, 2.4, OA.PEAR, true, shake);
+      const cx = (x + 0.5) * TS, shake = R.st === 'shake' ? Math.sin(t * 30 + k) * 0.18 : 0, py = 6.0 * TS;
+      ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx, 3.6 * TS); ctx.lineTo(cx, py - 1.6 * TS); ctx.stroke();
+      OA.pear(ctx, cx, py, 1.9, OA.PEAR, true, shake);
       // the cutaway window with three pips inside
-      ctx.translate(cx, py - 24); ctx.rotate(shake); ctx.fillStyle = '#fff6dc'; ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.ellipse(0, 0, 13, 16, 0, 0, TAU); ctx.fill(); ctx.stroke();
+      ctx.translate(cx, py - 19); ctx.rotate(shake); ctx.fillStyle = '#fff6dc'; ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.ellipse(0, 0, 13, 16, 0, 0, TAU); ctx.fill(); ctx.stroke();
       const loose = k === R.loose && (R.st === 'settle' || R.st === 'pick');
       for (let q = 0; q < 3; q++) {
         let dx = (q - 1) * 7, dy = 4 + (q === 1 ? -6 : 0), a = 0.3;

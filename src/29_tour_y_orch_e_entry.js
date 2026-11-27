@@ -35,11 +35,11 @@ function jpTree(ctx, x, y, s, part, tie, t) {
   const fy = y - 3.8 * TS;
   if (part !== 'trunk') {
     ctx.fillStyle = JPC.trunk; ctx.lineCap = 'round'; ctx.strokeStyle = JPC.trunk; ctx.lineWidth = 12 * s;
-    ctx.beginPath(); ctx.moveTo(x, fy); ctx.quadraticCurveTo(x - 30 * s, fy - 40 * s, x - 62 * s, fy - 70 * s); ctx.moveTo(x, fy); ctx.quadraticCurveTo(x + 34 * s, fy - 36 * s, x + 66 * s, fy - 64 * s); ctx.moveTo(x, fy); ctx.lineTo(x + 4 * s, fy - 96 * s); ctx.stroke();
-    for (const [dx, dy, r, c] of [[-60, -96, 46, JPC.leaf3], [60, -92, 46, JPC.leaf3], [0, -124, 54, JPC.leaf], [-34, -78, 40, JPC.leaf], [36, -76, 40, JPC.leaf], [-12, -140, 30, JPC.leaf2], [24, -108, 26, JPC.leaf2]]) { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x + dx * s, fy + dy * s, r * s, 0, TAU); ctx.fill(); }
-    // its pears, hanging below the canopy on stalks
-    const P = [[-70, -54], [-30, -48], [8, -62], [44, -50], [78, -46]];
-    P.forEach(([dx, dy], k) => jpPear(ctx, x + dx * s, fy + dy * s + Math.sin(t * 1.3 + k) * 1.2, s, k === tie));
+    ctx.beginPath(); ctx.moveTo(x, fy); ctx.quadraticCurveTo(x - 26 * s, fy - 24 * s, x - 56 * s, fy - 44 * s); ctx.moveTo(x, fy); ctx.quadraticCurveTo(x + 28 * s, fy - 22 * s, x + 58 * s, fy - 40 * s); ctx.moveTo(x, fy); ctx.lineTo(x + 3 * s, fy - 60 * s); ctx.stroke();
+    for (const [dx, dy, r, c] of [[-58, -58, 34, JPC.leaf3], [58, -56, 34, JPC.leaf3], [0, -78, 40, JPC.leaf], [-30, -48, 30, JPC.leaf], [32, -46, 30, JPC.leaf], [-10, -92, 22, JPC.leaf2], [22, -66, 20, JPC.leaf2]]) { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x + dx * s, fy + dy * s, r * s, 0, TAU); ctx.fill(); }
+    // its pears, hanging below the canopy on stalks (the tied one a little bigger, low over the fork)
+    const P = [[-66, -14], [-34, -10], [14, -4], [44, -12], [76, -16]];
+    P.forEach(([dx, dy], k) => jpPear(ctx, x + dx * s, fy + dy * s + Math.sin(t * 1.3 + k) * 1.2, k === tie ? s * 1.25 : s, k === tie));
   }
   if (part !== 'back') {
     // the trunk and its low fork (bark stripes, a little moss)

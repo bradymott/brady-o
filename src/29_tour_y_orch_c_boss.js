@@ -39,7 +39,7 @@ const brain = {
   wake(b) {
     b.phase = 1; b.votes = 0; b.memberVotes = 0; const x0 = b.arenaX0 / TS;
     b.perches = PERCH.map(k => ({ x: (x0 + k) * TS + TS / 2, tx: x0 + k, whip: 0 }));
-    b.basketX = b.arenaX0 + 1.8 * TS; b.stalkX = (b.arenaX0 + b.arenaX1) / 2; b.homeY = b.floorY - 6.6 * TS;
+    b.basketX = b.arenaX0 + 2.4 * TS; b.basketY = b.floorY - 3.4 * TS; b.stalkX = (b.arenaX0 + b.arenaX1) / 2; b.homeY = b.floorY - 6.1 * TS;
     b.pears = [0, 1, 2].map(k => ({ k, x: b.stalkX + (k - 1) * 34, y: b.homeY + (k === 1 ? 10 : 0), mode: 'home', sp: 0 }));
     say(b.g, b, 'THIS MEETING OF THE WINDFALL COMMITTEE IS NOW IN SESSION.', '#ffffff');
     b.go('idle');
@@ -116,11 +116,11 @@ const brain = {
     }
     if (b.act === 'flick') {
       P.fk = Math.min(1, P.fk + dt / 0.9); const k = P.fk;
-      const tx = P.into ? b.basketX : (P.perch.x < b.cx ? b.arenaX0 - TS : b.arenaX1 + TS), ty = fy - 1.2 * TS;
+      const tx = P.into ? b.basketX : (P.perch.x < b.cx ? b.arenaX0 - TS : b.arenaX1 + TS), ty = P.into ? b.basketY - 0.8 * TS : fy - 1.2 * TS;
       P.x = lerp(P.sx, tx, k); P.y = lerp(P.sy, ty, k) - Math.sin(k * Math.PI) * 3.4 * TS;
       if (k >= 1) {
         if (P.into) {
-          b.votes++; b.memberVotes++; g.burst(b.basketX, fy - TS, 16, '#ffd84a', 'confetti'); OK.say(g, b.basketX + TS, fy - 2.5 * TS, 'AYE!', '#ffd84a');
+          b.votes++; b.memberVotes++; g.burst(b.basketX, b.basketY - TS, 16, '#ffd84a', 'confetti'); OK.say(g, b.basketX + TS, b.basketY - 2 * TS, 'AYE!', '#ffd84a');
           const done = b.memberVotes >= 2;
           if (done) { P.mode = 'gone'; } else { P.mode = 'back'; P.sx = P.x; P.sy = P.y; P.fk = 0; }
           b.damage(1, { quiet: true });
@@ -194,13 +194,15 @@ TourHooks.on('afterEntities', (play, ctx) => {
   // the lunge's lane: the half of the lawn it will sweep
   if (b.act === 'tell' && (b.phase || 1) >= 2 && P.side) { const k = Math.min(1, b.at); const mid = (b.arenaX0 + b.arenaX1) / 2, x0 = P.side < 0 ? b.arenaX0 : mid, x1 = P.side < 0 ? mid : b.arenaX1; ctx.save(); ctx.fillStyle = `rgba(255,90,110,${0.1 + 0.18 * k})`; ctx.fillRect(x0, fy - 1.6 * TS, x1 - x0, 1.6 * TS); ctx.restore(); }
   // the voting basket (left end), its votes in it
-  const bx = b.basketX;
+  // (up on its stand, clear of the stick in the corner)
+  const bx = b.basketX, by = b.basketY;
   ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2.2;
-  for (let k = 0; k < Math.min(6, b.votes); k++) OA.pear(ctx, bx - 22 + (k % 3) * 22, fy - 40 - Math.floor(k / 3) * 12, 1.0, OA.PEAR, true, (k - 2) * 0.25);
-  ctx.fillStyle = '#c8a06a'; ctx.beginPath(); ctx.moveTo(bx - 46, fy - 44); ctx.lineTo(bx + 46, fy - 44); ctx.lineTo(bx + 36, fy); ctx.lineTo(bx - 36, fy); ctx.closePath(); ctx.fill(); ctx.stroke();
-  ctx.strokeStyle = '#8a6a3a'; ctx.lineWidth = 1.3; for (let k = -4; k <= 4; k++) { ctx.beginPath(); ctx.moveTo(bx + k * 10, fy - 43); ctx.lineTo(bx + k * 8, fy - 1); ctx.stroke(); }
+  ctx.fillStyle = OA.BARK; ctx.fillRect(bx - 6, by, 12, fy - by); ctx.strokeRect(bx - 6, by, 12, fy - by); ctx.fillRect(bx - 22, fy - 8, 44, 8); ctx.strokeRect(bx - 22, fy - 8, 44, 8);
+  for (let k = 0; k < Math.min(6, b.votes); k++) OA.pear(ctx, bx - 22 + (k % 3) * 22, by - 40 - Math.floor(k / 3) * 12, 1.0, OA.PEAR, true, (k - 2) * 0.25);
+  ctx.fillStyle = '#c8a06a'; ctx.beginPath(); ctx.moveTo(bx - 46, by - 44); ctx.lineTo(bx + 46, by - 44); ctx.lineTo(bx + 36, by); ctx.lineTo(bx - 36, by); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = '#8a6a3a'; ctx.lineWidth = 1.3; for (let k = -4; k <= 4; k++) { ctx.beginPath(); ctx.moveTo(bx + k * 10, by - 43); ctx.lineTo(bx + k * 8, by - 1); ctx.stroke(); }
   ctx.restore();
-  OA.pill(ctx, bx, fy - 62, 'AYES ' + b.votes, '#ffd84a');
+  OA.pill(ctx, bx, by - 62, 'AYES ' + b.votes, '#ffd84a');
   // the members, on top
   for (const Q of b.pears) if (Q.mode !== 'gone') member(ctx, Q, t, b.phase, b);
 });
