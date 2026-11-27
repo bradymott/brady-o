@@ -263,7 +263,10 @@ TourHats.NOT = new Set([].concat(
   'washNet washCrawler washBeetleGate washPeep washSweater washSeam washFeltArt washPocket washJaws washLooseSheet washHem'.split(' '),
   // Pupo Standard Time (hidden land A7): thought bubbles, cushions, lashes, lids, mouths, flowers, jaws, rulers, things,
   // pictures, the tell, the bench and hollow (12-1), the full stop, the sentence, Pupo at his lectern, the parrot's echo
-  'pstThought pstCushionPad pstLashes pstLid pstMouth pstFlower pstJaw pstRuler pstThing pstPic pstZ pstBench pstHollow pstStop pstStrip pstSpeaker pstEcho'.split(' ')
+  'pstThought pstCushionPad pstLashes pstLid pstMouth pstFlower pstJaw pstRuler pstThing pstPic pstZ pstBench pstHollow pstStop pstStrip pstSpeaker pstEcho'.split(' '),
+  // Foley Beach (hidden land A4): props, shell flocks, tin panels, prop banks, screens, the cargo net and its crabs
+  // (on the ropes), trumpets, ears, platters, desks, clapper gates, machines, mics, room marks, the riser and flap (3-1)
+  'foleyProp foleyFlock foleyPanel foleyBank foleyScreen foleyNet foleyNetCrab foleyTrumpet foleyEar foleyPlatter foleyDesk foleyClapGate foleyMachine foleyMic foleyRoomMark foleyBossMic foleyBossMachine foleyRiser foleyFlap'.split(' ')
 ));
 
 /* ---------- the animals: [fx, fxFlip, fy, size] (see the header) ---------- */
@@ -328,7 +331,9 @@ Object.assign(TourHats.HEADS, {
   // Wrong Side of the Wash (26): the peg beetle, the lint lamb, the hanger heron, the sock moth
   washBeetle: [0.45, 0.45, -1.3, 0], washLamb: [0.55, 0.55, -1.1, 0], washHeron: [0.4, 0.4, -1.42, 0], washMoth: [0.08, 0.08, -1.2, 0],
   // Pupo Standard Time (hidden land A7): the pillow louse, the secondhand slug, the napkin bat, the snore pea
-  pstLouse: [0.4, 0.4, -1.1, 0], pstSlug: [0.55, 0.55, -1.45, 0], pstBat: [0.02, 0.02, -1.2, 0], pstPea: [0.02, 0.02, -1.15, 0]
+  pstLouse: [0.4, 0.4, -1.1, 0], pstSlug: [0.55, 0.55, -1.45, 0], pstBat: [0.02, 0.02, -1.2, 0], pstPea: [0.02, 0.02, -1.15, 0],
+  // Foley Beach (hidden land A4): the clapper clam, the hiss kettle, the rubbersole ray, the boom crab
+  foleyClam: [0.1, 0.1, -0.95, 0], foleyKettle: [0.0, 0.0, -1.25, 0], foleyRay: [0.25, 0.25, -1.15, 0], foleyCrab: [0.05, 0.05, -1.05, 0]
 
 });
 

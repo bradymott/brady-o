@@ -225,14 +225,15 @@ class FoleyPanel extends Ent {
     // the burgundy end caps (always solid-looking: the panel hangs between them)
     ctx.fillStyle = FELT; rr(ctx, x - 6, y - 4, 10, 18, 2); ctx.fill(); ctx.stroke(); rr(ctx, x + w - 4, y - 4, 10, 18, 2); ctx.fill(); ctx.stroke();
     // the sheet: rattling (a jagged ripple, amplitude E) or flat (a calm petrol plank)
-    const wob = (this.flat ? 0 : 3 + 7 * this.E), warn = this.flat && !this.caught && this.press <= 0 && this.flatT < 1.2 ? (1.2 - this.flatT) * 4 : 0;
+    const wob = (this.flat ? 0 : this.meet ? 1.5 : 3 + 7 * this.E), warn = this.flat && !this.caught && this.press <= 0 && this.flatT < 1.2 ? (1.2 - this.flatT) * 4 : 0;
     ctx.fillStyle = TIN; ctx.beginPath(); ctx.moveTo(x, y + 2);
     const segs = n * 4;
-    const hump = u => { if (!this.meet || this.caught) return 0; const hu = this.humpU() * 0.5; return -14 * (Math.exp(-Math.pow((u - hu) * 9, 2)) + Math.exp(-Math.pow((u - (1 - hu)) * 9, 2))); };
+    const hump = u => { if (!this.meet || this.caught) return 0; const hu = this.humpU() * 0.5; return -24 * (Math.exp(-Math.pow((u - hu) * 9, 2)) + Math.exp(-Math.pow((u - (1 - hu)) * 9, 2))); };
     for (let s = 0; s <= segs; s++) { const u = s / segs, yy = y + 2 + (s % 2 ? 1 : -1) * (wob + warn) * Math.sin(t * 30 + s) * 0.8 + hump(u); ctx.lineTo(x + u * w, yy); }
     for (let s = segs; s >= 0; s--) { const u = s / segs, yy = y + 10 + (s % 2 ? 1 : -1) * (wob + warn) * Math.sin(t * 30 + s) * 0.8 + hump(u); ctx.lineTo(x + u * w, yy); }
     ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.fillStyle = TIN3; ctx.fillRect(x + 2, y + 2, w - 4, 2);
+    if (this.meet && !this.caught) { const hu = this.humpU() * 0.5; for (const u of [hu, 1 - hu]) { ctx.fillStyle = '#9ad0e0'; ctx.beginPath(); ctx.ellipse(x + u * w, y - 16, 10, 8, 0, Math.PI, 0); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.stroke(); } }
     if (!this.flat || warn) { ctx.strokeStyle = '#9ad0e0'; ctx.lineWidth = 2; for (let k = 0; k < n; k++) { const xx = x + (k + 0.5) * TS; ctx.beginPath(); ctx.moveTo(xx - 6, y - 6); ctx.lineTo(xx - 2, y - 12); ctx.lineTo(xx + 2, y - 6); ctx.lineTo(xx + 6, y - 12); ctx.stroke(); } }
     ctx.restore();
     const p = this.g.player;
@@ -246,9 +247,9 @@ class FoleyPanel extends Ent {
       ctx.fillStyle = FELT; ctx.strokeStyle = INK; rr(ctx, cx - 22, y - 2 * TS + dy, 44, 14, 4); ctx.fill(); ctx.stroke(); ctx.restore();
       if (!this.caught) { markRing(ctx, cx, y + 4, t, hot, 30); if (hot) nowCue(ctx, cx, y - 3 * TS, t, 'NOW!'); }
       if (p && this.fTouch(p)) handCue(ctx, p.cx, p.y - 30, t, 'THROW WHEN THEY MEET');
-      if (!this.caught) markRing(ctx, (this.tx - 0.5) * TS, this.row * TS + TS, t, p && this.fTouch(p), 16);
+      if (!this.caught) markRing(ctx, (this.tx - 0.5) * TS, this.row * TS, t, p && this.fTouch(p), 16);
     } else if (!this.flat) {
-      markRing(ctx, (this.tx - 0.5) * TS, this.row * TS + TS, t, p && this.fTouch(p), 16);
+      markRing(ctx, (this.tx - 0.5) * TS, this.row * TS, t, p && this.fTouch(p), 16);
       if (p && this.fTouch(p)) handCue(ctx, p.cx, p.y - 30, t, 'HOLD THROW');
     } else if (p && this.fTouch(p) && this.press <= 0 && !this.caught) handCue(ctx, p.cx, p.y - 30, t, 'KEEP HOLDING THROW');
   }
@@ -325,7 +326,7 @@ class FoleyBank extends Ent {
   // the foot lands at q = 0 (generous: 0.3 s either side)
   onBeat() { const q = this.q(), d = Math.min(q, 1 - q) * this.P; return d < 0.3; }
   play() {
-    const g = this.g, kind = this.props[this.sel], B = BANK_PROPS[kind], x = (this.tx + this.sel) * TS + TS / 2;
+    const g = this.g, kind = this.props[this.sel], B = BANK_PROPS[kind], x = (this.tx + 1 + this.sel) * TS + TS / 2;
     FX.noise(g, x, this.fy * TS - 14, B.noise); sfx('prop', B.noise === 'thump' ? 'stomp' : 'kick', { vol: 0.5, pitch: B.noise === 'squeak' ? 2.2 : 1.6 });
     K.say(g, x, this.fy * TS - 2 * TS, B.word + '!', '#ffe8c8', 'bankw' + this.tx);
     const want = PICS[this.pic()];
@@ -341,11 +342,11 @@ class FoleyBank extends Ent {
     const t = this.t, y = this.fy * TS, p = this.g.player;
     // the bank: a burgundy felt table with the props on it
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
-    ctx.fillStyle = FELT; rr(ctx, this.tx * TS + 2, y - 20, this.props.length * TS - 4, 10, 3); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = WOOD2; ctx.fillRect(this.tx * TS + 6, y - 10, 5, 10); ctx.fillRect((this.tx + this.props.length) * TS - 11, y - 10, 5, 10);
+    ctx.fillStyle = FELT; rr(ctx, (this.tx + 1) * TS + 2, y - 20, this.props.length * TS - 4, 10, 3); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = WOOD2; ctx.fillRect((this.tx + 1) * TS + 6, y - 10, 5, 10); ctx.fillRect((this.tx + 1 + this.props.length) * TS - 11, y - 10, 5, 10);
     ctx.restore();
-    this.props.forEach((k, i) => drawBankProp(ctx, k, (this.tx + i) * TS + TS / 2, y - 20, this.mounted && i === this.sel, t));
-    if (this.mounted) { const x = (this.tx + this.sel) * TS + TS / 2; ctx.save(); ctx.fillStyle = '#ffd84a'; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x - 7, y - 50); ctx.lineTo(x + 7, y - 50); ctx.lineTo(x, y - 40 + Math.sin(t * 8) * 2); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); }
+    this.props.forEach((k, i) => drawBankProp(ctx, k, (this.tx + 1 + i) * TS + TS / 2, y - 20, this.mounted && i === this.sel, t));
+    if (this.mounted) { const x = (this.tx + 1 + this.sel) * TS + TS / 2; ctx.save(); ctx.fillStyle = '#ffd84a'; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x - 7, y - 50); ctx.lineTo(x + 7, y - 50); ctx.lineTo(x, y - 40 + Math.sin(t * 8) * 2); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); }
     if (!this.done) {
       markRing(ctx, this.tx * TS + TS / 2, y, t, p && this.fTouch(p), 16);
       if (p && this.fTouch(p)) handCue(ctx, p.cx, p.y - 34, t, this.mounted ? 'STICK PICKS · THROW PLAYS · JUMP LETS GO' : 'THROW: TAKE THE PROPS');
@@ -406,6 +407,8 @@ class FoleyNet extends Ent {
   draw(ctx) {
     const x = this.x, y = this.y, w = this.w, h = this.h, t = this.t, g = this.g;
     ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    // the lifting ropes running on up through a gap: just knotted ropes
+    if (this.s.lift) { ctx.strokeStyle = INK; ctx.lineWidth = 5; const R = () => { ctx.beginPath(); for (let xx = x + 8; xx < x + w; xx += 16) { ctx.moveTo(xx, y - 4); ctx.lineTo(xx, y + h + 6); } for (let yy = y + 6; yy < y + h; yy += 18) { ctx.moveTo(x + 4, yy); ctx.lineTo(x + w - 4, yy); } ctx.stroke(); }; R(); ctx.strokeStyle = '#efe2c4'; ctx.lineWidth = 3; R(); ctx.restore(); return; }
     // the frame and the pulleys it is lifted by
     ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = FELT; ctx.fillRect(x - 10, y - 18, w + 20, 10); ctx.strokeRect(x - 10, y - 18, w + 20, 10);
     for (const px of [x + 12, x + w - 12]) { ctx.fillStyle = TIN; ctx.beginPath(); ctx.arc(px, y - 8, 11, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = TIN3; ctx.beginPath(); ctx.arc(px, y - 8, 4, 0, TAU); ctx.fill(); ctx.stroke(); }
@@ -430,6 +433,16 @@ class FoleyNet extends Ent {
     ctx.restore();
   }
 }
+// on the far side of the ropes, the ropes pass in front of Brady (his bun and glasses still read between them)
+TourHooks.on('afterEntities', (play, ctx) => {
+  const p = play.player, W = p && p.wash; if (!(W && W.grip && W.face === 1) || !isFoley(play)) return;
+  const N = play.entities.find(e => e instanceof FoleyNet && e.nid === W.grip.nid); if (!N) return;
+  const step = TS * 0.75, x0 = p.x - 20, x1 = p.x + p.w + 20, y0 = p.y - 20, y1 = p.y + p.h + 10;
+  ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, x1 - x0, y1 - y0); ctx.clip(); ctx.lineCap = 'round';
+  const ropes = () => { ctx.beginPath(); for (let xx = N.x + 6; xx <= N.x + N.w - 6; xx += step) { ctx.moveTo(xx, N.y); ctx.lineTo(xx + Math.sin(N.t + xx) * 1.5, N.y + N.h); } for (let yy = N.y + 4; yy <= N.y + N.h; yy += step) { ctx.moveTo(N.x, yy); ctx.lineTo(N.x + N.w, yy); } ctx.stroke(); };
+  ctx.globalAlpha = 0.85; ctx.strokeStyle = INK; ctx.lineWidth = 4; ropes(); ctx.strokeStyle = '#efe2c4'; ctx.lineWidth = 2.4; ropes();
+  ctx.restore();
+});
 // a Boom Crab clambering on the net: one side each; only a crab on Brady's side can touch him
 class FoleyNetCrab extends Ent {
   constructor(g, s) {
@@ -477,7 +490,7 @@ const puffPath = (g, x, y, a, max) => {
   const A = g.area, pts = [[x, y]], plats = g.entities.filter(e => e instanceof FoleyPlatter), ears = g.entities.filter(e => e instanceof FoleyEar && !e.open);
   let vx = Math.cos(a), vy = Math.sin(a), d = 0, hit = null, lastPl = null;
   const step = 4;
-  while (d < (max || 40 * TS)) {
+  while (d < (max || 70 * TS)) {
     x += vx * step; y += vy * step; d += step;
     const pl = plats.find(q => q !== lastPl && Math.abs(x - q.cx) < 14 && Math.abs(y - q.cy) < 14);
     if (pl) { pts.push([pl.cx, pl.cy]); x = pl.cx; y = pl.cy; const ox = vx; if (pl.dirn === '/') { vx = -vy; vy = -ox; } else { vx = vy; vy = ox; } lastPl = pl; continue; }
@@ -553,7 +566,7 @@ class FoleyTrumpet extends Ent {
 }
 // a distant hinged ear: { face (1: its front opens to the right... -1: to the left), g (toggle group), landing rects }
 class FoleyEar extends Ent {
-  constructor(g, s) { super(g, s, 2 * TS, 3 * TS); this.x = s.x - TS / 2; this.y = s.y - 3 * TS + TS; this.friendly = true; this.back = true; this.face = s.face || -1; this.gi = s.gi; this.land = s.land || []; this.open = false; this.fold = 0; }
+  constructor(g, s) { super(g, s, 2 * TS, 3 * TS); this.x = s.x - TS; this.y = s.y - 3 * TS; this.friendly = true; this.back = true; this.face = s.face || -1; this.gi = s.gi; this.land = s.land || []; this.open = false; this.fold = 0; }
   hear() {
     if (this.open) return; this.open = true; const g = this.g;
     FX.noise(g, this.cx, this.cy, 'clack'); sfx('ear', 'door', { vol: 0.6 }); K.say(g, this.cx, this.y - 10, 'I HEARD THAT!', '#ffd84a', 'ear' + this.x);
@@ -820,7 +833,7 @@ const P = {
   net(st, o) {
     const B = st.B, x0 = st.x, y0 = st.gy - 1, nid = 'fn' + x0 + '_' + y0, holes = (o.holes || []).map(([dx, dy]) => [x0 + dx, y0 + dy]);
     B.zone(x0, y0, o.w, o.h, 0, 0, 0, 'washNet', { holes, nid, pulse: true });
-    B.spawn('foleyNet', x0, y0, { tx: x0, ty: y0, w: o.w, h: o.h, holes, nid });
+    B.spawn('foleyNet', x0, y0, { tx: x0, ty: y0, w: o.w, h: o.h, holes, nid, lift: !!o.lift });
     return st.x;
   },
   // a crab on the net it sits on: { face, ax, ay, speed, phase }

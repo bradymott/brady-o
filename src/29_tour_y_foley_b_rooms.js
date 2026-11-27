@@ -48,7 +48,15 @@ function stageRoom(keep, A, o, items, L) {
   return g;
 }
 const prizeOf = (o, keep) => RK.prize(o, keep);
-const hud = (play, ctx, str, col) => TourRooms.hudText(play, ctx, str, col, 15, 34);
+// the room's counter: painted on the front of the stage, in one fixed spot (never over the game, the top bar, the
+// stick or the buttons, never over the title or the rule)
+const hud = (play, ctx, str, col) => {
+  const kit = play.area && play.area.roomKit, st = (kit && kit.data && kit.data.st) || 8, x = 13.5 * TS, y = (st + 1.2) * TS;
+  if (play.toastT > 0) return;
+  ctx.save(); ctx.font = '13px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const w = ctx.measureText(str).width + 22; ctx.fillStyle = 'rgba(14,8,26,0.82)'; rr(ctx, x - w / 2, y - 12, w, 24, 12); ctx.fill();
+  ctx.strokeStyle = 'rgba(246,236,214,0.6)'; ctx.lineWidth = 1.2; ctx.stroke(); ctx.fillStyle = col || '#ffd84a'; ctx.fillText(str, x, y + 1); ctx.restore();
+};
 const quiet = (play, R) => !(play.bannerT > 0) && !R.ruleWait;
 // a THROW mark on the stage: an entity whose fInput hands the press (and the stick, if mounted) to the room's kind
 class FoleyRoomMark extends Ent {
@@ -118,8 +126,9 @@ TourRooms.def('foleyTrim', {
     TRIM.ears.forEach((e, k) => {
       const ex = x0 + e * (x1 - x0), hot = !R.won && R.passed <= k && e - u > 0.02 && e - u < 0.11;
       if (hot) { ctx.fillStyle = 'rgba(255,216,74,0.5)'; ctx.beginPath(); ctx.arc(ex, y - 22, 18 + Math.sin(t * 14) * 3, 0, TAU); ctx.fill(); }
-      ctx.fillStyle = FELT; ctx.beginPath(); ctx.moveTo(ex - 10, y - 8); ctx.lineTo(ex, y - 32); ctx.lineTo(ex + 10, y - 8); ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = FELT3; ctx.beginPath(); ctx.moveTo(ex - 5, y - 10); ctx.lineTo(ex, y - 24); ctx.lineTo(ex + 5, y - 10); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#c86a8a'; ctx.beginPath(); ctx.arc(ex, y - 20, 11, 0, TAU); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#f0b0c0'; ctx.beginPath(); ctx.arc(ex, y - 20, 6, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1; ctx.setLineDash([2, 2]); ctx.beginPath(); ctx.arc(ex, y - 20, 9, 0.2, Math.PI - 0.2); ctx.stroke(); ctx.setLineDash([]); ctx.strokeStyle = INK; ctx.lineWidth = 2;
     });
     // the clippers on their rail: down (trimming) or lifted
     const lift = R.up > 0 ? 30 : 0;
@@ -153,19 +162,19 @@ const shapePath = (ctx, sh, x, y, r) => {
 TourRooms.def('foleyLids', {
   title: 'ONLY ONE LID', rule: 'THROW AT THE CRANK TURNS THE LID RACK. FIT EACH LID TO ITS TIN, THEN THROW AT THE LEVER TO DROP THEM', need: 'FIT THE LIDS FIRST!',
   make(o, keep, ctx, A, rng) {
-    const g = stageRoom(keep, A, o, prizeOf(o, keep), { st: 9, s0: 6, cx: 4, cy: 4, hatch: null, ledge: 8, shelf: true, ch: 3 });
+    const g = stageRoom(keep, A, o, prizeOf(o, keep), { st: 9, s0: 6, cx: 18, hatch: null, ledge: 8 });
     // (here the cage sits on a shelf high over the way in, the game takes the whole stage)
-    g.fill(1, 6, 5, 7, '.'); g.fill(R1 - 2, 9, R1, 10, '#');
     g.spawn(8, 8, 'foleyRoomMark', { k: 'crank', cue: 'THROW: TURN' }); g.need('the crank', 8, 8);
-    g.spawn(19, 8, 'foleyRoomMark', { k: 'drop', cue: 'THROW: DROP' }); g.need('the lever', 19, 8);
+    g.spawn(17, 8, 'foleyRoomMark', { k: 'drop', cue: 'THROW: DROP' }); g.need('the lever', 17, 8);
     g.winSpot(A.id, 12, 8); g.coins(10, 16, 7);
     // two rounds: the rack's order of lids, and how far round it starts
-    g.data.rounds = [0, 1].map(() => { const order = SHAPES.slice().sort(() => rng() - 0.5); let off = 1 + Math.floor(rng() * 2); return { order, off }; });
+    // (the rack keeps the lids in the tins' own order round the ring: one turn of it fits them, the others don't)
+    g.data.rounds = [0, 1].map(() => ({ order: SHAPES.slice(), off: 1 + Math.floor(rng() * 2) }));
     return g;
   },
   enter(play, A, R, kit) { if (!R.won) { R.round = R.round || 0; R.rot = kit.data.rounds[R.round].off; R.drop = -1; } },
   // the lid over tin k (tins in SHAPES order)
-  lidAt(kit, R, k) { const rd = kit.data.rounds[R.round]; return rd.order[(k + R.rot) % 3]; },
+  lidAt(kit, R, k) { const rd = kit.data.rounds[Math.min(R.round || 0, 1)]; return rd.order[(k + R.rot) % 3]; },
   update(play, dt, A, R, kit) {
     if (R.won || R.drop < 0) return; R.drop += dt;
     if (R.drop > 0.8) {
@@ -196,8 +205,6 @@ TourRooms.def('foleyLids', {
       else if (sh === 'oval') { ctx.lineTo(x + 24, y - 10); ctx.quadraticCurveTo(x + 26, y + 6, x, y + 6); ctx.quadraticCurveTo(x - 26, y + 6, x - 24, y - 10); }
       else { ctx.lineTo(x + 24, y - 10); ctx.lineTo(x + 24, y + 6); ctx.quadraticCurveTo(x, y - 6, x - 24, y + 6); }
       ctx.closePath(); ctx.fill(); ctx.stroke();
-      // a small picture tag on its string: the shape it fits, drawn front-on (so it can be read at a glance)
-      ctx.fillStyle = IVORY; rr(ctx, x - 9, y - 32, 18, 16, 3); ctx.fill(); ctx.stroke(); ctx.fillStyle = FELT; ctx.save(); shapePath(ctx, sh, x, y - 24, 4.5); ctx.fill(); ctx.restore();
     });
     ctx.restore();
     if (!R.won && quiet(play, R)) hud(play, ctx, 'SHELF ' + Math.min(2, (R.round || 0) + 1) + ' OF 2');

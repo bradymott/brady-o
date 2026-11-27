@@ -283,6 +283,88 @@ const HELPERS = `(() => {
     }
     sim(0.2); return { ok: sprung && !p.dead && p.onGround, sprung, at: tileOf() };
   };
+  // 29-2: hold THROW at a panel's mark (the tile before it) until it lies flat, then keep holding and walk across
+  window.panelAt = mx => ents('FoleyPanel').find(e => e.tx === mx + 1);
+  window.damp = (mx, endTx) => {
+    walkTo(mx - 1, 4); const P0 = panelAt(mx), p = P(); let t = 0;
+    while (t < 2.5 && !P0.flat) { sim(1 / 120, { action: true, right: p.cx < mx * 32 + 8 && p.vx < 60 }); t += 1 / 120; }
+    const flatAt = +t.toFixed(2); if (!P0.flat) return { ok: false, why: 'not flat', at: tileOf() };
+    let w = 0; while (w < 4 && tileOf()[0] < endTx && !p.dead) { sim(1 / 120, { action: true, right: true }); w += 1 / 120; }
+    for (let q = 0; q < 120 && !p.onGround; q++) sim(1 / 120);
+    return { ok: !p.dead && tileOf()[0] >= endTx && tileOf()[1] === 14, flatAt, at: tileOf() };
+  };
+  window.meet = (mx, endTx) => {
+    walkTo(mx, 4); const P0 = panelAt(mx); let t = 0;
+    while (t < 6 && !P0.meetNow()) { sim(1 / 120); t += 1 / 120; }
+    press(); sim(0.2); if (!P0.caught) return { ok: false, why: 'missed' };
+    return safeWalk(endTx, 6);
+  };
+  // 29-3: take the bank at tile bx, pick and play: each pic gets its prop played as the foot lands
+  window.bankPlay = (bx, opts) => {
+    opts = opts || {}; walkTo(bx, 4); const B = ents('FoleyBank').find(e => e.tx === bx); if (!B) return { ok: false, why: 'no bank' };
+    press(); sim(0.1); if (!B.mounted) return { ok: false, why: 'not mounted', at: tileOf() };
+    const K = window.BRADY_FOLEY.kit; let guard = 0;
+    while (!B.done && guard++ < 12) {
+      const want = B.props.indexOf(opts.wrong && guard === 1 ? B.props.find(k => k !== K.PICS[B.pic()]) : K.PICS[B.pic()]);
+      let t = 0; while (B.sel !== want && t < 3) { sim(1 / 120, { right: B.sel < want, left: B.sel > want }); t += 1 / 120; } sim(1 / 120);
+      t = 0; while (t < 3 && !(B.q() > 0.97 || B.q() < 0.03)) { sim(1 / 120); t += 1 / 120; }
+      const n0 = B.n; press(); sim(0.3); if (opts.wrong && guard === 1) { opts.wrongOk = B.n === n0; continue; }
+      if (B.n === n0 && !B.done) return { ok: false, why: 'no hit', pic: B.pic(), sel: B.sel };
+    }
+    sim(1.2); return { ok: B.done, wrongOk: opts.wrongOk, at: tileOf() };
+  };
+  // the cargo net: a list of steps: 'grip' (push up from the floor), [tx, ty] (steer the grip point there), 'X' (JUMP
+  // at a collar: round to the other side), 'R' / 'L' (let go with a jump that way, land)
+  window.netGo = steps => {
+    const p = P();
+    for (const st of steps) {
+      if (st === 'grip') { let t = 0; while (t < 1 && !(p.wash && p.wash.grip)) { sim(1 / 120, { up: true }); t += 1 / 120; } if (!(p.wash && p.wash.grip)) return { ok: false, why: 'no grip', at: tileOf() }; continue; }
+      if (st === 'X') { const f0 = p.wash.face; sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.5); if (p.wash.face === f0) return { ok: false, why: 'no cross', at: [Math.floor(p.cx / 32), Math.floor((p.y + 8) / 32)] }; continue; }
+      if (st === 'J') { sim(1 / 120, { jump: true, jumpPressed: true }); let t = 0; while (t < 1.2 && !(p.wash && p.wash.grip && t > 0.05)) { sim(1 / 120, { jump: true, up: true }); t += 1 / 120; } if (!(p.wash && p.wash.grip)) return { ok: false, why: 'no grab', at: tileOf() }; continue; }
+      if (st === 'U') { sim(1 / 120, { jump: true, jumpPressed: true }); let t = 0; while (t < 2 && !(p.onGround && t > 0.1)) { sim(1 / 120, { jump: true, right: t > 0.2 && p.y + p.h < 6 * 32 }); t += 1 / 120; } sim(0.2); continue; }
+      if (st === 'R' || st === 'L') { const d = st === 'R' ? 1 : -1; sim(1 / 120, { jump: true, jumpPressed: true, right: d > 0, left: d < 0 }); let t = 0; while (t < 2 && !(p.onGround && t > 0.1)) { sim(1 / 120, { jump: t < 0.3, right: d > 0, left: d < 0 }); t += 1 / 120; } sim(0.2); continue; }
+      const [tx, ty] = st; let t = 0;
+      while (t < 6) {
+        if (p.dead || !(p.wash && p.wash.grip)) return { ok: false, why: p.dead ? 'died' : 'fell', at: tileOf(), st };
+        const dx = tx * 32 + 16 - p.cx, dy = ty * 32 + 16 - (p.y + 8);
+        if (Math.abs(dx) < 5 && Math.abs(dy) < 5) break;
+        sim(1 / 120, { right: dx > 4, left: dx < -4, down: dy > 4, up: dy < -4 }); t += 1 / 120;
+      }
+    }
+    return { ok: !p.dead, at: tileOf(), face: p.wash && p.wash.face };
+  };
+  // 29-4: take the trumpet at tile tx, aim with the stick until the dotted path ends on the front of the ear whose
+  // hinge is at tile ex, puff, wait for the ear to fold down, let go (JUMP)
+  window.trumpet = (tx, ex, o) => {
+    o = o || {}; walkTo(tx, 4); const T0 = ents('FoleyTrumpet').find(e => e.tx === tx), E = ents('FoleyEar').find(e => Math.round(e.cx / 32 - 0.5) === ex);
+    if (!T0 || !E) return { ok: false, why: 'no trumpet/ear', T: !!T0, E: !!E };
+    press(); sim(0.1); if (!T0.mounted) return { ok: false, why: 'not mounted' };
+    const K = window.BRADY_FOLEY.kit, aimed = () => { const [mx, my] = T0.mouth(), h = K.puffPath(S(), mx, my, T0.a).hit; return h && h.ear === E && h.front; };
+    let t = 0; const order = o.down ? ['down', 'up'] : ['up', 'down'];
+    for (const d of order) { if (aimed()) break; t = 0; if (d === 'up') { while (t < 3 && !aimed() && Math.sin(T0.a) > -0.99) { sim(1 / 120, { up: true }); t += 1 / 120; } } else { while (t < 3 && !aimed() && Math.sin(T0.a) < 0.34) { sim(1 / 120, { down: true }); t += 1 / 120; } } }
+    if (!aimed()) { sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.6); return { ok: false, why: 'no aim', a: +T0.a.toFixed(2) }; }
+    const a = +T0.a.toFixed(2); press(); let w = 0; while (w < 4 && !E.open) { sim(1 / 120); w += 1 / 120; }
+    sim(0.5); sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.7);
+    return { ok: E.open && !T0.mounted, a, t: +w.toFixed(2) };
+  };
+  // 29-5: cut a take at the desk on tile dx: hold THROW from the band's start, let go at its end
+  window.cut = (dx, o) => {
+    o = o || {}; walkTo(dx, 4); const D = ents('FoleyDesk').find(e => e.tx === dx); if (!D) return { ok: false, why: 'no desk' };
+    const [a, b] = D.band, sh = o.short ? -0.12 : o.long ? 0.15 : 0; let t = 0;
+    while (t < 6 && !(D.u() > a - 0.02 && D.u() < a + 0.02)) { sim(1 / 120); t += 1 / 120; }
+    sim(1 / 120, { action: true, actionPressed: true }); t = 0;
+    while (t < 4 && D.u() < b + sh && D.u() >= a - 0.05) { sim(1 / 120, { action: true }); t += 1 / 120; }
+    sim(1 / 120); sim(1.2); return { ok: !!D.done === !(o.short || o.long), done: D.done, at: tileOf() };
+  };
+  // 29-6: the mic on tile mx: take it, steer to the machine of kind (or the pea), capture as it sounds, play back
+  window.micTake = (mx, kind, o) => {
+    o = o || {}; walkTo(mx, 4); const M = ents('FoleyMic').find(e => e.tx === mx); if (!M) return { ok: false, why: 'no mic' };
+    press(); sim(0.1); const L = M.machines(), want = L.findIndex(e => (e.kind || 'pea') === kind); if (want < 0) return { ok: false, why: 'no machine ' + kind };
+    let t = 0; while (M.sel !== want && t < 3) { sim(1 / 120, { right: M.sel < want, left: M.sel > want }); t += 1 / 120; } sim(1 / 120);
+    t = 0; while (t < 8 && !(L[want].sounding() && (kind !== 'pea' || true))) { sim(1 / 120); t += 1 / 120; }
+    sim(0.15); press(); sim(0.2); if (!M.got) return { ok: false, why: 'no capture' };
+    press(); sim(1.2); return { ok: M.done, at: tileOf() };
+  };
   window.flocks = () => ents('FoleyFlock').map(f => ({ x: Math.round(f.x / 32), size: f.size, state: f.state }));
   window.door = () => { const a0 = S().area.aid; for (let k = 0; k < 20 && S().area.aid === a0; k++) sim(0.1, { up: true, upPressed: true }); sim(1.2); return S().area.aid; };
 })()`;
@@ -345,6 +427,134 @@ async function roomRun(page, shot, label, enter) {
   check(label + ': its door takes Brady out ' + (r0.other ? 'somewhere else than where he came in' : 'back the way he came'), out.back && (!r0.other || out.elsewhere), out);
 }
 async function run0(page, name, f) { if (want.length && !want.some(w => name.startsWith(w))) return; try { await page.evaluate(HELPERS); await page.evaluate(() => { window.ROOMK = window.BRADY_TOUR.TourRooms ? window.BRADY_TOUR.TourRooms.kinds : {}; }); await f(); } catch (e) { check(name + ' runs', false, String(e.message).slice(0, 300)); } }
+// ---------------- 29-2 The Quiet Cut ----------------
+const S2_ROUTE = [
+  [2, "damp(15, 22)"], [22, "safeWalk(25)"], [25, "damp(29, 38)"], [38, "safeWalk(46)"], [46, "damp(50, 61)"], [61, "safeWalk(70)"],
+  [70, "AP.route([[72, 11]])"], [72, "(() => { const r = damp(72, 81); return { ok: tileOf()[0] >= 81 && !P().dead, r }; })()"], [81, "AP.route([[84, 11], [88, 14]])"], [88, "safeWalk(89)"],
+  [89, "AP.route([[86, 14], [91, 11], [97, 10], [102, 14]])"], [102, "safeWalk(136)"], [136, "meet(140, 156)"], [156, "safeWalk(166)"], [166, "damp(170, 184)"], [184, "safeWalk(204)"]];
+LEVELS.s2 = async (page, shot, run, pano) => {
+  await run('s2', async () => {
+    await page.evaluate(HELPERS);
+    await page.evaluate(() => { fresh(); play('29-2'); place(13, 13); sim(0.6); freeze(); }); await shot('20-29-2-rattle.png');
+    // a rattling panel is nothing to stand on; held THROW flattens it; let go and it rattles again (ripples first)
+    const r = await page.evaluate(() => { thaw(); play('29-2'); const A = S().area, P0 = panelAt(15); const empty0 = A.tiles[14 * A.W + 17] === window.BRADY.T.EMPTY; walkTo(15, 3); let t = 0; while (t < 2 && !P0.flat) { sim(1 / 120, { action: true }); t += 1 / 120; } const flat = A.tiles[14 * A.W + 17] !== window.BRADY.T.EMPTY; sim(0.4); let back = 0; while (back < 5 && P0.flat) { sim(1 / 120); back += 1 / 120; } return { empty0, flatAt: +t.toFixed(2), flat, back: +back.toFixed(2) }; });
+    check('29-2: a rattling panel is empty; holding THROW at its end lays it flat in under a second; let go and it rattles again a couple of seconds later', r.empty0 && r.flat && r.flatAt < 1 && r.back > 1.5 && r.back < 3.5, r);
+    await page.evaluate(() => { play('29-2'); walkTo(15, 3); for (let q = 0; q < 100; q++) sim(1 / 120, { action: true }); sim(0.3, { action: true, right: true }); freeze(); }); await shot('21-29-2-damper.png');
+    const m = await page.evaluate(() => { thaw(); play('29-2'); place(139, 13); sim(0.3); walkTo(140, 2); const P0 = panelAt(140); let t = 0; while (t < 6 && P0.meetNow()) { sim(1 / 120); t += 1 / 120; } press(); sim(0.2); const early = !P0.caught; t = 0; while (t < 6 && !P0.meetNow()) { sim(1 / 120); t += 1 / 120; } sim(0.05); const now = P0.meetNow(); return { early, now }; });
+    check('29-2 twist: THROW before the humps meet misses; they keep running', m.early && m.now, m);
+    await page.evaluate(() => freeze()); await shot('22-29-2-humps-meet.png');
+    const leg = await page.evaluate(legs => { fresh(); play('29-2'); place(2, 13); for (const [, code] of legs) { const r = eval(code); if (r && r.ok === false) return { ok: false, code, r, tile: tileOf() }; } sim(3, { right: true }); return { ok: true, state: S().state }; }, S2_ROUTE);
+    check('29-2 played start to finish with real inputs: every panel held flat and walked, the high panel, the hut roof, the humps caught where they meet', leg.ok && /clear|tally|results/.test(leg.state), leg);
+    await page.evaluate(() => { play('29-2'); }); await pano('23-29-2-panorama.png', 0.35);
+  });
+};
+// ---------------- 29-2's room: walk into the hut's false front, where the sand puffs ----------------
+LEVELS.r2 = async (page, shot) => { await run0(page, 'r2', () => roomRun(page, shot, '26-29-2-B17', () => {
+  play('29-2'); place(90, 13); sim(0.3); const r = walkTo(94, 3); sim(1.2, { right: true }); walkTo(98, 2); const aid = door(); return { ok: aid === 'tins', aid, r, inX: 98, other: false, how: 'walk into the hut\'s front panel where the sand puffs up: it is false; the hatch in the nook' }; })); };
+
+// ---------------- 29-3 Coconut Understudy ----------------
+const NET_ROUTE = "netGo(['grip', [64, 12], [65, 12], 'X', [68, 10], [70, 9], 'X', [73, 9], 'R'])";
+const S3_ROUTE = [
+  [2, "bankPlay(12)"], [12, "safeWalk(31)"], [31, "bankPlay(32)"], [32, "safeWalk(61)"], [61, NET_ROUTE], [74, "safeWalk(84)"],
+  [84, "safeWalk(118)"], [118, "bankPlay(120)"], [120, "safeWalk(157)"], [157, "AP.route([[163, 13], [171, 16]])"], [171, "safeWalk(199)"]];
+LEVELS.s3 = async (page, shot, run, pano) => {
+  await run('s3', async () => {
+    await page.evaluate(HELPERS);
+    const r = await page.evaluate(() => { fresh(); play('29-3'); place(10, 15); sim(0.3); walkTo(12, 3); press(); sim(0.4); const B = ents('FoleyBank')[0]; return { mounted: B.mounted, x: tileOf()[0] }; });
+    check('29-3: THROW at the bank takes it (Brady stays put while he holds it)', r.mounted, r);
+    await page.evaluate(() => { freeze(); }); await shot('30-29-3-bank.png');
+    const w = await page.evaluate(() => { thaw(); play('29-3'); place(10, 15); sim(0.3); return bankPlay(12, { wrong: true }); });
+    check('29-3: the wrong prop on the beat does not count; the coconuts as the hoof lands, twice, roll the screen up', w.ok && w.wrongOk, w);
+    await page.evaluate(() => { sim(0.3); freeze(); }); await shot('31-29-3-screen-up.png');
+    const n = await page.evaluate(n => { thaw(); play('29-3'); place(58, 15); sim(0.3); walkTo(61, 3); return eval(n); }, NET_ROUTE);
+    check('29-3: the cargo net climbed with real inputs: grip, up, round the back at a collar past the crab, back to the front at the other collar, off onto the ledge', n.ok && n.at && n.at[0] >= 73 && n.at[1] === 9, n);
+    await page.evaluate(() => { play('29-3'); place(58, 15); sim(0.3); walkTo(61, 3); netGo(['grip', [64, 12], [65, 12], 'X', [67, 11]]); freeze(); }); await shot('32-29-3-net-far-side.png');
+    const t = await page.evaluate(() => { thaw(); play('29-3'); place(116, 15); sim(0.3); return bankPlay(120); });
+    check('29-3 twist: the horse twice on the coconuts, then the hobbyhorse on the wood block', t.ok, t);
+    const leg = await page.evaluate(legs => { fresh(); play('29-3'); place(2, 15); for (const [, code] of legs) { const r = eval(code); if (r && r.ok === false) return { ok: false, code, r, tile: tileOf() }; } sim(3, { right: true }); return { ok: true, state: S().state }; }, S3_ROUTE);
+    check('29-3 played start to finish with real inputs: three banks, the cargo net, the gaps', leg.ok && /clear|tally|results/.test(leg.state), leg);
+    await page.evaluate(() => { play('29-3'); }); await pano('33-29-3-panorama.png', 0.35);
+  });
+};
+// ---------------- 29-3's room: from the top of the net up through the sand-trickling gap in the loft floor ----------------
+LEVELS.r3 = async (page, shot) => { await run0(page, 'r3', () => roomRun(page, shot, '36-29-3-B18', () => {
+  play('29-3'); place(58, 15); sim(0.3); walkTo(61, 3); const n = netGo(['grip', [61, 7], [71, 7], 'J', [71, 5], 'R']); walkTo(81, 3); const aid = door(); return { ok: aid === 'loft', aid, n, inX: 81, other: true, how: 'climb to the top of the cargo net, jump up through the gap where the sand trickles, the door in the flies' }; })); };
+
+// ---------------- 29-4 Sound Goes Round ----------------
+const S4_ROUTE = [
+  [2, "trumpet(12, 23)"], [12, "AP.route([[16, 16], [21, 13], [24, 14], [30, 16]])"], [30, "safeWalk(40)"], [40, "trumpet(40, 52)"],
+  [40, "AP.route([[46, 13], [50, 10], [55, 10]])"], [55, "safeWalk(62)"], [62, "AP.route([[66, 16]])"], [66, "safeWalk(71)"], [71, "AP.route([[74, 14]])"],
+  [74, "trumpet(74, 83)"], [74, "trumpet(74, 91)"], [74, "AP.route([[81, 14], [84, 14], [89, 14], [92, 14], [97, 16]])"],
+  [97, "safeWalk(137)"], [137, "safeWalk(140)"], [140, "trumpet(140, 150)"], [140, "AP.route([[143, 16], [147, 13], [151, 10], [155, 10], [163, 16]])"], [163, "safeWalk(203)"]];
+LEVELS.s4 = async (page, shot, run, pano) => {
+  await run('s4', async () => {
+    await page.evaluate(HELPERS);
+    const r = await page.evaluate(() => { fresh(); play('29-4'); place(10, 15); sim(0.3); walkTo(12, 3); press(); for (let q = 0; q < 30; q++) sim(1 / 120, { up: true }); const T0 = ents('FoleyTrumpet')[0]; return { mounted: T0.mounted, x: tileOf()[0] }; });
+    check('29-4: THROW at the trumpet takes it; the stick aims (Brady stays put)', r.mounted && r.x === 12, r);
+    await page.evaluate(() => { freeze(); }); await shot('40-29-4-aim-dots.png');
+    const t1 = await page.evaluate(() => { thaw(); play('29-4'); place(10, 15); sim(0.3); return trumpet(12, 23); });
+    check('29-4: aimed along the dots at the ear\'s front, the puff opens it into a landing', t1.ok, t1);
+    await page.evaluate(() => { freeze(); }); await shot('41-29-4-ear-open.png');
+    const bk = await page.evaluate(() => { thaw(); play('29-4'); place(138, 15); sim(0.3); walkTo(140, 3); press(); const T0 = ents('FoleyTrumpet').find(e => e.tx === 140), E = ents('FoleyEar').find(e => Math.round(e.cx / 32 - 0.5) === 150); const K = window.BRADY_FOLEY.kit; let back = false; for (let q = 0; q < 600 && !back; q++) { const [mx, my] = T0.mouth(), h = K.puffPath(S(), mx, my, T0.a).hit; if (h && h.ear === E && !h.front) back = true; else sim(1 / 120, { up: true }); } if (!back) return { back }; press(); sim(2); return { back, open: E.open }; });
+    check('29-4 twist: a puff straight at the ear that faces away hits its back: nothing', bk.back && !bk.open, bk);
+    const t2 = await page.evaluate(() => { play('29-4'); place(138, 15); sim(0.3); return trumpet(140, 150, { down: true }); });
+    check('29-4 twist: bounced off the two tin platters, the puff goes round into the ear\'s front', t2.ok, t2);
+    await page.evaluate(() => { freeze(); }); await shot('42-29-4-platters.png');
+    const leg = await page.evaluate(legs => { fresh(); play('29-4'); place(2, 15); for (const [, code] of legs) { const r = eval(code); if (r && r.ok === false) return { ok: false, code, r, tile: tileOf() }; } sim(3, { right: true }); return { ok: true, state: S().state }; }, S4_ROUTE);
+    check('29-4 played start to finish with real inputs: every ear opened by an aimed puff, across on their landings', leg.ok && /clear|tally|results/.test(leg.state), leg);
+    await page.evaluate(() => { play('29-4'); }); await pano('43-29-4-panorama.png', 0.35);
+  });
+};
+// ---------------- 29-4's room: open the ear under the sand-trickling ledge, climb to its door ----------------
+LEVELS.r4 = async (page, shot) => { await run0(page, 'r4', () => roomRun(page, shot, '46-29-4-B19', () => {
+  play('29-4'); place(99, 15); sim(0.3); const t = trumpet(101, 110); if (!t.ok) return { ok: false, t };
+  const r = AP.route([[104, 13], [107, 10], [114, 10]]); walkTo(116, 2); const aid = door(); return { ok: aid === 'office', aid, t, r, inX: 116, other: false, how: 'a puff into the ear on the high ledge (sand trickles off its lip): its landing is the step up to the door' }; })); };
+
+// ---------------- 29-5 Cut the Take ----------------
+const S5_ROUTE = [
+  [2, "cut(12)"], [12, "safeWalk(29)"], [29, "AP.route([[36, 16]])"], [36, "safeWalk(46)"], [46, "cut(46)"], [46, "safeWalk(57)"], [57, "AP.route([[64, 13], [68, 12]])"],
+  [68, "cut(70)"], [70, "safeWalk(80)"], [80, "AP.route([[84, 16]])"], [84, "safeWalk(98)"], [98, "AP.route([[103, 16]])"], [103, "safeWalk(150)"], [150, "cut(150)"],
+  [150, "safeWalk(161)"], [161, "AP.route([[169, 16]])"], [169, "safeWalk(176)"], [176, "cut(176)"], [176, "safeWalk(199)"]];
+LEVELS.s5 = async (page, shot, run, pano) => {
+  await run('s5', async () => {
+    await page.evaluate(HELPERS);
+    await page.evaluate(() => { fresh(); play('29-5'); place(10, 15); sim(0.3); walkTo(12, 3); const D = ents('FoleyDesk')[0]; for (let q = 0; q < 600 && !(D.u() > D.band[0] - 0.01 && D.u() < D.band[0] + 0.02); q++) sim(1 / 120); sim(1 / 120, { action: true, actionPressed: true }); sim(0.35, { action: true }); freeze(); }); await shot('50-29-5-recording.png');
+    const r = await page.evaluate(() => { thaw(); play('29-5'); place(10, 15); sim(0.3); const a = cut(12, { short: true }); const b = cut(12, { long: true }); const c = cut(12); return { a, b, c }; });
+    check('29-5: cut too short or too long, nothing; held through the band and let go at its end, the take plays and the gate lifts', r.a.ok && r.b.ok && r.c.ok && r.c.done, r);
+    await page.evaluate(() => { sim(0.2); freeze(); }); await shot('51-29-5-take.png');
+    const t = await page.evaluate(() => { thaw(); play('29-5'); place(148, 15); sim(0.3); const a = cut(150, { long: true }); const b = cut(150); return { a, b }; });
+    check('29-5 twist: the thunderclap with its rattle is too long; just the crack is a take', t.a.ok && t.b.ok && t.b.done, t);
+    await page.evaluate(() => { freeze(); }); await shot('52-29-5-thunder.png');
+    const leg = await page.evaluate(legs => { fresh(); play('29-5'); place(2, 15); for (const [, code] of legs) { const r = eval(code); if (r && r.ok === false) return { ok: false, code, r, tile: tileOf() }; } sim(3, { right: true }); return { ok: true, state: S().state }; }, S5_ROUTE);
+    check('29-5 played start to finish with real inputs: five takes cut, five gates lifted', leg.ok && /clear|tally|results/.test(leg.state), leg);
+    await page.evaluate(() => { play('29-5'); }); await pano('53-29-5-panorama.png', 0.35);
+  });
+};
+// ---------------- 29-5's room: drop through the gap in the boards where the sand puffs up ----------------
+LEVELS.r5 = async (page, shot) => { await run0(page, 'r5', () => roomRun(page, shot, '56-29-5-B20', () => {
+  play('29-5'); place(97, 15); sim(0.3); const r = AP.route([[104, 19]]); walkTo(110, 3); const aid = door(); return { ok: aid === 'cabin', aid, r, inX: 110, other: true, how: 'drop through the gap in the boards (sand puffs up out of it) to the cable run, the door' }; })); };
+// ---------------- 29-6 the lead-in ----------------
+const S6_ROUTE = [
+  [2, "micTake(13, 'tin')"], [13, "safeWalk(38)"], [38, "micTake(44, 'rice')"], [44, "safeWalk(62)"], [62, "AP.route([[70, 14]])"], [70, "safeWalk(84)"],
+  [84, "micTake(84, 'pea')"], [84, "safeWalk(110)"], [110, "AP.route([[112, 11], [119, 9], [125, 14]])"], [125, "walkTo(130, 3)"], [130, "(() => ({ ok: door() === 'stage' }))()"]];
+LEVELS.s6 = async (page, shot, run, pano) => {
+  await run('s6', async () => {
+    await page.evaluate(HELPERS);
+    await page.evaluate(() => { fresh(); play('29-6'); place(11, 13); sim(0.3); walkTo(13, 3); press(); sim(0.4, { right: true }); sim(0.4); freeze(); }); await shot('60-29-6-mic.png');
+    const w = await page.evaluate(() => { thaw(); play('29-6'); place(11, 13); sim(0.3); const a = micTake(13, 'rice'); return { wrong: a }; });
+    check('29-6: a noise that does not match the card does not lift the gate', !w.wrong.ok, w);
+    const q = await page.evaluate(() => { play('29-6'); place(82, 13); sim(0.3); walkTo(84, 3); press(); sim(0.1); const M = ents('FoleyMic').find(e => e.tx === 84), L = M.machines(), pea = L.findIndex(e => e.kind === 'pea'); let t = 0; while (M.sel !== pea && t < 3) { sim(1 / 120, { right: true }); t += 1 / 120; } sim(1 / 120); let noisy = false; t = 0; while (t < 6 && !noisy) { if (!L[pea].sounding()) noisy = true; else sim(1 / 120); t += 1 / 120; } press(); sim(0.1); const early = !M.got; sim(0.3, { jump: true, jumpPressed: true }); sim(0.5); return { early, noisy }; });
+    check('29-6: while the machines are noisy the pea\'s tiny voice cannot be captured', q.noisy && q.early, q);
+    const leg = await page.evaluate(legs => { fresh(); play('29-6'); place(2, 13); for (const [, code] of legs) { const r = eval(code); if (r && r.ok === false) return { ok: false, code, r, tile: tileOf() }; } return { ok: true, area: S().area.aid }; }, S6_ROUTE);
+    check('29-6 lead-in played with real inputs: the three mic gates (the tin for the clap, the rice for the hail, the pea in the quiet), through the stage door', leg.ok && leg.area === 'stage', leg);
+    await page.evaluate(() => { sim(3); freeze(); }); await shot('61-29-6-arena.png');
+    await page.evaluate(() => { thaw(); play('29-6'); }); await pano('62-29-6-panorama.png', 0.4);
+  });
+};
+// ---------------- 29-6's room: the loose panel at the foot of the proscenium ----------------
+LEVELS.r6 = async (page, shot) => { await run0(page, 'r6', () => roomRun(page, shot, '66-29-6-RAIN', () => {
+  play('29-6'); place(112, 13); sim(0.3); walkTo(115, 3); sim(1.2, { right: true }); walkTo(120, 2); const aid = door(); return { ok: aid === 'rain', aid, inX: 120, other: true, how: 'walk into the loose panel at the foot of the proscenium where the sand puffs' }; })); };
+
 // ---------------- 29-1's room: up through the sand-trickling gap in the tunnel's ceiling ----------------
 LEVELS.r1 = async (page, shot) => { await run0(page, 'r1', () => roomRun(page, shot, '16-29-1-B16', () => {
   play('29-1'); place(118, 13); sim(0.3); safeWalk(123); const r = AP.route([[125, 12], [128, 9]]); if (!r.ok) return { ok: false, r };
@@ -418,6 +628,11 @@ LEVELS.bot = async (page) => {
   if (!BOT) return;
   await page.evaluate(HELPERS);
   await botRun(page, '29-1', S1_ROUTE);
+  await botRun(page, '29-2', S2_ROUTE);
+  await botRun(page, '29-3', S3_ROUTE);
+  await botRun(page, '29-4', S4_ROUTE);
+  await botRun(page, '29-5', S5_ROUTE);
+  await botRun(page, '29-6', S6_ROUTE);
   if (LEVELS.botMore) await LEVELS.botMore(page, botRun);
 };
 

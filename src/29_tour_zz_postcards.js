@@ -60,7 +60,8 @@ const NOTES = {
   table: 'Every card from our table! I saved you the last olive. Madame Manners says you have to offer it to me first.',   // Table for Two (36)
   wash: 'Every card from the wrong side of the wash! I folded your socks into pairs while you were out. Two of them were never pairs, darling, they only met on the line.',   // Wrong Side of the Wash (26)
   // Pupo Standard Time (hidden land A7)
-  pst: 'Every card from Pupo Standard Time! I packed a biscuit for each word of Pupo\'s sentence. That is four. He says the pause counts, so there is a fifth, and he has already eaten it.'
+  pst: 'Every card from Pupo Standard Time! I packed a biscuit for each word of Pupo\'s sentence. That is four. He says the pause counts, so there is a fifth, and he has already eaten it.',
+  foley: 'Every card from Foley Beach! I packed two coconut halves so you can do the horse in the kitchen. Do it quietly, darling, the neighbours think we keep one.'   // Foley Beach (hidden land A4)
 };
 const noteOf = C => (NOTES[C.id] || ('Every postcard from ' + C.name + '! I keep them all in a shoebox.')) + ' ♥ C';
 

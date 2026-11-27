@@ -294,6 +294,9 @@ const ENEMY_SAFE_TYPES = {
 // touch()); a net critter touches only Brady on its own face of the net, peg jaws only while snapped shut (customCollide)
 Object.assign(BOSS_SAFE, { wash_majesty: ['drift', 'aim', 'snap', 'back', 'pucker', 'sweep', 'balloon', 'shake'] });
 Object.assign(ENEMY_SAFE_TYPES, { washCrawler: 'on a drying net: touches only Brady on its own face (customCollide)', washJaws: 'peg jaws on a timer: hurt only while snapped shut (customCollide)' });
+// Foley Beach (29): a hiss kettle that has startled itself silent is harmless for two seconds (its joke); a boom crab on the
+// cargo net touches only Brady on its own side of the ropes (customCollide)
+Object.assign(ENEMY_SAFE_TYPES, { foleyKettle: 'silent and harmless after it startles itself (29_tour_y_foley.js harmlessWhen)', foleyNetCrab: 'on the cargo net: touches only Brady on its own side (customCollide)' });
 const OLD_TYPES = { greeter: 1, pony: 1 };   // the old Black Rock City enemies (08a_chunks.js / 10b_burners.js): in no tour level
 if (!noSweep) {
   const noHurt = [];
