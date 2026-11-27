@@ -459,7 +459,8 @@ TourRooms.def('foleyRain', {
 // the camera in a foley room: the whole room's width in view, the stage band in the middle
 TourHooks.on('camera', (play, dt) => {
   const A = play.area; if (!(A && A.roomKit && /^foley/.test(A.roomKit.kind))) return;
-  if (Game.viewW >= (R1 + 1) * TS - 8) play.camX = clamp(((R1 + 1) * TS - Game.viewW) / 2, 0, Math.max(0, A.W * TS - Game.viewW));
+  // (a phone shows about 22 columns: the room's 23 columns are centred, so the way in, the game and the cage all fit)
+  play.camX = clamp(((R1 + 1) * TS - Game.viewW) / 2, 0, Math.max(0, A.W * TS - Game.viewW));
 });
 {
   const ct0 = Play.prototype.camTargetY;

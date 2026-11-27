@@ -478,7 +478,7 @@ LEVELS.s3 = async (page, shot, run, pano) => {
 };
 // ---------------- 29-3's room: from the top of the net up through the sand-trickling gap in the loft floor ----------------
 LEVELS.r3 = async (page, shot) => { await run0(page, 'r3', () => roomRun(page, shot, '36-29-3-B18', () => {
-  play('29-3'); place(58, 15); sim(0.3); walkTo(61, 3); const n = netGo(['grip', [61, 7], [71, 7], 'J', [71, 5], 'R']); walkTo(81, 3); const aid = door(); return { ok: aid === 'loft', aid, n, inX: 81, other: true, how: 'climb to the top of the cargo net, jump up through the gap where the sand trickles, the door in the flies' }; })); };
+  play('29-3'); place(58, 15); sim(0.3); walkTo(61, 3); const n = netGo(['grip', [61, 7], [71, 7], 'J', [71, 3], 'R']); walkTo(81, 3); const aid = door(); return { ok: aid === 'loft', aid, n, inX: 81, other: true, how: 'climb to the top of the cargo net, jump up through the gap where the sand trickles, the door in the flies' }; })); };
 
 // ---------------- 29-4 Sound Goes Round ----------------
 const S4_ROUTE = [
@@ -489,7 +489,7 @@ const S4_ROUTE = [
 LEVELS.s4 = async (page, shot, run, pano) => {
   await run('s4', async () => {
     await page.evaluate(HELPERS);
-    const r = await page.evaluate(() => { fresh(); play('29-4'); place(10, 15); sim(0.3); walkTo(12, 3); press(); for (let q = 0; q < 30; q++) sim(1 / 120, { up: true }); const T0 = ents('FoleyTrumpet')[0]; return { mounted: T0.mounted, x: tileOf()[0] }; });
+    const r = await page.evaluate(() => { fresh(); play('29-4'); place(10, 15); sim(0.3); walkTo(12, 3); press(); for (let q = 0; q < 30; q++) sim(1 / 120, { up: true }); const T0 = ents('FoleyTrumpet').find(e => e.tx === 12); return { mounted: T0.mounted, x: tileOf()[0] }; });
     check('29-4: THROW at the trumpet takes it; the stick aims (Brady stays put)', r.mounted && r.x === 12, r);
     await page.evaluate(() => { freeze(); }); await shot('40-29-4-aim-dots.png');
     const t1 = await page.evaluate(() => { thaw(); play('29-4'); place(10, 15); sim(0.3); return trumpet(12, 23); });

@@ -192,7 +192,7 @@ const under = (() => {
   G.put(31, 15, 'N'); G.put(32, 15, 'j'); G.put(43, 15, 'm'); G.put(48, 15, 'c');
   // the cargo net over the scenery dock (x60-73, rows 6-15); the dock's soft floor (row 19) and steps back up
   G.pit(62, 73); G.ground(62, 73, 19); G.ground(62, 62, 18); G.put(56, 15, 'O');
-  G.put(60, 7, 'u'); G.put(71, 5, 'w'); G.put(67, 7, '!'); G.put(66, 13, '$');
+  G.put(60, 7, 'u'); G.put(71, 3, 'w'); G.put(67, 7, '!'); G.put(66, 13, '$');
   G.ground(74, 80, 9); G.fill(74, 9, 74, 19, '#');
   // the loft over the net: its floor (row 6) has a gap at x71-72 with sand trickling out; the flies above, the door
   // (the net's lifting ropes run on up through the gap: jump from the net's top and grab them)
@@ -218,7 +218,7 @@ stamps.foleyUnder = {
     a: BANK('u1', ['coconut', 'block', 'squeak'], ['horse', 'horse']),
     j: BANK('u2', ['coconut', 'squeak', 'sponge'], ['duck', 'duck']),
     d: BANK('u3', ['coconut', 'block', 'squeak', 'sponge'], ['horse', 'horse', 'hobby']),
-    u: ['piece', 'foley.net', { w: 14, h: 9, holes: [[5, 5], [10, 2]] }], w: ['piece', 'foley.net', { w: 2, h: 2, holes: [], lift: true }],
+    u: ['piece', 'foley.net', { w: 14, h: 9, holes: [[5, 5], [10, 2]] }], w: ['piece', 'foley.net', { w: 2, h: 4, holes: [], lift: true }],
     '!': ['piece', 'foley.netcrab', { face: 0, ay: 8, speed: 1.4 }], '$': ['piece', 'foley.netcrab', { face: 1, ax: 6, speed: 1.0, phase: 0.5 }],
     p: ['anchor', 'b18Back'], Z: ['anchor', 'b18Out']
   })
