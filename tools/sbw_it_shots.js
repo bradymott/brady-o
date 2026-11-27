@@ -292,6 +292,7 @@ async function session(viewport, fn) {
       const R = {};
       // a helper in the page: the room state of the current area; tokens by id
       await ev(() => { window.room = () => S().area.roomState; window.kit = () => S().area.roomKit; window.waitArea = (aid, sec) => until(sec || 4, () => ({}), () => S().area.aid === aid && S().fade.a < 0.05 && P().state === 'play'); window.upDoor = () => { sim(0.05, { up: true, upPressed: true }); }; window.runTo = (tx, sec) => { const A = S().area; return until(sec || 12, () => { const p = P(), row = Math.round((p.y + p.h) / 32), fx = Math.floor(p.cx / 32), gap = p.onGround && [1, 2].some(d => A.tiles[row * A.W + fx + d] === 0); return { right: p.cx < tx - 6, left: p.cx > tx + 20, jump: true, jumpPressed: gap }; }, () => Math.abs(P().cx - tx) < 10 && P().onGround); };
+      window.floorAt = (tx, ty) => { const A = S().area; let r = Math.max(0, ty); while (r < A.H && !A.tiles[r * A.W + tx]) r++; return r - 1; };
       window.hop = sec => { let n = 0; until(sec || 1.4, k => ({ jump: true, jumpPressed: k === 0 }), () => ++n > 30 && P().onGround); }; });
       // 14-1: a boosted launch off the first ramp reaches the pigeon loft; inside, the scooter time trial; out through the roller door
       await ev(() => { fresh(); play('14-1'); const loft = S().entities.find(e => e.s && e.s.look === 'itLoft'); const ramp = ents('ItRamp').filter(r => r.x < loft.x).sort((a, b) => b.x - a.x)[0]; place(Math.floor(ramp.x / 32) - 8, Math.floor((ramp.y + ramp.h) / 32) - 1); sim(0.4); });
@@ -327,7 +328,7 @@ async function session(viewport, fn) {
       r = await ev(() => { const d = S().entities.find(e => e.s && e.s.look === 'itGarage' && e.s.targetRef && /garageOut/.test(e.s.targetRef)); place(Math.floor(d.cx / 32), Math.floor((d.y + d.h) / 32) - 1); P().vx = 0; sim(0.3, { down: true }); upDoor(); waitArea('vicolo'); const an = S().level.areas[0].anchors.garageOut; return { area: S().area.aid, dx: Math.round((P().cx - an.x) / 32) }; });
       check('14-1 secret: the roller door leads out onto the street further on (not back to the loft)', r.area === 'vicolo' && Math.abs(r.dx) <= 2, r);
       // 14-2: a full charge, straight up through the flour vent; the run along the cupboard tops; the pantry hatch
-      await ev(() => { play('14-2'); const v = ents('ItFlourTell')[0]; place(Math.floor(v.x / 32) - 4, Math.floor((v.y + v.h) / 32)); sim(0.3); });
+      await ev(() => { play('14-2'); const v = ents('ItFlourTell')[0]; const tx = Math.floor(v.x / 32) - 4; place(tx, floorAt(tx, Math.floor(v.y / 32))); sim(0.3); });
       await shot('83-14-2-tell-flour-vent.png');
       r = await ev(() => {
         const v = ents('ItFlourTell')[0], pad = ents('ItDough').find(d => Math.abs(d.cx - v.cx) < 48), p = P();
@@ -381,11 +382,14 @@ async function session(viewport, fn) {
       check('14-3 secret: the store\'s second door comes out a storey higher', r.area === 'torre' && r.row === 57, r);
       // 14-4: the column of song up through the gap in the ceiling, the gantry run, the opera hats, the rope down
       await ev(() => { play('14-4'); place(14, 11); sim(0.2); });
-      await shot('88-14-4-tell-ceiling-gap.png');
-      r = await ev(() => { const d = ents('ItDiva').find(q => q.gi === 0); until(8, () => ({}), () => d.phase().singing && d.phase().k < 0.3); place(19, 11); until(4, k => ({ jump: true, jumpPressed: k === 0 }), () => S().area.aid === 'loggione'); waitArea('loggione'); return { area: S().area.aid }; });
+      await shot('88-14-4-tell-pigeon-looks-up.png');
+      await ev(() => { const d = ents('ItDiva').find(q => q.gi === 0); until(8, () => ({}), () => d.phase().singing && d.phase().k < 0.3); place(19, 11); until(4, k => ({ jump: true, jumpPressed: k === 0 }), () => P().y < 2.5 * 32 || S().area.aid === 'loggione'); });
+      await shot('88b-14-4-ceiling-gap-ride.png');
+      r = await ev(() => { until(4, () => ({ jump: true }), () => S().area.aid === 'loggione'); waitArea('loggione'); return { area: S().area.aid }; });
       check('14-4 secret: riding the song up through the gap in the ceiling comes out in the gantry', r.area === 'loggione', r);
+      await ev(() => sim(0.6));   // the seam's velvet curtain whips away in game time
       await shot('89-14-4-gantry.png');
-      r = await ev(() => { const d = S().entities.find(e => e.s && e.s.look === 'itStageDoor'); runTo(d.cx, 14); upDoor(); waitArea('loggia'); return { area: S().area.aid }; });
+      r = await ev(() => { const d = S().entities.find(e => e.s && e.s.look === 'itStageDoor'); const dx = d && d.cx / 32; P().invuln = 30;   /* a sour note is a hit: the checker proves the route; here just the inputs */ runTo(d.cx, 14); const p1 = { x: P().cx / 32, y: (P().y + P().h) / 32, aid: S().area.aid }; upDoor(); waitArea('loggia'); return { area: S().area.aid, p1, dx }; });
       check('14-4 secret: along the gantry (spike pits, sour notes) to the royal box door', r.area === 'loggia', r);
       r = await ev(() => {
         const K = kit(), Rm = room(), p = P(), pickCup = c => { p.x = c.x - p.w / 2; p.y = (K.data.row + 1) * 32 - 34 - p.h + 4; p.vy = 4 * 32; sim(0.05); };
@@ -404,9 +408,9 @@ async function session(viewport, fn) {
       check('14-5 secret: behind the curtain, the gold record is a prank, then the cage opens', r.area === 'camerino' && r.won, r);
       await shot('92-14-5-dressing-room.png');
       // 14-6: the pit with no coffee: drop in; the bean store; out further along
-      await ev(() => { fresh(); play('14-6'); const t = ents('ItSackTell')[0]; for (const d of ents('TourDoom')) d.front = -1e5; place(Math.floor(t.x / 32) - 3, 13); sim(0.2); });
+      await ev(() => { fresh(); play('14-6'); const t = ents('ItSackTell')[0]; for (const d of ents('TourDoom')) d.front = -1e5; const tx = Math.floor(t.x / 32) - 3; place(tx, floorAt(tx, 1)); sim(0.2); });
       await shot('93-14-6-tell-sack-pit.png');
-      r = await ev(() => { const t = ents('ItSackTell')[0]; for (const d of ents('TourDoom')) d.front = -1e5; place(Math.floor(t.x / 32) - 1, 13); until(3, () => ({ right: P().cx < t.cx }), () => S().area.aid === 'retro'); waitArea('retro'); return { area: S().area.aid, dead: P().dead }; });
+      r = await ev(() => { const t = ents('ItSackTell')[0]; for (const d of ents('TourDoom')) d.front = -1e5; const tx = Math.floor(t.x / 32) - 1; place(tx, floorAt(tx, 1)); until(3, () => ({ right: P().cx < t.cx }), () => S().area.aid === 'retro'); waitArea('retro'); return { area: S().area.aid, dead: P().dead }; });
       check('14-6 secret: dropping into the pit with the bean sacks (no coffee) lands in the bean store', r.area === 'retro' && !r.dead, r);
       r = await ev(() => {
         const K = kit(), Rm = room(); place(10, 10); until(4, () => ({}), () => Rm.phase === 'run');

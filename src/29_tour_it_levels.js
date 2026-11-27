@@ -141,7 +141,7 @@ const L2 = { n: 2, name: 'The Pizzeria', arch: 'dough', theme: 'it_pizzeria',
         ['ovens', { n: 12, ovens: 2 }],
         ['gate', { exit: 'main' }]
       ] },
-    { id: 'dispensa', gen: 'room', role: 'secret', theme: 'it_pizzeria', stamp: 'itDispensa', room: 'itPizza' }
+    { id: 'dispensa', gen: 'room', role: 'secret', theme: 'it_cantina', stamp: 'itDispensa', room: 'itPizza' }
   ] };
 
 /* ---------------- 14-3 The Leaning Tower ---------------- */

@@ -219,7 +219,7 @@ TourRooms.def('itPizza', {
     });
     // the order ticket pinned on the wall: the three toppings wanted (ticked when on)
     if (!R.won && R.order) {
-      const x = play.camX + Game.viewW - 120, y = TourRooms.hudY(play, 0) + 70;
+      const x = (D.jars[5] + 4.5) * TS, y = 8.5 * TS;   // pinned on the wall right of the jars
       ctx.fillStyle = R.burnT > 0 ? '#ffb0a0' : '#fffaf0'; rr(ctx, x - 50, y - 26, 100, 60, 6); ctx.fill(); ctx.stroke();
       ctx.fillStyle = INK; ctx.font = TourBackstage.F7; ctx.textAlign = 'center'; ctx.fillText('ORDER #14', x, y - 14);
       R.order.forEach((k, i) => { const tx = x - 30 + i * 30; TOPPINGS[k].draw(ctx, tx, y + 8); if (R.got.indexOf(k) >= 0) { ctx.strokeStyle = '#2aa84a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(tx - 8, y + 8); ctx.lineTo(tx - 2, y + 15); ctx.lineTo(tx + 9, y - 1); ctx.stroke(); ctx.strokeStyle = INK; ctx.lineWidth = 1.6; } });
