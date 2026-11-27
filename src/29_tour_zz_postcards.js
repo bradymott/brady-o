@@ -61,7 +61,8 @@ const NOTES = {
   wash: 'Every card from the wrong side of the wash! I folded your socks into pairs while you were out. Two of them were never pairs, darling, they only met on the line.',   // Wrong Side of the Wash (26)
   // Pupo Standard Time (hidden land A7)
   pst: 'Every card from Pupo Standard Time! I packed a biscuit for each word of Pupo\'s sentence. That is four. He says the pause counts, so there is a fifth, and he has already eaten it.',
-  post: 'Every card from the harbour on my postcard! I put a stamp on your forehead while you napped so you would come back to me. It says FRAGILE. It is still there, darling. Have a look in the kettle.'   // Postmark Sound (hidden land A2)
+  post: 'Every card from the harbour on my postcard! I put a stamp on your forehead while you napped so you would come back to me. It says FRAGILE. It is still there, darling. Have a look in the kettle.',   // Postmark Sound (hidden land A2)
+  gal: 'Every postcard from the gallery! I hung the worst Piwi portrait in the hall so the coats have something to laugh at. Mind the hook, darling: it is where your hat used to go.'   // The Unflattering Gallery (hidden land A5)
 };
 const noteOf = C => (NOTES[C.id] || ('Every postcard from ' + C.name + '! I keep them all in a shoebox.')) + ' ♥ C';
 

@@ -408,6 +408,19 @@ const BoxArt = (() => {
     // empty: the lid stands open over a dark case, the bone hangs from the front ----
     // ---- Postmark Sound (hidden land A2): a butter-yellow envelope parcel with cobalt airmail stripes and a coral wax
     // seal; hit: the seal pops off and the flap flips up; empty: the flap stands open over a dark envelope ----
+    // ---- The Unflattering Gallery (hidden land A5): a framed palette case, an aubergine frame round a mustard panel,
+    // a powder-blue palette hanging from its brass latch; hit: the palette swings off the latch and the lid flips up;
+    // empty: the lid stands open over the case's white mount ----
+    gal: { name: 'The Unflattering Gallery', draw(c, p) {
+      const Au = '#5a2346', Ah = '#844070', Mu = '#e2b33a', Bl = '#9ab8e8', Wh = '#fffdf6';
+      const sw = io(seg(p, 0, 0.45)), q = ease(seg(p, 0.25, 1));
+      lidBack(c, q, 3, 10, 26, Ah, 10);
+      R(c, 3, 10, 26, 20, 2, Au); shine(c, 5, 12, 22, 1.1);
+      R(c, 7, 13, 18, 13, 1, q > 0 ? Wh : Mu, 1.1);
+      if (q <= 0.5) R(c, 2, 6, 28, 6, 2, Ah);
+      R(c, 14, 25, 4, 3, 0.8, Mu, 1);
+      rot(c, 16, 27, sw * 1.2, () => { E(c, 16, 31.5, 4.6, 3.4, 0, Bl, 1.1); O(c, 14.6, 31, 0.8, Au, 0); O(c, 17.4, 32, 0.8, Mu, 0); });
+    } },
     post: { name: 'Postmark Sound', draw(c, p) {
       const Y1 = '#fbe6a2', Y2 = '#e8c870', Cb = '#2f4fc8', Co = '#f47a5a';
       const pop = ease(seg(p, 0, 0.4)), q = ease(seg(p, 0.3, 1));

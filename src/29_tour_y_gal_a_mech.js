@@ -185,6 +185,22 @@ const carriage = {
   }
 };
 
+
+/* ---------------- the camera looks where a prop's effect lands while Brady has the prop ---------------- */
+{
+  const uc0 = Play.prototype.updateCamera;
+  Play.prototype.updateCamera = function (dt) {
+    const r = uc0.apply(this, arguments), L = this.galLook, p = this.player;
+    if (L != null && p && inGal(this) && !(this.area.gal && this.area.gal.room)) {
+      const want = clamp((p.cx + L) / 2 - Game.viewW / 2, 0, Math.max(0, this.area.W * TS - Game.viewW));
+      this.galCamX = this.galCamX == null ? this.camX : lerp(this.galCamX, want, Math.min(1, (dt || 1 / 60) * 3));
+      this.camX = this.galCamX;
+    } else this.galCamX = null;
+    this.galLook = null;
+    return r;
+  };
+}
+
 /* ======================= 30-2 VANTAGE: line two scraps up in the viewing frame ======================= */
 // { rail, at, good (the left tile where they meet), decoy (a tile where only the handrail meets), obj: [x0, y0, x1, y1]
 // (the walkable object's tiles), kind: 'bridge' | 'stair', g }
@@ -198,6 +214,7 @@ class GalViewer extends Ent {
   off() { return carriage.sx(this) - this.s.good; }
   update(dt) {
     this.t += dt; carriage.update(this, dt);
+    if (this.holding && !this.done) this.g.galLook = (this.s.obj[0] + this.s.obj[2] + 1) * TS / 2;
     if (this.done) return;
     const ok = this.off() === 0;
     this.k = ok ? this.k + dt / BREATH : 0;
@@ -220,7 +237,7 @@ class GalViewer extends Ent {
       ctx.save(); ctx.translate(0, d);
       if (solid) { ctx.fillStyle = MUS; ctx.strokeStyle = INK; ctx.lineWidth = 2; }
       else { ctx.fillStyle = 'rgba(154,184,232,0.22)'; ctx.strokeStyle = BLUE; ctx.lineWidth = 2.5; ctx.setLineDash([6, 5]); ctx.lineDashOffset = -this.t * 10; }
-      if (stair) { ctx.beginPath(); ctx.moveTo(a, y1); for (let xx = a; xx < b; xx += TS) { const yy = y0 + (y1 - y0) * (1 - (xx - x0 + TS) / (x1 - x0)); ctx.lineTo(xx, Math.min(y1, yy + TS)); ctx.lineTo(xx, yy); ctx.lineTo(xx + TS, yy); } ctx.lineTo(b, y1); ctx.closePath(); }
+      if (stair) { ctx.beginPath(); for (const r of objRects(O, 'stair')) { const cx0 = r[0] * TS; if (cx0 < a - 1 || cx0 >= b - 1) continue; ctx.rect(cx0, r[1] * TS, TS, (r[3] - r[1] + 1) * TS); } }
       else { ctx.beginPath(); ctx.rect(a, y0, b - a, 12); }
       ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
       ctx.restore();
@@ -240,9 +257,9 @@ class GalViewer extends Ent {
       if (meet) { ctx.strokeStyle = `rgba(255,240,160,${0.6 + 0.4 * Math.sin(t * 8)})`; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(mid, O[1] * TS - 10); ctx.lineTo(mid, (O[3] + 1) * TS + 4); ctx.stroke(); if (this.k > 0) breathRing(ctx, mid, O[1] * TS - 30, this.k); }
       // the decoy handrail: painted above the stair, meeting one spot early
       if (s.decoy != null) {
-        const dh = clamp(carriage.sx(this) - s.decoy, -4, 4) * 14, y = O[1] * TS - 2 * TS;
+        const dh = clamp(carriage.sx(this) - s.decoy, -4, 4) * 14, yTop = xx => (O[3] - (xx / TS - O[0]) * (O[3] - O[1]) / Math.max(1, O[2] - O[0])) * TS - 40, X0 = O[0] * TS, X1 = (O[2] + 1) * TS;
         ctx.strokeStyle = Math.abs(dh) < 3 ? MUS_HI : BLUE; ctx.lineWidth = 4; ctx.setLineDash([8, 5]);
-        ctx.beginPath(); ctx.moveTo(O[0] * TS, y - dh); ctx.lineTo(mid, y - dh + 8); ctx.moveTo(mid, y + dh + 8); ctx.lineTo((O[2] + 1) * TS, y + dh + 16); ctx.stroke(); ctx.setLineDash([]);
+        ctx.beginPath(); ctx.moveTo(X0, yTop(X0) - dh); ctx.lineTo(mid, yTop(mid) - dh); ctx.moveTo(mid, yTop(mid) + dh); ctx.lineTo(X1, yTop(X1) + dh); ctx.stroke(); ctx.setLineDash([]);
       }
     }
     // the viewing frame itself: an aubergine frame on little wheels, its window showing a sliver of each scrap

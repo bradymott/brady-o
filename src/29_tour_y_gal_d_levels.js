@@ -42,7 +42,7 @@ const hallRows = (() => {
   ground(Gr, 0, 131, 19); put(Gr, 3, 18, '@'); put(Gr, 5, 18, 'n'); put(Gr, 8, 15, '?'); put(Gr, 10, 14, '*');
   put(Gr, 13, 18, '1'); partition(Gr, 18, 14); put(Gr, 18, 18, 'r');
   put(Gr, 21, 15, 'o.o'); put(Gr, 25, 18, '2'); partition(Gr, 31, 14); put(Gr, 31, 18, 'R');
-  put(Gr, 34, 18, 'k'); put(Gr, 36, 18, 'c'); put(Gr, 40, 15, 'o.o.o'); put(Gr, 44, 18, 'u'); put(Gr, 46, 15, '?'); put(Gr, 48, 11, 'M');
+  put(Gr, 34, 18, 'k'); put(Gr, 36, 18, 'c'); put(Gr, 40, 15, 'o.o.o'); put(Gr, 44, 18, 'u'); put(Gr, 46, 15, '?'); put(Gr, 48, 14, 'M');
   // the plinth portrait
   fillG(Gr, 52, 17, 53, 18, 'B'); put(Gr, 52, 16, '3'); put(Gr, 50, 18, 'N'); partition(Gr, 58, 14); put(Gr, 58, 18, 'P');
   // the low passage under a panelled ceiling, its walls up from the ends; a gap in the ceiling (the pale patch below)
@@ -56,7 +56,7 @@ const hallRows = (() => {
   // Pupo's portrait on its plinth
   fillG(Gr, 120, 17, 121, 18, 'B'); put(Gr, 120, 16, '5'); put(Gr, 117, 18, 'O'); partition(Gr, 127, 14); put(Gr, 127, 18, 'Y');
   // a varnish pit with gnats, P3 over it; on to the gate
-  varnish(Gr, 132, 135, 21); put(Gr, 133, 13, 'E'); put(Gr, 134, 10, 'M');
+  varnish(Gr, 132, 135, 21); put(Gr, 133, 13, 'E'); put(Gr, 134, 14, 'M');
   ground(Gr, 136, W - 1, 19); put(Gr, 140, 18, 'j'); put(Gr, 146, 15, 'o.o.o'); put(Gr, 150, 18, 'u'); put(Gr, 156, 18, 'k'); put(Gr, 165, 18, 'G'); fillG(Gr, W - 1, 0, W - 1, 18, '#');
   return rowsOf(Gr);
 })();
@@ -92,14 +92,14 @@ const longRows = (() => {
   ground(Gr, 0, 20, 19); put(Gr, 3, 18, '@'); put(Gr, 5, 18, 'n'); put(Gr, 7, 15, '?'); put(Gr, 9, 18, '1');
   varnish(Gr, 21, 32, 21); put(Gr, 26, 13, 'o.o.o');
   ground(Gr, 33, 49, 19); put(Gr, 34, 18, 'c'); put(Gr, 38, 18, 'N'); put(Gr, 40, 18, '2'); put(Gr, 46, 18, 'u');
-  varnish(Gr, 50, 61, 21); put(Gr, 55, 14, '*'); put(Gr, 53, 11, 'M'); put(Gr, 59, 12, 'M');
+  varnish(Gr, 50, 61, 21); put(Gr, 55, 14, '*'); put(Gr, 53, 14, 'M'); put(Gr, 59, 15, 'M');
   ground(Gr, 62, 118, 19); put(Gr, 66, 15, '?'); put(Gr, 68, 18, 'l'); put(Gr, 70, 18, 'j');
   // the canvas panel: a pillar of panelling whose foot is only painted canvas (the pale patch beside it)
   fillG(Gr, 74, 12, 77, 18, 'H'); fillG(Gr, 74, 17, 74, 18, 'F'); fillG(Gr, 75, 17, 77, 18, '.'); put(Gr, 73, 18, 'x'); put(Gr, 75, 17, 'A'); put(Gr, 77, 18, 'D');
-  put(Gr, 82, 18, 'k'); put(Gr, 86, 15, 'h'); put(Gr, 90, 18, 'a'); put(Gr, 94, 18, 'c'); put(Gr, 96, 18, 'O'); put(Gr, 98, 18, '3'); put(Gr, 104, 12, 'M');
+  put(Gr, 82, 18, 'k'); put(Gr, 86, 15, 'h'); put(Gr, 90, 18, 'a'); put(Gr, 94, 18, 'c'); put(Gr, 96, 18, 'O'); put(Gr, 98, 18, '3'); put(Gr, 104, 14, 'M');
   // the cliff the painted stair climbs
   ground(Gr, 119, W - 1, 12); put(Gr, 124, 11, 'w'); put(Gr, 130, 8, 'o.o.o');
-  varnish(Gr, 135, 139, 14); put(Gr, 137, 8, 'E'); put(Gr, 137, 5, 'M');
+  varnish(Gr, 135, 139, 14); put(Gr, 137, 8, 'E'); put(Gr, 152, 9, 'M');
   put(Gr, 146, 11, 'j'); put(Gr, 152, 11, 'u'); put(Gr, 158, 11, 'k'); put(Gr, 166, 11, 'G'); fillG(Gr, W - 1, 0, W - 1, 11, '#');
   return rowsOf(Gr);
 })();
@@ -134,15 +134,15 @@ const L2 = { n: 2, name: 'A Question of Perspective', mapLabel: 'A Question of P
 const studioRows = (() => {
   const W = 180, H = 24, Gr = grid(W, H, '.');
   ground(Gr, 0, 29, 19); put(Gr, 3, 18, '@'); put(Gr, 5, 18, 'n'); put(Gr, 8, 15, '?'); put(Gr, 12, 18, '1');
-  ground(Gr, 30, 62, 12); put(Gr, 27, 10, '*'); put(Gr, 34, 11, 'c'); put(Gr, 40, 11, 'u'); put(Gr, 44, 8, '?'); put(Gr, 48, 8, 'o.o.o'); put(Gr, 55, 11, 'i'); put(Gr, 58, 7, 'M');
+  ground(Gr, 30, 62, 12); put(Gr, 27, 10, '*'); put(Gr, 34, 11, 'c'); put(Gr, 40, 11, 'u'); put(Gr, 44, 8, '?'); put(Gr, 48, 8, 'o.o.o'); put(Gr, 55, 11, 'i'); put(Gr, 58, 8, 'M');
   ground(Gr, 63, 73, 19); put(Gr, 64, 18, 'N'); put(Gr, 66, 18, '2'); put(Gr, 71, 18, 'j');
-  varnish(Gr, 74, 85, 21); put(Gr, 79, 13, 'M');
+  varnish(Gr, 74, 85, 21); put(Gr, 79, 15, 'M');
   ground(Gr, 86, 110, 19); put(Gr, 88, 18, 'c'); put(Gr, 96, 18, 'w');
   // the hole in the floor by a pale patch: a short drop to a passage under the floor and the cloakroom's door
   fillG(Gr, 92, 19, 93, 19, '.'); fillG(Gr, 92, 20, 99, 22, '.'); put(Gr, 91, 18, 'x'); put(Gr, 95, 21, 'A'); put(Gr, 98, 22, 'D');
   put(Gr, 104, 18, 'a'); put(Gr, 106, 18, 'k');
   // the twist: the ledge's ridge (run it: the balcony), then the ridge over the varnish (walk it: it holds you up)
-  put(Gr, 109, 18, '3'); varnish(Gr, 111, 132, 21); put(Gr, 111, 18, 'O'); put(Gr, 113, 18, '4'); put(Gr, 116, 15, 'E'); put(Gr, 124, 11, 'M');
+  put(Gr, 109, 18, '3'); varnish(Gr, 111, 132, 21); put(Gr, 111, 18, 'O'); put(Gr, 113, 18, '4'); put(Gr, 116, 15, 'E'); put(Gr, 124, 15, 'M');
   ground(Gr, 133, W - 1, 19); put(Gr, 136, 18, 'u'); put(Gr, 142, 15, 'o.o.o'); put(Gr, 148, 18, 'j'); put(Gr, 154, 18, 'l'); put(Gr, 168, 18, 'G'); fillG(Gr, W - 1, 0, W - 1, 18, '#');
   return rowsOf(Gr);
 })();
@@ -183,14 +183,14 @@ const hangRows = (() => {
   ground(Gr, 17, 22, 19); fillG(Gr, 17, 17, 17, 18, 'B'); put(Gr, 18, 18, 'B'); put(Gr, 19, 17, 'o.o');
   ground(Gr, 23, 30, 14); put(Gr, 26, 13, 'c'); put(Gr, 28, 13, '*'); put(Gr, 30, 13, '2'); put(Gr, 29, 13, '9');
   varnish(Gr, 31, 42, 21); put(Gr, 36, 16, 'o.o.o');
-  ground(Gr, 43, 56, 14); put(Gr, 43, 13, 'x'); put(Gr, 46, 13, 'u'); put(Gr, 50, 13, 'c'); put(Gr, 54, 13, '?');
+  ground(Gr, 43, 56, 14); put(Gr, 43, 13, 'x'); put(Gr, 46, 13, 'u'); put(Gr, 50, 13, 'c'); put(Gr, 62, 15, '?');
   // the gap in the rail over the second frame's turned place, the run on top of the rail, the paint store's hatch
   fillG(Gr, 41, 11, 42, 11, '.'); fillG(Gr, 40, 4, 40, 11, 'H'); fillG(Gr, 57, 4, 57, 11, 'H'); put(Gr, 44, 10, 'o.o.o'); put(Gr, 48, 7, 'A'); put(Gr, 52, 7, 'h'); put(Gr, 55, 10, 'D');
   // down to the floor and the picture-cord rack up to the high ledge
   ground(Gr, 57, 73, 19); put(Gr, 60, 18, 'a'); put(Gr, 62, 18, 'N'); put(Gr, 66, 8, 'R'); put(Gr, 68, 9, 'e'); put(Gr, 70, 12, 'f');
   ground(Gr, 74, 95, 9); put(Gr, 78, 8, 'c'); put(Gr, 84, 8, 'w'); put(Gr, 88, 5, 'o.o.o'); put(Gr, 92, 8, 'O');
   fillG(Gr, 92, 6, 120, 6, 'H'); put(Gr, 95, 8, '3');
-  varnish(Gr, 96, 107, 21); put(Gr, 101, 8, 'E'); put(Gr, 104, 8, 'M');
+  varnish(Gr, 96, 107, 21); put(Gr, 101, 8, 'E'); put(Gr, 112, 8, 'u');
   ground(Gr, 108, W - 1, 9); put(Gr, 101, 8, 'E'); put(Gr, 107, 8, '4'); put(Gr, 112, 8, 'j'); put(Gr, 124, 5, 'o.o.o'); put(Gr, 130, 8, 'u'); put(Gr, 140, 8, 'k'); put(Gr, 150, 8, 'G'); fillG(Gr, W - 1, 0, W - 1, 8, '#');
   return rowsOf(Gr);
 })();
@@ -228,13 +228,13 @@ const aucRows = (() => {
   const W = 176, H = 24, Gr = grid(W, H, '.');
   ground(Gr, 0, 19, 19); put(Gr, 3, 18, '@'); put(Gr, 5, 18, 'n'); put(Gr, 8, 15, '?'); put(Gr, 8, 18, 'P'); put(Gr, 13, 18, '1');
   ground(Gr, 20, 36, 13); put(Gr, 24, 12, 'c'); put(Gr, 28, 12, 'u'); put(Gr, 32, 9, 'o.o');
-  ground(Gr, 37, 53, 19); put(Gr, 39, 18, 'N'); put(Gr, 41, 18, 'J'); put(Gr, 44, 18, '2'); put(Gr, 47, 18, '3'); put(Gr, 45, 15, '*'); put(Gr, 38, 11, 'M');
+  ground(Gr, 37, 53, 19); put(Gr, 39, 18, 'N'); put(Gr, 41, 18, 'J'); put(Gr, 44, 18, '2'); put(Gr, 47, 18, '3'); put(Gr, 45, 15, '*'); put(Gr, 38, 14, 'M');
   ground(Gr, 54, 80, 10); put(Gr, 58, 9, 'c'); put(Gr, 62, 9, 'j'); put(Gr, 66, 6, '?');
   // the gap in the top floor by a pale patch: a short drop into a passage in the wall, the press's door
   fillG(Gr, 70, 10, 71, 11, '.'); fillG(Gr, 66, 12, 77, 13, '.'); put(Gr, 69, 9, 'x'); put(Gr, 68, 13, 'A'); put(Gr, 76, 13, 'D');
-  ground(Gr, 81, 108, 19); put(Gr, 84, 18, 'c'); put(Gr, 85, 18, 'a'); put(Gr, 86, 18, 'O'); put(Gr, 88, 18, 'Z'); put(Gr, 92, 18, '4'); put(Gr, 98, 18, '5'); put(Gr, 101, 18, 'w'); put(Gr, 95, 11, 'M');
+  ground(Gr, 81, 108, 19); put(Gr, 84, 18, 'c'); put(Gr, 85, 18, 'a'); put(Gr, 86, 18, 'O'); put(Gr, 88, 18, 'Z'); put(Gr, 92, 18, '4'); put(Gr, 98, 18, '5'); put(Gr, 101, 18, 'w'); put(Gr, 95, 14, 'M');
   ground(Gr, 109, W - 1, 10); put(Gr, 114, 9, 'u'); put(Gr, 120, 6, 'o.o.o');
-  varnish(Gr, 128, 131, 14); put(Gr, 129, 6, 'E'); put(Gr, 130, 3, 'M');
+  varnish(Gr, 128, 131, 14); put(Gr, 129, 6, 'E'); put(Gr, 130, 6, 'M');
   put(Gr, 138, 9, 'j'); put(Gr, 146, 9, 'k'); put(Gr, 160, 9, 'G'); fillG(Gr, W - 1, 0, W - 1, 9, '#');
   return rowsOf(Gr);
 })();
@@ -273,7 +273,7 @@ const salonRows = (() => {
   const W = 100, H = 22, Gr = grid(W, H, '.');
   ground(Gr, 0, W - 1, 19); put(Gr, 3, 18, '@'); put(Gr, 5, 18, 'n'); put(Gr, 7, 15, '?'); put(Gr, 9, 18, '1');
   partition(Gr, 24, 14); put(Gr, 24, 18, 'r'); put(Gr, 22, 13, '*');
-  put(Gr, 27, 18, 'c'); put(Gr, 30, 15, '?'); put(Gr, 32, 18, 'N'); put(Gr, 34, 18, '2'); put(Gr, 31, 9, 'M');
+  put(Gr, 27, 18, 'c'); put(Gr, 30, 15, '?'); put(Gr, 32, 18, 'N'); put(Gr, 34, 18, '2'); put(Gr, 31, 14, 'M');
   partition(Gr, 50, 14); put(Gr, 50, 18, 'R'); put(Gr, 45, 12, 'E'); put(Gr, 40, 18, 'u');
   put(Gr, 55, 18, 'k'); put(Gr, 58, 18, 'c');
   // the private collection: a panelled pillar whose foot is only canvas (the pale patch beside it)

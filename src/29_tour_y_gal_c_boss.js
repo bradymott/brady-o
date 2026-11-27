@@ -96,7 +96,7 @@ const brain = {
         b.blotX = null;
         if (onMark && low && Math.abs(b.markX - G.ear) < 30 && !b.blotHit) this.improve(b, 'A SPLENDID SECOND EAR!');
         else say(b, Math.abs(b.markX - G.ear) >= 30 ? 'THE MARK ISN\'T ON THE EAR SPOT' : 'IT HIT YOU, NOT THE EAR', '#c8d8ff');
-        b.go('pause2');
+        if (b.phase === 2) b.go('pause2');   // (the last ear moves him on to his chin)
       }
     } else if (A === 'pause2') {
       if (b.at > 1.4) b.go('flourish');

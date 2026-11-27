@@ -522,6 +522,109 @@ LEVELS.entry = async (page, shot, run, pano) => {
   });
 };
 
+// ---------------- bot: one honest run of each stage, enemies on, no invulnerability, the lives a level gives ----------------
+// Steps: [x, row] walk/hop there; { j: [x, row] } land exactly there; { bump: [x, row] } hit the box above; { sit: [x, row,
+// crouch] } fill a portrait; { view: sx } / { sitting: sx } roll a viewing frame / posing mark; { run: x } hold RUN to x;
+// { walk: x } walk on along the frames to x; 'climb' the cord rack; { bid: x } THROW at the podium at x; 'finish'; 'boss'
+const BOT = {
+  '30-1': [[0, [{ bump: [8, 19] }, { sit: [13, 19, 0] }, { sit: [25, 19, 1] }, [36, 19]]],
+    [34, [{ bump: [46, 19] }, [50, 19], { sit: [52, 17, 0] }, [60, 19], [70, 19], [86, 19]]],
+    [90, [[94, 19], { sit: [100, 19, 1] }, [110, 19], [118, 19], { sit: [120, 17, 1] }, [130, 19], [138, 19], [150, 19], 'finish']]],
+  '30-2': [[0, [{ bump: [7, 19] }, { view: 15 }, [24, 19], [30, 19], [36, 19]]],
+    [34, [{ view: 44 }, [52, 19], [60, 19], { bump: [66, 19] }, [80, 19], [94, 19]]],
+    [92, [{ view: 111 }, [112, 18], [115, 15], [118, 12], [130, 12], [134, 12], [141, 12], [150, 12], [160, 12], 'finish']]],
+  '30-3': [[0, [{ bump: [8, 19] }, [3, 19], { run: 21 }, [23, 16], [27, 13], [32, 12], [36, 12]]],
+    [34, [{ bump: [44, 12] }, [60, 12], [63, 19], { run: 73 }, [80, 19], [86, 19], [90, 19]]],
+    [88, [[96, 19], { run: 109 }, [113, 19], [124, 19], [133, 19], [150, 19], 'finish']]],
+  '30-4': [[0, [{ bump: [6, 19] }, [9, 17], [12, 14], [16, 14], { walk: 25 }, [26, 14]]],
+    [26, [{ walk: 46 }, [50, 14], [57, 19], { bump: [62, 19] }, 'climb', [80, 9]]],
+    [78, [[90, 9], { walk: 110 }, [120, 9], [140, 9], 'finish']]],
+  '30-5': [[0, [{ bump: [8, 19] }, [9, 19], { bid: 13 }, [18, 16], [21, 13], [26, 13]]],
+    [24, [[36, 13], [40, 19], [41, 19], { bid: 44 }, { bid: 47 }, [50, 16], [52, 13], [56, 10], [60, 10]]],
+    [58, [{ bump: [66, 10] }, [80, 10], [84, 19], [88, 19], { bid: 98 }, [105, 16], [107, 13], [112, 10], [125, 10], [133, 10], [140, 10], [150, 10], 'finish']]],
+  '30-6': [[0, [{ bump: [7, 19] }, { sitting: 18 }, [26, 19], [28, 19]]], [27, [{ bump: [30, 19] }, [31, 19], { sitting: 36 }, [52, 19], [58, 19]]], [58, [[87, 19], 'boss']]]
+};
+LEVELS.bot = async (page, shot, run) => {
+  if (!want.includes('bot')) return;
+  await page.evaluate(helpers);
+  const ids = Object.keys(BOT).filter(id => !want.some(w => /^30-/.test(w)) || want.includes(id));
+  for (const id of ids) await run('bot', async () => {
+    const r = await page.evaluate(([id, segs]) => {
+      fresh(); const B = window.BRADY; B.Save.data.lives = 5;
+      const [w, i] = id.split('-').map(Number); B.Game.setScene(new B.Play(B.getLevel(w, i), {})); sim(1.6);
+      AP.careful = true; const deaths = []; let hurts = 0, lastPow = P().power;
+      const PP = Object.getPrototypeOf(P()); if (!PP.__galHurt) { const h0 = PP.hurt; PP.hurt = function (src) { if (!(this.invuln > 0) && !(this.star > 0)) (window.__hurtLog = window.__hurtLog || []).push((src && (src.style || src.constructor.name)) + ':' + (src && src.act) + '@' + Math.floor(this.cx / 32) + ' y' + Math.round(this.y) + ' h' + this.h + ' f' + (src && Math.round(src.floorY)) + ' c' + this.crouch + ' d' + (this.inp && this.inp.down) + ' g' + this.onGround + ' bx' + (src && Math.round(src.blotX)) + ' ' + window.__dec); return h0.apply(this, arguments); }; PP.__galHurt = true; } window.__hurtLog = [];
+      const alive = () => { const g = S(), p = P(); return p && !p.dead && g.state === 'play'; };
+      const settle = () => { for (let k = 0; k < 120 * 8 && !(S().state === 'play' && P() && !P().dead && S().fade.a < 0.05); k++) sim(1 / 120); };
+      const doStep = st => {
+        if (st === 'finish') { sim(3, { right: true }); return S().state !== 'play'; }
+        if (st === 'boss') return bossFight();
+        if (st === 'climb') { AP.go([67, 19]); for (let k = 0; k < 120 && !(P().wash && P().wash.grip); k++) sim(1 / 60, { up: true }); const p = P(); for (let k = 0; k < 120 * 8 && p.y > 7 * 32 && alive(); k++) { const cr = S().entities.find(e => e.isWashCrawler && !e.dead && e.face === (p.wash && p.wash.face) && Math.abs(e.cx - p.cx) < 50 && e.cy < p.cy && p.cy - e.cy < 80); sim(1 / 120, cr ? { right: p.cx < 72 * 32, left: p.cx > 67 * 32 && p.cx > 70 * 32 } : { up: true, right: p.cx < 72 * 32 }); } sim(1 / 120, { jump: true, jumpPressed: true, right: true }); sim(0.6, { jump: true, right: true }); sim(0.5); return alive(); }
+        if (Array.isArray(st)) { for (let k = 0; k < 8; k++) { if (k === 4) AP.careful = false; const r = AP.go(st); AP.careful = true; if (r.ok) return true; if (!alive()) return false; sim(0.5); } return false; }
+        if (st.j) { for (let k = 0; k < 8; k++) { const r = AP.go(st.j, { jump: true }); if (r.ok && tileOf()[0] === st.j[0]) return true; if (!alive()) return false; sim(0.4); } return false; }
+        if (st.bump) { AP.go(st.bump); const p = P(); sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.5, { jump: true }); sim(0.4); for (let q = 0; q < 240; q++) { const it = S().entities.find(e => !e.remove && e.constructor.name !== 'GalPill' && (e.item || e.isItem || /Item|Power|Mushroom/.test(e.constructor.name))); if (!it) break; sim(1 / 60, { left: it.cx < p.cx - 6, right: it.cx > p.cx + 6 }); } return alive(); }
+        if (st.sit) { const r = sitAt(st.sit[0], st.sit[1], !!st.sit[2]); return alive() && r.done; }
+        if (st.view != null) { const r = rollTo('GalViewer', st.view, 1.6); return alive() && r.done; }
+        if (st.sitting != null) { const r = rollTo('GalSitting', st.sitting, 1.8); return alive() && r.done; }
+        if (st.run != null) { runTo(st.run); return alive(); }
+        if (st.walk != null) { AP.exec({ walkTo: st.walk * 32 + 16, dir: 0 }, 8); sim(0.4); return alive(); }
+        if (st.bid != null) { AP.go([st.bid, 19]); AP.exec({ walkTo: st.bid * 32 + 16, dir: 0 }, 2); throwN(1); return alive(); }
+        return true;
+      };
+      function bossFight() {
+        const g0 = S(); const d = g0.entities.filter(e => e.constructor.name === 'Portal' && e.target && e.target.area !== g0.area.idx).sort((a, b) => b.cx - a.cx)[0];
+        if (d) { AP.go([Math.floor(d.cx / 32), 19]); for (let k = 0; k < 20 && S().area.aid !== 'studio'; k++) sim(0.1, { up: true, upPressed: true }); }
+        if (S().area.aid !== 'studio') return false;
+        sim(1); let hold = 0;
+        for (let f = 0; f < 60 * 180; f++) {
+          const g = S(), b = g.entities.find(e => e.boss && !e.remove), p = P();
+          if (!b || b.state === 'dying') { sim(3); for (let q = 0; q < 12 && S().state === 'play'; q++) sim(0.5, { right: true }); return true; }
+          if (!alive()) { if (p && !p.dead && S().state !== 'dead') { sim(1 / 60); continue; } return false; }
+          if (b.state !== 'fight' || b.markX == null) { sim(1 / 60, { right: true }); continue; }
+          const G = window.BRADY_TOUR.Tour.galKit.retoucherBrain.geo(b), A = b.act, ph = b.phase || 1, onMark = Math.abs(p.cx - b.markX) < 14;
+          let tx = b.markX, crouch = false, jump = false, act = false;
+          if (ph === 1) {
+            if (b.loaded && (A === 'pause1' || A === 'raise')) { tx = G.easel; act = Math.abs(p.cx - G.easel) < 20 && p.onGround; }
+            else if ((A === 'raise' || A === 'drip') && b.dripX != null) tx = onMark ? b.dripX : b.markX;
+            if (A === 'sweep' && b.waveX != null && b.waveX > p.cx && b.waveX - p.cx < 70 && p.onGround) jump = true;
+          } else if (ph === 2) {
+            tx = onMark ? G.ear : b.markX;
+            if (A === 'fling' && b.blotX != null) { tx = p.cx; crouch = true; }
+            if (A === 'flourish' && onMark && Math.abs(b.markX - G.ear) < 10) { tx = p.cx; crouch = true; }
+          } else {
+            if (b.window > 0) { tx = G.easel; act = Math.abs(p.cx - G.easel) < 20 && p.onGround; }
+            else { tx = onMark ? G.chin : b.markX; if ((A === 'chin' || A === 'lunge') && onMark && Math.abs(b.markX - G.chin) < 10) { tx = p.cx; crouch = true; } if (A === 'lunge' && !onMark) { tx = p.cx; crouch = true; } }
+          }
+          const inp = { left: !crouch && tx < p.cx - 6, right: !crouch && tx > p.cx + 6, down: crouch };
+          if (act) { inp.action = true; inp.actionPressed = true; }
+          if (jump) { inp.jump = true; inp.jumpPressed = true; hold = 0.35; } else if (hold > 0) { inp.jump = true; hold -= 1 / 60; }
+          window.__bossAct = A; window.__dec = A + '/' + ph + '/' + crouch + '/' + Math.round(b.blotX) + '/' + onMark;
+          sim(1 / 60, inp);
+        }
+        return false;
+      }
+      settle(); for (let q = 0; q < 240 && S().state !== 'play'; q++) sim(1 / 60); lastPow = P().power;
+      const t0 = Date.now(); let si = 0, k = 0, tries = {};
+      while (si < segs.length && Date.now() - t0 < 300000) {
+        const steps = segs[si][1]; let ok = true;
+        const won = () => ['clear', 'tally', 'results'].indexOf(S().state) >= 0;
+        for (; k < steps.length; k++) { if (!doStep(steps[k]) || (!alive() && !won())) { ok = false; break; } if (P().power < lastPow) hurts++; lastPow = P().power; if (won()) break; }
+        if (ok) { if (won()) { si = segs.length; break; } si++; k = 0; continue; }
+        if (alive()) { deaths.push({ stuck: tileOf(), seg: si, step: k }); break; }
+        deaths.push({ at: Math.floor(P().cx / 32), seg: si, step: k, boss: window.__bossAct || undefined }); window.__bossAct = null;
+        sim(3); settle(); lastPow = P() ? P().power : 0;
+        if (B.Save.data.lives <= 0 || !(S() instanceof B.Play)) break;
+        const x = Math.floor(P().cx / 32); si = 0; for (let q = 0; q < segs.length; q++) if (segs[q][0] <= x + 2) si = q; k = 0;
+        tries[si] = (tries[si] || 0) + 1; if (tries[si] > 3) break;
+      }
+      const g = S(); return { id, done: ['clear', 'tally', 'results'].indexOf(g && g.state) >= 0, state: g && g.state, deaths, hurts, by: (window.__hurtLog || []).slice(0, 8), lives: B.Save.data.lives, sec: Math.round((Date.now() - t0) / 1000) };
+    }, [id, BOT[id]]);
+    console.log('BOT ' + JSON.stringify(r));
+    check(`bot ${id}: an ordinary run (enemies on, damage on) reaches the end`, r.done, r);
+    check(`bot ${id}: at most one death`, r.deaths.length <= 1, r.deaths);
+  });
+};
+
 (async () => {
   await session({ width: 844, height: 390 }, async (page, shot, run, pano) => {
     for (const k of Object.keys(LEVELS).filter(k => k !== 'entry' && k !== 'map' && k !== 'bot').concat(['entry', 'map', 'bot'])) if (LEVELS[k]) await LEVELS[k](page, shot, run, pano);
