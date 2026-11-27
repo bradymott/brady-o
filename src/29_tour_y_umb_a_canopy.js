@@ -128,13 +128,15 @@ class UmbCanopy extends Ent {
   // ferrules at the rib tips; the rivets are coral studs where two spokes cross (painted once, world coordinates)
   paintCloth(c, x, y, w, h) {
     c.save();
-    const n = Math.max(4, Math.round(w / (3 * TS))), hubX = x + w / 2, hubY = y - h * 0.55, tips = [];
-    for (let k = 0; k <= n; k++) tips.push([x + (w * k) / n, y + h]);
-    const edge = (c2) => { c2.moveTo(x, y + h); for (let k = 0; k < n; k++) { const [ax] = tips[k], [bx] = tips[k + 1]; c2.quadraticCurveTo((ax + bx) / 2, y + h - 16, bx, y + h); } };
-    // the dome: a shallow arc over the top
+    // the ribs fan out from a hub high above, wider than the canopy, so the wedges fill it edge to edge
+    const sp = 3 * TS, n = Math.max(4, Math.round(w / sp)) + 2, hubX = x + w / 2, hubY = y - h * 1.2 - 2 * TS, tips = [];
+    const tx0 = x + w / 2 - (n / 2) * (w / (n - 2));
+    for (let k = 0; k <= n; k++) tips.push([tx0 + k * (w / (n - 2)), y + h]);
+    const edge = (c2) => { c2.moveTo(tips[0][0], y + h); for (let k = 0; k < n; k++) { const [ax] = tips[k], [bx] = tips[k + 1]; c2.quadraticCurveTo((ax + bx) / 2, y + h - 16, bx, y + h); } };
+    // the canopy's outline: a shallow dome over the top, the scalloped hem
     c.beginPath(); c.moveTo(x, y + h); c.lineTo(x, y + 6); c.quadraticCurveTo(x + w / 2, y - 18, x + w, y + 6); c.lineTo(x + w, y + h);
-    for (let k = n; k > 0; k--) { const [ax] = tips[k], [bx] = tips[k - 1]; c.quadraticCurveTo((ax + bx) / 2, y + h - 16, bx, y + h); }
-    c.closePath(); c.save(); c.clip();
+    c.lineTo(x + w, y + h + 20); c.lineTo(x, y + h + 20); c.closePath(); c.save(); c.clip();
+    c.beginPath(); c.moveTo(tips[0][0], y - 40); c.lineTo(tips[n][0], y - 40); c.lineTo(tips[n][0], y + h); for (let k = n; k > 0; k--) { const [ax] = tips[k], [bx] = tips[k - 1]; c.quadraticCurveTo((ax + bx) / 2, y + h - 16, bx, y + h); } c.closePath(); c.clip();
     // the wedges (shaded: the underside), alternating
     for (let k = 0; k < n; k++) {
       const [ax] = tips[k], [bx] = tips[k + 1];
@@ -152,9 +154,10 @@ class UmbCanopy extends Ent {
     for (let yy = y + 2.5 * TS; yy < y + h - TS; yy += 3 * TS) { const k = (yy - hubY) / (y + h - hubY); c.strokeStyle = 'rgba(31,42,86,0.55)'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(hubX + (tips[0][0] - hubX) * k, yy); c.lineTo(hubX + (tips[n][0] - hubX) * k, yy); c.stroke(); }
     c.restore();
     // the hem: ink edge, the ferrules
-    c.strokeStyle = INK; c.lineWidth = 3; c.beginPath(); edge(c); c.stroke();
-    c.beginPath(); c.moveTo(x, y + h); c.lineTo(x, y + 6); c.quadraticCurveTo(x + w / 2, y - 18, x + w, y + 6); c.lineTo(x + w, y + h); c.stroke();
-    for (const [tx, ty] of tips) { c.fillStyle = UA.CORAL; c.strokeStyle = INK; c.lineWidth = 1.6; c.beginPath(); c.moveTo(tx - 4, ty - 2); c.lineTo(tx + 4, ty - 2); c.lineTo(tx, ty + 10); c.closePath(); c.fill(); c.stroke(); }
+    c.save(); c.beginPath(); c.rect(x - 2, y - 30, w + 4, h + 60); c.clip();
+    c.strokeStyle = INK; c.lineWidth = 3; c.beginPath(); edge(c); c.stroke(); c.restore();
+    c.beginPath(); c.moveTo(x, y + h - 6); c.lineTo(x, y + 6); c.quadraticCurveTo(x + w / 2, y - 18, x + w, y + 6); c.lineTo(x + w, y + h - 6); c.stroke();
+    for (const [tx, ty] of tips) { if (tx < x - 2 || tx > x + w + 2) continue; c.fillStyle = UA.CORAL; c.strokeStyle = INK; c.lineWidth = 1.6; c.beginPath(); c.moveTo(tx - 4, ty - 2); c.lineTo(tx + 4, ty - 2); c.lineTo(tx, ty + 10); c.closePath(); c.fill(); c.stroke(); }
     // the rivets: big coral studs, a ring of stitching round each
     for (const [hx, hy] of this.holes) {
       const cx = hx * TS + TS / 2, cy = hy * TS + TS / 2;

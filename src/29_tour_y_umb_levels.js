@@ -5,7 +5,8 @@
         rivet to the fabric side to pass the ticks there; late on a Rivet Tick wedged in its seat walls off both faces
         until its rib is flexed from the far end with THROW. Room B26 (Long Lunch) off a ledge only the tall canopy
         reaches.
-   (31-2 to 31-6 below.)
+   31-2 EVERY DROP ACCOUNTED FOR (dripstamp), 31-3 HOOK EXCHANGE (hookchain), 31-4 PANEL BEATER (panelpop),
+   31-5 SHAKE WELL (puddleherd), 31-6 LIFETIME WARRANTY (lair: The Inspector of Unlikely Weather): below.
    ============================================================ */
 (function () {
 const C = Tour.countries.umb;
@@ -17,6 +18,8 @@ const ground = (Gr, x0, x1, top, ch) => fillG(Gr, x0, top, x1, Gr.length - 1, ch
 const pit = (Gr, x0, x1) => fillG(Gr, x0, 0, x1, Gr.length - 1, '.');
 const rowsOf = Gr => Gr.map(r => r.join(''));
 const stamps = {};
+// a room kind once the rooms file has it (until then the stand-in stamp is the room)
+const RK = k => (typeof TourRooms !== 'undefined' && TourRooms.kinds[k]) ? k : undefined;
 const SIGN = text => ['spawn', 'sign', { text }];
 const CANP = (w, h, holes) => ['piece', 'umb.canopy', { w, h, holes: holes || [] }];
 const CRAWL = o => ['piece', 'umb.crawler', o];
@@ -92,10 +95,227 @@ const L1 = { n: 1, name: 'Rib Inspector', mapLabel: 'Rib Inspector', arch: 'ribc
   exits: { main: { to: '31-2' } },
   areas: [
     { id: 'ribs', gen: 'room', theme: 'umb_ribs', stamp: 'umbRib', camera: 'free', bottomKill: true },
-    { id: 'lunch', gen: 'room', role: 'secret', theme: 'umb_room_lunch', stamp: 'umbLunch', room: Tour.umbRoom ? 'umbLunch' : undefined }
+    { id: 'lunch', gen: 'room', role: 'secret', theme: 'umb_room_lunch', stamp: 'umbLunch', room: RK('umbLunch') }
   ] };
 
-Tour.amend('umb', { stamps, levels: [L1] });
+/* ---------------- 31-2 Every Drop Accounted For ---------------- */
+// floors on row 21. ① the teach: a drip, its gutter's plate beside it, the cistern and its sluice shutter; ② a
+// cistern that needs three drops (carry three, or stamp twice); the downpipe housing whose left face is only a
+// painted board (the ticket on it: room B27, the sewing loft, inside); ③ a cistern with a grate: one big drop
+// only (let two merge on your head before stamping), then a second grated one that needs two big drops
+const dropRows = (() => {
+  const W = 200, H = 26, Gr = grid(W, H, '.');
+  ground(Gr, 0, 40, 21); put(Gr, 3, 20, '@'); put(Gr, 6, 20, 'k'); put(Gr, 10, 17, '?'); put(Gr, 14, 20, 'd'); put(Gr, 15, 20, '1');
+  put(Gr, 26, 20, 'c'); put(Gr, 30, 16, '*'); put(Gr, 33, 14, 'f'); put(Gr, 36, 20, 'r'); put(Gr, 28, 18, 'o.o.o');
+  ground(Gr, 44, 100, 21); put(Gr, 48, 20, 'd'); put(Gr, 50, 20, '2'); put(Gr, 45, 17, 'o.o');
+  put(Gr, 62, 20, 'l');
+  // the downpipe housing: its left face is a painted board (walk into it); the cupboard door inside
+  fillG(Gr, 66, 17, 70, 20, 'H'); fillG(Gr, 67, 18, 69, 20, '.'); fillG(Gr, 66, 18, 66, 20, 'F'); put(Gr, 68, 20, 'A'); fillG(Gr, 63, 19, 63, 20, 'B'); put(Gr, 65, 19, 'u');
+  put(Gr, 76, 20, 'c'); put(Gr, 80, 17, '?'); put(Gr, 86, 20, 'j'); put(Gr, 92, 14, 'f'); put(Gr, 97, 20, 'a'); put(Gr, 72, 14, 'o.o.o');
+  put(Gr, 102, 17, 'R');
+  ground(Gr, 104, 160, 21); put(Gr, 106, 20, 'K'); put(Gr, 112, 20, 'd'); put(Gr, 113, 20, '3');
+  put(Gr, 125, 20, 'c'); put(Gr, 132, 20, 'r'); put(Gr, 128, 16, '?');
+  put(Gr, 140, 20, 'e'); put(Gr, 141, 20, '4'); put(Gr, 137, 14, 'f');
+  ground(Gr, 161, W - 1, 21); fillG(Gr, 161, 22, 163, 25, '#');
+  put(Gr, 170, 20, 'c'); put(Gr, 176, 20, 'l'); fillG(Gr, 180, 17, 181, 20, 'H'); put(Gr, 180, 12, 'P'); put(Gr, 184, 18, 'o.o.o'); put(Gr, 192, 20, 'G');
+  fillG(Gr, W - 1, 0, W - 1, 20, 'H');
+  return rowsOf(Gr);
+})();
+const DROP = Object.assign({}, ENEMY, {
+  k: SIGN('A DRIP! STAND UNDER IT: EACH DROP STAYS ON YOUR HEAD. THEN JUMP ONTO THE CORAL PLATE TO SEND THEM DOWN THE GUTTER'),
+  K: SIGN('THIS CISTERN HAS A GRATE: ONLY A BIG DROP GETS IN. TWO DROPS ON YOUR HEAD MERGE INTO ONE BIG ONE'),
+  d: ['piece', 'umb.drip', { top: 7 }], e: ['piece', 'umb.drip', { top: 7, phase: 0.45 }],
+  '1': ['piece', 'umb.gutter', { len: 5, need: 2, gate: 2, h: 4, id: 'cis1' }],
+  '2': ['piece', 'umb.gutter', { len: 6, need: 3, gate: 2, h: 4, id: 'cis2' }],
+  '3': ['piece', 'umb.gutter', { len: 6, need: 1, big: true, gate: 2, h: 4, id: 'cis3' }],
+  '4': ['piece', 'umb.gutter', { len: 7, need: 2, big: true, gate: 2, h: 4, id: 'cis4' }],
+  A: ['spawn', 'portal', { kind: 'door', look: 'umbCase', targetRef: 'sew@in' }], u: TICKET({}), a: ['anchor', 'sewOut']
+});
+stamps.umbDrop = { floor: 21, rows: dropRows, legend: DROP, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power'] };
+stamps.umbSew = roomStamp('drips@sewOut', 'umbHatch');
+const L2 = { n: 2, name: 'Every Drop Accounted For', mapLabel: 'Every Drop', arch: 'dripstamp', theme: 'umb_gutter',
+  gimmick: 'The workshops\' leaks are all on the books: stand under a drip to catch each drop on your head, then stamp on a gutter\'s dry end to send them along into a leaky cistern. A full cistern floats its sluice shutter up',
+  hint: 'Two drops on your head merge into one big one. A grated cistern only takes a big drop. One downpipe\'s housing has a ticket on its side...',
+  postcard: 'Brady! A whole street of leaks and every single drop is written down in a ledger. I signed for three of them. ♥ C',
+  enemies: [['umbTick', 2], ['umbMule', 2], ['umbFerret', 1], ['umbFinch', 3]],
+  mapCell: [1, 0], mapFrom: 0,
+  exits: { main: { to: '31-3' } },
+  areas: [
+    { id: 'drips', gen: 'room', theme: 'umb_gutter', stamp: 'umbDrop', camera: 'free', bottomKill: true },
+    { id: 'sew', gen: 'room', role: 'secret', theme: 'umb_room_sew', stamp: 'umbSew', room: RK('umbThread') }
+  ] };
+
+/* ---------------- 31-3 Hook Exchange ---------------- */
+// floors on row 21. ① the teach: a hook over a shallow trench (a fall costs nothing: steps back up); ② a hook over a
+// real gap, a hook over a gap with a tick on the far bank; the side hook on the pillar by the ticket builds a chain to
+// the high ledge with room B28's door (only the chain reaches it); ③ the corner hook: its sister handle turns the
+// corner at the far pulley before it nests
+const hookRows = (() => {
+  const W = 220, H = 26, Gr = grid(W, H, '.');
+  ground(Gr, 0, 25, 21); put(Gr, 3, 20, '@'); put(Gr, 6, 20, 'k'); put(Gr, 12, 17, '?'); put(Gr, 25, 20, '1');
+  // the teach trench: a floor three rows down, a step back up on the left
+  ground(Gr, 26, 31, 24); ground(Gr, 26, 26, 23); put(Gr, 28, 18, 'o.o.o');
+  ground(Gr, 32, 62, 21); put(Gr, 35, 20, 'c'); put(Gr, 42, 17, '?'); put(Gr, 47, 20, 'j'); put(Gr, 54, 15, 'f'); put(Gr, 62, 20, '2'); put(Gr, 64, 16, '*');
+  ground(Gr, 71, 96, 21); put(Gr, 76, 20, 'r'); put(Gr, 82, 20, 'c'); put(Gr, 96, 20, '3'); put(Gr, 88, 17, 'o.o.o');
+  ground(Gr, 104, 150, 21); put(Gr, 110, 20, 'l');
+  // the side hook: up the steps onto the pillar, a chain across to the high ledge (B28's door); under it the street
+  fillG(Gr, 116, 19, 117, 20, 'B'); fillG(Gr, 118, 16, 120, 20, 'H'); put(Gr, 120, 15, '4'); put(Gr, 119, 14, 'u');
+  fillG(Gr, 126, 16, 132, 16, 'H'); put(Gr, 129, 15, 'A'); put(Gr, 131, 13, 'o.o');
+  put(Gr, 136, 20, 'c'); put(Gr, 140, 17, '?'); put(Gr, 145, 20, 'a'); put(Gr, 142, 15, 'f');
+  // a long gap, the risky postcard over it
+  put(Gr, 150, 20, '5'); put(Gr, 152, 16, 'R');
+  ground(Gr, 159, 182, 21); put(Gr, 164, 20, 'K'); put(Gr, 170, 20, 'r'); put(Gr, 174, 20, 'c'); put(Gr, 182, 20, '6');
+  ground(Gr, 193, W - 1, 21); put(Gr, 197, 20, 'l'); fillG(Gr, 202, 18, 203, 20, 'H'); put(Gr, 202, 13, 'P'); put(Gr, 212, 20, 'G');
+  fillG(Gr, W - 1, 0, W - 1, 20, 'H');
+  return rowsOf(Gr);
+})();
+const HOOKL = Object.assign({}, ENEMY, {
+  k: SIGN('A HOOK EXCHANGE! STAND ON THE MARK BY THE HOOK AND HOLD THROW: HANDLES NEST ONE IN ANOTHER ACROSS THE GAP. LET GO WHEN THE FAR RING LIGHTS'),
+  K: SIGN('THIS LAST PAIR OPEN THE SAME WAY ROUND. THE SISTER HAS TO TURN THE CORNER FIRST: KEEP HOLDING'),
+  '1': ['piece', 'umb.hook', { span: 6 }], '2': ['piece', 'umb.hook', { span: 8 }], '3': ['piece', 'umb.hook', { span: 7 }],
+  '4': ['piece', 'umb.hook', { span: 5, wire: 4 }], '5': ['piece', 'umb.hook', { span: 8 }], '6': ['piece', 'umb.hook', { span: 10, corner: true }],
+  A: ['spawn', 'portal', { kind: 'door', look: 'umbCase', targetRef: 'tray@in' }], u: TICKET({}), a: ['anchor', 'trayOut']
+});
+stamps.umbHooks = { floor: 21, rows: hookRows, legend: HOOKL, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power'] };
+stamps.umbTray = roomStamp('hooks@trayOut', 'umbHatch');
+const L3 = { n: 3, name: 'Hook Exchange', mapLabel: 'Hook Exchange', arch: 'hookchain', theme: 'umb_hooks',
+  gimmick: 'Closed umbrellas ride a wire past the hooks at every gap. Hold THROW by a hook and it catches a passing handle; the next one nests inside it, and the next, a rigid chain across the gap',
+  hint: 'Keep holding until the ring on the far side lights, then let go when you like. The last pair open the same way round: wait while the sister turns the corner. A hook on a pillar by a ticket leads somewhere high...',
+  postcard: 'Brady! I crossed a gap on a chain of other people\'s umbrellas. Piwi\'s was in it. It has a duck on the handle. ♥ C',
+  enemies: [['umbTick', 2], ['umbMule', 2], ['umbFerret', 1], ['umbFinch', 2]],
+  mapCell: [2, 0], mapFrom: 1,
+  exits: { main: { to: '31-4' } },
+  areas: [
+    { id: 'hooks', gen: 'room', theme: 'umb_hooks', stamp: 'umbHooks', camera: 'free', bottomKill: true },
+    { id: 'tray', gen: 'room', role: 'secret', theme: 'umb_room_tray', stamp: 'umbTray', room: RK('umbMagnet') }
+  ] };
+
+/* ---------------- 31-4 Panel Beater ---------------- */
+// floors on row 21; the arcade's canopy is the ceiling on row 16 over the covered stretches. ① the teach: a dent,
+// its rain sheet across the way: jump into the dent from underneath; ② dents with critters between, one over a step;
+// the missing panel by the ticket (a crate under it): up through it onto the arcade's roof, along it to room B29's
+// hatch; ③ three panels in a row, each popping its left neighbour back in, and the shutter they lift
+const panelRows = (() => {
+  const W = 210, H = 24, Gr = grid(W, H, '.');
+  ground(Gr, 0, W - 1, 21); put(Gr, 3, 20, '@'); put(Gr, 6, 20, 'k'); put(Gr, 9, 17, '?');
+  fillG(Gr, 11, 16, 20, 16, 'H'); put(Gr, 13, 16, '1'); put(Gr, 24, 17, 'o.o.o');
+  put(Gr, 28, 20, 'c'); put(Gr, 33, 20, 'r');
+  fillG(Gr, 38, 16, 50, 16, 'H'); put(Gr, 40, 16, '2'); put(Gr, 46, 20, 'l'); put(Gr, 56, 17, '*'); put(Gr, 60, 14, 'f');
+  // a step up under the third panel
+  fillG(Gr, 64, 19, 76, 20, '#'); fillG(Gr, 62, 14, 78, 14, 'H'); put(Gr, 66, 14, '3'); put(Gr, 74, 17, 'o.o');
+  put(Gr, 82, 20, 'c'); put(Gr, 85, 17, '?');
+  // the covered stretch with a missing panel (a crate under it, the ticket at its edge); the roof run to the hatch
+  fillG(Gr, 90, 16, 124, 16, 'H'); fillG(Gr, 95, 16, 96, 16, '.'); fillG(Gr, 95, 19, 96, 20, 'B'); put(Gr, 94, 17, 'u');
+  put(Gr, 100, 15, 'o.o.o.o'); put(Gr, 120, 15, 'A'); put(Gr, 104, 20, 'j'); put(Gr, 112, 20, 'r');
+  put(Gr, 114, 16, '4'); put(Gr, 108, 13, 'R');
+  put(Gr, 128, 20, 'a'); put(Gr, 130, 20, 'c'); put(Gr, 136, 16, 'f'); put(Gr, 140, 17, '?');
+  // ③ the row of three, the shutter after it
+  put(Gr, 146, 20, 'K'); fillG(Gr, 148, 16, 166, 16, 'H'); put(Gr, 150, 16, '5');
+  put(Gr, 172, 20, 'c'); put(Gr, 178, 20, 'l'); fillG(Gr, 184, 18, 185, 20, 'H'); put(Gr, 184, 14, 'P'); put(Gr, 190, 20, 'r'); put(Gr, 200, 20, 'G');
+  fillG(Gr, W - 1, 0, W - 1, 20, 'H');
+  return rowsOf(Gr);
+})();
+const PANL = Object.assign({}, ENEMY, {
+  k: SIGN('A DENTED PANEL LETS THE RAIN THROUGH IN A SHEET. JUMP INTO THE DENT FROM UNDERNEATH TO POP IT OUT'),
+  K: SIGN('THREE PANELS: ALL OUT AT ONCE LIFTS THE SHUTTER. WATCH WHICH ONE POPS BACK IN...'),
+  '1': ['piece', 'umb.panel', { w: 5, floor: 5, id: 'p1' }], '2': ['piece', 'umb.panel', { w: 6, floor: 5, id: 'p2' }],
+  '3': ['piece', 'umb.panel', { w: 6, floor: 5, curtain: 5, id: 'p3' }], '4': ['piece', 'umb.panel', { w: 6, floor: 5, id: 'p4' }],
+  '5': ['piece', 'umb.panelRow', { w: 4, floor: 5, gate: 3, h: 4, id: 'row' }],
+  A: ['spawn', 'portal', { kind: 'door', look: 'umbCase', targetRef: 'booth@in' }], u: TICKET({ dy: 1 }), a: ['anchor', 'boothOut']
+});
+stamps.umbPanels = { floor: 21, rows: panelRows, legend: PANL, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power', 'power'] };
+stamps.umbBooth = roomStamp('arcade@boothOut', 'umbHatch');
+const L4 = { n: 4, name: 'Panel Beater', mapLabel: 'Panel Beater', arch: 'panelpop', theme: 'umb_arcade',
+  gimmick: 'The arcade\'s great canopy has dents, and every dent lets the rain through in a solid sheet across the way. Jump into a dent from underneath to pop it out and send the rain off the sides',
+  hint: 'Bump the dent from below, on your side of the rain. In the row of three, popping one pops its left neighbour back in: start from the far end. A crate stands under a missing panel...',
+  postcard: 'Brady! I popped a dent out of a canopy with my head. The rain went round me like I was somebody important. ♥ C',
+  enemies: [['umbTick', 2], ['umbMule', 3], ['umbFerret', 1], ['umbFinch', 2]],
+  mapCell: [3, 0], mapFrom: 2,
+  exits: { main: { to: '31-5' } },
+  areas: [
+    { id: 'arcade', gen: 'room', theme: 'umb_arcade', stamp: 'umbPanels', camera: 'free', bottomKill: true },
+    { id: 'booth', gen: 'room', role: 'secret', theme: 'umb_room_photo', stamp: 'umbBooth', room: RK('umbCamera') }
+  ] };
+
+/* ---------------- 31-5 Shake Well ---------------- */
+// floors on row 21. ① the teach: one puddle on a canopy floor, its cup low; ② two puddles, a cup that needs both
+// (herd them together into the scallop); the manhole by the ticket: drop in (room B30, the carousel, under the
+// square); a canopy whose scallop is on the left; ③ the high cup: three little puddles must leave together
+const shakeRows = (() => {
+  const W = 220, H = 26, Gr = grid(W, H, '.');
+  ground(Gr, 0, 98, 21); put(Gr, 3, 20, '@'); put(Gr, 6, 20, 'k'); put(Gr, 10, 17, '?'); put(Gr, 14, 20, '1');
+  put(Gr, 28, 20, 'c'); put(Gr, 33, 20, 'l'); put(Gr, 38, 15, 'f'); put(Gr, 30, 17, 'o.o.o');
+  put(Gr, 44, 20, '2'); put(Gr, 50, 15, '*');
+  put(Gr, 64, 20, 'c'); put(Gr, 70, 20, 'r'); put(Gr, 76, 17, '?'); put(Gr, 84, 20, 'j');
+  // the manhole: a shaft down to the room under the square, the ticket beside it
+  put(Gr, 94, 20, 'u'); fillG(Gr, 95, 0, 96, H - 1, '.'); fillG(Gr, 95, H - 1, 96, H - 1, 'z');
+  ground(Gr, 97, 98, 21); ground(Gr, 99, 150, 21);
+  put(Gr, 104, 20, 'a'); put(Gr, 108, 20, 'c'); put(Gr, 112, 20, '3'); put(Gr, 130, 15, 'f'); put(Gr, 136, 20, 'l'); put(Gr, 128, 17, 'R');
+  put(Gr, 142, 20, 'c'); put(Gr, 146, 20, 'K'); ground(Gr, 151, W - 1, 21); put(Gr, 150, 20, '4');
+  put(Gr, 178, 20, 'c'); put(Gr, 184, 20, 'r'); fillG(Gr, 190, 18, 191, 20, 'H'); put(Gr, 190, 13, 'P'); put(Gr, 196, 20, 'j'); put(Gr, 210, 20, 'G');
+  fillG(Gr, W - 1, 0, W - 1, 20, 'H');
+  return rowsOf(Gr);
+})();
+const SHAKEL = Object.assign({}, ENEMY, {
+  k: SIGN('A PUDDLED CANOPY! WALK ALONG IT TO HERD THE WATER INTO THE SCALLOP AT THE FAR END. THEN JUMP ON THE DRY END TO FLING IT INTO THE CUP'),
+  K: SIGN('THIS CUP IS HIGH: THREE LITTLE PUDDLES HAVE TO LEAVE TOGETHER'),
+  '1': ['piece', 'umb.shake', { w: 8, n: 1, need: 1, cup: 4, gate: 2, h: 4, id: 'cup1' }],
+  '2': ['piece', 'umb.shake', { w: 10, n: 2, need: 2, cup: 5, gate: 2, h: 4, id: 'cup2' }],
+  '3': ['piece', 'umb.shake', { w: 11, n: 2, need: 2, cup: 5, gate: 2, h: 4, id: 'cup3' }],
+  '4': ['piece', 'umb.shake', { w: 12, n: 3, need: 3, cup: 7, gate: 2, h: 4, id: 'cup4' }],
+  z: ['seam', 'bottom', 'slice@in'], u: TICKET({}), a: ['anchor', 'sliceOut']
+});
+stamps.umbShake = { floor: 21, rows: shakeRows, legend: SHAKEL, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power'] };
+stamps.umbSlice = roomStamp('square@sliceOut', 'umbHatch');
+const L5 = { n: 5, name: 'Shake Well', mapLabel: 'Shake Well', arch: 'puddleherd', theme: 'umb_puddles',
+  gimmick: 'Puddled canopies laid out to dry across the square: walk along one to herd the loose water into its scallop, then stamp on the dry end to fling it up into the counterweight cup that lifts the gate',
+  hint: 'Water left outside the scallop rolls back to the middle. The last cup is high: all three puddles at once. A ticket hangs by a manhole...',
+  postcard: 'Brady! I herded three puddles into one and flung it at a cup. The cup was delighted. So was a passing mule. ♥ C',
+  enemies: [['umbTick', 2], ['umbMule', 2], ['umbFerret', 2], ['umbFinch', 2]],
+  mapCell: [4, 0], mapFrom: 3,
+  exits: { main: { to: '31-6' } },
+  areas: [
+    { id: 'square', gen: 'room', theme: 'umb_puddles', stamp: 'umbShake', camera: 'free', bottomKill: true },
+    { id: 'slice', gen: 'room', role: 'secret', theme: 'umb_room_slice', stamp: 'umbSlice', room: RK('umbSlice') }
+  ] };
+
+/* ---------------- 31-6 Lifetime Warranty (the boss) ---------------- */
+// the repair hall's corridor, floor row 16 under a long shelf (row 11): two inside-out umbrellas jammed in collars
+// across the way (hold THROW at the runner, walk back); a gap in the shelf by the ticket lets you up onto the shelf
+// run (bundles, two postcards) to the test shower (Missing Rib); it lets you out by the hall door. Then the hall.
+const warRows = (() => {
+  const W = 76, H = 20, Gr = grid(W, H, '#');
+  fillG(Gr, 1, 13, W - 2, 15, '.'); fillG(Gr, 1, 1, 11, 15, '.'); fillG(Gr, 12, 6, W - 6, 11, '.');
+  put(Gr, 3, 15, '@'); put(Gr, 6, 15, 'k'); put(Gr, 9, 11, '?'); put(Gr, 5, 8, 'o.o.o');
+  put(Gr, 18, 15, '1'); put(Gr, 30, 14, '*'); put(Gr, 34, 15, 'l');
+  // the gap up to the shelf run, the ticket by it
+  fillG(Gr, 26, 12, 27, 12, '.'); fillG(Gr, 26, 15, 26, 15, 'H'); put(Gr, 28, 15, 'u');
+  put(Gr, 31, 10, 'BB'); put(Gr, 38, 9, 'BBB'); put(Gr, 44, 8, 'R'); put(Gr, 52, 10, 'BB'); put(Gr, 33, 7, 'o.o.o'); put(Gr, 60, 7, 'P'); put(Gr, 64, 11, 'A');
+  put(Gr, 46, 15, '2'); put(Gr, 56, 15, 'c'); put(Gr, 58, 9, '?'); put(Gr, 62, 15, 'a'); put(Gr, 66, 15, 'r'); put(Gr, 72, 15, 'E');
+  return rowsOf(Gr);
+})();
+const WAR = Object.assign({}, ENEMY, {
+  k: SIGN('AN UMBRELLA JAMMED INSIDE OUT IN A REPAIR COLLAR! STAND AT ITS RUNNER, HOLD THROW AND WALK BACK TO SLIDE IT HOME'),
+  '1': ['piece', 'umb.jam', { h: 3, side: -1, pull: 3, id: 'jam1' }], '2': ['piece', 'umb.jam', { h: 3, side: -1, pull: 3, id: 'jam2' }],
+  u: TICKET({ dy: 1 }), A: ['spawn', 'portal', { kind: 'door', look: 'umbCase', targetRef: 'shower@in' }], a: ['anchor', 'showerOut'],
+  E: ['spawn', 'portal', { kind: 'door', look: 'umbCase', targetRef: 'hall@in' }]
+});
+stamps.umbWarranty = { floor: 16, rows: warRows, legend: WAR, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power'] };
+stamps.umbShower = roomStamp('corridor@showerOut', 'umbHatch', ['star']);
+const L6 = { n: 6, name: 'Lifetime Warranty', mapLabel: 'Lifetime Warranty', arch: 'lair', theme: 'umb_hall', boss: 'umb_inspector',
+  gimmick: 'The Inspector of Unlikely Weather will not be mended. Catch his tip in a repair collar, then hold THROW on his runner and walk it home: the poke, the scoop, the jab',
+  hint: 'You can\'t stomp an umbrella. Stand in the glowing collar\'s ring and jump his attack: the tip lodges. Then hold THROW at the runner\'s mark and walk back, away from him',
+  postcard: 'Brady! You mended the inspector. He says it was most unlikely. It rained on him once and he looked marvellous. ♥ C',
+  enemies: [['umbTick', 1], ['umbMule', 1]],
+  mapCell: [5, 0], mapFrom: 4,
+  exits: { main: { to: null } },
+  areas: [
+    { id: 'corridor', gen: 'room', theme: 'umb_hall', stamp: 'umbWarranty' },
+    { id: 'shower', gen: 'room', role: 'secret', theme: 'umb_room_rib', stamp: 'umbShower', room: RK('umbRib') },
+    { id: 'hall', gen: 'arena', role: 'arena', layout: 'hall', arenaW: 30, H: 18, roof: false, theme: 'umb_hall' }
+  ] };
+
+Tour.amend('umb', { stamps, levels: [L1, L2, L3, L4, L5, L6] });
 Tour.umbLevels = { grid, put, fillG, ground, pit, rowsOf, SIGN, CANP, CRAWL, TICKET, ENEMY, roomStamp };
 
 /* ---------------- the land's map: wet cobbles and open umbrellas ---------------- */

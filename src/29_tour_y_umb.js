@@ -232,7 +232,7 @@ const painters = {
     const b = L.base;
     shopRow(ctx, rng, b, L.color, 70, 150, false);
     ctx.save(); ctx.globalAlpha = 0.55;
-    for (let k = 0; k < 9; k++) { const x = rng() * BG_W, y = b - 160 - rng() * 60, r = 18 + rng() * 16; wrapDraw(x - r, r * 2, X => UmbArt.umbrella(ctx, X + r, y, r, { len: 0, c1: rng() < 0.5 ? GOLD : CORAL, c2: GOLD_L, inside: rng() < 0.3 })); }
+    for (let k = 0; k < 9; k++) { const x = rng() * BG_W, y = b - 60 - rng() * 50, r = 16 + rng() * 14; wrapDraw(x - r, r * 2, X => UmbArt.umbrella(ctx, X + r, y, r, { len: 0, c1: rng() < 0.5 ? GOLD : CORAL, c2: GOLD_L, inside: rng() < 0.3 })); }
     ctx.restore();
   },
   // near: repair stalls under striped awnings, umbrellas hung up to drip on rails, a wet street shine
