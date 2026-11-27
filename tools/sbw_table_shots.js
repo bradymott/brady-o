@@ -251,6 +251,15 @@ const tableInit = () => {
   const K = () => window.BRADY_TABLE.kit;
   window.TB = {
     plates: () => ents('tabPlate').sort((a, b) => a.x - b.x),
+    // the tablecloth: stand on the corner tab, press and hold THROW, run `dir` until `paces` tiles, let go
+    pull(cl, paces, dir) {
+      const p = P(), x0 = p.cx; let t = 0;
+      sim(1 / 120, { action: true, actionPressed: true });
+      const held = cl.held;
+      while (t < 3 && Math.abs(p.cx - x0) / 32 < paces) { sim(1 / 120, { action: true, left: dir < 0, right: dir > 0 }); t += 1 / 120; if (!cl.held) break; }
+      sim(1 / 120, {}); sim(0.4);
+      return { held, state: cl.state, d: +(Math.abs(p.cx - x0) / 32).toFixed(1) };
+    },
     // a hop on the spot (to land on a crease)
     hop() { sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.12, { jump: true }); for (let k = 0; k < 120 && !P().onGround; k++) sim(1 / 60); sim(0.15); },
     // walk to tile x on this floor and hop onto it
@@ -374,6 +383,46 @@ LEVELS.napkin = async (page, shot, run, pano) => {
     check('36-2: played: past its centre crease it rises to a sail and lifts Brady to the cliff; on to the gate', e.rose && e.row === 9 && e.r2 && e.state !== 'play' && e.key === 'main', e);
     await page.evaluate(() => { play('36-2'); place(149, 13); const N = ents('tabNapkin').find(q => q.id === 'n5'); N.setForm(2, true); sim(0.3); freeze(); }); await shot('24-36-2-under-the-glass.png');
     await page.evaluate(() => { thaw(); play('36-2'); sim(0.3); }); await pano('29-36-2-panorama.png', 0.35);
+  });
+};
+
+// ---------------- 36-3 Tablecloth Service ----------------
+LEVELS.cloth = async (page, shot, run, pano) => {
+  await run('cloth', async () => {
+    await page.evaluate(() => { fresh(); play('36-3'); place(7, 14); sim(0.6); freeze(); });
+    await shot('30-36-3-start.png');
+    const cls = () => ents('tabCloth').sort((a, b) => a.x - b.x);
+    // too short a pull: the cloth slips back
+    const a = await page.evaluate(() => { thaw(); play('36-3'); place(10, 14); sim(0.3); const C = ents('tabCloth').sort((a, b) => a.x - b.x)[0]; const r = TB.pull(C, 1.2, -1); return r; });
+    check('36-3: a pull of one pace is too short: the cloth slips back (no mat)', a.held && a.state === 'on', a);
+    // the teach: a proper pull, then down into the mat's hollow, and the cork mat springs Brady up to the first tier
+    const b = await page.evaluate(() => {
+      const C = ents('tabCloth').sort((a, b) => a.x - b.x)[0]; const r0 = AP.go([10, 15]); const r = TB.pull(C, 3.6, -1);
+      const r2 = AP.route([[24, 9], [36, 9]]); return { r0: r0.ok, r, ok: r2.ok, r2 };
+    });
+    check('36-3: played: hold THROW on the corner, run three paces, let go: the cloth whips out, the mat springs Brady up', b.r.state !== 'on' && b.ok, b);
+    await page.evaluate(() => { play('36-3'); place(8, 14); sim(0.2); const C = ents('tabCloth').sort((a, b) => a.x - b.x)[0]; AP.go([10, 15]); sim(1 / 120, { action: true, actionPressed: true }); sim(0.35, { action: true, left: true }); freeze(); });
+    await shot('31-36-3-pulling.png');
+    const c = await page.evaluate(() => {
+      thaw(); play('36-3'); place(24, 8); sim(0.2); const r1 = AP.route([[38, 9], [42, 15], [44, 15]]); if (!r1.ok) return { r1 };
+      const C = ents('tabCloth').sort((a, b) => a.x - b.x)[1]; const r = TB.pull(C, 3.4, -1); const r2 = AP.route([[54, 9]]); return { r, ok: r2.ok, r2 };
+    });
+    check('36-3: played: down off the first tier, the second table, up to the second tier', c.ok && c.r.state !== 'on', c);
+    const d = await page.evaluate(() => {
+      const r1 = AP.route([[58, 9]]); if (!r1.ok) return { r1 }; const C = ents('tabCloth').sort((a, b) => a.x - b.x)[2]; const r = TB.pull(C, 3.4, -1);
+      const r2 = AP.route([[67, 4], [86, 4], [95, 9], [104, 15], [118, 15]]); return { r, ok: r2.ok, r2 };
+    });
+    check('36-3: played: the table on the tier, up to the high tier, down to the last table', d.ok && d.r.state !== 'on', d);
+    await page.evaluate(() => freeze()); await shot('32-36-3-the-last-table.png'); await page.evaluate(() => thaw());
+    // the twist: hold on too long and the tall glass topples (the cloth snaps back); a short, clean pull works
+    const e = await page.evaluate(() => {
+      const C = ents('tabCloth').sort((a, b) => a.x - b.x)[3]; const long = TB.pull(C, 7, -1); const tipped = C.tipT > 0 || long.state === 'on';
+      AP.go([118, 15]); sim(1.5); const ok = TB.pull(C, 3.6, -1); const r2 = AP.route([[132, 9], [150, 9]]); sim(3, { right: true });
+      return { long, tipped, ok, r2: r2.ok, state: S().state, key: S().exitKey };
+    });
+    check('36-3: played: a long slow pull topples the tall glass and the cloth snaps back', e.tipped && e.long.state === 'on', e);
+    check('36-3: played: a short, clean pull at the last table, up and on to the gate', e.ok.state !== 'on' && e.r2 && e.state !== 'play' && e.key === 'main', e);
+    await page.evaluate(() => { play('36-3'); sim(0.3); }); await pano('39-36-3-panorama.png', 0.35);
   });
 };
 

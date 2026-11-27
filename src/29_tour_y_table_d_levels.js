@@ -171,7 +171,64 @@ const L2 = { n: 2, name: 'The Napkin Bird', mapLabel: 'Napkin Bird', arch: 'napk
     { id: 'cloak', gen: 'room', role: 'secret', theme: 'table_room_cloak', stamp: 'tabCloak', room: 'tabTear' }
   ] };
 
+/* ---------------- 36-3 Tablecloth Service ----------------
+   Floor row 15 (a hollow for each place mat). Hold THROW on a cloth's corner tab and run away from the table; let go
+   after three paces and the cloth whips out from under the dishes, uncovering the cork place mat, which springs Brady
+   up to the next tier. ① the teach: one table, a wide runway; up onto the first tier. Its far end is a wall with a wisp
+   of steam at its foot: a fake panel (walk in) to THE SPARE STAR, whose hatch lets Brady out on the second tier. Down,
+   a second table to the second tier. ② the test: a table on the tier with a flea hopping in on the runway; its mat
+   springs to the high third tier. ③ the twist: the last table's tall glass wobbles while you pull and topples if you
+   hold on past five paces: a short, clean release. */
+const cloth = (() => {
+  const G = mk(176, 20), F = 15;
+  G.ground(0, 19, F); G.put(2, 14, '@'); G.put(4, 14, 'n'); G.put(6, 11, '?'); G.put(15, 14, 'q');
+  G.put(10, 14, '1');                                    // T1: corner at x10, cloth x11-18, mat x13-15
+  G.ground(20, 40, 9); G.put(25, 8, 'k'); G.put(30, 5, '*'); G.coins(27, 33, 6); G.put(36, 8, 'j');
+  // the secret: a fake panel in the first tier's far wall, a hidden doorway behind it, steam at its foot
+  G.ground(41, 52, F); G.fill(39, 12, 40, 14, 'F'); G.put(40, 14, 'X'); G.put(42, 14, 'e'); G.put(43, 14, 'A');
+  G.put(44, 14, '2');                                    // T2: corner x44, cloth x45-50, mat x46-48
+  G.ground(51, 64, 9); G.put(54, 8, 'c'); G.put(52, 8, 'Z');
+  // ② on the second tier: a table with a flea hopping in on the runway; its mat springs to the high third tier
+  G.put(58, 8, '3');                                     // T3: corner x58 (floor row 9), cloth x59-64, mat x60-62
+  G.put(53, 8, 'f'); G.put(61, 1, 'R');
+  G.ground(65, 92, 4); G.put(68, 3, 'f'); G.put(76, 0, '?'); G.coins(70, 76, 2); G.put(80, 3, 'm'); G.put(88, 3, 'P'); G.put(84, 3, 'w');
+  G.ground(93, 96, 9); G.ground(97, 128, F); G.put(100, 14, 'c'); G.put(106, 14, 'r'); G.put(112, 14, 'm'); G.put(103, 14, 'O');
+  // ③ the last table, the tall glass on it
+  G.put(118, 14, '4');                                   // T4: corner x118, cloth x119-127, mat x120-122, glass at x124
+  G.ground(129, 175, 9); G.put(134, 8, 't'); G.put(144, 8, 'k'); G.put(156, 8, 'G'); G.put(162, 8, 'u'); G.put(168, 8, 'j');
+  G.fill(175, 0, 175, 19, 'H');
+  return G.rows();
+})();
+const CL = o => ['piece', 'table.cloth', o];
+stamps.tabCloth = {
+  floor: 15, rows: cloth, items: ['power', 'power'], gold: { '*': 'must', P: 'hidden', R: 'risky' },
+  legend: Object.assign({}, COMMON, {
+    n: SIGN('TABLECLOTH SERVICE! HOLD THROW ON THE CLOTH\'S CORNER, RUN AWAY FROM THE TABLE, AND LET GO AFTER THREE PACES'),
+    O: SIGN('THE LAST TABLE HAS A TALL GLASS. IT WOBBLES WHILE YOU PULL: A SHORT, CLEAN PULL!'),
+    '1': CL({ dir: 1, w: 8, mat: [3, 3], g: 0, dishes: [[2, 'plate'], [6, 'cup'], [7, 'teapot']] }),
+    '2': CL({ dir: 1, w: 6, mat: [2, 3], g: 1, dishes: [[1, 'cup'], [5, 'plate']] }),
+    '3': CL({ dir: 1, w: 6, mat: [2, 3], g: 2, dishes: [[1, 'plate'], [5, 'teapot']] }),
+    '4': CL({ dir: 1, w: 9, mat: [2, 3], g: 0, max: 5, glass: 6, dishes: [[1, 'plate'], [8, 'cup']] }),
+    X: ['spawn', 'portal', { kind: 'door', look: 'tourDoorHidden', targetRef: 'stars@in', secretDoor: true }],
+    e: ['piece', 'table.steam', {}], A: ['anchor', 'b53Back'], Z: ['anchor', 'b53Out'],
+    f: ['enemy', 'tabPepper'], k: ['enemy', 'tabCrumb'], m: ['enemy', 'tabButter'], r: ['enemy', 'tabRest']
+  })
+};
+stamps.tabStars = roomStamp('service@b53Back', ['oneup']);
+const L3 = { n: 3, name: 'Tablecloth Service', mapLabel: 'Tablecloth', arch: 'cloth', theme: 'table_service',
+  gimmick: 'Hold THROW on the corner of a tablecloth, run, and let go: the cloth whips out from under the dishes and the cork place mat under it springs Brady up to the next tier',
+  hint: 'Hold THROW on the corner tab and run away from the table; let go after three paces. The tall glass wobbles if you pull too long: a short, clean pull',
+  postcard: 'Brady, a waiter pulled the tablecloth out from under our dinner. The dinner stayed. Piwi did not. ♥ C',
+  enemies: [['tabCrumb', 2], ['tabPepper', 2], ['tabButter', 2], ['tabRest', 1]],
+  mapCell: [2, 1], mapFrom: 1,
+  exits: { main: { to: '36-4' } },
+  areas: [
+    { id: 'service', gen: 'room', theme: 'table_service', stamp: 'tabCloth', bottomKill: true },
+    { id: 'stars', gen: 'room', role: 'secret', theme: 'table_room_sky', stamp: 'tabStars', room: 'tabStar', tabStar: { exit: 'service@b53Out' } }
+  ] };
 
-Tour.amend('table', { stamps, levels: [L1, L2] });
+
+Tour.amend('table', { stamps, levels: [L1, L2, L3] });
+Object.assign(TourLandscape.ARCH_LABEL, { china: 'CHINA', napkin: 'NAPKIN', cloth: 'CLOTH', crouton: 'CROUTON' });
 Tour.tableLevels = { mk, stamps, roomStamp, SIGN, COMMON };
 })();

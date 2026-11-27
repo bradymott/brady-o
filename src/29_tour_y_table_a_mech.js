@@ -314,6 +314,8 @@ class TabCloth extends Ent {
       const sx = this.pullDir * (fly * 10 * TS + pull * 4);
       // the cloth itself: gingham lying flat over the table, its corner tab hanging at the mark
       ctx.beginPath(); ctx.rect(L + sx, fy - 7, w, 9); ctx.save(); ctx.clip(); TK.gingham(ctx, L + sx - 8, fy - 7, w + 16, 9, 6, 0.7); ctx.restore(); ctx.strokeRect(L + sx, fy - 7, w, 9);
+      // over the mat's hollow the cloth lies taut, a whole tile deep (it is what Brady stands on there)
+      for (const [cx, cy] of this.cover) { const X = cx * TS + sx; ctx.save(); ctx.beginPath(); ctx.rect(X, cy * TS, TS, TS); ctx.clip(); TK.gingham(ctx, X - 4, cy * TS, TS + 8, TS, 6, 0.6); ctx.fillStyle = 'rgba(80,20,20,0.18)'; ctx.fillRect(X, cy * TS + TS - 6, TS, 6); ctx.restore(); }
       if (this.rattle > 0) ctx.translate(Math.sin(t * 60) * 2, 0);
       ctx.restore();
       // the corner tab and, while held, the stretched cloth to Brady's hand
@@ -339,11 +341,11 @@ class TabCloth extends Ent {
     }
     // the pull meter while held: paces run so far, the mark at the clean-release length
     if (this.held && p) {
-      const min = this.o.min || 3, max = this.o.max || 8, bw = 60, bx = p.cx - bw / 2, by = p.y - 30;
+      const min = this.o.min || 3, max = this.o.max || 8, bw = 60, bx = p.cx - bw / 2, by = p.y - 46;
       ctx.fillStyle = 'rgba(20,10,20,0.7)'; rr(ctx, bx - 3, by - 3, bw + 6, 12, 5); ctx.fill();
       ctx.fillStyle = this.d >= min ? '#7aff9a' : '#ffd84a'; ctx.fillRect(bx, by, bw * Math.min(1, this.d / max), 6);
       ctx.fillStyle = '#ffffff'; ctx.fillRect(bx + bw * min / max - 1, by - 2, 2, 10);
-    } else if (this.state === 'on' && p && this.tabTouch(p)) handCue(ctx, x0 + TS / 2, fy - 2 * TS - 8, t, 'HOLD THROW');
+    } else if (this.state === 'on' && p && this.tabTouch(p)) handCue(ctx, x0 + TS / 2, fy - 2 * TS - 30, t, 'HOLD THROW');
     ctx.restore();
   }
 }
