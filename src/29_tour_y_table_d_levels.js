@@ -106,7 +106,72 @@ const L1 = { n: 1, name: 'Mind the Good China', mapLabel: 'Good China', arch: 'c
     { id: 'dining', gen: 'room', theme: 'table_china', stamp: 'tabChina', bottomKill: true },
     { id: 'reflect', gen: 'room', role: 'secret', theme: 'table_room_drawer', stamp: 'tabReflect', room: 'tabSpoons', tabSpoons: { exit: 'dining@b51Out' } }
   ] };
+/* ---------------- 36-2 The Napkin Bird ----------------
+   Floor row 14. Every napkin has three creases on its tail (the fold marks on the cloth before it): SAIL, BIRD, SQUARE.
+   ① the teach: a sail stands in the way (fold it flat and walk over); a sail is the only way up the bread block (its
+   tall edge is a step). ② the test: a bird's wings are the bridge over a gap round a sugar pedestal; a napkin by a
+   wall (sail or bird both get you over); its sail also reaches a high ledge on the left with a wisp of steam and a
+   hatch (the cloakroom: MATCH THE TEAR). ③ the twist: the last napkin stands half under a low upturned glass: only
+   flat does it let Brady in under the rim, and it rises (to a sail, lifting him to the cliff) only once he has crossed
+   its centre crease. */
+const napkin = (() => {
+  const G = mk(192, 18), F = 14;
+  G.ground(0, 51, F); G.put(2, 13, '@'); G.put(4, 13, 'n'); G.put(5, 10, '?');
+  // ① N1: a sail in the way; its creases at x7-9
+  G.put(7, 13, '!'); G.put(8, 13, '$'); G.put(9, 13, '%'); G.put(12, 13, '1');
+  G.coins(18, 24, 11); G.put(23, 13, 'r');
+  // N2: the only way up the bread block is the sail's edge
+  G.put(27, 13, 'N'); G.put(29, 13, '&'); G.put(30, 13, '+'); G.put(31, 13, '='); G.put(33, 13, '2');
+  G.ground(38, 47, 8); G.put(42, 5, '*'); G.put(46, 7, 'c'); G.coins(39, 44, 6); G.put(40, 7, 'x');
+  // ② N3: the bird's wings over the gap round the sugar pedestal
+  G.put(48, 13, ':'); G.put(49, 13, ';'); G.put(50, 13, ',');
+  G.pit(52, 57); G.ground(58, 61, F); G.fill(58, F, 61, 17, 'B'); G.pit(62, 67);
+  G.put(58, 13, '3'); G.put(60, 8, 'R'); G.coins(55, 64, 8);
+  G.ground(68, 94, F); G.put(71, 13, 'c'); G.put(75, 13, 'f'); G.put(68, 13, 'O');
+  // N4 by the wall; its sail also reaches the high ledge on the left (steam, the hatch: the secret)
+  G.put(80, 13, '('); G.put(81, 13, ')'); G.put(82, 13, '['); G.put(85, 13, '4');
+  G.fill(77, 8, 81, 8, '#'); G.put(78, 7, 'D'); G.put(80, 7, 'A'); G.put(79, 7, 'e'); G.put(81, 5, 'P');
+  G.ground(91, 94, 8);
+  G.ground(95, 154, F); G.put(97, 13, 'j'); G.put(100, 13, 'm'); G.put(104, 10, '?'); G.put(110, 13, 'c'); G.coins(112, 120, 11); G.put(118, 13, 'k'); G.put(128, 13, 'f'); G.put(132, 13, 'w');
+  // ③ N5 half under the low glass: flat to get in; it rises once Brady has crossed its centre crease
+  G.put(136, 13, 'c'); G.put(138, 13, 'V'); G.put(142, 13, ']'); G.put(143, 13, '{'); G.put(144, 13, '}');
+  G.put(146, 11, 'Y'); G.put(150, 13, '5');
+  G.ground(155, 191, 9); G.coins(158, 166, 6); G.put(168, 8, 'r'); G.put(176, 8, 'u'); G.put(182, 8, 'G'); G.put(187, 8, 'j');
+  G.fill(191, 0, 191, 17, 'H');
+  return G.rows();
+})();
+const NAP = (id, g, form, use, more) => ['piece', 'table.napkin', Object.assign({ id, g, form, use }, more || {})];
+const CRE = (id, g, form, sw) => ['piece', 'table.crease', { id, g, form, sw }];
+stamps.tabNapkin = {
+  floor: 14, rows: napkin, items: ['power', 'power'], gold: { '*': 'must', P: 'hidden', R: 'risky' }, doors: [{ to: 'cloak@in', look: 'tabHatch' }],
+  legend: Object.assign({}, COMMON, {
+    n: SIGN('A STANDING NAPKIN HAS THREE CREASES: HOP ONTO ONE TO FOLD IT. SAIL, BIRD OR FLAT SQUARE'),
+    N: SIGN('A SAIL\'S TALL EDGE IS A STEP. STAND ON IT TO REACH UP HIGH'),
+    O: SIGN('A BIRD\'S WINGS ARE A BRIDGE'),
+    V: SIGN('UNDER THE GLASS: FLAT TO GET IN. THE NAPKIN RISES ONCE YOU CROSS ITS MIDDLE'),
+    '1': NAP('n1', 0, 0, [0, 2], { sail: [1, -5, 2, -1] }), '!': CRE('n1', 0, 0, true), '$': CRE('n1', 0, 1, false), '%': CRE('n1', 0, 2, true),
+    '2': NAP('n2', 1, 2, [2, 0], { sail: [1, -3, 2, -1] }), '&': CRE('n2', 1, 0, true), '+': CRE('n2', 1, 1, false), '=': CRE('n2', 1, 2, true),
+    '3': NAP('n3', 2, 0, [0, 1], { sail: [1, -5, 2, -1], bird: [[-4, -3, 7, -3], [1, -2, 2, -1]] }), ':': CRE('n3', 2, 0, true), ';': CRE('n3', 2, 1, true), ',': CRE('n3', 2, 2, false),
+    '4': NAP('n4', 0, 2, [2, 0], { sail: [1, -3, 2, -1], bird: [[-2, -3, 5, -3], [1, -2, 2, -1]] }), '(': CRE('n4', 0, 0, true), ')': CRE('n4', 0, 1, false), '[': CRE('n4', 0, 2, true),
+    '5': NAP('n5', 1, 0, [0, 2], { sail: [3, -5, 4, -1], bird: [[3, -3, 4, -3], [3, -2, 4, -1]], rise: { dx: 3, form: 0 } }), ']': CRE('n5', 1, 0, true), '{': CRE('n5', 1, 1, false), '}': CRE('n5', 1, 2, true),
+    e: ['piece', 'table.steam', {}], A: ['anchor', 'b52Back'], Y: ['piece', 'table.glass', { w: 7, h: 9 }],
+    f: ['enemy', 'tabPepper'], k: ['enemy', 'tabCrumb'], m: ['enemy', 'tabButter'], r: ['enemy', 'tabRest']
+  })
+};
+stamps.tabCloak = roomStamp('fold@b52Back', ['oneup']);
+const L2 = { n: 2, name: 'The Napkin Bird', mapLabel: 'Napkin Bird', arch: 'napkin', theme: 'table_napkin',
+  gimmick: 'Standing napkins with three creases on their tails: step on one and the napkin folds to a sail, a bird or a flat square, each with its own edge to stand on',
+  hint: 'A sail\'s tall edge is a step up; a bird\'s wings are a bridge; flat lets you walk over. Under the glass it has to be flat, and it rises once you are past its middle',
+  postcard: 'The waiter folded my napkin into a swan. It bit Piwi. I have never tipped so much. ♥ C',
+  enemies: [['tabRest', 2], ['tabPepper', 2], ['tabCrumb', 1], ['tabButter', 1]],
+  mapCell: [1, 1], mapFrom: 0,
+  exits: { main: { to: '36-3' } },
+  areas: [
+    { id: 'fold', gen: 'room', theme: 'table_napkin', stamp: 'tabNapkin', bottomKill: true },
+    { id: 'cloak', gen: 'room', role: 'secret', theme: 'table_room_cloak', stamp: 'tabCloak', room: 'tabTear' }
+  ] };
 
-Tour.amend('table', { stamps, levels: [L1] });
+
+Tour.amend('table', { stamps, levels: [L1, L2] });
 Tour.tableLevels = { mk, stamps, roomStamp, SIGN, COMMON };
 })();

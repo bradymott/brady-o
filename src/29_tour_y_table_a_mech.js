@@ -196,7 +196,8 @@ class TabNapkin extends Ent {
     // the twist: flat under the glass, it rises (to a sail) once Brady has crossed its centre crease
     const R = this.o.rise, p = this.g.player;
     if (R && this.form === 2 && p && !p.dead) {
-      const past = p.onGround && p.groundTy === this.fy && p.cx > (this.bx + R.dx) * TS && p.cx < (this.bx + 4) * TS;
+      const rx1 = Math.max(...this.cells[R.form || 0].map(c => c[0])) + 1;
+      const past = p.onGround && p.groundTy === this.fy && p.cx > (this.bx + R.dx) * TS && p.cx < rx1 * TS;
       if (past) { this.riseT += dt; if (this.riseT > 0.3) { this.setForm(R.form || 0); this.g.parts.text(this.cx, this.y - 20, 'UP SHE GOES!', '#ffd84a'); } } else this.riseT = 0;
     }
   }
@@ -235,15 +236,16 @@ class TabNapkin extends Ent {
     ctx.restore();
   }
 }
-// a crease on the napkin's tail (a fold line on the cloth): stepping onto it folds the napkin to its form
+// a crease on the napkin's tail (a fold line on the cloth): hopping onto it folds the napkin to its form
 class TabCrease extends Ent {
   constructor(g, s) { super(g, s, TS, TS); this.x = s.x - TS / 2; this.y = s.y - TS; this.friendly = true; this.back = true; this.id = s.id; this.form = s.form; this.tx = Math.round(this.x / TS); this.fy = Math.round(s.y / TS); this.was = false; this.flash = 0; }
   napkin() { return this._n || (this._n = this.g.entities.find(e => e instanceof TabNapkin && e.id === this.id)); }
   update(dt) {
     this.t += dt; this.flash = Math.max(0, this.flash - dt * 2);
-    const p = this.g.player, on = onMark(p, this.tx, this.fy, 0.6);
-    if (on && !this.was) { const N = this.napkin(); if (N && N.form !== this.form) { N.setForm(this.form); this.flash = 1; } }
-    this.was = on;
+    // a crease folds the napkin when Brady LANDS on it (a hop): walking across a row of creases folds nothing
+    const p = this.g.player, on = onMark(p, this.tx, this.fy, 0.6), air = p && !p.onGround;
+    if (on && this.wasAir) { const N = this.napkin(); if (N && N.form !== this.form) { N.setForm(this.form); this.flash = 1; } }
+    this.wasAir = air; this.was = on;
   }
   touchPlayer() {}
   draw(ctx) {
@@ -544,10 +546,28 @@ const P = {
     if (o.gx != null) { const gx = x + o.gx, gh = o.gh || 4; B.lock(gx, F - gh, F - 1, id, 'tabGate'); B.spawns[B.spawns.length - 1].type = 'tabGate'; }
     return st.x;
   },
+  // a big upturned glass whose rim's left end is the letter: { w, h } (w columns, h rows up from the rim row): solid,
+  // drawn as glass
+  glass(st, o) {
+    const B = st.B, x = st.x, y1 = st.gy - 1, w = o.w || 7, h = o.h || 9;
+    for (let c = x; c < x + w; c++) for (let y = y1 - h + 1; y <= y1; y++) { B.set(c, y, T.HARD); B.setHide(c, y, 1); }
+    B.decor.push({ kind: 'tabBigGlass', x: (x + w / 2) * TS, y: (y1 + 1) * TS, w: w * TS, h: h * TS, seed: 0 });
+    return st.x;
+  },
   // the land's tell: a wisp of steam rising out of a hidden way (decor at the letter)
   steam(st, o) { st.B.decorAt('tabSteam', st.x, st.gy, (st.x * 3) % 17); return st.x; }
 };
 for (const k in P) Tour.pieces['table.' + k] = P[k];
+// the upturned glass: a tumbler upside down, its thick base at the top, its rim at the bottom, highlights
+Decor.tabBigGlass = function (ctx, x, y, t, th, d) {
+  const w = d.w, h = d.h, l = x - w / 2;
+  ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2.4;
+  ctx.fillStyle = 'rgba(210,235,255,0.42)'; ctx.beginPath(); ctx.moveTo(l + 6, y - h); ctx.lineTo(l + w - 6, y - h); ctx.lineTo(l + w, y); ctx.lineTo(l, y); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = 'rgba(190,220,250,0.7)'; ctx.fillRect(l + 6, y - h, w - 12, 18); ctx.strokeRect(l + 6, y - h, w - 12, 18);
+  ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.fillRect(l + 16, y - h + 26, 7, h - 44); ctx.fillRect(l + 30, y - h + 30, 3, h - 70);
+  ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(l + 2, y - 3); ctx.lineTo(l + w - 2, y - 3); ctx.stroke();
+  ctx.restore();
+};
 Object.assign(ENTITY_TYPES, { tabPlate: TabPlate, tabNapkin: TabNapkin, tabCrease: TabCrease, tabCloth: TabCloth, tabRaft: TabRaft, tabGate: TabGate, tabBreadPlate: TabBreadPlate, tabHostess: TabHostess });
 Object.assign(Tour.tableKit, { TabPlate, TabNapkin, TabCrease, TabCloth, TabRaft, TabGate, TabBreadPlate, TabHostess, handCue, onMark, isTable, liftOut });
 try { if (typeof window !== 'undefined') window.BRADY_TABLE = { phys: (b, inp, A, dt, pl, o) => playerPhysicsFlip(b, inp, A, dt, pl, o), spikeContact: (b, A) => spikeContact(b, A), lavaContact: (b, A) => lavaContact(b, A), kit: Tour.tableKit }; } catch (e) { /* not in a browser */ }

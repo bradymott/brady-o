@@ -251,6 +251,10 @@ const tableInit = () => {
   const K = () => window.BRADY_TABLE.kit;
   window.TB = {
     plates: () => ents('tabPlate').sort((a, b) => a.x - b.x),
+    // a hop on the spot (to land on a crease)
+    hop() { sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.12, { jump: true }); for (let k = 0; k < 120 && !P().onGround; k++) sim(1 / 60); sim(0.15); },
+    // walk to tile x on this floor and hop onto it
+    crease(x) { const r = AP.go([x, P().groundTy]); TB.hop(); return r.ok; },
     // walk on the plate under Brady, toward x (tiles) and back, until its chip drops him; returns where he landed
     chipDrop(xa, xb, maxT) {
       const p = P(), g = S(), row0 = p.groundTy; let t = 0, dir = p.cx / 32 < (xa + xb) / 2 ? 1 : -1, phase = 0;
@@ -334,6 +338,45 @@ LEVELS.china = async (page, shot, run, pano) => {
 
 
 
+// ---------------- 36-2 The Napkin Bird ----------------
+LEVELS.napkin = async (page, shot, run, pano) => {
+  await run('napkin', async () => {
+    await page.evaluate(() => { fresh(); play('36-2'); place(5, 13); sim(0.6); freeze(); });
+    await shot('20-36-2-start.png');
+    const nap = id => `ents('tabNapkin').find(e => e.id === '${id}')`;
+    // the teach: the sail is a wall; the square crease folds it flat and Brady walks over it
+    const a = await page.evaluate(() => {
+      thaw(); play('36-2'); place(3, 13); sim(0.3); const N = ents('tabNapkin').find(e => e.id === 'n1');
+      const blocked = !AP.go([16, 14]).ok;
+      const r1 = { ok: TB.crease(9) }; const form = N.form; const r2 = AP.route([[16, 14], [24, 14]]);
+      return { blocked, form, ok: r1.ok && r2.ok, r2 };
+    });
+    check('36-2: played: the sail blocks the way; the SQUARE crease folds it flat and Brady walks over', a.blocked && a.form === 2 && a.ok, a);
+    await page.evaluate(() => freeze()); await shot('21-36-2-folded-flat.png'); await page.evaluate(() => thaw());
+    const b = await page.evaluate(() => { const r1 = { ok: TB.crease(29) }; const N = ents('tabNapkin').find(e => e.id === 'n2'); const f = N.form; const r2 = AP.route([[34, 11], [41, 8], [46, 8]]); return { f, ok: r1.ok && r2.ok, r2 }; });
+    check('36-2: played: the SAIL crease stands N2 up; its tall edge is the step up the bread block', b.f === 0 && b.ok, b);
+    await page.evaluate(() => freeze()); await shot('22-36-2-on-the-sail.png'); await page.evaluate(() => thaw());
+    const c = await page.evaluate(() => { const r1 = AP.route([[50, 14]]); TB.crease(49); const N = ents('tabNapkin').find(e => e.id === 'n3'); const f = N.form; const r2 = AP.route([[55, 11], [64, 11], [70, 14]]); return { f, ok: r1.ok && r2.ok, r2 }; });
+    check('36-2: played: the BIRD crease spreads N3\'s wings: the bridge over the gap round the sugar pedestal', c.f === 1 && c.ok, c);
+    await page.evaluate(() => freeze()); await shot('23-36-2-bird-bridge.png'); await page.evaluate(() => thaw());
+    const d = await page.evaluate(() => { const r1 = AP.route([[78, 14]]); TB.crease(80); const r2 = AP.route([[86, 11], [92, 8], [97, 14], [112, 14], [140, 14]]); return { ok: r1.ok && r2.ok, r1, r2 }; });
+    check('36-2: played: N4 as a sail up the wall; on past the second and third checkpoints', d.ok, d);
+    // the twist: the glass. Standing up it blocks the way under the rim; flat it lets Brady in, and rises under him
+    const e = await page.evaluate(() => {
+      const N = ents('tabNapkin').find(q => q.id === 'n5'); const blocked = N.form === 0 && !AP.go([153, 14]).ok;
+      const r1 = { ok: TB.crease(144) }; const flat = N.form === 2;
+      const p = P(); let t = 0; while (t < 3 && N.form !== 0) { sim(1 / 60, { right: true }); t += 1 / 60; }
+      sim(0.6); const rose = N.form === 0, row = p.groundTy;
+      const r2 = AP.route([[160, 9], [176, 9]]); sim(3, { right: true });
+      return { blocked, flat, rose, row, r1: r1.ok, r2: r2.ok, state: S().state, key: S().exitKey };
+    });
+    check('36-2: played: the napkin under the glass blocks the way standing up; flat, Brady walks in under the rim', e.blocked && e.flat && e.r1, e);
+    check('36-2: played: past its centre crease it rises to a sail and lifts Brady to the cliff; on to the gate', e.rose && e.row === 9 && e.r2 && e.state !== 'play' && e.key === 'main', e);
+    await page.evaluate(() => { play('36-2'); place(149, 13); const N = ents('tabNapkin').find(q => q.id === 'n5'); N.setForm(2, true); sim(0.3); freeze(); }); await shot('24-36-2-under-the-glass.png');
+    await page.evaluate(() => { thaw(); play('36-2'); sim(0.3); }); await pano('29-36-2-panorama.png', 0.35);
+  });
+};
+
 // ---------------- the hidden entrance: Spain 6-1, the café after the third plaza ----------------
 LEVELS.entry = async (page, shot, run) => {
   await run('entry', async () => {
@@ -365,18 +408,7 @@ LEVELS.entry = async (page, shot, run) => {
   });
 };
 
-LEVELS.dbg = async (page, shot, run) => {
-  await run('dbg', async () => {
-    const r = await page.evaluate(() => {
-      fresh(); window.BRADY.Save.data.unlocked['6-1'] = true; play('6-1'); const d = ents('tabShadowDoor')[0]; const ax0 = d.ax0, ay = d.ay;
-      place(ax0 - 6, ay + 3); sim(0.4); P().invuln = 999;
-      const a = AP.route([[ax0 - 2, ay + 2], [ax0 + 2, ay]]); const out = [JSON.stringify(a), 'fy=' + d.fy + ' sx=' + d.sx0 + '-' + d.sx1];
-      const g = S(), p = P(); for (let k = 0; k < 40; k++) { sim(1 / 30, { right: true }); out.push([+(p.cx / 32).toFixed(1), p.groundTy, p.onGround ? 1 : 0, +(g.t - d.awnT).toFixed(2), d.arr].join(',')); }
-      return out;
-    });
-    console.log(r.join(' | '));
-  });
-};
+
 
 (async () => {
   await session({ width: 844, height: 390 }, async (page, shot, run, pano) => {
