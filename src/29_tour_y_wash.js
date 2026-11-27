@@ -63,6 +63,12 @@ const WashArt = {
   hatch(ctx, draw, a) {
     ctx.save(); ctx.globalAlpha = a == null ? 0.55 : a; draw(ctx); ctx.restore();
   },
+  // a prompt on a dark rounded pill (never bare text over the sky or a character)
+  pill(ctx, x, y, text, col, a) {
+    ctx.save(); ctx.globalAlpha *= a == null ? 1 : a; ctx.font = TourBackstage.F9; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const w = ctx.measureText(text).width + 14, h = 17; ctx.fillStyle = 'rgba(20,14,30,0.85)'; rr(ctx, x - w / 2, y - h / 2, w, h, h / 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1; ctx.stroke(); ctx.fillStyle = col || '#ffd84a'; ctx.fillText(text, x, y + 1); ctx.restore();
+  },
   // the land's tell: a sock moth peering out of a little nibbled peephole (it blinks; when Brady is near, it ducks)
   peephole(ctx, x, y, t, shy) {
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 1.5;
@@ -78,6 +84,34 @@ const WashArt = {
     ctx.restore();
   }
 };
+
+
+/* ---------------- the land's floating words: always on a dark rounded pill, clear of the HUD and the thumbs ---------------- */
+// WashSay(g, x, y, text, col): a short line that rises and fades over ~1.2 s (instead of bare text over the sky)
+function WashSay(g, x, y, text, col) {
+  if (!g) return; const L = g.__washSay || (g.__washSay = []);
+  if (L.some(q => q.text === text && q.t < 0.4 && Math.abs(q.x - x) < 80)) return;
+  L.push({ x, y, text: String(text), col: col || '#ffffff', t: 0 }); if (L.length > 6) L.shift();
+}
+TourHooks.on('afterEntities', (play, ctx) => {
+  const L = play.__washSay; if (!L || !L.length) return;
+  const k = Game.viewH / Math.max(1, Game.gameRect ? Game.gameRect.h : Game.viewH), dt = 1 / 60;
+  const top = play.camY + 74 * k, bot = play.camY + Game.viewH - 150 * k, x0 = play.camX + 12 * k, x1 = play.camX + Game.viewW - 12 * k;
+  ctx.save(); ctx.font = `${Math.round(12 * k)}px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const placed = [];
+  for (let i = L.length - 1; i >= 0; i--) {
+    const q = L[i]; q.t += dt; if (q.t > 1.4) { L.splice(i, 1); continue; }
+    const w = ctx.measureText(q.text).width + 18 * k, h = 22 * k;
+    let x = clamp(q.x, x0 + w / 2, x1 - w / 2), y = clamp(q.y - q.t * 22, top + h / 2, Math.max(top + h / 2, bot - h / 2));
+    for (const r of placed) if (Math.abs(r.x - x) < (r.w + w) / 2 && Math.abs(r.y - y) < h) y = r.y - h - 3 * k;
+    placed.push({ x, y, w });
+    const a = q.t > 1.0 ? (1.4 - q.t) / 0.4 : Math.min(1, q.t * 8);
+    ctx.globalAlpha = a; ctx.fillStyle = 'rgba(20,14,30,0.82)'; rr(ctx, x - w / 2, y - h / 2, w, h, h / 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = q.col; ctx.fillText(q.text, x, y + 1);
+  }
+  ctx.restore();
+});
 
 /* ---------------- tiles ---------------- */
 // the folded laundry hem: a stack of folded cream linen, a navy gingham band along the top
@@ -150,6 +184,30 @@ const woolGround = Object.assign({}, hemGround, {
 const linen = { ground: hemGround, semi: pegSemi, brick: towelBrick, hard: roofHard, pillar: { c1: CREAM, c2: CREAM_D, cap: RED, style: 'column' }, accent: RED, tint: {}, bloom: 0.14, liquid: null };
 const cupboard = Object.assign({}, linen, { hard: checkHard });
 const woolly = Object.assign({}, linen, { ground: woolGround });
+
+
+// each secret room its own floor and walls: a ground whose top band and body are painted from two colours and a
+// pattern, a hard block to match
+const roomTiles = (cap, capHi, body, body2, pat, hard1, hard2) => {
+  const ground = { style: 'room', cap, capHi, dirt: body, dirt2: body2, rock: body2,
+    paint(ctx, rng) { ctx.fillStyle = body; ctx.fillRect(0, 0, TS, TS); ctx.fillStyle = body2;
+      if (pat === 'weave') { for (let y = 0; y < TS; y += 8) for (let x = (y / 8) % 2 * 8; x < TS; x += 16) ctx.fillRect(x, y, 8, 8); }
+      else if (pat === 'tile') { ctx.fillRect(0, TS - 2, TS, 2); ctx.fillRect(TS - 2, 0, 2, TS); }
+      else if (pat === 'plank') { ctx.fillRect(0, 10, TS, 2); ctx.fillRect(0, 22, TS, 2); ctx.fillRect((rng() * 20) | 0, 0, 2, 10); }
+      else if (pat === 'check') { ctx.fillRect(0, 0, TS / 2, TS / 2); ctx.fillRect(TS / 2, TS / 2, TS / 2, TS / 2); }
+      else if (pat === 'carpet') { for (let k = 0; k < 6; k++) ctx.fillRect(rng() * TS, rng() * TS, 3, 2); } },
+    paintCap(ctx, x0, x1) { ctx.fillStyle = cap; ctx.fillRect(x0, 0, x1 - x0, 10); ctx.fillStyle = capHi; ctx.fillRect(x0, 0, x1 - x0, 3); ctx.fillStyle = INK; ctx.fillRect(x0, 10, x1 - x0, 1.5); } };
+  const hard = { c1: hard1, c2: hard2, paint(ctx) { ctx.fillStyle = hard2; ctx.fillRect(0, 0, TS, TS); ctx.fillStyle = hard1; ctx.fillRect(2, 2, TS - 4, TS - 4); ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.strokeRect(0.75, 0.75, TS - 1.5, TS - 1.5); } };
+  return Object.assign({}, linen, { ground, hard });
+};
+const RT = {
+  wicker: roomTiles('#a8783a', '#d8a868', '#c8a06a', '#b08850', 'weave', '#c8a06a', '#8a6a3a'),
+  laund: roomTiles('#e8f0f4', '#ffffff', '#d8e4ea', '#b8c8d0', 'tile', '#e8ecf0', '#9aa8b4'),
+  loft: roomTiles('#8a5a3a', '#b07a50', '#7a4e30', '#5a3a22', 'plank', '#6a4a3a', '#3a2a22'),
+  counter: roomTiles('#c83a2a', '#ff6a5a', '#f4ead2', '#c83a2a', 'check', '#a8784a', '#6a4a2a'),
+  drying: Object.assign({}, woolly, { hard: { c1: '#c8783a', c2: '#8a4a2a', paint(ctx) { roofHard.paint(ctx); } } }),
+  socks: roomTiles('#3e4f8e', '#5a6ab0', '#2a3466', '#23305e', 'carpet', '#8a5a3a', '#5a3a22')
+};
 
 /* ---------------- painted backdrops ---------------- */
 // a row of laundry on a line across the backdrop (towels, shirts, sheets in the land's colours)
@@ -281,6 +339,14 @@ const painters = {
     }
     ctx.fillStyle = shade(L.color, -0.2); ctx.fillRect(0, b - 12, BG_W, 12);
   },
+  // 26-6 near layer: swagged curtains along the top, a washing line of nightshirts and pillowcases strung across the
+  // room, a rag rug on the floor
+  washBedNear(ctx, L, rng, H) {
+    const b = L.base;
+    for (let x = 0; x < BG_W; x += 160) { ctx.fillStyle = '#7a3a5a'; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 160, 0); ctx.lineTo(x + 160, 26); ctx.quadraticCurveTo(x + 80, 70, x, 26); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#ffd84a'; ctx.fillRect(x, 0, 160, 6); }
+    laundryRow(ctx, rng, 120, 0, BG_W, 1.1, 0.9);
+    ctx.fillStyle = 'rgba(232,68,46,0.35)'; for (let x = 0; x < BG_W; x += 300) { ctx.beginPath(); ctx.ellipse(x + 150, b - 6, 120, 10, 0, 0, TAU); ctx.fill(); }
+  },
   /* ---------- the six secret rooms' own places (one each, no two alike) ---------- */
   // B1 the laundry-basket stall: wicker wall, a striped awning, the three baskets' shelf
   roomWicker(ctx, L, rng, H) {
@@ -345,14 +411,14 @@ const themes = {
   wash_pockets: base({ name: 'Pocket Address', music: 'tour_wash_cold', particles: 'none', rays: null, sky: ['#6a5a8a', '#c88aa0', '#f2c0a0'], horizonGlow: '#ffd8b0', celestial: { type: 'sun', x: 0.2, y: 0.55, r: 30, color: '#ffe0b0', glow: '#ffb88a' }, stars: 0.3,
     layers: [{ kind: 'washFarRoofs', color: '#7a6a8a', base: 360, f: 0.08 }, { kind: 'washTrousers', color: '#5a4a6a', base: 420, f: 0.2 }], fog: '#b88aa0', decor: ['washBasket'] }, linen),
   wash_bed: base({ name: 'Fitted Sheet for One', music: 'tour_wash_boss', particles: 'none', rays: null, sky: ['#2a3466', '#3a4a7a', '#4a5a8a'], horizonGlow: '#c8c8ff', celestial: { type: 'none' }, stars: 0,
-    layers: [{ kind: 'washBedroom', color: '#c8b8d8', base: 420, f: 0.1 }], fog: '#6a6a9a', decor: [] }, cupboard),
+    layers: [{ kind: 'washBedroom', color: '#c8b8d8', base: 420, f: 0.08 }, { kind: 'washBedNear', base: 420, f: 0.2 }], fog: '#6a6a9a', decor: [] }, cupboard),
   // the rooms
-  wash_room_wicker: base({ name: 'The Basket Stall', music: 'tour_wash_room', particles: 'none', rays: null, sky: ['#c8a06a', '#c8a06a', '#c8a06a'], horizonGlow: '#ffe0a0', celestial: { type: 'none' }, stars: 0, layers: [{ kind: 'roomWicker', base: 400, f: 0.05 }], fog: '#c8a06a', decor: [] }, linen),
-  wash_room_launderette: base({ name: 'The Launderette', music: 'tour_wash_room', particles: 'none', rays: null, sky: ['#d8ece6', '#d8ece6', '#d8ece6'], horizonGlow: '#ffffff', celestial: { type: 'none' }, stars: 0, layers: [{ kind: 'roomLaunderette', base: 400, f: 0.05 }], fog: '#d8ece6', decor: [] }, cupboard),
-  wash_room_loft: base({ name: 'The Peg Loft', music: 'tour_wash_room', particles: 'none', rays: null, sky: ['#5a4a5a', '#5a4a5a', '#5a4a5a'], horizonGlow: '#ffe8b0', celestial: { type: 'none' }, stars: 0, layers: [{ kind: 'roomPegLoft', base: 400, f: 0.05 }], fog: '#5a4a5a', decor: [] }, linen),
-  wash_room_counter: base({ name: 'Lost Property', music: 'tour_wash_room', particles: 'none', rays: null, sky: ['#e8d8b8', '#e8d8b8', '#e8d8b8'], horizonGlow: '#ffffff', celestial: { type: 'none' }, stars: 0, layers: [{ kind: 'roomCounter', base: 400, f: 0.05 }], fog: '#e8d8b8', decor: [] }, linen),
-  wash_room_drying: base({ name: 'The Drying Room', music: 'tour_wash_room', particles: 'none', rays: null, sky: ['#f0b878', '#f0b878', '#f0b878'], horizonGlow: '#ffe0b0', celestial: { type: 'none' }, stars: 0, layers: [{ kind: 'roomDrying', base: 400, f: 0.05 }], fog: '#f0b878', decor: [] }, woolly),
-  wash_room_socks: base({ name: 'The Sock Drawer', music: 'tour_wash_room', particles: 'none', rays: null, sky: ['#3a4a6a', '#3a4a6a', '#3a4a6a'], horizonGlow: '#c8d8ff', celestial: { type: 'none' }, stars: 0, layers: [{ kind: 'roomSockDrawer', base: 400, f: 0.05 }], fog: '#3a4a6a', decor: [] }, cupboard)
+  wash_room_wicker: base({ name: 'The Basket Stall', music: 'tour_wash_room', particles: 'none', rays: null, sky: ['#c8a06a', '#c8a06a', '#c8a06a'], horizonGlow: '#ffe0a0', celestial: { type: 'none' }, stars: 0, layers: [{ kind: 'roomWicker', base: 400, f: 0.05 }], fog: '#c8a06a', decor: [] }, RT.wicker),
+  wash_room_launderette: base({ name: 'The Launderette', music: 'tour_wash_room', particles: 'none', rays: null, sky: ['#d8ece6', '#d8ece6', '#d8ece6'], horizonGlow: '#ffffff', celestial: { type: 'none' }, stars: 0, layers: [{ kind: 'roomLaunderette', base: 400, f: 0.05 }], fog: '#d8ece6', decor: [] }, RT.laund),
+  wash_room_loft: base({ name: 'The Peg Loft', music: 'tour_wash_room', particles: 'none', rays: null, sky: ['#5a4a5a', '#5a4a5a', '#5a4a5a'], horizonGlow: '#ffe8b0', celestial: { type: 'none' }, stars: 0, layers: [{ kind: 'roomPegLoft', base: 400, f: 0.05 }], fog: '#5a4a5a', decor: [] }, RT.loft),
+  wash_room_counter: base({ name: 'Lost Property', music: 'tour_wash_room', particles: 'none', rays: null, sky: ['#e8d8b8', '#e8d8b8', '#e8d8b8'], horizonGlow: '#ffffff', celestial: { type: 'none' }, stars: 0, layers: [{ kind: 'roomCounter', base: 400, f: 0.05 }], fog: '#e8d8b8', decor: [] }, RT.counter),
+  wash_room_drying: base({ name: 'The Drying Room', music: 'tour_wash_room', particles: 'none', rays: null, sky: ['#f0b878', '#f0b878', '#f0b878'], horizonGlow: '#ffe0b0', celestial: { type: 'none' }, stars: 0, layers: [{ kind: 'roomDrying', base: 400, f: 0.05 }], fog: '#f0b878', decor: [] }, RT.drying),
+  wash_room_socks: base({ name: 'The Sock Drawer', music: 'tour_wash_room', particles: 'none', rays: null, sky: ['#3a4a6a', '#3a4a6a', '#3a4a6a'], horizonGlow: '#c8d8ff', celestial: { type: 'none' }, stars: 0, layers: [{ kind: 'roomSockDrawer', base: 400, f: 0.05 }], fog: '#3a4a6a', decor: [] }, RT.socks),
 };
 
 /* ---------------- props (Decor: drawn each frame) ---------------- */
@@ -508,8 +574,8 @@ const mothArt = (ctx, e, x, y, m, t) => {
 const lintArt = (c, s) => { c.save(); c.fillStyle = 'rgba(244,234,210,0.95)'; c.strokeStyle = INK; c.lineWidth = 1.3; for (let k = 0; k < 4; k++) { c.beginPath(); c.arc(s.x + 6 + k * 5, s.y + s.h / 2 + Math.sin(k * 2 + s.x * 0.05) * 3, 7, 0, TAU); c.fill(); c.stroke(); } c.restore(); };
 const enemies = {
   washBeetle: { cls: TourEnemy.make({ w: 26, h: 34, speed: 0.9, behavior: 'charge', range: 7, windup: 0.6, chargeSpeed: 3.6, chargeT: 1.0, art: beetleArt, burst: CREAM,
-    onNotice: e => { if (e.g.onScreen(e)) e.g.parts.text(e.cx, e.y - 14, 'HITCH!', CREAM); },
-    onDefeat: e => { if (e.g.onScreen(e)) e.g.parts.text(e.cx, e.y - 10, 'MY TROUSERS!', '#ffffff'); } }), place: 'walk' },
+    onNotice: e => { if (e.g.onScreen(e)) WashSay(e.g, e.cx, e.y - 14, 'HITCH!', CREAM); },
+    onDefeat: e => { if (e.g.onScreen(e)) WashSay(e.g, e.cx, e.y - 10, 'MY TROUSERS!', '#ffffff'); } }), place: 'walk' },
   washLamb: { cls: TourEnemy.make({ w: 26, h: 26, speed: 0.8, behavior: 'walk', art: lambArt, burst: CREAM,
     init(e) { e.fleece = 0.2; e.snz = 0; },
     think(e, dt) {
@@ -519,26 +585,26 @@ const enemies = {
         e.snz -= dt; e.vx = 0; e.mode = 'notice';
         if (e.snz <= 0) {
           e.fleece = 0; e.mode = 'walk';
-          if (e.g.onScreen(e, 40)) { e.g.parts.text(e.cx, e.y - 12, 'CHOO!', '#ffffff'); TourKit.sfx('sneeze', 'bump', { vol: 0.35, pitch: 1.6 }); tourFire(e.g, e.cx + e.dir * 18, e.y + 6, { vx: e.dir * 2.6 * TS, w: 30, h: 18, life: 2.4, col: CREAM, art: lintArt }); }
+          if (e.g.onScreen(e, 40)) { WashSay(e.g, e.cx, e.y - 12, 'CHOO!', '#ffffff'); TourKit.sfx('sneeze', 'bump', { vol: 0.35, pitch: 1.6 }); tourFire(e.g, e.cx + e.dir * 18, e.y + 6, { vx: e.dir * 2.6 * TS, w: 30, h: 18, life: 2.4, col: CREAM, art: lintArt }); }
         }
         return;
       }
       if (!e.vx) e.vx = e.dir * e.speed;
       e.mode = 'walk';
       e.fleece = Math.min(1, e.fleece + dt * 0.18);
-      if (e.fleece >= 1) { e.snz = 0.9; if (p && Math.abs(p.cx - e.cx) < 8 * TS) e.dir = sign(p.cx - e.cx) || e.dir; if (e.g.onScreen(e, 40)) e.g.parts.text(e.cx, e.y - 12, 'AH... AH...', '#ffffff'); }
+      if (e.fleece >= 1) { e.snz = 0.9; if (p && Math.abs(p.cx - e.cx) < 8 * TS) e.dir = sign(p.cx - e.cx) || e.dir; if (e.g.onScreen(e, 40)) WashSay(e.g, e.cx, e.y - 12, 'AH... AH...', '#ffffff'); }
     },
     onHurt: e => {}, onDefeat: e => {} }), place: 'walk' },
   washHeron: { cls: TourEnemy.make({ w: 24, h: 46, speed: 0.7, behavior: 'charge', range: 6, windup: 0.7, chargeSpeed: 5.2, chargeT: 0.8, art: heronArt, burst: MINT,
-    onNotice: e => { if (e.g.onScreen(e)) e.g.parts.text(e.cx, e.y - 12, 'TSK! CROOKED!', MINT); } }), place: 'walk' },
+    onNotice: e => { if (e.g.onScreen(e)) WashSay(e.g, e.cx, e.y - 12, 'TSK! CROOKED!', MINT); } }), place: 'walk' },
   washMoth: { cls: TourFlyer.make({ w: 26, h: 22, range: 3, speed: 0.8, swoop: true, art: mothArt, burst: '#c8643a',
-    onSwoop: e => { if (e.g.onScreen(e)) e.g.parts.text(e.cx, e.y - 10, 'NIBBLE!', CREAM); } }), place: 'fly' }
+    onSwoop: e => { if (e.g.onScreen(e)) WashSay(e.g, e.cx, e.y - 10, 'NIBBLE!', CREAM); } }), place: 'fly' }
 };
 // the lamb in full fleece: a stomp just bounces off the wool (stomp it once it has sneezed)
 {
   const h0 = TourEnemy.prototype.hit;
   enemies.washLamb.cls.prototype.hit = function (kind, src) {
-    if ((kind === 'stomp' || kind === 'spin') && !this.dead && this.fleece > 0.35 && !(this.stunT > 0)) { Sound.play('spring', { vol: 0.35, pitch: 1.4 }); this.g.parts.text(this.cx, this.y - 8, 'FLUFF', '#ffffff'); this.fleece = Math.max(0, this.fleece - 0.3); return 'bounce'; }
+    if ((kind === 'stomp' || kind === 'spin') && !this.dead && this.fleece > 0.35 && !(this.stunT > 0)) { Sound.play('spring', { vol: 0.35, pitch: 1.4 }); WashSay(this.g, this.cx, this.y - 8, 'FLUFF', '#ffffff'); this.fleece = Math.max(0, this.fleece - 0.3); return 'bounce'; }
     return h0.call(this, kind, src);
   };
 }
@@ -671,6 +737,6 @@ Tour.country({
   levels: []
 });
 // for the land's other files and the tests
-Tour.washKit = { COL, INK, WashArt, beetleArt, lambArt, heronArt, mothArt, lintArt };
+Tour.washKit = { say: WashSay, COL, INK, WashArt, beetleArt, lambArt, heronArt, mothArt, lintArt };
 try { if (typeof window !== 'undefined') { window.BRADY_TOUR = window.BRADY_TOUR || {}; window.BRADY_TOUR.washKit = Tour.washKit; if (typeof TourMap !== 'undefined' && !window.BRADY_TOUR.TourMap) window.BRADY_TOUR.TourMap = TourMap; } } catch (e) { /* not in a browser */ }
 })();

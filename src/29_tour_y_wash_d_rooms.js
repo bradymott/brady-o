@@ -74,35 +74,49 @@ const hud = (play, ctx, str, i) => {
 const winRoom = (play, A, R, opts) => { TourRooms.win(play, A, R, opts); for (const e of play.entities) if (e instanceof ENTITY_TYPES.roomCage) e.update(0); };
 const shuffle = (rng, L) => { for (let k = L.length - 1; k > 0; k--) { const j = Math.floor(rng() * (k + 1)); [L[k], L[j]] = [L[j], L[k]]; } return L; };
 // Brady has just landed on one of the slot tops (row ON) at these columns: its index, or -1
-const landedOn = (play, R, xs) => {
+const landedOn = (play, R, xs, ON) => {
   const p = play.player, g0 = R.wasG; R.wasG = p.onGround;
   if (!p.onGround || g0 || p.groundTy !== ON) return -1;
   return xs.findIndex(x => Math.abs(p.cx - (x * TS + TS / 2)) < TS * 0.7);
 };
-// the shared room shape: the way in on the left floor, steps up to a stage, the game's slots on the stage (one-way
-// tops at row ON), the cage at the right; returns { g, x0, x1, slots }
+// the room shape, each room its own: the way in on the floor, a stage (solid, sh rows high, or a plank shelf on two
+// posts) with the game's slots on it (one-way tops one row over the stage), the cage at the far end; mirror: the door
+// on the right and the cage on the left. Returns { g, slots }; g.data.stage / g.data.on: the stage's top row and the
+// row things stand on (the kinds read these)
 function stageRoom(o, keep, A, n, gap, opts) {
   opts = opts || {};
-  const Kt = RK(), W = opts.W || 26, g = Kt.room(W, 15, 11), Y = Kt.Y;   // 15 rows: the floor sits higher in the fixed view, clear of the stick
+  const Kt = RK(), W = opts.W || 26, g = Kt.room(W, 15, 11), sh = opts.sh || 2, STG = 11 - sh, ONR = STG - 1;
   const xa = g.west(keep);
   const x1 = Kt.east(g, keep, A, o);
-  // the stage: two rows high, a step up at its left end
   const s0 = xa + 1, s1 = x1;
-  g.fill(s0, STAGE, s1, 10, '#'); g.put(xa, 10, '#');
+  if (opts.shelf) { g.hline(s0, s1, STG, '-'); g.vline(s0 + 1, STG + 1, 10, 'H'); g.vline(s1 - 1, STG + 1, 10, 'H'); }
+  else { g.fill(s0, STG, s1, 10, '#'); for (let k = 1; k < sh; k++) g.fill(xa - (sh - 1) + k, 11 - k, xa - (sh - 1) + k, 10, '#'); }
   const span = (n - 1) * gap, c0 = Math.round((s0 + 2 + s1 - 1 - span) / 2);
-  const slots = []; for (let k = 0; k < n; k++) { const x = c0 + k * gap; slots.push(x); if (!opts.noTops) g.put(x, ON, '-'); g.need('a slot of the game', x, ON - 1); }
-  g.winSpot(A.id, slots[0], opts.noTops ? ON : ON - 1);
-  return { g, x0: s0, x1: s1, slots };
+  const slots = []; for (let k = 0; k < n; k++) { const x = c0 + k * gap; slots.push(x); if (!opts.noTops) g.put(x, ONR, '-'); g.need('a slot of the game', x, ONR - 1); }
+  g.winSpot(A.id, slots[0], opts.noTops ? ONR : ONR - 1);
+  g.data.stage = STG; g.data.on = ONR;
+  return { g, slots };
+}
+// a room built left to right, flipped (the door on the right, the cage on the left): rows, boxes, doors, needs, slots
+function mirrorRoom(g, keys) {
+  const W = g.W;
+  g.g = g.g.map(r => r.slice().reverse());
+  const flipKeys = M => { const o = {}; for (const k in M) { const [x, y] = k.split(',').map(Number); o[(W - 1 - x) + ',' + y] = M[k]; } return o; };
+  g.boxes = flipKeys(g.boxes); g.doorsAt = flipKeys(g.doorsAt);
+  for (const q of g.needs) q.x = W * TS - q.x - q.w;
+  for (const k of keys || []) { const v = g.data[k]; if (Array.isArray(v)) g.data[k] = v.map(x => W - 1 - x); else if (typeof v === 'number') g.data[k] = W - 1 - v; }
+  g.data.mirror = true;
+  return g;
 }
 const ROOM_SEED = (play, A) => mulberry32(hashStr('wash:' + A.roomKit.aid + ':' + ((A.roomState && A.roomState.visits) || 0) + ':' + ((A.roomState && A.roomState.fails) || 0) + ':' + Math.floor(play.t * 7)));
 
 /* ======================= B1 CUP WITH A LIMP (26-1): three laundry baskets ======================= */
 TourRooms.def('washCups', {
   title: 'CUP WITH A LIMP', rule: 'THE SOCK IS UNDER THE BASKET WITH THE WOBBLY FOOT. FOLLOW IT, THEN JUMP ON IT. TWICE!', need: 'FIND THE SOCK FIRST!',
-  make(o, keep, ctx, A, rng) { const S = stageRoom(o, keep, A, 3, 4); S.g.data.slots = S.slots; return S.g; },
+  make(o, keep, ctx, A, rng) { const S = stageRoom(o, keep, A, 3, 4); S.g.data.slots = S.slots; return S.g; },   // door left, cage right, a solid stage
   enter(play, A, R, kit) { if (!R.won) { R.round = 0; this.start(play, A, R); } },
   start(play, A, R) { R.phase = 'show'; R.pt = 0; R.at = [0, 1, 2]; R.sock = Math.floor(ROOM_SEED(play, A)() * 3); R.swaps = []; R.pick = -1; },
-  update(play, dt, A, R, kit) {
+  update(play, dt, A, R, kit) { const ON = kit.data.on, STAGE = kit.data.stage;
     if (R.won) return;
     if (play.bannerT > 0.1 && R.phase === 'show') return;
     const xs = kit.data.slots;
@@ -117,10 +131,10 @@ TourRooms.def('washCups', {
       if (R.pt >= R.dur) { const [a, b] = R.swaps[R.si]; const ia = R.at.indexOf(a), ib = R.at.indexOf(b); R.at[ia] = b; R.at[ib] = a; R.si++; R.pt = 0; TourKit.sfx('swish', 'select', { vol: 0.25, pitch: 1.4 }); if (R.si >= R.swaps.length) { R.phase = 'pick'; R.pt = 0; R.wasG = play.player.onGround; } }
     }
     if (R.phase === 'pick') {
-      const k = landedOn(play, R, xs); if (k < 0) return;
+      const k = landedOn(play, R, xs, kit.data.on); if (k < 0) return;
       // basket R.at[k] stands at slot k
       R.pick = k; R.phase = 'reveal'; R.pt = 0; R.right = R.at[k] === R.sock;
-      if (R.right) { Sound.play('coin', { vol: 0.6 }); play.parts.text(xs[k] * TS + 16, ON * TS - 30, 'THE SOCK!', '#ffffff'); }
+      if (R.right) { Sound.play('coin', { vol: 0.6 }); Tour.washKit.say(play, xs[k] * TS + 16, ON * TS - 30, 'THE SOCK!', '#ffffff'); }
       else { R.fails = (R.fails || 0) + 1; RK().raspberry(play, 'A MOTH! TRY AGAIN'); }
     }
     if (R.phase === 'reveal' && R.pt > 1.1) {
@@ -136,7 +150,7 @@ TourRooms.def('washCups', {
     const o = b === a ? c : a, xo = xs[R.at.indexOf(o)] * TS + TS / 2, k = Math.min(1, R.pt / R.dur), e = k * k * (3 - 2 * k);
     return { x: lerp(x, xo, e), lift: (b === a ? -1 : 1) * Math.sin(k * Math.PI) * 14 };
   },
-  draw(play, ctx, A, R, kit) {
+  draw(play, ctx, A, R, kit) { const ON = kit.data.on, STAGE = kit.data.stage;
     const t = play.t, y = ON * TS + TS;
     for (let b = 0; b < 3; b++) {
       const P = this.basketX(R, kit, b), up = R.phase === 'reveal' && R.at[R.pick] === b ? Math.min(1, R.pt * 4) * 30 : R.won ? 30 : 0;
@@ -156,10 +170,10 @@ TourRooms.def('washCups', {
     }
     if (!R.won && !(play.bannerT > 0.1)) hud(play, ctx, (R.phase === 'pick' ? 'WHICH ONE?  ' : R.phase === 'show' ? 'WATCH THE WOBBLE...  ' : 'FOLLOW IT...  ') + 'ROUND ' + (R.round + 1) + ' / 2', 0);
   },
-  testWin(g, A, R, kit, frame) { for (let n = 0; n < 2 && !R.won; n++) { for (let k = 0; k < 2000 && R.phase !== 'pick'; k++) frame(g, {}); pickSlot(g, kit.data.slots[R.at.indexOf(R.sock)], frame); for (let k = 0; k < 400 && R.phase !== 'show' && !R.won; k++) frame(g, {}); } }
+  testWin(g, A, R, kit, frame) { const ON = kit.data.on, STAGE = kit.data.stage; for (let n = 0; n < 2 && !R.won; n++) { for (let k = 0; k < 2000 && R.phase !== 'pick'; k++) frame(g, {}); pickSlot(g, kit.data.slots[R.at.indexOf(R.sock)], frame, kit.data.on); for (let k = 0; k < 400 && R.phase !== 'show' && !R.won; k++) frame(g, {}); } }
 });
 // the rooms test (and the shots tool): land on a slot's top from just above it
-function pickSlot(g, x, frame) { const p = g.player; p.x = x * TS + TS / 2 - p.w / 2; p.y = (ON) * TS - p.h - 10; p.vx = 0; p.vy = 2 * TS; p.onGround = false; for (let k = 0; k < 60 && !p.onGround; k++) frame(g, {}); frame(g, {}); }
+function pickSlot(g, x, frame, on) { const p = g.player; p.x = x * TS + TS / 2 - p.w / 2; p.y = on * TS - p.h - 10; p.vx = 0; p.vy = 2 * TS; p.onGround = false; for (let k = 0; k < 60 && !p.onGround; k++) frame(g, {}); frame(g, {}); }
 
 /* ======================= B2 ROOM WITH A VIEW (26-2): the launderette's portholes ======================= */
 const RIDERS = [
@@ -170,21 +184,21 @@ const RIDERS = [
 ];
 TourRooms.def('washWindows', {
   title: 'ROOM WITH A VIEW', rule: 'THREE TUMBLE PAST THE PORTHOLES. WHEN THE DOORS SHUT, JUMP ON THEIR PICTURES IN THE ORDER THEY CAME', need: 'REMEMBER THE ORDER FIRST!',
-  make(o, keep, ctx, A, rng) { const S = stageRoom(o, keep, A, 4, 3); S.g.data.slots = S.slots; return S.g; },
+  make(o, keep, ctx, A, rng) { const S = stageRoom(o, keep, A, 4, 3, { sh: 1 }); S.g.data.slots = S.slots; return mirrorRoom(S.g, ['slots']); },   // door right, cage left, a low step of a stage
   enter(play, A, R, kit) { if (!R.won) this.start(play, A, R); },
   start(play, A, R) { const rng = ROOM_SEED(play, A); R.order = shuffle(rng, [0, 1, 2, 3]).slice(0, 3); R.pics = shuffle(rng, [0, 1, 2, 3]); R.phase = 'ride'; R.pt = 0; R.got = 0; R.wasG = true; },
-  update(play, dt, A, R, kit) {
+  update(play, dt, A, R, kit) { const ON = kit.data.on, STAGE = kit.data.stage;
     if (R.won) return;
     if (play.bannerT > 0.1 && R.phase === 'ride') return;
     R.pt += dt;
     if (R.phase === 'ride' && R.pt > 1.0 + 3 * 1.3 + 0.6) { R.phase = 'pick'; R.pt = 0; R.wasG = play.player.onGround; TourKit.sfx('door', 'bump', { vol: 0.4 }); }
     if (R.phase === 'pick') {
-      const k = landedOn(play, R, kit.data.slots); if (k < 0) return;
-      if (R.pics[k] === R.order[R.got]) { R.got++; Sound.play('pick', { vol: 0.6, pitch: 1 + R.got * 0.2 }); play.parts.text(kit.data.slots[k] * TS + 16, ON * TS - 34, String(R.got), '#ffffff'); if (R.got >= 3) winRoom(play, A, R, { text: 'ALL ABOARD!', coins: 6 }); }
+      const k = landedOn(play, R, kit.data.slots, kit.data.on); if (k < 0) return;
+      if (R.pics[k] === R.order[R.got]) { R.got++; Sound.play('pick', { vol: 0.6, pitch: 1 + R.got * 0.2 }); Tour.washKit.say(play, kit.data.slots[k] * TS + 16, ON * TS - 34, String(R.got), '#ffffff'); if (R.got >= 3) winRoom(play, A, R, { text: 'ALL ABOARD!', coins: 6 }); }
       else { R.fails = (R.fails || 0) + 1; RK().raspberry(play, 'NOT THAT ONE! WATCH AGAIN'); this.start(play, A, R); }
     }
   },
-  draw(play, ctx, A, R, kit) {
+  draw(play, ctx, A, R, kit) { const ON = kit.data.on, STAGE = kit.data.stage;
     const t = play.t, xs = kit.data.slots, cx = (xs[0] + xs[3] + 1) / 2 * TS, wy = 3.4 * TS;
     // three portholes on the machines' front, side by side; the riders tumble past them left to right in turn
     const px = [cx - 3.2 * TS, cx, cx + 3.2 * TS], shut = R.phase === 'pick' || R.won;
@@ -210,17 +224,17 @@ TourRooms.def('washWindows', {
     ctx.restore();
     if (!R.won && !(play.bannerT > 0.1)) hud(play, ctx, R.phase === 'ride' ? 'WATCH WHO COMES FIRST...' : 'JUMP ON THEM IN ORDER  ' + R.got + ' / 3', 0);
   },
-  testWin(g, A, R, kit, frame) { for (let k = 0; k < 2400 && R.phase !== 'pick'; k++) frame(g, {}); for (let i = 0; i < 3 && !R.won; i++) pickSlot(g, kit.data.slots[R.pics.indexOf(R.order[R.got])], frame); }
+  testWin(g, A, R, kit, frame) { const ON = kit.data.on, STAGE = kit.data.stage; for (let k = 0; k < 2400 && R.phase !== 'pick'; k++) frame(g, {}); for (let i = 0; i < 3 && !R.won; i++) pickSlot(g, kit.data.slots[R.pics.indexOf(R.order[R.got])], frame, kit.data.on); }
 });
 
 /* ======================= B3 ONE MORE PETAL (26-3): the peg loft ======================= */
 const PEG_COLS = ['#e8442e', '#ffd84a', '#4aa8e8', '#5ad86a', '#c86ad8', '#ff8a3a', '#f4ead2'];
 TourRooms.def('washPegs', {
   title: 'ONE MORE PEG', rule: 'THE TOWEL DROPS, THEN LIFTS WITH ONE NEW PEG ON THE LINE. JUMP ON THE STOOL UNDER THE NEW ONE. THREE TIMES!', need: 'SPOT THE NEW PEG FIRST!',
-  make(o, keep, ctx, A, rng) { const S = stageRoom(o, keep, A, 6, 2); S.g.data.slots = S.slots; return S.g; },
+  make(o, keep, ctx, A, rng) { const S = stageRoom(o, keep, A, 6, 2, { shelf: true, sh: 3 }); S.g.data.slots = S.slots; return S.g; },   // a plank shelf on posts over the loft floor
   enter(play, A, R, kit) { if (!R.won) { R.round = 0; this.start(play, A, R); } },
   start(play, A, R) { const rng = ROOM_SEED(play, A); R.has = shuffle(rng, [0, 1, 2, 3, 4, 5]).slice(0, 2 + R.round); R.cols = shuffle(rng, PEG_COLS.slice()); R.phase = 'look'; R.pt = 0; R.newer = -1; },
-  update(play, dt, A, R, kit) {
+  update(play, dt, A, R, kit) { const ON = kit.data.on, STAGE = kit.data.stage;
     if (R.won) return;
     if (play.bannerT > 0.1 && R.phase === 'look') return;
     R.pt += dt;
@@ -230,12 +244,12 @@ TourRooms.def('washPegs', {
       R.newer = free[Math.floor(rng() * free.length)]; R.has.push(R.newer); R.phase = 'pick'; R.pt = 0; R.wasG = play.player.onGround;
     }
     if (R.phase === 'pick') {
-      const k = landedOn(play, R, kit.data.slots); if (k < 0) return;
-      if (k === R.newer) { R.round++; Sound.play('pick', { vol: 0.6, pitch: 1.2 + R.round * 0.15 }); play.parts.text(kit.data.slots[k] * TS + 16, ON * TS - 40, 'NEW!', '#ffffff'); if (R.round >= 3) { winRoom(play, A, R, { text: 'A FULL LINE!', coins: 6 }); return; } R.phase = 'look'; R.pt = 0.4; }
+      const k = landedOn(play, R, kit.data.slots, kit.data.on); if (k < 0) return;
+      if (k === R.newer) { R.round++; Sound.play('pick', { vol: 0.6, pitch: 1.2 + R.round * 0.15 }); Tour.washKit.say(play, kit.data.slots[k] * TS + 16, ON * TS - 40, 'NEW!', '#ffffff'); if (R.round >= 3) { winRoom(play, A, R, { text: 'A FULL LINE!', coins: 6 }); return; } R.phase = 'look'; R.pt = 0.4; }
       else { R.fails = (R.fails || 0) + 1; RK().raspberry(play, 'THAT ONE WAS ALREADY THERE!'); this.start(play, A, R); }
     }
   },
-  draw(play, ctx, A, R, kit) {
+  draw(play, ctx, A, R, kit) { const ON = kit.data.on, STAGE = kit.data.stage;
     const t = play.t, xs = kit.data.slots, ly = 4.2 * TS, lx0 = xs[0] * TS - 20, lx1 = xs[5] * TS + TS + 20;
     WA.line(ctx, lx0, ly, lx1, ly, 8, '#8a7a62');
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#5a4a3a'; ctx.fillRect(lx0 - 6, ly - 6, 8, 2.6 * TS); ctx.strokeRect(lx0 - 6, ly - 6, 8, 2.6 * TS); ctx.fillRect(lx1 - 2, ly - 6, 8, 2.6 * TS); ctx.strokeRect(lx1 - 2, ly - 6, 8, 2.6 * TS); ctx.restore();
@@ -249,7 +263,7 @@ TourRooms.def('washPegs', {
     if (R.phase === 'shut') { const k = Math.min(1, R.pt * 4) * (R.pt > 0.75 ? Math.max(0, (1 - R.pt) * 4) : 1); ctx.save(); ctx.globalAlpha = 1; WA.gingham(ctx, lx0, ly - 6, lx1 - lx0, 2.4 * TS * k, 10, 0.55, '#f2c0b0'); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(lx0, ly - 6, lx1 - lx0, 2.4 * TS * k); ctx.restore(); }
     if (!R.won && !(play.bannerT > 0.1)) hud(play, ctx, (R.phase === 'pick' ? 'WHICH ONE IS NEW?  ' : 'LOOK AT THE LINE...  ') + 'MORNING ' + (R.round + 1) + ' / 3', 0);
   },
-  testWin(g, A, R, kit, frame) { for (let n = 0; n < 3 && !R.won; n++) { for (let k = 0; k < 2000 && R.phase !== 'pick'; k++) frame(g, {}); pickSlot(g, kit.data.slots[R.newer], frame); } }
+  testWin(g, A, R, kit, frame) { const ON = kit.data.on, STAGE = kit.data.stage; for (let n = 0; n < 3 && !R.won; n++) { for (let k = 0; k < 2000 && R.phase !== 'pick'; k++) frame(g, {}); pickSlot(g, kit.data.slots[R.newer], frame, kit.data.on); } }
 });
 
 /* ======================= B4 STILL PACKED? (26-4): the lost property counter ======================= */
@@ -263,7 +277,7 @@ const THINGS = [
 ];
 TourRooms.def('washBag', {
   title: 'STILL PACKED?', rule: 'PEEK IN THE LAUNDRY BAG. WHEN IT SHUTS, JUMP ON THE ONE THING ON THE SHELF THAT WAS INSIDE. TWICE!', need: 'FIND WHAT WAS PACKED FIRST!',
-  make(o, keep, ctx, A, rng) { const S = stageRoom(o, keep, A, 4, 3); S.g.data.slots = S.slots; return S.g; },
+  make(o, keep, ctx, A, rng) { const S = stageRoom(o, keep, A, 4, 3, { sh: 3 }); S.g.data.slots = S.slots; return mirrorRoom(S.g, ['slots']); },   // door right, a tall counter
   enter(play, A, R, kit) { if (!R.won) { R.round = 0; this.start(play, A, R); } },
   start(play, A, R) {
     const rng = ROOM_SEED(play, A), L = shuffle(rng, [0, 1, 2, 3, 4, 5]);
@@ -271,18 +285,18 @@ TourRooms.def('washBag', {
     R.bag = L.slice(0, 3); const keepOne = R.bag[Math.floor(rng() * 3)];
     R.shelf = shuffle(rng, [keepOne].concat(L.slice(3, 6))); R.answer = R.shelf.indexOf(keepOne); R.phase = 'peek'; R.pt = 0;
   },
-  update(play, dt, A, R, kit) {
+  update(play, dt, A, R, kit) { const ON = kit.data.on, STAGE = kit.data.stage;
     if (R.won) return;
     if (play.bannerT > 0.1 && R.phase === 'peek') return;
     R.pt += dt;
     if (R.phase === 'peek' && R.pt > 3.0) { R.phase = 'pick'; R.pt = 0; R.wasG = play.player.onGround; TourKit.sfx('zip', 'select', { vol: 0.3, pitch: 1.6 }); }
     if (R.phase === 'pick') {
-      const k = landedOn(play, R, kit.data.slots); if (k < 0) return;
-      if (k === R.answer) { R.round++; Sound.play('pick', { vol: 0.6, pitch: 1.3 }); play.parts.text(kit.data.slots[k] * TS + 16, ON * TS - 40, 'PACKED!', '#ffffff'); if (R.round >= 2) { winRoom(play, A, R, { text: 'ALL ACCOUNTED FOR!', coins: 6 }); return; } this.start(play, A, R); }
+      const k = landedOn(play, R, kit.data.slots, kit.data.on); if (k < 0) return;
+      if (k === R.answer) { R.round++; Sound.play('pick', { vol: 0.6, pitch: 1.3 }); Tour.washKit.say(play, kit.data.slots[k] * TS + 16, ON * TS - 40, 'PACKED!', '#ffffff'); if (R.round >= 2) { winRoom(play, A, R, { text: 'ALL ACCOUNTED FOR!', coins: 6 }); return; } this.start(play, A, R); }
       else { R.fails = (R.fails || 0) + 1; RK().raspberry(play, 'THAT WASN\'T IN THE BAG!'); this.start(play, A, R); }
     }
   },
-  draw(play, ctx, A, R, kit) {
+  draw(play, ctx, A, R, kit) { const ON = kit.data.on, STAGE = kit.data.stage;
     const t = play.t, xs = kit.data.slots, cx = (xs[0] + xs[3] + 1) / 2 * TS, by = 4.6 * TS;
     // the laundry bag: open (its three things showing over the drawstring) or pulled shut
     const open = R.phase === 'peek';
@@ -296,30 +310,30 @@ TourRooms.def('washBag', {
     ctx.restore();
     if (!R.won && !(play.bannerT > 0.1)) hud(play, ctx, (R.phase === 'peek' ? 'PEEK INSIDE...  ' : 'WHICH WAS PACKED?  ') + (R.round + 1) + ' / 2', 0);
   },
-  testWin(g, A, R, kit, frame) { for (let n = 0; n < 2 && !R.won; n++) { for (let k = 0; k < 2000 && R.phase !== 'pick'; k++) frame(g, {}); pickSlot(g, kit.data.slots[R.answer], frame); } }
+  testWin(g, A, R, kit, frame) { const ON = kit.data.on, STAGE = kit.data.stage; for (let n = 0; n < 2 && !R.won; n++) { for (let k = 0; k < 2000 && R.phase !== 'pick'; k++) frame(g, {}); pickSlot(g, kit.data.slots[R.answer], frame, kit.data.on); } }
 });
 
 /* ======================= B5 YOUR SEAT, SIR (26-5): the drying room's cushions ======================= */
 const MOTH_COLS = ['#e8442e', '#4aa8e8', '#5ad86a'];
 TourRooms.def('washSeats', {
   title: 'YOUR SEAT, SIR', rule: 'THREE MOTHS TAKE A CUSHION EACH, THEN FLY UP. WHEN ONE FLIES TO YOU, JUMP ON ITS OWN CUSHION', need: 'SEAT THE MOTHS FIRST!',
-  make(o, keep, ctx, A, rng) { const S = stageRoom(o, keep, A, 4, 3); S.g.data.slots = S.slots; return S.g; },
+  make(o, keep, ctx, A, rng) { const S = stageRoom(o, keep, A, 4, 3, { shelf: true, sh: 2 }); S.g.data.slots = S.slots; return S.g; },   // a drying rack's plank, the cushions on it
   enter(play, A, R, kit) { if (!R.won) this.start(play, A, R); },
   start(play, A, R) { const rng = ROOM_SEED(play, A); R.seat = shuffle(rng, [0, 1, 2, 3]).slice(0, 3); R.queue = shuffle(rng, [0, 1, 2]); R.qi = 0; R.sat = []; R.phase = 'settle'; R.pt = 0; },
-  update(play, dt, A, R, kit) {
+  update(play, dt, A, R, kit) { const ON = kit.data.on, STAGE = kit.data.stage;
     if (R.won) return;
     if (play.bannerT > 0.1 && R.phase === 'settle') return;
     R.pt += dt;
     if (R.phase === 'settle' && R.pt > 2.6) { R.phase = 'fly'; R.pt = 0; TourKit.sfx('flap', 'jump', { vol: 0.3, pitch: 2 }); }
     if (R.phase === 'fly' && R.pt > 1.4) { R.phase = 'seat'; R.pt = 0; R.wasG = play.player.onGround; }
     if (R.phase === 'seat') {
-      const k = landedOn(play, R, kit.data.slots); if (k < 0) return;
+      const k = landedOn(play, R, kit.data.slots, kit.data.on); if (k < 0) return;
       const m = R.queue[R.qi];
-      if (k === R.seat[m]) { R.sat.push(m); R.qi++; Sound.play('pick', { vol: 0.6, pitch: 1.1 + R.qi * 0.2 }); play.parts.text(kit.data.slots[k] * TS + 16, ON * TS - 40, 'SEATED!', '#ffffff'); if (R.qi >= 3) winRoom(play, A, R, { text: 'EVERYONE SEATED!', coins: 6 }); }
+      if (k === R.seat[m]) { R.sat.push(m); R.qi++; Sound.play('pick', { vol: 0.6, pitch: 1.1 + R.qi * 0.2 }); Tour.washKit.say(play, kit.data.slots[k] * TS + 16, ON * TS - 40, 'SEATED!', '#ffffff'); if (R.qi >= 3) winRoom(play, A, R, { text: 'EVERYONE SEATED!', coins: 6 }); }
       else { R.fails = (R.fails || 0) + 1; RK().raspberry(play, 'NOT MY SEAT! EVERYBODY UP!'); this.start(play, A, R); }
     }
   },
-  draw(play, ctx, A, R, kit) {
+  draw(play, ctx, A, R, kit) { const ON = kit.data.on, STAGE = kit.data.stage;
     const t = play.t, xs = kit.data.slots, p = play.player;
     // four cushions on the stage (their tops are what you land on)
     xs.forEach((x, k) => { const bx = x * TS + TS / 2, yy = ON * TS + TS; ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = ['#f2c0b0', '#c8c8f0', '#bfe8d6', '#ffe0a0'][k]; rr(ctx, bx - 17, yy - 24, 34, 24, 9); ctx.fill(); ctx.stroke(); ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(bx, yy - 12, 2.2, 0, TAU); ctx.fill(); ctx.restore(); });
@@ -336,21 +350,21 @@ TourRooms.def('washSeats', {
     }
     if (!R.won && !(play.bannerT > 0.1)) hud(play, ctx, R.phase === 'seat' ? 'JUMP ON ITS CUSHION  ' + R.qi + ' / 3' : 'WHO SITS WHERE?', 0);
   },
-  testWin(g, A, R, kit, frame) { for (let k = 0; k < 2400 && R.phase !== 'seat'; k++) frame(g, {}); for (let i = 0; i < 3 && !R.won; i++) pickSlot(g, kit.data.slots[R.seat[R.queue[R.qi]]], frame); }
+  testWin(g, A, R, kit, frame) { const ON = kit.data.on, STAGE = kit.data.stage; for (let k = 0; k < 2400 && R.phase !== 'seat'; k++) frame(g, {}); for (let i = 0; i < 3 && !R.won; i++) pickSlot(g, kit.data.slots[R.seat[R.queue[R.qi]]], frame, kit.data.on); }
 });
 
 /* ======================= SOCK DIVORCE (26-6): the sock drawer ======================= */
 TourRooms.def('washDivorce', {
   title: 'SOCK DIVORCE', rule: 'HOLD THROW ON THE CUFF AND WALK AWAY TILL THE SOCKS PEEL APART. LET GO BEFORE THE TOE MARK! TWO PAIRS', need: 'PART THE SOCKS FIRST!',
   make(o, keep, ctx, A, rng) {
-    const S = stageRoom(o, keep, A, 2, 9, { noTops: true });
+    const S = stageRoom(o, keep, A, 2, 9, { noTops: true, sh: 1 });
     // the post the socks are pegged to (at the stage's left), the cuff Brady takes hold of beside it
     S.g.data.post = S.slots[0]; S.g.data.far = S.slots[1];
     return S.g;
   },
   enter(play, A, R, kit) { if (!R.won) { R.pair = 0; this.start(play, A, R); } },
   start(play, A, R) { const rng = ROOM_SEED(play, A); R.phase = 'wait'; R.hold = false; R.str = 0; R.peelAt = (3.2 + rng() * 1.6) * TS; R.toe = R.peelAt + (R.pair ? 1.7 : 2.2) * TS; R.peeled = false; R.snapT = 0; },
-  update(play, dt, A, R, kit) {
+  update(play, dt, A, R, kit) { const ON = kit.data.on, STAGE = kit.data.stage;
     if (R.won) return;
     const p = play.player, cuffX = (kit.data.post + 1) * TS + 8, I = p.inp || {};
     if (R.snapT > 0) { R.snapT -= dt; R.str = Math.max(0, R.str - dt * 14 * TS); return; }
@@ -362,15 +376,15 @@ TourRooms.def('washDivorce', {
     // holding: the damp socks are heavy (a slow walk), they stretch as he walks away
     p.vx = clamp(p.vx, -2.4 * TS, 2.4 * TS);
     R.str = Math.max(0, p.cx - R.x0);
-    if (!R.peeled && R.str >= R.peelAt) { R.peeled = true; TourKit.sfx('rip', 'kick', { vol: 0.5, pitch: 1.6 }); play.parts.text(p.cx, p.y - 20, 'PEEL!', '#ffffff'); }
+    if (!R.peeled && R.str >= R.peelAt) { R.peeled = true; TourKit.sfx('rip', 'kick', { vol: 0.5, pitch: 1.6 }); Tour.washKit.say(play, p.cx, p.y - 20, 'PEEL!', '#ffffff'); }
     if (R.str > R.toe) { R.hold = false; R.snapT = 0.6; R.fails = (R.fails || 0) + 1; RK().raspberry(play, 'TWANG! TOO FAR. BACK THEY GO'); this.start(play, A, R); R.snapT = 0.6; return; }
     if (!I.action) {
       R.hold = false;
-      if (R.peeled) { R.pair++; Sound.play('pick', { vol: 0.6, pitch: 1.3 }); play.parts.text(p.cx, p.y - 24, 'DIVORCED!', '#ffffff'); if (R.pair >= 2) { winRoom(play, A, R, { text: 'AMICABLE!', coins: 6 }); return; } this.start(play, A, R); }
+      if (R.peeled) { R.pair++; Sound.play('pick', { vol: 0.6, pitch: 1.3 }); Tour.washKit.say(play, p.cx, p.y - 24, 'DIVORCED!', '#ffffff'); if (R.pair >= 2) { winRoom(play, A, R, { text: 'AMICABLE!', coins: 6 }); return; } this.start(play, A, R); }
       else { R.fails = (R.fails || 0) + 1; RK().raspberry(play, 'STILL STUCK! HOLD ON LONGER'); R.snapT = 0.5; }
     }
   },
-  draw(play, ctx, A, R, kit) {
+  draw(play, ctx, A, R, kit) { const ON = kit.data.on, STAGE = kit.data.stage;
     const t = play.t, post = kit.data.post, px = post * TS + TS / 2, sy = STAGE * TS, cuffX = (post + 1) * TS + 8;
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
     // the post with its peg
@@ -385,13 +399,13 @@ TourRooms.def('washDivorce', {
     // the stitched toe mark on the stage (how far the sock may stretch), the damp seam where they're stuck
     const tx = R.toe + x0 + 1.2 * TS;
     ctx.strokeStyle = '#e8442e'; ctx.lineWidth = 3; ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.moveTo(tx, sy); ctx.lineTo(tx, sy - 2.2 * TS); ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle = '#e8442e'; ctx.font = TourBackstage.F8; ctx.textAlign = 'center'; ctx.fillText('TOE', tx, sy - 2.4 * TS);
+    WA.pill(ctx, tx, sy - 2.5 * TS, 'TOE MARK', '#ff8a7a');
     if (!R.peeled && R.hold) { ctx.fillStyle = 'rgba(120,160,220,0.6)'; for (let k = 0; k < 4; k++) { const dx = ((t * 40 + k * 30) % Math.max(10, len)); ctx.beginPath(); ctx.arc(x0 + dx, y0 + 1, 2.5, 0, TAU); ctx.fill(); } }
-    if (!R.hold && !R.won) { const k = 0.5 + 0.5 * Math.sin(t * 6); ctx.fillStyle = `rgba(255,216,74,${0.5 + 0.5 * k})`; ctx.font = TourBackstage.F9; ctx.textAlign = 'center'; ctx.fillText('THROW', cuffX, y0 - 26); }
+    if (!R.hold && !R.won) { const k = 0.5 + 0.5 * Math.sin(t * 6); WA.pill(ctx, cuffX, y0 - 30, 'HOLD THROW', '#ffd84a', 0.7 + 0.3 * k); }
     ctx.restore();
     if (!R.won && !(play.bannerT > 0.1)) hud(play, ctx, (R.hold ? (R.peeled ? 'LET GO NOW!  ' : 'KEEP WALKING...  ') : 'HOLD THROW ON THE CUFF  ') + 'PAIR ' + (R.pair + 1) + ' / 2', 0);
   },
-  testWin(g, A, R, kit, frame) {
+  testWin(g, A, R, kit, frame) { const ON = kit.data.on, STAGE = kit.data.stage;
     const p = g.player, cuffX = (kit.data.post + 1) * TS + 8;
     for (let n = 0; n < 2 && !R.won; n++) {
       p.x = cuffX - p.w / 2; p.y = STAGE * TS - p.h; p.vx = 0; p.vy = 0; for (let k = 0; k < 30; k++) frame(g, {});

@@ -17,7 +17,7 @@
 (function () {
 const WK = Tour.washKit, INK = WK.INK, WA = WK.WashArt;
 // her words come up under her (she floats high: over her they would sit on the HUD)
-const say = (g, b, text, col) => { if (b && b.y != null && b.boss) g.parts.text(b.cx, b.y + b.h + 30, text, col || '#ffffff'); else TourKit.say(g, b, text, col); };
+const say = (g, b, text, col) => { if (b && b.y != null && b.boss) Tour.washKit.say(g, b.cx, b.y + b.h + 30, text, col || '#ffffff'); else TourKit.say(g, b, text, col); };
 
 /* ---------------- the lead-in: a loose sheet across the way, its corner, the post behind ---------------- */
 // spawn { id, x0 (the corner's anchor column, on the wall), post (the post's column), y (the floor row), side (1: it
@@ -51,7 +51,7 @@ class WashLooseSheet extends Ent {
   hook() {
     if (this.open) return; this.open = true; this.head = this.postX;
     for (const [x, y] of this.tiles) this.g.setTile(x, y, T.EMPTY);
-    Sound.play('door', { vol: 0.5 }); this.g.burst(this.postX, this.floorY - 2 * TS, 14, WA.CREAM, 'confetti'); this.g.parts.text(this.postX, this.floorY - 3 * TS, 'TUCKED!', '#ffffff');
+    Sound.play('door', { vol: 0.5 }); this.g.burst(this.postX, this.floorY - 2 * TS, 14, WA.CREAM, 'confetti'); Tour.washKit.say(this.g, this.postX, this.floorY - 3 * TS, 'TUCKED!', '#ffffff');
   }
   touchPlayer() {}
   draw(ctx) {
@@ -192,7 +192,7 @@ const brain = {
     // a ring or the shake: the act plays on (the second ring is still coming); an arrow: she draws back
     const act = b.act;
     b.damage(1, { quiet: !!keep });
-    b.g.parts.text(post.x, b.floorY - 3 * TS, 'TUCKED!', '#ffd84a');
+    Tour.washKit.say(b.g, post.x, b.floorY - 3 * TS, 'TUCKED!', '#ffd84a');
     if (keep && b.act === act) say(b.g, b, pick(['TUCKED!', 'SO TIGHT!', 'MY ELASTIC!']), '#ffd84a');
     if (b.act === 'snap') b.go('back');
   },
@@ -223,6 +223,8 @@ TourHooks.on('afterEntities', (play, ctx) => {
   ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
   // the posts (a hooked one shows the elastic from her to it)
   b.posts.forEach((q, k) => {
+    // a free post (somewhere to tuck a corner) pulses gold
+    if (!q.hooked) { const k2 = 0.5 + 0.5 * Math.sin(t * 5 + k); ctx.save(); ctx.fillStyle = `rgba(255,216,74,${0.18 + 0.22 * k2})`; ctx.beginPath(); ctx.ellipse(q.x, fy - 1.3 * TS, 24 + k2 * 6, 1.6 * TS + k2 * 6, 0, 0, TAU); ctx.fill(); ctx.restore(); }
     Decor.washPost(ctx, q.x, fy, t);
     if (q.hooked) { const c = brain.corner(b, k); ctx.strokeStyle = '#e8442e'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(c.x, c.y); ctx.quadraticCurveTo((c.x + q.x) / 2, (c.y + fy - 2.2 * TS) / 2 + 20, q.x, fy - 2.2 * TS); ctx.stroke(); ctx.beginPath(); ctx.ellipse(q.x, fy - 2.2 * TS, 10, 6, 0, 0, TAU); ctx.stroke(); ctx.strokeStyle = INK; ctx.lineWidth = 2; }
   });
@@ -241,12 +243,12 @@ TourHooks.on('afterEntities', (play, ctx) => {
   if (b.act === 'sweep' && b.hoops) for (const r of b.hoops) {
     if (r.done || b.at < r.go) continue;
     ctx.strokeStyle = '#e8442e'; ctx.lineWidth = 4;
-    if (r.kind === 'wide') { ctx.beginPath(); ctx.moveTo(r.x - 26, fy); ctx.lineTo(r.x - 26, fy - 40); ctx.lineTo(r.x + 26, fy - 40); ctx.lineTo(r.x + 26, fy); ctx.stroke(); ctx.fillStyle = '#ffd84a'; ctx.font = TourBackstage.F8; ctx.textAlign = 'center'; ctx.fillText('DUCK', r.x, fy - 50); }
-    else { ctx.beginPath(); ctx.ellipse(r.x, fy - 26, 26, 26, 0, 0, TAU); ctx.stroke(); ctx.fillStyle = '#ffd84a'; ctx.font = TourBackstage.F8; ctx.textAlign = 'center'; ctx.fillText('JUMP', r.x, fy - 60); }
+    if (r.kind === 'wide') { ctx.beginPath(); ctx.moveTo(r.x - 26, fy); ctx.lineTo(r.x - 26, fy - 40); ctx.lineTo(r.x + 26, fy - 40); ctx.lineTo(r.x + 26, fy); ctx.stroke(); WA.pill(ctx, r.x, fy - 58, 'DUCK', '#ffd84a'); }
+    else { ctx.beginPath(); ctx.ellipse(r.x, fy - 26, 26, 26, 0, 0, TAU); ctx.stroke(); WA.pill(ctx, r.x, fy - 68, 'JUMP', '#ffd84a'); }
   }
   if ((b.act === 'balloon' || b.act === 'shake') && b.pocket != null) {
     const k = b.act === 'balloon' ? Math.min(1, b.at / 1.8) : 1, px = b.pocket;
-    ctx.fillStyle = `rgba(244,234,210,${0.35 + 0.25 * k})`; ctx.strokeStyle = '#e8442e'; ctx.lineWidth = 3;
+    const pu = 0.5 + 0.5 * Math.sin(t * 8); ctx.fillStyle = `rgba(255,236,170,${0.3 + 0.2 * k + 0.15 * pu})`; ctx.strokeStyle = '#e8442e'; ctx.lineWidth = 3 + pu * 2;
     ctx.beginPath(); ctx.ellipse(px, fy - 1.6 * TS, (0.8 + 0.8 * k) * TS, (1 + 0.9 * k) * TS, 0, 0, TAU); ctx.fill(); ctx.stroke();
     ctx.strokeStyle = WA.NAVY_L; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.ellipse(px, fy - 1.6 * TS, (0.8 + 0.8 * k) * TS - 6, (1 + 0.9 * k) * TS - 6, 0, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
     if (b.act === 'shake') { ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 3; for (let q = 0; q < 6; q++) { const xx = b.arenaX0 + (q + 0.5) * (b.arenaX1 - b.arenaX0) / 6; ctx.beginPath(); ctx.moveTo(xx - 20, fy - 4 + Math.sin(t * 40 + q) * 4); ctx.lineTo(xx + 20, fy - 4 - Math.sin(t * 40 + q) * 4); ctx.stroke(); } }

@@ -214,7 +214,7 @@ class WashCrawler extends Ent {
     // a moth stops now and then to nibble a peephole and peer through it (the pause is the tell that it moves on)
     if (this.kind === 'moth') {
       if (this.nib > 0) { this.nib -= dt; return; }
-      if (Math.floor((this.t + this.ph) / 3.2) !== Math.floor((this.t + this.ph - dt) / 3.2)) { this.nib = 1.0; if (this.g.onScreen(this) && this.face === 0) this.g.parts.text(this.cx, this.y - 6, 'NIBBLE...', WK.WashArt.CREAM); return; }
+      if (Math.floor((this.t + this.ph) / 3.2) !== Math.floor((this.t + this.ph - dt) / 3.2)) { this.nib = 1.0; if (this.g.onScreen(this) && this.face === 0) Tour.washKit.say(this.g, this.cx, this.y - 6, 'NIBBLE...', WK.WashArt.CREAM); return; }
     }
     this.u += this.dirU * this.sp * TS * dt / this.len;
     if (this.u >= 1) { this.u = 1; this.dirU = -1; } if (this.u <= 0) { this.u = 0; this.dirU = 1; }
@@ -230,7 +230,7 @@ class WashCrawler extends Ent {
     if (!onNet && p.vy > 0 && p.prevBottom <= this.y + 12) { this.knock(); p.vy = -PHYS.stompV; p.jumping = true; this.g.addScore(100, this.cx, this.y); return; }
     p.hurt(this);
   }
-  knock() { if (this.dead) return; this.dead = true; this.vy = -4 * TS; Sound.play('stomp'); this.g.burst(this.cx, this.cy, 8, '#ffffff', 'dust'); if (this.kind === 'beetle') this.g.parts.text(this.cx, this.y - 8, 'MY TROUSERS!', '#ffffff'); }
+  knock() { if (this.dead) return; this.dead = true; this.vy = -4 * TS; Sound.play('stomp'); this.g.burst(this.cx, this.cy, 8, '#ffffff', 'dust'); if (this.kind === 'beetle') Tour.washKit.say(this.g, this.cx, this.y - 8, 'MY TROUSERS!', '#ffffff'); }
   hit(kind) { if (this.face === 1 && kind !== 'star') return false; this.knock(); return true; }
   touchPlayer() {}
   art(c, x, y, mode) { const A = this.kind === 'moth' ? WK.mothArt : WK.beetleArt; A(c, this, x, y, mode, this.t); }
@@ -273,13 +273,13 @@ class WashBeetleGate extends Ent {
     const W = p.wash, near = overlap(p, this.clipBox());
     if (near && W && W.grip && W.face === 1 && p.inp && p.inp.actionPressed) { g.keys.add(this.id); this.release(); return; }
     // the near face: he says where the peg is
-    if (near && (!W || W.face !== 1) && this.msgT <= 0) { this.msgT = 3; g.parts.text(this.cx, this.y - 10, 'MY PEG IS ROUND THE BACK!', WK.WashArt.CREAM); }
+    if (near && (!W || W.face !== 1) && this.msgT <= 0) { this.msgT = 3; Tour.washKit.say(g, this.cx, this.y - 10, 'MY PEG IS ROUND THE BACK!', WK.WashArt.CREAM); }
   }
   release() {
     if (this.open) return; this.open = true; this.vy = -3 * TS;
     for (const [x, y] of this.tiles) this.g.setTile(x, y, T.EMPTY);
     Sound.play('door', { vol: 0.6 }); TourKit.sfx('snap', 'kick', { vol: 0.5, pitch: 1.4 });
-    this.g.burst(this.cx, this.y, 16, WK.WashArt.CREAM, 'confetti'); this.g.parts.text(this.cx, this.y - 12, 'MY TROUSERS!', '#ffffff');
+    this.g.burst(this.cx, this.y, 16, WK.WashArt.CREAM, 'confetti'); Tour.washKit.say(this.g, this.cx, this.y - 12, 'MY TROUSERS!', '#ffffff');
     this.g.addScore(500, this.cx, this.y);
   }
   touchPlayer(p) {}
@@ -303,7 +303,7 @@ class WashBeetleGate extends Ent {
       ctx.save(); ctx.globalAlpha = far ? 1 : 0.45;
       WA.peg(ctx, x + this.side * 4, py + 22, 1.3, 0);
       ctx.restore();
-      if (far && p && overlap(p, this.clipBox())) { const k = 0.5 + 0.5 * Math.sin(t * 8); ctx.fillStyle = `rgba(255,216,74,${0.6 + 0.4 * k})`; ctx.font = TourBackstage.F9; ctx.textAlign = 'center'; ctx.fillText('THROW!', x, py - 14); }
+      if (far && p && overlap(p, this.clipBox())) { const k = 0.5 + 0.5 * Math.sin(t * 8); WA.pill(ctx, x, py - 16, 'THROW!', '#ffd84a', 0.7 + 0.3 * k); }
     }
     ctx.restore();
   }

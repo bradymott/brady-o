@@ -181,8 +181,8 @@ const looseRows = (() => {
   put(Gr, 140, 17, '4'); pit(Gr, 141, 154); put(Gr, 145, 12, 'n'); put(Gr, 151, 12, 'N'); put(Gr, 147, 14, 'R');
   ground(Gr, 155, 175, 18); put(Gr, 158, 17, 'c'); put(Gr, 156, 17, 'l'); put(Gr, 165, 14, '?'); put(Gr, 170, 17, 'K');
   // the last hem: the post on a thin floor; under it the retry ledge, steps back up to the post
-  fillG(Gr, 173, 19, 175, 25, '.'); fillG(Gr, 174, 18, 175, 18, 'H'); put(Gr, 175, 17, '5'); pit(Gr, 176, 187); ground(Gr, 172, 179, 23); ground(Gr, 178, 179, 21);
-  ground(Gr, 188, W - 1, 18); put(Gr, 192, 17, 'c'); fillG(Gr, 198, 15, 199, 17, 'H'); put(Gr, 198, 12, 'P'); put(Gr, 207, 17, 'G');
+  fillG(Gr, 173, 19, 174, 25, '.'); fillG(Gr, 173, 18, 174, 18, 'H'); ground(Gr, 173, 174, 23); fillG(Gr, 173, 21, 173, 22, 'H'); fillG(Gr, 175, 18, 176, 25, 'H'); put(Gr, 176, 17, '5'); pit(Gr, 177, 188);
+  ground(Gr, 189, W - 1, 18); put(Gr, 192, 17, 'c'); fillG(Gr, 198, 15, 199, 17, 'H'); put(Gr, 198, 12, 'P'); put(Gr, 207, 17, 'G');
   fillG(Gr, W - 1, 0, W - 1, 17, 'H');
   return rowsOf(Gr);
 })();

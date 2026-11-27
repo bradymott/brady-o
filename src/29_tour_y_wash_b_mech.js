@@ -132,16 +132,17 @@ class WashSeam extends Ent {
     const g = this.g, p = g.player, I = (p && p.inp) || {};
     if (!p || p.dead) { this.hold = false; return; }
     // the second thread (under his own feet): pull it and the floor here unzips: down to the ledge below
-    if (this.trap && !this.trapped && I.actionPressed && this.near(p, [this.tx - 1, this.ty]) && !this.hold) {
+    if (this.trap && !this.trapped && I.actionPressed && this.near(p, [this.tx - 2, this.ty]) && !this.hold) {
       this.trapped = true; for (const [x, y] of this.trap) g.setTile(x, y, T.EMPTY);
-      TourKit.sfx('rip', 'kick', { vol: 0.5, pitch: 0.8 }); g.parts.text(p.cx, p.y - 16, 'WRONG THREAD!', '#ffffff');
+      TourKit.sfx('rip', 'kick', { vol: 0.5, pitch: 0.8 }); Tour.washKit.say(g, p.cx, p.y - 16, 'WRONG THREAD!', '#ffffff');
       return;
     }
     if (!this.hold) {
       if (this.n < this.cells.length && I.actionPressed && this.near(p, this.end())) { this.hold = true; TourKit.sfx('grip', 'select', { vol: 0.35, pitch: 1.3 }); }
       return;
     }
-    if (!I.action || !p.onGround && p.vy > 4 * TS) { this.hold = false; return; }
+    // let go of THROW (or fall well below the seam) and the thread slips from his hand; a hop up a step keeps it
+    if (!I.action || (p.y + p.h) > (this.end()[1] + 2.5) * TS) { this.hold = false; return; }
     // holding the thread: the seam unzips two cells ahead of him as he walks along it
     const dir = this.cells.length && this.cells[0][0] < this.tx ? -1 : 1, front = p.cx / TS + dir * 2.2;
     while (this.n < this.cells.length && (dir > 0 ? this.cells[this.n][0] <= front : this.cells[this.n][0] >= front)) {
@@ -168,12 +169,12 @@ class WashSeam extends Ent {
       const can = p && this.near(p, this.end()) && !this.hold, wag = Math.sin(t * 5) * 5;
       ctx.strokeStyle = col; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(lx, ly); ctx.quadraticCurveTo(lx + 6, ly - 14, lx + 2 + wag, ly - 24); ctx.stroke();
       ctx.fillStyle = col; ctx.beginPath(); ctx.arc(lx + 2 + wag, ly - 25, 3.4, 0, TAU); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.stroke();
-      if (can) { const k = 0.5 + 0.5 * Math.sin(t * 7); ctx.fillStyle = `rgba(255,216,74,${0.6 + 0.4 * k})`; ctx.font = TourBackstage.F9; ctx.textAlign = 'center'; ctx.fillText('HOLD THROW', lx, ly - 36); }
+      if (can) { const k = 0.5 + 0.5 * Math.sin(t * 7); WA.pill(ctx, lx, ly - 40, 'HOLD THROW', '#ffd84a', 0.7 + 0.3 * k); }
       if (this.hold && p) { ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(lx, ly); ctx.quadraticCurveTo((lx + p.cx) / 2, ly + 6, p.cx + p.facing * 8, p.y + 26); ctx.stroke(); }
     }
     // the second thread (navy), running back under his feet
     if (this.trap && !this.trapped) {
-      const tx = (this.tx - 1) * TS + TS / 2, ty = this.ty * TS, wag = Math.sin(t * 4 + 1) * 4;
+      const tx = (this.tx - 2) * TS + TS / 2, ty = this.ty * TS, wag = Math.sin(t * 4 + 1) * 4;
       ctx.strokeStyle = WA.NAVY_L; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(tx, ty); ctx.quadraticCurveTo(tx - 6, ty - 12, tx - 2 + wag, ty - 22); ctx.stroke();
       ctx.fillStyle = WA.NAVY_L; ctx.beginPath(); ctx.arc(tx - 2 + wag, ty - 23, 3.4, 0, TAU); ctx.fill();
       ctx.setLineDash([3, 4]); ctx.beginPath(); for (const [x, y] of this.trap) { ctx.moveTo(x * TS, y * TS + 4); ctx.lineTo(x * TS + TS, y * TS + 4); } ctx.stroke(); ctx.setLineDash([]);
@@ -190,7 +191,7 @@ Tour.pieces['wash.seam'] = function (st, o) {
   let cy = y;
   for (let i = 1; i <= len; i++) { if (rise && i > 1 && (i - 1) % rise === 0) cy--; cells.push([tx + dir * i, cy]); }
   for (const [x, yy] of cells) B.set(x, yy, T.EMPTY);
-  const trap = o.trap ? Array.from({ length: o.trap }, (_, k) => [tx - 1 - k, y]) : null;
+  const trap = o.trap ? Array.from({ length: o.trap }, (_, k) => [tx - 2 - k, y]) : null;
   B.spawn('washSeam', tx, y - 1, { tx, y, cells, trap, col: o.col });
   return st.x;
 };
@@ -252,7 +253,7 @@ const onWool = (A, p) => { if (!p.onGround) return false; for (const z of A.zone
       ctx.strokeStyle = '#fff4a0'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - 6, y); for (let q = 0; q < 4; q++) ctx.lineTo(x - 6 + q * 4, y - (q % 2 ? 7 : 1) - Math.sin(a + q) * 2); ctx.stroke();
       ctx.fillStyle = '#ffd84a'; ctx.beginPath(); TourKit.star(ctx, x, y - 12, 4.5, 2, 4); ctx.fill();
     }
-    if (W.fresh > 0) { ctx.fillStyle = `rgba(255,244,160,${W.fresh})`; ctx.font = TourBackstage.F9; ctx.textAlign = 'center'; ctx.fillText('CRACKLE!', p.cx, p.y - 14); }
+    if (W.fresh > 0) WA.pill(ctx, p.cx, p.y - 34, 'CRACKLE!', '#fff4a0', Math.min(1, W.fresh * 2));
     ctx.restore();
   });
 }

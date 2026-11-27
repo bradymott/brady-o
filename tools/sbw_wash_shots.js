@@ -218,7 +218,7 @@ STAGES.cold = async ({ ev, shot, run, pano }) => {
     await ev(() => { fresh(); play('26-2'); place(8, 20); sim(0.3); freeze(); }); await shot('20-26-2-start.png');
     // the teach: straight off the roof onto the sweater, along it (the sleeve stretches ahead), off the cuff
     let r = await ev(() => {
-      thaw(); place(18, 20); sim(0.2); const sw = ents('WashSweater')[0], p = P();
+      thaw(); place(18, 20); sim(0.2); const sw = ents('WashSweater').find(e => e.tx0 === 21), p = P();
       for (let k = 0; k < 600 && p.cx < (sw.tx1 + 1) * 32 + 8; k++) sim(1 / 120, { right: true });
       const len = sw.len[1];
       for (let k = 0; k < 600 && p.cx < (sw.tx1 + len) * 32 + 4; k++) sim(1 / 120, { right: true });
@@ -259,7 +259,7 @@ STAGES.loose = async ({ ev, shot, run, pano }) => {
   await run('loose', async () => {
     await ev(ROOM_HELPERS);
     let r = await ev(() => {
-      fresh(); play('26-3'); place(18, 20); sim(0.3); const p = P(), sm = ents('WashSeam')[0];
+      fresh(); play('26-3'); place(18, 20); sim(0.3); const p = P(), sm = ents('WashSeam').find(e => e.tx === 18);
       press('action'); for (let k = 0; k < 900 && p.cx < 30 * 32; k++) sim(1 / 120, { action: true, right: true });
       sim(0.3); return { n: sm.n, of: sm.cells.length, at: at() };
     });
@@ -279,12 +279,12 @@ STAGES.loose = async ({ ev, shot, run, pano }) => {
     r = await ev(() => {
       thaw(); place(174, 17); sim(0.3); const p = P();
       press('action'); sim(1.0); const dropped = at();
-      walkTo(178.5 * 32, 8); sim(0.4, { jump: true, jumpPressed: true }); sim(0.5);
-      sim(0.5, { jump: true, jumpPressed: true, left: true }); sim(0.4, { left: true }); sim(0.5); walkTo(175 * 32 + 16, 6); const back = at();
-      press('action'); for (let k = 0; k < 900 && p.cx < 189 * 32; k++) sim(1 / 120, { action: true, right: true });
+      walkTo(173 * 32 + 16, 6); sim(0.4, { jump: true, jumpPressed: true }); sim(0.3);
+      sim(0.6, { jump: true, jumpPressed: true, right: true }); sim(0.3, { right: true }); sim(0.4); walkTo(176 * 32 + 16, 6); const back = at();
+      press('action'); for (let k = 0; k < 900 && p.cx < 190 * 32; k++) sim(1 / 120, { action: true, right: true });
       sim(0.3); return { dropped, back, at: at() };
     });
-    check('26-3: the last hem: the navy thread under his feet drops him to the retry ledge; back up, the red one unzips the bridge', r.dropped.y === 22 && r.back.x === 175 && r.back.y === 17 && r.at.x >= 188 && r.at.y === 17 && !r.at.dead, r);
+    check('26-3: the last hem: the navy thread under his feet drops him to the retry ledge; back up, the red one unzips the bridge', r.dropped.y === 22 && r.back.x === 176 && r.back.y === 17 && r.at.x >= 189 && r.at.y === 17 && !r.at.dead, r);
     // room B3: walk into the chimney's painted side
     await ev(() => { place(114, 17); sim(0.3); freeze(); }); await shot('33-26-3-room-chimney.png');
     r = await ev(() => { thaw(); place(117, 17); sim(0.2); walkTo(121 * 32 + 16, 6); sim(0.1, { up: true, upPressed: true }); for (let k = 0; k < 600 && (S().fade.a > 0.05 || P().state !== 'play'); k++) sim(1 / 120); return { area: S().area.aid }; });
