@@ -71,6 +71,17 @@ function enterRoom(g, lvl, k) {
     settle(g);
     return g.area.idx === k ? null : 'entered area ' + g.area.idx;
   }
+  // a seam (a pit or a gap in a ceiling) into the room: Brady goes through it the way a player falls or jumps
+  for (let j = 0; j < lvl.areas.length; j++) {
+    const sm = (lvl.areas[j].seams || []).find(s2 => s2.target && s2.target.area === k);
+    if (!sm) continue;
+    g.loadArea(j, lvl.areas[j].anchors.start ? lvl.areas[j].anchors.start.x : TS * 2, lvl.areas[j].anchors.start ? lvl.areas[j].anchors.start.y : TS * 2); g.player.invuln = 5;
+    const p = g.player, mid = (sm.a + sm.b + 1) / 2 * TS;
+    p.x = mid - p.w / 2; p.y = sm.side === 'bottom' ? (lvl.areas[j].H - 3) * TS : TS; p.vx = 0; p.vy = sm.side === 'bottom' ? 4 * TS : -12 * TS;
+    for (let q = 0; q < 600 && g.area.idx !== k; q++) frame(g, {});
+    settle(g);
+    return g.area.idx === k ? null : 'fell through the seam into area ' + g.area.idx;
+  }
   return 'no way in';
 }
 
@@ -174,6 +185,7 @@ function testRoom(id, lvl, k) {
     return finish(name, e0);
   }
   if (WIN[kit.kind]) WIN[kit.kind](g, A, R, kit);
+  else if (Rooms.kinds[kit.kind] && Rooms.kinds[kit.kind].testWin) Rooms.kinds[kit.kind].testWin(g, A, R, kit, frame);   // a land's own kind scripts its own win
   if (!NOGAME[kit.kind]) check(name + ': the game is won', R.won, { phase: R.phase });
   // the cage opens; every prize box gives its prize
   const cage = g.entities.find(e => e.constructor.name === 'TourRoomCage');

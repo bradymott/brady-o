@@ -153,24 +153,7 @@ async function session(viewport, fn) {
       check('17-1: real inputs: cross the ribbon that fades toward you before the fade meets you', r.ok && r.alive, r);
       await ev(() => { thaw(); play('17-1'); place(92, 14); const rb = ents('IsRibbon').find(e => Math.floor(e.x0 / 32) === 93); for (let k = 0; k < 500 && rb.S.front < 0; k++) sim(0.02); sim(0.6); freeze(); });
       await shot('13-17-1-reverse-ribbon.png');
-      // the hidden folk's door on the ridge: up the blinking ribbon to the ledge, in through the painted door
-      r = await ev(() => {
-        thaw(); play('17-1'); place(109, 14); sim(0.3);
-        const rb = ents('IsRibbon').find(e => Math.floor(e.x0 / 32) === 106);
-        for (let k = 0; k < 300 && !rb.dead; k++) sim(0.02);
-        for (let k = 0; k < 300 && rb.dead; k++) sim(0.02);
-        sim(0.05, { left: true, jump: true, jumpPressed: true }); sim(0.5, { left: true, jump: true });
-        sim(0.25, { left: true });
-        const on1 = P().onGround && ty() === 11;
-        sim(0.05, { left: true, jump: true, jumpPressed: true }); sim(0.45, { left: true, jump: true }); sim(0.3, { left: true });
-        const ledge = ty() === 8 && P().onGround;
-        sim(0.3); const d = S().entities.filter(e => e.kind === 'door' || e.constructor.name === 'Portal').sort((a, b) => Math.abs(a.cx - P().cx) - Math.abs(b.cx - P().cx))[0];
-        if (d) { place(Math.floor(d.cx / 32), 8); sim(0.4); sim(0.4, { up: true, upPressed: true }); sim(1.5); }
-        return { on1, ledge, door: d && Math.round(d.cx / 32), area: S().area.aid };
-      });
-      check('17-1: real inputs: up the blinking ribbon to the ridge and through the painted door to the hidden folk', r.ledge && r.area === 'huldu', r);
-      await ev(() => { sim(0.3); place(12, 11); sim(0.3); freeze(); });
-      await shot('14-17-1-hidden-folk-room.png');
+      // (the hidden folk's ridge and its room: the 'secrets' run below)
       await ev(() => { thaw(); play('17-1'); place(120, 14); const rb = ents('IsRibbon').find(e => Math.floor(e.x0 / 32) === 115); sim(0.1); freeze(); });
       await shot('15-17-1-puffins-over-ribbons.png');
       // the last stretch: three sweeping ribbons in a chain over one long pit (real inputs, a jump at each end)
@@ -295,11 +278,7 @@ async function session(viewport, fn) {
       check('17-4: real inputs: the twist: fast pipes and lifts', r.ok && r.alive, r);
       r = await ev(() => { thaw(); play('17-4'); place(156, 11); sim(0.2); const ok = hop(185, 12); return { ok, x: tx(), alive: alive() }; });
       check('17-4: real inputs: the last stretch of the fastest pipes', r.ok && r.alive, r);
-      // the lift up to the steaming crack, and in
-      r = await ev(() => { thaw(); play('17-4'); const pp = pipeAt(79); place(79, 11); waitFor(() => pp.rest - pp.y > 4.8 * 32, 4); sim(0.05, { right: true, jump: true, jumpPressed: true }); sim(0.5, { right: true, jump: true }); sim(0.4, { right: true }); const top = ty(); place(85, 4); sim(0.4); sim(0.4, { up: true, upPressed: true }); sim(1.5); return { top, area: S().area.aid }; });
-      check('17-4: real inputs: ride the lift and jump to the crater shelf; the crack leads to the vent', r.top === 4 && r.area === 'vent', r);
-      await ev(() => { sim(0.3); place(12, 11); sim(0.3); freeze(); });
-      await shot('42-17-4-vent.png');
+      // (the tall lift, the crater rim and the vent: the 'secrets' run below)
       await ev(() => { thaw(); play('17-4'); place(46, 11); sim(0.6); freeze(); });
       await shot('43-17-4-lava-lake.png');
       await ev(() => { thaw(); play('17-4'); place(130, 11); sim(0.4); freeze(); });
@@ -319,6 +298,72 @@ async function session(viewport, fn) {
       await ev(() => { sim(0.5); freeze(); });
       await shot('52-17-5-troll-cave.png');
       await pano('17-5', null, '53-17-5-panorama.png');
+    });
+    // ---------------- the secret rooms: every entrance found with real inputs, every game failed once and won ----------------
+    await run('secrets', async () => {
+      const kitOf = () => S().area.roomKit, R = () => S().area.roomState;
+      // 17-1: the folk's ridge above the view: the coin trail up a blinking ribbon; up two ribbons, in at the rock door
+      await ev(() => { thaw(); play('17-1'); place(108, 14); sim(0.4); freeze(); }); await shot('100-17-1-secret-tell-coin-trail.png');
+      let r = await ev(() => {
+        thaw(); play('17-1'); place(109, 14); sim(0.3);
+        const u = ents('IsRibbon').find(e => Math.floor(e.x0 / 32) === 106);
+        for (let k = 0; k < 300 && !u.dead; k++) sim(0.02); for (let k = 0; k < 300 && u.dead; k++) sim(0.02);
+        sim(0.05, { left: true, jump: true, jumpPressed: true }); sim(0.45, { left: true, jump: true }); sim(0.15);
+        const on1 = ty();
+        sim(0.05, { jump: true, jumpPressed: true }); sim(0.4, { jump: true }); sim(0.2);
+        const on2 = ty();
+        sim(0.05, { jump: true, jumpPressed: true }); sim(0.45, { jump: true }); sim(0.3); sim(0.5, { left: true }); sim(0.2);
+        const ledge = ty();
+        const d = ents('Portal').find(e => e.target && Math.abs(e.cx - P().cx) < 6 * 32); if (d) { walk(Math.floor(d.cx / 32), 2); sim(0.3, { up: true, upPressed: true }); sim(1.5); }
+        return { on1, on2, ledge, area: S().area.aid };
+      });
+      check('17-1 secret: real inputs: up two blinking ribbons to the ledge above the view, in at the rock door', r.ledge === 5 && r.area === 'huldu', r);
+      r = await ev(() => { const g = S(), A = g.area, R = A.roomState, bells = ents('IsBell'), tune = A.roomKit.data.tune; P().x = bells[0].cx + 128; for (let k = 0; k < 1000 && R.demo > 0; k++) sim(1 / 120); const wrong = bells.find(b => b.k !== tune[0]); P().x = wrong.cx - P().w / 2; P().y = wrong.y + wrong.h - P().h; P().vy = 0; sim(0.06); const failed = R.demo > 0 && !R.won; P().x = bells[0].cx + 128; for (let k = 0; k < 1000 && R.demo > 0; k++) sim(1 / 120); for (const k of tune) { const b = bells.find(e => e.k === k); P().x = b.cx - P().w / 2; P().y = b.y + b.h - P().h; sim(0.06); P().x = b.cx + 80; sim(0.06); } return { failed, won: R.won }; });
+      check('17-1 THE FOLK\'S BELLS: a wrong bell rings flat and the tune replays; the tune rung back wins', r.failed && r.won, r);
+      await ev(() => { sim(0.6); freeze(); }); await shot('101-17-1-folk-bells.png');
+      r = await ev(() => { thaw(); const d = ents('Portal').find(e => e.target); P().x = d.cx - P().w / 2; sim(0.3); sim(0.3, { up: true, upPressed: true }); sim(1.5); return { area: S().area.aid, x: tx() }; });
+      check('17-1: the bells room\'s door lets Brady out at the foot of the ridge (not the ledge he came in by)', r.area === 'field' && r.x >= 104 && r.x <= 108, r);
+      // 17-2: a crack in the glacier above the second stretch (cold mist puffs, a tiny painted door): ride the rising floe up
+      await ev(() => { thaw(); play('17-2'); place(137, 6); sim(0.4); freeze(); }); await shot('102-17-2-secret-tell-crack.png');
+      r = await ev(() => { thaw(); play('17-2'); place(133, 13); sim(0.3); const f = S().entities.find(e => e.skin === 'isFloe' && Math.floor(e.hx / 32) === 134); for (let k = 0; k < 400 && !(Math.abs(f.y - f.hy) < 4); k++) sim(0.02); sim(0.05, { jump: true, jumpPressed: true }); sim(0.3, { jump: true, right: true }); sim(0.3); const onFloe = P().ride === f; for (let k = 0; k < 400 && f.y > f.hy - 2.9 * 32; k++) sim(0.02); sim(0.05, { right: true, jump: true, jumpPressed: true }); sim(0.3, { right: true, jump: true }); sim(0.3, { right: true }); const shelf = ty(); walk(139, 2); sim(0.3); sim(0.3, { up: true, upPressed: true }); sim(1.5); return { onFloe, shelf, area: S().area.aid }; });
+      check('17-2 secret: real inputs: ride the floe up to the glacier shelf, in at the crack', r.area === 'cave', r);
+      r = await ev(() => { const R = S().area.roomState, kit = S().area.roomKit; P().x += 160; for (let k = 0; k < 4000 && R.phase !== 'rest'; k++) sim(1 / 120); const failed = R.phase === 'rest' && !R.won; for (let k = 0; k < 400 && R.phase !== 'run'; k++) sim(1 / 120); for (const e of S().entities.filter(e => e.constructor.name === 'TourMazeKey' || e.isKey || (e.id && String(e.id).startsWith('tok:')))) { P().x = e.cx - P().w / 2; P().y = e.y + e.h - P().h; sim(0.08); } return { failed, won: R.won }; });
+      check('17-2 THE PUFFIN EGG ROUNDUP: time runs out once (the round restarts), then every egg is grabbed in time', r.failed && r.won, r);
+      await ev(() => { sim(0.6); freeze(); }); await shot('103-17-2-egg-roundup.png');
+      r = await ev(() => { thaw(); const d = ents('Portal').find(e => e.target); P().x = d.cx - P().w / 2; P().y = 11 * 32 - P().h; P().vy = 0; sim(0.3); sim(0.3, { up: true, upPressed: true }); sim(1.5); return { area: S().area.aid, x: tx() }; });
+      check('17-2: the ice cave lets Brady out further along the lagoon (by checkpoint 2)', r.area === 'lagoon' && r.x >= 145, r);
+      // 17-3: the one crack in the flat with steam in it: walk into it on purpose
+      await ev(() => { thaw(); play('17-3'); place(109, 14); sim(0.4); freeze(); }); await shot('104-17-3-secret-tell-steam.png');
+      r = await ev(() => { thaw(); play('17-3'); place(109, 14); sim(0.3); sim(1.6, { right: true }, () => { if (S().area.aid !== 'rift') return false; }); sim(1.5); return { area: S().area.aid, alive: alive() }; });
+      check('17-3 secret: real inputs: walking into the steaming fissure drops Brady into the lava tube (alive)', r.area === 'tube' && r.alive, r);
+      r = await ev(() => { const R = S().area.roomState; P().x = S().area.W * 16; for (let k = 0; k < 900 && !(R.mobs && R.mobs.length); k++) sim(1 / 120); const barred = !!R.bars; for (let w = 0; w < 30 && !R.won; w++) { for (const m of (R.mobs || [])) if (!m.dead && !m.remove) m.hit('stomp', P()); sim(0.5); } return { barred, won: R.won }; });
+      check('17-3 THE SHEEP SHELTER: the door bars, the rams drop in; stomped, the shelter opens', r.barred && r.won, r);
+      await ev(() => { sim(0.6); freeze(); }); await shot('105-17-3-sheep-shelter.png');
+      r = await ev(() => { thaw(); const d = ents('Portal').find(e => e.target); P().x = d.cx - P().w / 2; sim(0.3); sim(0.3, { up: true, upPressed: true }); sim(1.5); return { area: S().area.aid, x: tx() }; });
+      check('17-3: the lava tube lets Brady out past the fissure', r.area === 'rift' && r.x >= 116, r);
+      // 17-4: the coin trail up the tall lift column; ride it above the view, run the crater rim to the steaming vent
+      await ev(() => { thaw(); play('17-4'); place(78, 11); sim(0.4); freeze(); }); await shot('106-17-4-secret-tell-lift.png');
+      r = await ev(() => { thaw(); play('17-4'); place(79, 11); const pp = ents('IsPipe').find(e => Math.floor(e.x / 32) === 79); waitFor(() => pp.rest - pp.y > 8.6 * 32, 6); sim(0.05, { right: true, jump: true, jumpPressed: true }); sim(0.4, { right: true, jump: true }); sim(0.3, { right: true }); const rim = ty(); const ok = hop(107, 8); walk(108, 1); sim(0.3); sim(0.3, { up: true, upPressed: true }); sim(1.5); return { rim, ok, area: S().area.aid }; });
+      check('17-4 secret: real inputs: the lift above the view, the run along the crater rim, in at the vent', r.rim === 2 && r.area === 'vent', r);
+      await ev(() => { thaw(); play('17-4'); place(96, 2); sim(0.3); freeze(); }); await shot('107-17-4-crater-rim-run.png');
+      r = await ev(() => { thaw(); play('17-4'); toArea('vent'); sim(0.5); const R = S().area.roomState, kit = S().area.roomKit, keys = ents('IsOrganKey'), on = e => { P().x = e.cx - P().w / 2; P().y = e.y - P().h; P().vy = 0; sim(0.12); P().x = S().area.anchors.in.x + 40; P().y = 11 * 32 - P().h; sim(0.12); }; on(keys.find(e => e.k === kit.data.tune[0])); on(keys.find(e => e.k !== kit.data.tune[1] && e.k !== kit.data.tune[0])); const failed = R.step === 0 && !R.won; for (const k of kit.data.tune) on(keys.find(e => e.k === k)); return { failed, won: R.won }; });
+      check('17-4 THE TROLL\'S LULLABY: a wrong pipe plays a sour chord (from the top); the slate\'s tune wins', r.failed && r.won, r);
+      await ev(() => { sim(0.6); freeze(); }); await shot('108-17-4-trolls-lullaby.png');
+      r = await ev(() => { thaw(); const d = ents('Portal').find(e => e.target); P().x = d.cx - P().w / 2; P().y = 11 * 32 - P().h; sim(0.3); sim(0.3, { up: true, upPressed: true }); sim(1.5); return { area: S().area.aid, x: tx() }; });
+      check('17-4: the vent lets Brady out on the ledge before checkpoint 2', r.area === 'crater' && r.x >= 114, r);
+      // 17-5: the turf hut (the land's one plain door): three bowls of skyr (the shuffle is played by sbw_rooms_test)
+      r = await ev(() => { thaw(); play('17-5'); place(13, 12); sim(0.3); sim(0.3, { up: true, upPressed: true }); sim(1.5); return { area: S().area.aid, kind: S().area.roomKit && S().area.roomKit.kind }; });
+      check('17-5: the turf hut holds three bowls of skyr (a shell game)', r.area === 'hut' && r.kind === 'shell', r);
+      await ev(() => { sim(4); freeze(); }); await shot('109-17-5-skyr-bowls.png');
+      // 17-6: the folk's door in a rock is there only while Brady looks back
+      await ev(() => { thaw(); play('17-6'); place(83, 14); sim(0.4); freeze(); }); await shot('110-17-6-secret-tell-before.png');
+      r = await ev(() => { thaw(); play('17-6'); place(85, 14); sim(0.3); sim(0.3, { up: true, upPressed: true }); sim(1.0); const ahead = S().area.aid; sim(0.05, { action: true, actionPressed: true }); sim(0.3); sim(0.3, { up: true, upPressed: true }); sim(1.5); return { ahead, area: S().area.aid }; });
+      check('17-6 secret: real inputs: the rock door does nothing while Brady looks ahead; looking back (THROW) it lets him in', r.ahead === 'folk' && r.area === 'house', r);
+      r = await ev(() => { const R = S().area.roomState, p = P(), L = ents('IsFolkLight'); p.isLookBack = false; sim(0.1); const e0 = L[0]; p.x = e0.cx - 14 - p.w / 2; p.y = e0.y + e0.h - p.h; sim(0.1); const failed = !R.got; sim(0.05, { action: true, actionPressed: true }); sim(0.1); for (const e of L) { p.x = e.cx - 14 - p.w / 2; p.y = e.y + e.h - p.h; p.vy = 0; sim(0.06); } return { failed, won: R.won, look: !!p.isLookBack }; });
+      check('17-6 THE SHY LANTERNS: looking at a lantern it is not there; looking back Brady gathers all five', r.failed && r.won, r);
+      await ev(() => { sim(0.6); freeze(); }); await shot('111-17-6-shy-lanterns.png');
+      r = await ev(() => { thaw(); const d = ents('Portal').find(e => e.target); P().x = d.cx - P().w / 2; P().y = 11 * 32 - P().h; sim(0.3); sim(0.3, { up: true, upPressed: true }); sim(1.5); return { area: S().area.aid, x: tx() }; });
+      check('17-6: the folk\'s parlour lets Brady out past the twist, by checkpoint 2', r.area === 'folk' && r.x >= 104, r);
     });
     // ---------------- the land's map ----------------
     await run('owmap', async () => {
