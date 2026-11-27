@@ -80,6 +80,80 @@ module.exports = async ({ page, check, shot }) => {
   check('np: after the finale, the tour ending scene plays', r.ending === true, r);
   check('np: Brady never died during the test', !(await died()), await died());
 
+  // ---- fairness (26 Nov): the hurt box is the drawn body; he hovers to one side; he gloats after a throw; mercy after a hit ----
+  await ev(() => { start('12-5'); enterArena(); });
+  // the drawn art of each form (pixels, no ink) must contain its hurt box; just outside the hurt box Brady is safe, inside he is hit
+  const fair = async (label, setup) => ev(([label, setup]) => {
+    const b = boss(), p = P(); eval(setup)(b); sim(0.05);
+    const c = document.createElement('canvas'); c.width = 700; c.height = 700; const x = c.getContext('2d'); const ox = 350 - b.cx, oy = 350 - (b.y + b.h / 2); x.translate(ox, oy); b.brain.draw(b, x, b.t);
+    const d = x.getImageData(0, 0, 700, 700).data, R = b.brain.body(b); let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+    for (let py = 0; py < 700; py++) for (let px = 0; px < 700; px++) if (d[(py * 700 + px) * 4 + 3] > 100) { const wx = px - ox, wy = py - oy; x0 = Math.min(x0, wx); x1 = Math.max(x1, wx); y0 = Math.min(y0, wy); y1 = Math.max(y1, wy); }
+    const inside = R.x >= x0 - 1 && R.x + R.w <= x1 + 1 && R.y >= y0 - 1 && R.y + R.h <= y1 + 1;
+    // touch tests: big Brady level with the middle of the hurt box, 4 px clear of its side (safe) and 6 px into it (hit)
+    const probe = dx => { p.setPower(1, true); p.growT = 0; p.invuln = 0; p.state = 'play'; p.dead = false; b.hurtT = 0; b.vuln = false; p.vx = 0; p.vy = 0;
+      p.x = dx < 0 ? R.x - p.w - 4 : R.x + R.w - 6; p.y = R.y + R.h / 2 - p.h / 2; p.prevBottom = p.y + p.h; const pw = p.power; b.touchPlayer(p); return p.power < pw; };
+    const clear = probe(-1), hit = probe(1);
+    p.invuln = 999; p.setPower(1, true);
+    return { label, inside, clear, hit, body: [Math.round(R.x - b.x), Math.round(R.y - b.y), R.w, Math.round(R.h)], box: [b.w, b.h], art: [Math.round(x0 - b.x), Math.round(y0 - b.y), Math.round(x1 - x0), Math.round(y1 - y0)] };
+  }, [label, setup.toString()]);
+  for (const [label, setup] of [
+    ['Showtrunk', b => { b.go('walk'); }],
+    ['Showtrunk swooping', b => { b.go('swoop'); sim(1); }],
+    ['Showstopper mech', b => { b.hurtT = 0; b.damage(1); b.hurtT = 0; b.damage(1); b.hurtT = 0; b.damage(1); sim(4); b.go('walk'); }],
+    ['mech charging', b => { b.go('charge'); sim(1); }],
+    ['Piwi on foot', b => { b.hurtT = 0; b.damage(1); b.hurtT = 0; b.damage(1); b.hurtT = 0; b.damage(1); sim(2); b.go('taunt'); }],
+  ]) {
+    r = await fair(label, setup);
+    check(`np: ${label}: the hurt box sits inside the drawn body; 4 px beside it is safe, touching it hurts`, r.inside && !r.clear && r.hit, r);
+  }
+  // phase 1 from a fresh fight: he hovers to one side of Brady, high enough for big Brady to stand on a landmark under him, slower than Brady walks
+  await ev(() => { start('12-5'); enterArena(); });
+  r = await ev(() => { const b = boss(), p = P(); p.setPower(1, true); p.growT = 0; p.invuln = 999; let minDx = 1e9, maxV = 0, low = 1e9;
+    // Brady stands at a spot across the summit; Piwi comes over: his top speed on the way, how close he settles, how low he flies
+    for (const f of [0.2, 0.8, 0.5, 0.1]) { p.x = b.arenaX0 + f * (b.arenaX1 - b.arenaX0); p.y = b.floorY - p.h; p.vx = 0; let ox = b.x;
+      for (let k = 0; k < 100; k++) { sim(1 / 40); if (b.act !== 'walk') b.go('walk'); maxV = Math.max(maxV, Math.abs(b.x - ox) * 40); ox = b.x; const R = b.brain.body(b); low = Math.min(low, b.floorY - (R.y + R.h)); if (k > 80) minDx = Math.min(minDx, Math.abs(R.x + R.w / 2 - p.cx)); } }
+    return { minDx: Math.round(minDx), maxSpeed: Math.round(maxV), lowest: Math.round(low), bigOnJar: 32 + p.h, walk: 6.2 * 32 }; });
+  check('np: the Showtrunk keeps to one side of Brady (never over him), slower than he walks, above big Brady on a landmark', r.minDx > 33 + 11 && r.maxSpeed < r.walk && r.lowest > r.bigOnJar, r);
+  // after a throw he holds still to gloat: the opening to kick the landmark back
+  r = await ev(() => { const b = boss(); b.thrown = 0; b.go('throw'); let t = 0; while (b.act === 'throw' && t < 3) { sim(0.05); t += 0.05; } const x0 = b.x, a = b.act; let still = 0; while (b.act === 'gloat' && still < 5) { sim(0.05); still += 0.05; } return { after: a, still: +still.toFixed(2), moved: Math.round(Math.abs(b.x - x0)) }; });
+  check('np: after a throw Piwi gloats in place for over a second (the opening)', r.after === 'gloat' && r.still >= 1.2 && r.moved < 8, r);
+  // mercy: once he hurts Brady he starts no new attack for a moment
+  r = await ev(() => { const b = boss(), p = P(); for (const e of S().entities) if (e.landmark) e.remove = true; b.go('walk'); b.at = 1.4; p.invuln = 0; p.setPower(1, true); sim(0.02); b.go('walk'); b.at = 1.4; p.hurt(b); const acts = []; for (let k = 0; k < 30; k++) { sim(0.05); acts.push(b.act); } p.invuln = 999; return { acts: [...new Set(acts)] }; });
+  check('np: after Piwi hurts Brady he backs off and starts no attack for 1.5 s', r.acts.length === 1 && r.acts[0] === 'walk', r);
+
+  // ---- the walls (26 Nov: Brady popped through the door wall and walked out to the gate mid-fight) ----
+  for (const [label, side, setup, hit] of [
+    ['the Showtrunk crashes on Brady at the door wall', 1, b => { b.hp = 5; b.x = b.arenaX1 - b.w; b.go('walk'); }, b => b.damage(1)],
+    ['the Showtrunk crashes on Brady at the entrance', -1, b => { b.hp = 5; b.x = b.arenaX0; b.go('walk'); }, b => b.damage(1)],
+    ['the mech is hit standing over Brady at the door wall', 1, b => { b.hurtT = 0; b.damage(1); b.hurtT = 0; b.damage(1); b.hurtT = 0; b.damage(1); sim(4); b.x = b.arenaX1 - b.w; b.go('walk'); }, b => { b.hurtT = 0; b.damage(1); }],
+  ]) {
+    await ev(() => { start('12-5'); enterArena(); });
+    r = await ev(([side, setup, hit]) => {
+      const b = boss(), p = P(), g = S(); p.setPower(1, true); p.growT = 0; eval(setup)(b); sim(0.05);
+      p.x = side > 0 ? b.arenaX1 - p.w : b.arenaX0; p.y = b.floorY - p.h; p.vx = 0; p.vy = 0; p.invuln = 999; eval(hit)(b);
+      let lo = p.x, hi = p.x + p.w; for (let k = 0; k < 100; k++) { sim(0.05); lo = Math.min(lo, p.x); hi = Math.max(hi, p.x + p.w); }
+      for (let k = 0; k < 40; k++) sim(0.05, side > 0 ? { right: true } : { left: true });
+      return { outBy: Math.round(Math.max(b.arenaX0 - lo, hi - b.arenaX1, 0)), x: Math.round(p.x), arena: [b.arenaX0, b.arenaX1], state: g.state, fighting: b.state };
+    }, [side, setup.toString(), hit.toString()]);
+    check(`np: walls: ${label}: Brady is never pushed through it`, r.outBy === 0 && r.state === 'play', r);
+  }
+  // and even if Brady stood past the door, the gate would not end the level while Piwi fights
+  r = await ev(() => { const b = boss(), g = S(), p = P(); const gate = g.entities.find(e => e.constructor && e.constructor.name === 'Gate'); p.x = gate.cx - p.w / 2; p.y = gate.y + gate.h - p.h; p.vy = 0; sim(0.5); return { state: g.state, fighting: b.state, x: Math.round(p.x), x1: b.arenaX1 }; });
+  check('np: walls: the summit gate does nothing while Piwi still fights (Brady is held in the arena)', r.state === 'play' && r.x + 22 <= r.x1, r);
+
+  // ---- the yak (26 Nov: Brady was drawn twice, one on the yak and one running behind it) ----
+  // every drawing of Brady reads Save.data.look once: riding the yak must not add a read per frame
+  const looks = () => page.evaluate(() => new Promise(res => { const D = window.BRADY.Save.data, v = D.look; let n = 0, f = 0; Object.defineProperty(D, 'look', { configurable: true, enumerable: true, get() { n++; return v; }, set() {} }); const tick = () => { if (++f < 13) requestAnimationFrame(tick); else { delete D.look; D.look = v; res(n / 12); } }; requestAnimationFrame(tick); }));
+  for (const pw of [0, 1, 2]) {
+    await ev(pw => { start('12-2', { lead: true }); const p = P(); p.collect('sig:yak'); p.setPower(pw, true); p.growT = 0; p.invuln = 0; sim(0.4, { right: true }); }, pw);
+    const ride = await looks();
+    await ev(() => { window.__sig = P().sig; P().sig = null; });
+    const walk = await looks();
+    await ev(() => { P().sig = window.__sig; });
+    if (pw === 1) await shot('np_yak_big.png');
+    check(`np: riding the yak (power ${pw}) Brady is drawn once`, Math.abs(ride - walk) < 0.5, { ride, walk });
+  }
+
   // ---- 12-7 FORT: the Tin Yak (mini-boss, 3 hp, 2 phases): dodge its charge so it rams a crate wall, stomp it while stuck ----
   await ev(() => { start('12-7'); enterArena(); }); await safe(); await watch();
   r = await ev(() => { const b = boss(), g = S(); return { state: b.state, hp: b.hp, name: b.name, walls: g.entities.filter(e => e.crateWall && !e.remove).length, mid: b.mid }; });

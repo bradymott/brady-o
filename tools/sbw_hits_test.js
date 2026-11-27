@@ -49,8 +49,10 @@ G.run('(' + function () {
     const ents = g.entities.length, shake = g.shakeAmt;
     p.state = 'play'; p.dead = false; p.grabbedBy = null; p.mounted = false; p.stunT = 0; p.star = 0; p.carrying = null;
     __load(p, { power: 1, hands: 'gear:plane', jump: 'beans' }); p.invuln = 0;
-    const bottom = how === 'mid' ? e.y + e.h * 0.6 + p.h / 2 : e.y + e.h;
-    p.x = s < 0 ? e.x - p.w + 6 : e.x + e.w - 6; p.y = Math.min(bottom, e.y + e.h + p.h - 4) - p.h; p.vx = 0; p.vy = 0; p.prevBottom = p.y + p.h;
+    // a boss whose brain names a hurt box smaller than its hit box (brain.body, e.g. Piwi in 12-5) is probed at that box
+    const R = e.boss && e.brain && e.brain.body ? e.brain.body(e) : e;
+    const bottom = how === 'mid' ? R.y + R.h * 0.6 + p.h / 2 : R.y + R.h;
+    p.x = s < 0 ? R.x - p.w + 6 : R.x + R.w - 6; p.y = Math.min(bottom, R.y + R.h + p.h - 4) - p.h; p.vx = 0; p.vy = 0; p.prevBottom = p.y + p.h;
     let err = null;
     try {
       if (e.enemy && !e.dead && !e.boss) { if (!(e.friendly || e.friendT)) e.touchPlayer(p); }

@@ -351,12 +351,25 @@ const power = {
       }
     }
   },
-  drawOn(p, ctx, t) {
-    // the yak, then Brady again sitting up on its saddle (the walking Brady underneath is hidden by the yak)
-    yakArt(ctx, p.cx, p.y + p.h + 1, p.facing, t, p.onGround && Math.abs(p.vx) > 30, p._charge > 0);
-    drawBrady(ctx, { x: p.cx - p.facing * 3, y: p.y + p.h - 27, facing: p.facing, small: p.small, power: p.power, anim: { state: p.onGround ? 'idle' : 'jump', t: p.anim.t, phase: 0 }, hair: p.hair, look: Save.data.look, time: t, held: 'joint' });
-  }
+  // the yak and Brady on its back are drawn by the player's own draw (below): nothing extra over the top
+  drawOn() {}
 };
+// riding the yak: the yak first, then the one and only Brady (the player's own drawing, ink and all) lifted onto its
+// back, standing. (It used to draw a second Brady over the yak while the running Brady still showed behind it.)
+const YAK_LIFT = 27;
+function npYakRider(p) { return p.sig && p.sig.id === 'yak' && !p.dead && p.state !== 'portal' && p.state !== 'dying' && !p.mounted && !p.pupoRide; }
+{
+  const pd0 = Player.prototype.draw;
+  Player.prototype.draw = function (ctx, t) {
+    if (!npYakRider(this)) return pd0.call(this, ctx, t);
+    const run = this.onGround && Math.abs(this.vx) > 30, charge = this._charge > 0, bob = run ? Math.abs(Math.sin(t * (charge ? 22 : 12))) * 2 : 0;
+    yakArt(ctx, this.cx, this.y + this.h + 1, this.facing, t, run, charge);
+    const a = this.anim, st = a.state;
+    if (st !== 'throw' && st !== 'die' && st !== 'hurt') a.state = this.onGround ? 'idle' : 'jump';
+    ctx.save(); ctx.translate(-this.facing * 3, -(YAK_LIFT + bob));
+    try { return pd0.call(this, ctx, t); } finally { ctx.restore(); a.state = st; }
+  };
+}
 
 /* ---------------- entities ---------------- */
 // a little yak pen: the yak inside is happy to carry Brady for a while
@@ -869,10 +882,28 @@ function mechArt(ctx, b, t) {
   // the laser's aiming line: the tell
   if (P === 'aim' && b.aimY != null) { const q = Math.min(1, b.at / 0.9); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(255,80,80,${0.3 + 0.6 * q})`; ctx.lineWidth = 1 + q * 2; ctx.setLineDash([8, 6]); ctx.beginPath(); ctx.moveTo(b.cx + b.dir * 20, b.aimY); ctx.lineTo(b.dir > 0 ? b.arenaX1 : b.arenaX0, b.aimY); ctx.stroke(); ctx.setLineDash([]); ctx.restore(); }
 }
+/* FAIRNESS (Brady's 26 Nov feedback: "seems impossible ... make it just a touch easier"). Measured with a scripted
+   player (big Brady) before the change: the Showtrunk's hit box was 140 px wide while the trunk drawn is 70 (half the box
+   was empty air beside it); it hovered 77 px over the floor, right over Brady (30 px off his centre), so big Brady
+   standing on a landmark or hopping at it touched the trunk, and a kick could not lob a jar at a Piwi straight overhead.
+   Now: Piwi only hurts where his body is drawn (NP_BODY, a little inside the art); the Showtrunk hovers higher and to
+   one side of Brady, slower than Brady walks; after every throw he holds still to gloat (the opening to kick it back);
+   after he hurts Brady he backs off for a moment (mercy) and starts no new attack. */
+// swoopK: the swoop's height: big Brady standing clears it by 9 px, Brady on a ledge by 1 px
+const NP = { swoopK: 1.72, hoverK: 3.0, follow: 4.2, side: 2.6, swoop: 6, gloat: [1.6, 1.3, 1.1], mercy: 1.6, run: 5 };
+// Piwi's hurt box, in world px, by phase: the trunk and its open lid (not the rotor blades, the hanging cage or the jars);
+// the mech's crate body and lattice legs (not the windmill or the club held out); Piwi himself on foot
+function NP_BODY(b) {
+  const ph = b.phase || 1;
+  if (ph === 1 || (b.act === 'crash' && !b.landed)) return { x: b.cx - 33, y: b.y + 12, w: 66, h: 64 };
+  if (b.h >= 110) return { x: b.cx - 38, y: b.y + 14, w: 76, h: b.h - 14 };
+  return { x: b.cx - 14, y: b.y + 6, w: 28, h: b.h - 6 };
+}
 const boss = {
   id: 'np_baron', name: 'Piwi Squirmin\'', hp: BARON_HP, dims: [140, 84], floats: true, music: 'tour_np_boss', country: 'np',
   brain: {
     guardText: 'NOT THE HAIR!',
+    body: NP_BODY,   // (tools/boss_tests/np.js reads it)
     phases: [4, 1],
     wake(b) { b.phase = 1; b.thrown = 0; b.quota = 3; b.parts = 3; b.told = false; b.fired = false; K.say(b.g, b, 'AH, MISTER BUN! JUST IN TIME FOR THE FINALE!', '#ffd84a'); },
     noDisc(b) { return true; },
@@ -890,7 +921,8 @@ const boss = {
     },
     onCharge(b, p) { },
     // after a bounce off the hat Brady is still a pixel inside the box for a frame: never let that count as contact
-    touch(b, p) { if (b.act === 'finale') return true; if (p.vy < 0 && p.y + p.h < b.y + 12) return true; return false; },
+    // only his drawn body hurts (NP_BODY): Brady beside the trunk, under the cage or past the mech's held-out arms is safe
+    touch(b, p) { if (b.act === 'finale') return true; const r = NP_BODY(b); if (!overlap(p, r)) return true; if (p.vy < 0 && p.y + p.h < r.y + 12) return true; return false; },
     phase(b, n) {
       const g = b.g;
       if (n === 2) {
@@ -912,25 +944,41 @@ const boss = {
       const g = b.g, p = g.player, ph = b.phase || 1, first = b.first;
       b.guard = 'bounce';
       if (b.act === 'finale') { baronFinale(b, dt); return; }
+      // mercy: Brady was just hurt (his invulnerability jumped up): Piwi backs off and starts no new attack for a moment
+      if (p) { if (p.invuln > (b._pinv || 0) + 1 && b.state === 'fight') { b.mercy = NP.mercy; K.say(g, b, pick(['BRAVO! ENCORE!', 'TAKE A BOW!', 'HA! BREAK A LEG!']), '#ffd84a'); if (ph === 2 && b.act === 'charge') { b.vx = 0; b.go('walk'); } if (ph === 3 && b.act === 'run' && Math.sign(b.vx) === Math.sign(p.cx - b.cx)) b.go('taunt'); } b._pinv = p.invuln; }
+      if (b.mercy > 0) b.mercy -= dt;
+      const calm = b.mercy > 0;
       /* ---- phase 1: the airship ---- */
       if (ph === 1) {
-        const hy = b.floorY - b.h - 2.4 * TS;
-        if (b.act === 'walk') { b.face(); b.hover(dt, hy + Math.sin(b.t * 1.4) * 12, p ? p.cx + (p.cx < b.cx ? 30 : -30) : undefined); b.pose = 'fly'; if (b.at > 1.5) { b.cycle++; b.go(!baronOut(b) && b.thrown < b.quota ? 'throw' : ['globes', 'swoop'][b.cycle % 2]); } }
-        else if (b.act === 'throw') {
-          b.face(); b.hover(dt, hy, p ? p.cx : undefined); b.pose = 'wind';
+        const hy = b.floorY - b.h - NP.hoverK * TS;
+        // he keeps to one side of Brady (never straight over him), slower than Brady walks; further off while he is merciful
+        const beside = () => { if (!p) return b.cx; let s = b.cx < p.cx ? -1 : 1, off = (calm ? 2 : 1) * NP.side * TS; if (p.cx + s * off < b.arenaX0 + b.w / 2 || p.cx + s * off > b.arenaX1 - b.w / 2) s = -s; return p.cx + s * off; };
+        const glide = (ty, tx, k) => { b.y = approach(b.y, ty, 6 * TS * dt); if (tx !== undefined) b.x = approach(b.x, tx - b.w / 2, NP.follow * TS * (k || 1) * dt); };
+        if (b.act === 'walk') {
+          b.face(); const out = baronOut(b);
+          glide(hy + Math.sin(b.t * 1.4) * 10 - (calm ? TS : 0), beside(), out ? 0.6 : 1); b.pose = 'fly';
+          if (calm) b.at = Math.min(b.at, 0.6);
+          if (b.at > 1.5) { b.cycle++; b.go(!out && b.thrown < b.quota ? 'throw' : ['globes', 'swoop'][b.cycle % 2]); }
+        } else if (b.act === 'throw') {
+          b.face(); glide(hy, beside()); b.pose = 'wind';
           if (first) { K.say(g, b, pick(['CATCH!', 'A PROP FOR YOU!', 'HEADS UP, MISTER BUN!']), '#ffd84a'); Sound.play('throw', { pitch: 0.7, vol: 0.4 }); }
           if (b.at > 0.85 && !b.fired) { b.fired = true; baronThrow(b, b.cx + b.dir * 18, b.y + b.h - 10); }
-          if (b.at > 1.5) { b.fired = false; b.go('walk'); }
+          if (b.at > 1.5) { b.fired = false; b.go('gloat'); }
+        } else if (b.act === 'gloat') {
+          // the opening: he holds still in the air and admires his throw; kick the landmark back now
+          glide(hy + Math.sin(b.t * 3) * 4); b.pose = 'fly'; b.face();
+          if (first) K.say(g, b, pick(['TA-DAAA!', 'HOLD FOR APPLAUSE...', 'AND THE CROWD GOES WILD!']), '#ffd84a');
+          if (b.at > NP.gloat[0]) b.go('walk');
         } else if (b.act === 'globes') {
-          b.hover(dt, hy, p ? p.cx : undefined); b.pose = 'drop';
+          glide(hy, beside()); b.pose = 'drop';
           if (first) { b.n = 0; K.say(g, b, 'SNOW GLOBES! FREE WITH EVERY TICKET!', '#ffd84a'); }
           if (b.at > 0.5 + b.n * 0.3 && b.n < 4) { b.n++; tourFire(g, b.cx + (b.n - 2.5) * 26, b.y + b.h, { kind: 'globe', vx: p ? clamp((p.cx - b.cx) / 1.4, -4 * TS, 4 * TS) : 0, vy: 1 * TS, grav: PHYS.gDown * 0.45, w: 18, h: 18, life: 4, col: '#bfe8ff', art: globeShot }); Sound.play('throw', { pitch: 1.4, vol: 0.35 }); }
           if (b.at > 2.2) b.go('walk');
         } else if (b.act === 'swoop') {
           b.pose = 'fly';
           if (first) { b.sdir = p && p.cx < (b.arenaX0 + b.arenaX1) / 2 ? 1 : -1; b.x = b.sdir > 0 ? b.arenaX0 : b.arenaX1 - b.w; b.dir = b.sdir; K.say(g, b, 'WHEEE! DUCK!', '#ffd84a'); b.n = 0; }
-          if (b.at > 0.5) { b.y = approach(b.y, b.floorY - b.h - 1.9 * TS, 7 * TS * dt); b.x += b.sdir * 7 * TS * dt; }
-          if (b.at > 0.9 + b.n * 0.5 && b.n < 2) { b.n++; tourFire(g, b.cx, b.y + b.h, { kind: 'globe', vx: 0, vy: 2 * TS, grav: PHYS.gDown * 0.45, w: 18, h: 18, life: 3, col: '#bfe8ff', art: globeShot }); }
+          if (b.at > 0.7) { b.y = approach(b.y, b.floorY - b.h - NP.swoopK * TS, 7 * TS * dt); b.x += b.sdir * NP.swoop * TS * dt; }
+          if (b.at > 1.1 + b.n * 0.5 && b.n < 2) { b.n++; tourFire(g, b.cx, b.y + b.h, { kind: 'globe', vx: 0, vy: 2 * TS, grav: PHYS.gDown * 0.45, w: 18, h: 18, life: 3, col: '#bfe8ff', art: globeShot }); }
           if (b.at > 0.6 && ((b.sdir > 0 && b.x >= b.arenaX1 - b.w - 2) || (b.sdir < 0 && b.x <= b.arenaX0 + 2))) b.go('walk');
         } else if (b.act === 'reel') { b.pose = 'reel'; b.y += Math.sin(b.at * 14) * 1.5; b.x -= b.dir * 1.5 * TS * dt; if (b.at > 1) b.go('walk'); }
         else b.go('walk');
@@ -945,14 +993,20 @@ const boss = {
           return;
         }
         if (b.act === 'walk') {
-          b.face(); b.walk(1.1); b.pose = 'walk'; b.step = (b.step || 0) + dt;
+          b.face(); if (calm && p) { b.dir = p.cx < b.cx ? 1 : -1; b.at = Math.min(b.at, 0.6); }   // mercy: it lumbers away from him
+          b.walk(1.1); b.pose = 'walk'; b.step = (b.step || 0) + dt;
           if (b.step > 0.55) { b.step = 0; g.shake(3); Sound.play('stomp', { pitch: 0.5, vol: 0.3 }); g.burst(b.cx - b.dir * 30, b.floorY, 4, '#c8a8ff', 'dust'); }
           if (b.at > 1.8) { b.cycle++; b.go(!baronOut(b) && b.thrown < b.quota ? 'throw' : ['laser', 'stomp', 'charge'][b.cycle % 3]); }
         } else if (b.act === 'throw') {
           b.vx = 0; b.face(); b.pose = 'wind';
           if (first) { K.say(g, b, pick(['TAKE THIS ONE TOO!', 'FETCH, MISTER BUN!', 'BIG FINISH!']), '#ffd84a'); Sound.play('throw', { pitch: 0.7, vol: 0.4 }); }
           if (b.at > 0.85 && !b.fired) { b.fired = true; baronThrow(b, b.cx + b.dir * 46, b.y + 10); }
-          if (b.at > 1.5) { b.fired = false; b.go('walk'); }
+          if (b.at > 1.5) { b.fired = false; b.go('gloat'); }
+        } else if (b.act === 'gloat') {
+          // the opening: the mech stands and Piwi takes a bow in the dome
+          b.vx = 0; b.face(); b.pose = 'idle';
+          if (first) K.say(g, b, pick(['TA-DAAA!', 'HOLD FOR APPLAUSE...', 'A STANDING OVATION, PLEASE!']), '#ffd84a');
+          if (b.at > NP.gloat[1]) b.go('walk');
         } else if (b.act === 'laser') {
           b.vx = 0; b.face(); b.pose = 'aim';
           if (first) { b.aimY = p ? p.cy : b.floorY - 28; K.say(g, b, 'SPOTLIGHT... ON ME!', '#ff8a8a'); Sound.play('laser', { vol: 0.25, pitch: 0.5 }); }
@@ -980,9 +1034,9 @@ const boss = {
       }
       if (b.act === 'run') {
         b.pose = 'run'; if (first) b.face();
-        b.vx = b.dir * 5.5 * TS; if (b.onGround && Math.random() < dt * 1.5) b.vy = -7 * TS;
+        b.vx = b.dir * NP.run * TS; if (b.onGround && Math.random() < dt * 1.5) b.vy = -7 * TS;
         if (b.at > 0.2 && (b.hitWall || b.x <= b.arenaX0 + 2 || b.x >= b.arenaX1 - b.w - 2)) { b.cycle++; b.go(!baronOut(b) && b.thrown < b.quota ? 'throw' : ['taunt', 'flash', 'hop'][b.cycle % 3]); }
-        else if (b.at > 2.6) b.go('taunt');
+        else if (b.at > 2.6) b.go(!baronOut(b) && b.thrown < b.quota ? 'throw' : 'taunt');   // (at his slower pace he may not reach a wall)
       } else if (b.act === 'taunt') {
         b.vx = 0; b.face(); b.pose = 'taunt';
         if (first) K.say(g, b, pick(['YOU\'LL NEVER GET THIS ONE!', 'THE SHOW MUST GO ON!', 'CATCH ME IF YOU CAN!']), '#ffd84a');
@@ -991,7 +1045,7 @@ const boss = {
         b.vx = 0; b.face(); b.pose = 'wind';
         if (first) { K.say(g, b, 'THE LAST ONE! CATCH!', '#ffd84a'); Sound.play('throw', { pitch: 0.7, vol: 0.4 }); }
         if (b.at > 0.85 && !b.fired) { b.fired = true; baronThrow(b, b.cx + b.dir * 16, b.y + 16); }
-        if (b.at > 1.4) { b.fired = false; b.dir = -b.dir; b.go('run'); }
+        if (b.at > 1.4) { b.fired = false; b.go('taunt'); }   // the opening: he stops to taunt, then runs off
       } else if (b.act === 'flash') {
         b.vx = 0; b.face(); b.pose = b.at < 0.7 ? 'aim' : 'flash';
         if (first) K.say(g, b, 'SMILE FOR THE SHRINK-SPOT!', '#8af0ff');

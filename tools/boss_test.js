@@ -10,7 +10,7 @@ const path = require('path'), fs = require('fs');
 const args = process.argv.slice(2);
 const si = args.indexOf('--shots');
 const shots = si >= 0 ? args[si + 1] : path.join(__dirname, '..', 'shots', 'bosses');
-const want = args.filter((a, i) => a !== '--shots' && i !== si + 1);
+const want = args.filter((a, i) => a !== '--shots' && !(si >= 0 && i === si + 1));
 fs.mkdirSync(shots, { recursive: true });
 const dist = process.env.BRADY_DIST ? path.resolve(process.env.BRADY_DIST) : path.join(__dirname, '..', 'dist');
 const appPage = [path.join(dist, 'site', 'super-brady-o-world', 'index.html'), path.join(dist, 'brady-o.html')].find(f => fs.existsSync(f));
