@@ -31,7 +31,7 @@ if (typeof TourRooms === 'undefined' || !Tour.umbKit) return;
 const UK = Tour.umbKit, INK = UK.INK, UA = UK.UmbArt, RKit = TourRoomKit;
 const isUmb = kit => !!(kit && /^umb/.test(kit.kind));
 const chime = (k, ok) => Sound.play('select', { vol: 0.5, pitch: ok === false ? 0.45 : Math.pow(2, [0, 4, 7, 12][k % 4] / 12) });
-const hud = (play, ctx, str, col) => TourRooms.hudText(play, ctx, str, col, 14, 34);
+const hud = (play, ctx, str, col) => TourRooms.hudText(play, ctx, str, col, 13, 72);   // under the HUD's row of pills
 const W = 26;
 
 /* ---------------- the room's shape ----------------
@@ -52,7 +52,7 @@ function shell(keep, A, o, L) {
   const [cx, cy, cw] = L.cage;
   g.cage(A.id, cx, cy, items, { w: cw || Math.max(3, items.length + 2), h: 4 });
   const cwd = cw || Math.max(3, items.length + 2);
-  if (cy < 10) g.fill(cx + 1, cy + 1, cx + cwd, 10, '#');
+  if (cy < 10) g.fill(cx - 1, cy + 1, cx + cwd, 10, '#');
   const [sx, sy] = L.station;
   g.spawn(sx, sy, 'umbStation', { k: o.kind || A.room });
   g.need('the station', sx, sy);
@@ -118,7 +118,7 @@ const controls = () => {};
 /* ======================= B26 LONG LUNCH (31-1): the pea-flicker and the toy finch ======================= */
 // geometry in tiles: the flicker at the station's hand height, the beak at the right; round 2: the plate in the way, the
 // enamel tray along the ceiling to bank off
-const LUNCH = { beak: [20.5, 7.0], plate: [14.2, 6.0, 14.2, 9.0], tray: [11, 4.7, 18, 4.7], r: 0.85 };
+const LUNCH = { beak: [19, 7.0], plate: [13.2, 6.0, 13.2, 9.0], tray: [10.5, 4.7, 17, 4.7], r: 0.85 };
 TourRooms.def('umbLunch', {
   title: 'LONG LUNCH', rule: 'TILT WITH THE STICK, THROW TO FLICK A PEA INTO THE TOY FINCH\'S BEAK. THEN BANK ONE OFF THE TRAY', need: 'FEED THE FINCH FIRST!',
   make(o, keep, ctx, A, rng) { return shell(keep, A, o, { ledge: 6, stage: [6, 21, 9], station: [7, 8], cage: [21, 10, 3] }); },
@@ -183,18 +183,19 @@ TourRooms.def('umbLunch', {
 
 /* ======================= B27 THREADBARE (31-2): the stiff thread and the two-hole patch ======================= */
 // in tiles: the box the thread end moves in, the patch's x, its two buttonholes (y ranges)
-const THR = { box: [10, 4.8, 21, 8.6], bx: 15.5, holes: [[5.0, 6.0], [7.4, 8.4]], start: [10.5, 6.8], sp: 3.2 };
+// (the sewing loft is mirrored: the station on the right, the thread goes left through the top hole first)
+const THR = { box: [5, 4.8, 16, 8.6], bx: 10.5, holes: [[5.0, 6.0], [7.4, 8.4]], start: [15.5, 6.8], sp: 3.2, first: -1 };
 TourRooms.def('umbThread', {
   title: 'THREADBARE', rule: 'STEER THE THREAD WITH THE STICK: THROUGH THE TOP BUTTONHOLE, THEN BACK THROUGH THE BOTTOM ONE. DON\'T BRUSH THE PATCH', need: 'MEND THE PATCH FIRST!',
-  make(o, keep, ctx, A, rng) { return shell(keep, A, o, { ledge: 5, stage: [7, 9, 9], station: [8, 8], cage: [20, 10, 3], step: [6, 8, 0] }); },
+  make(o, keep, ctx, A, rng) { return shell(keep, A, o, { ledge: 5, stage: [7, 9, 9], station: [8, 8], cage: [21, 8, 3], step: [6, 8, 0], mirror: true }); },
   enter(play, A, R, kit) { if (!R.won) this.reset(R, kit); },
   reset(R, kit) { R.tip = THR.start.slice(); R.trail = [THR.start.slice()]; R.stage = 0; },
   geom(kit) { return kit.data.mirror ? { flip: true } : { flip: false }; },
   // the room is mirrored: x in the game box runs from the station's side (the right) toward the patch
-  wx(kit, x) { return kit.data.mirror ? (W - x) : x; },
+  wx(kit, x) { return x; },
   update(play, dt, A, R, kit) {
     if (R.won || !R.mounted) return;
-    const I = (play.player && play.player.umbRaw) || {}, f = kit.data.mirror ? -1 : 1;
+    const I = (play.player && play.player.umbRaw) || {}, f = 1;
     let dx = (I.right ? 1 : 0) - (I.left ? 1 : 0), dy = (I.down ? 1 : 0) - (I.up ? 1 : 0); dx *= f;
     if (!dx && !dy) return;
     const n = Math.hypot(dx, dy), [x0, y0] = R.tip, x1 = clamp(x0 + dx / n * THR.sp * dt, THR.box[0], THR.box[2]), y1 = clamp(y0 + dy / n * THR.sp * dt, THR.box[1], THR.box[3]);
@@ -202,7 +203,7 @@ TourRooms.def('umbThread', {
     if ((x0 - THR.bx) * (x1 - THR.bx) <= 0 && x0 !== x1) {
       const yc = y0 + (y1 - y0) * (THR.bx - x0) / (x1 - x0), want = R.stage === 0 ? 0 : 1, H = THR.holes[want], going = x1 > x0 ? 1 : -1;
       const inHole = k => yc > THR.holes[k][0] && yc < THR.holes[k][1];
-      if (inHole(want) && going === (R.stage === 0 ? 1 : -1)) {
+      if (inHole(want) && going === (R.stage === 0 ? THR.first : -THR.first)) {
         R.stage++; chime(R.stage, true); UK.say(play, this.wx(kit, THR.bx) * TS, (H[0] - 0.8) * TS, R.stage === 1 ? 'THROUGH! NOW BACK THROUGH THE BOTTOM' : 'STITCHED!', UA.GOLD_L, 'room');
         if (R.stage >= 2) { R.tip = [x1, y1]; R.trail.push([x1, y1]); R.mounted = false; TourRooms.win(play, A, R, { text: 'A NEAT DARN!', coins: 5 }); return; }
       } else { R.fails = (R.fails || 0) + 1; RKit.raspberry(play, inHole(0) || inHole(1) ? 'WRONG HOLE: IT SNAGS!' : 'SNAGGED ON THE PATCH!'); this.reset(R, kit); return; }
@@ -214,12 +215,11 @@ TourRooms.def('umbThread', {
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
     // the giant needle stuck in the top of the patch, the patch (a marigold wedge) with its two stitched buttonholes
     const px = X(THR.bx), top = Y(THR.box[1] - 0.2), bot = Y(THR.box[3] + 0.2);
-    ctx.fillStyle = UA.GOLD; ctx.fillRect(px - 9, top, 18, bot - top); ctx.strokeRect(px - 9, top, 18, bot - top);
-    ctx.strokeStyle = UA.NAVY; ctx.setLineDash([3, 3]); ctx.strokeRect(px - 6, top + 3, 12, bot - top - 6); ctx.setLineDash([]);
-    THR.holes.forEach(([a, b], k) => { const lit = R.stage === k && !R.won; ctx.fillStyle = '#f4dce8'; ctx.fillRect(px - 10, Y(a), 20, Y(b) - Y(a)); ctx.strokeStyle = lit ? UA.GOLD_L : INK; ctx.lineWidth = lit ? 3 : 2; ctx.strokeRect(px - 10, Y(a), 20, Y(b) - Y(a)); if (lit && R.mounted) { const q = 0.5 + 0.5 * Math.sin(t * 7); ctx.strokeStyle = `rgba(255,216,74,${0.4 + 0.5 * q})`; ctx.beginPath(); ctx.ellipse(px, (Y(a) + Y(b)) / 2, 22 + q * 3, (Y(b) - Y(a)) / 2 + 8, 0, 0, TAU); ctx.stroke(); } });
+    ctx.fillStyle = UA.GOLD; ctx.fillRect(px - 14, top, 28, bot - top); ctx.strokeRect(px - 14, top, 28, bot - top);
+    ctx.strokeStyle = UA.NAVY; ctx.setLineDash([3, 3]); ctx.strokeRect(px - 10, top + 3, 20, bot - top - 6); ctx.setLineDash([]);
+    THR.holes.forEach(([a, b], k) => { const lit = R.stage === k && !R.won; ctx.fillStyle = '#f4dce8'; ctx.fillRect(px - 15, Y(a), 30, Y(b) - Y(a)); ctx.strokeStyle = lit ? UA.GOLD_L : INK; ctx.lineWidth = lit ? 3 : 2; ctx.strokeRect(px - 15, Y(a), 30, Y(b) - Y(a)); if (lit && R.mounted) { const q = 0.5 + 0.5 * Math.sin(t * 7); ctx.strokeStyle = `rgba(255,216,74,${0.4 + 0.5 * q})`; ctx.beginPath(); ctx.ellipse(px, (Y(a) + Y(b)) / 2, 22 + q * 3, (Y(b) - Y(a)) / 2 + 8, 0, 0, TAU); ctx.stroke(); } });
     ctx.strokeStyle = INK; ctx.lineWidth = 2;
-    ctx.fillStyle = '#d8dce8'; ctx.beginPath(); ctx.moveTo(px - 5, top - 34); ctx.lineTo(px + 5, top - 34); ctx.lineTo(px + 2, top + 18); ctx.lineTo(px - 2, top + 18); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#f4dce8'; ctx.beginPath(); ctx.ellipse(px, top - 24, 2, 6, 0, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#d8dce8'; ctx.beginPath(); ctx.moveTo(px + 14, top + 4); ctx.lineTo(px + 40, top - 6); ctx.lineTo(px + 40, top - 1); ctx.lineTo(px + 14, top + 8); ctx.closePath(); ctx.fill(); ctx.stroke();   // a pin through the patch's corner
     // the thread: from the spool at the station to the stiff tip
     const [sx, sy] = kit.data.station, spx = sx * TS + TS / 2, spy = sy * TS - 10;
     ctx.fillStyle = '#c86a9a'; ctx.fillRect(spx - 10, spy - 6, 20, 14); ctx.strokeRect(spx - 10, spy - 6, 20, 14);
@@ -228,7 +228,7 @@ TourRooms.def('umbThread', {
     ctx.restore();
     if (!R.won && !(play.bannerT > 0) && !R.ruleWait) { hud(play, ctx, R.stage ? 'BACK THROUGH THE BOTTOM HOLE' : 'THROUGH THE TOP HOLE' + (R.mounted ? '   (JUMP: STEP OFF)' : '')); }
   },
-  testWin(g, A, R, kit, frame) { R.mounted = true; const f = kit.data.mirror ? -1 : 1, go = (x, y) => { for (let k = 0; k < 600 && Math.hypot(R.tip[0] - x, R.tip[1] - y) > 0.12 && !R.won; k++) { const dx = x - R.tip[0], dy = y - R.tip[1]; frame(g, { right: dx * f > 0.06, left: dx * f < -0.06, down: dy > 0.06, up: dy < -0.06 }); } }; go(12, 5.5); go(18, 5.5); go(18, 7.9); go(12, 7.9); }
+  testWin(g, A, R, kit, frame) { R.mounted = true; const f = 1, go = (x, y) => { for (let k = 0; k < 600 && Math.hypot(R.tip[0] - x, R.tip[1] - y) > 0.12 && !R.won; k++) { const dx = x - R.tip[0], dy = y - R.tip[1]; frame(g, { right: dx * f > 0.06, left: dx * f < -0.06, down: dy > 0.06, up: dy < -0.06 }); } }; go(14, 5.5); go(7, 5.5); go(7, 7.9); go(14, 7.9); }
 });
 
 /* ======================= B28 FINDERS KEEPERS (31-3): the magnet over the ferrule tray ======================= */
@@ -285,10 +285,10 @@ TourRooms.def('umbMagnet', {
 
 /* ======================= B29 BUN IN THE VIEWFINDER (31-4): the camera, the mirror, Pupo on a crook ======================= */
 // in tiles: the scene's box, the mirror with Brady's bun reflected, Pupo's swing (a crook from the ceiling), the frame
-const CAM = { box: [10, 4.6, 22, 8.9], bun: [13.6, 6.0], pivot: [16.5, 4.4], len: 2.6, fw: 3.4, fh: 2.8 };
+const CAM = { box: [10, 4.6, 19.6, 8.9], bun: [13.6, 6.0], pivot: [16.5, 4.4], len: 2.6, fw: 3.4, fh: 2.8 };
 TourRooms.def('umbCamera', {
   title: 'BUN IN THE VIEWFINDER', rule: 'PAN THE VIEWFINDER WITH THE STICK. THROW TAKES THE PICTURE: YOUR BUN IN THE MIRROR AND PUPO\'S WHOLE SMILE, BOTH', need: 'TAKE THE PICTURE FIRST!',
-  make(o, keep, ctx, A, rng) { return shell(keep, A, o, { ledge: 6, stage: [7, 22, 9], shelf: true, station: [9, 8], cage: [19, 8, 3], step: [6, 8, 0] }); },
+  make(o, keep, ctx, A, rng) { return shell(keep, A, o, { ledge: 6, stage: [7, 20, 9], shelf: true, station: [9, 8], cage: [21, 10, 3], step: [6, 8, 0] }); },
   enter(play, A, R, kit) { if (!R.won) { R.fx = R.fx || 18; R.fy = R.fy || 6; R.flash = 0; } },
   // Pupo's smile at time t (he swings on the crook, back and forth past the mirror)
   smile(t) { const a = Math.sin(t * 1.25) * 0.85; return [CAM.pivot[0] + Math.sin(a) * CAM.len, CAM.pivot[1] + Math.cos(a) * CAM.len + 0.55]; },
@@ -316,7 +316,7 @@ TourRooms.def('umbCamera', {
     ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fillRect(X(12.6), Y(5.2), 6, Y(2.4));
     const bx = X(CAM.bun[0]), by = Y(CAM.bun[1]);
     ctx.fillStyle = '#6a4a2a'; ctx.beginPath(); ctx.arc(bx, by + 18, 18, Math.PI, 0); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#8a5e36'; ctx.beginPath(); ctx.arc(bx, by - 2, 8, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#8a5e36'; ctx.beginPath(); ctx.arc(bx, by - 8, 10, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = UA.CORAL; ctx.fillRect(bx - 8, by - 1, 16, 4);
     ctx.fillStyle = '#1a1830'; ctx.fillRect(bx - 16, by + 12, 32, 5);
     // the crook from the ceiling and Pupo swinging on it, upside down, grinning
     const a = Math.sin(t * 1.25) * 0.85, px = X(CAM.pivot[0]), py = Y(CAM.pivot[1]), ex = px + Math.sin(a) * X(CAM.len), ey = py + Math.cos(a) * Y(CAM.len);
@@ -348,7 +348,7 @@ TourRooms.def('umbCamera', {
 const SLC = { c: [16, 6.6], r: 2.0, n: 8, turn: 11 };
 TourRooms.def('umbSlice', {
   title: 'SEED THE SLICE', rule: 'POINT THE STICK AND THROW: A PATCH FLIES FROM THE MIDDLE THAT WAY. ONE IN EACH BARE WEDGE BEFORE IT TURNS ALL THE WAY ROUND', need: 'PATCH THE CANOPY FIRST!',
-  make(o, keep, ctx, A, rng) { return shell(keep, A, o, { ledge: 5, stage: [8, 12, 9], station: [10, 8], cage: [20, 10, 3], step: [6, 8, 1] }); },
+  make(o, keep, ctx, A, rng) { return shell(keep, A, o, { ledge: 5, stage: [8, 12, 9], station: [10, 8], cage: [15, 10, 3], step: [6, 8, 1] }); },
   enter(play, A, R, kit) { if (!R.won) this.reset(play, A, R); },
   reset(play, A, R) { const rng = ROOM_SEED(play, A), first = Math.floor(rng() * 8); R.bare = [first, (first + 3) % 8, (first + 5) % 8]; R.rot = 0; R.go = false; R.spun = 0; R.flies = []; R.dir = [0, -1]; },
   wedgeAt(R, ang) { const a = ((ang - R.rot) % TAU + TAU) % TAU; return Math.floor(a / (TAU / SLC.n)); },
@@ -403,10 +403,11 @@ TourRooms.def('umbSlice', {
 });
 
 /* ======================= MISSING RIB (31-6): turn the umbrella under the rain, tuck the patch ======================= */
-const RIBR = { c: [13, 5.9], r: 1.9, n: 8 };
+// (the test shower is mirrored: the door on the right, the cage up on the left)
+const RIBR = { c: [12.5, 5.9], r: 1.9, n: 8 };
 TourRooms.def('umbRib', {
   title: 'MISSING RIB', rule: 'THE RAIN COMES THROUGH ONE WEDGE. TURN THE UMBRELLA WITH THE STICK UNTIL IT\'S AT THE TOP, THEN THROW TO TUCK THE PATCH ON. TWICE', need: 'MEND THE UMBRELLA FIRST!',
-  make(o, keep, ctx, A, rng) { return shell(keep, A, o, { ledge: 6, stage: [9, 17, 9], shelf: true, station: [13, 8], cage: [20, 10, 3], step: [6, 8, 2] }); },
+  make(o, keep, ctx, A, rng) { return shell(keep, A, o, { ledge: 6, stage: [9, 17, 9], shelf: true, station: [13, 8], cage: [21, 8, 3], step: [6, 8, 2], mirror: true }); },
   enter(play, A, R, kit) { if (!R.won) { R.round = R.round || 0; this.start(play, A, R); } },
   start(play, A, R) { const rng = ROOM_SEED(play, A); R.turn = 0; R.show = 0; R.leak = 1 + Math.floor(rng() * 7); R.cool = 0; },
   // which wedge is at the top (under the patch) now
