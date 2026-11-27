@@ -129,13 +129,13 @@ const NOTE = [1.0, 1.26, 1.5, 1.78];
 TourRooms.def('keSimon', {
   title: 'THE WEAVERS\' SONG', rule: 'LISTEN TO THE WEAVERS, THEN HOP ON THE MATS IN THE SAME ORDER', need: 'SING THE WEAVERS\' SONG FIRST!',
   make(o, keep, ctx, A, rng) {
-    const K = TourRoomKit, W = 30 + K.eastW(keep, o), g = K.room(W), Y = K.Y;
+    const K = TourRoomKit, W = 22 + K.eastW(keep, o), g = K.room(W), Y = K.Y;
     const x0 = g.west(keep) + 2, x1 = K.east(g, keep, A, o);
     const span = x1 - x0 - 1, pads = [];
     for (let k = 0; k < 4; k++) pads.push(x0 + Math.round(span * (k + 0.5) / 4));
     g.data.pads = pads; g.data.len = o.len || 4;
     // a row of coins high over the mats (the room's own little bonus: hop for them between tunes)
-    g.coins(pads[1], pads[2], 3);
+    g.coins(pads[1], pads[2], 4);
     g.winSpot(A.id, pads[3], Y);
     return g;
   },
@@ -176,7 +176,7 @@ TourRooms.def('keSimon', {
       ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = lit ? S.col : '#c8a850'; ctx.beginPath(); ctx.ellipse(x, fy - 3, 22, 6, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore();
       ctx.save(); TourRoomArt.sym(ctx, k, x, fy - 3, 4); ctx.restore();
       // the nest overhead on its string, the weaver singing out of it
-      const ny = 6 * TS + Math.sin(t * 2 + k) * 2;
+      const ny = 7 * TS + Math.sin(t * 2 + k) * 2;
       ctx.save(); ctx.strokeStyle = '#6a4a2a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, 2 * TS); ctx.lineTo(x, ny - 18); ctx.stroke();
       if (lit) { ctx.fillStyle = 'rgba(255,240,150,0.5)'; ctx.beginPath(); ctx.arc(x, ny, 30, 0, TAU); ctx.fill(); }
       ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#d8b860'; ctx.beginPath(); ctx.ellipse(x, ny, 16, 19, 0, 0, TAU); ctx.fill(); ctx.stroke();
