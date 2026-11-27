@@ -60,14 +60,14 @@ const china = (() => {
   G.put(64, 8, '3');                                    // plate 3 (x64-71, row 8)
   G.put(64, 12, '4');                                   // plate 4 (x64-73, row 12)
   G.fill(72, 2, 75, 11, 'H');                           // the bread basket
-  G.ground(64, 88, 16); G.put(70, 15, 'k'); G.coins(76, 86, 14); G.put(80, 15, 'P');
+  G.ground(64, 88, 16); G.put(84, 15, 'x'); G.coins(76, 86, 14); G.put(80, 15, 'P');
   G.ground(89, 89, 15); G.ground(90, 101, F); G.put(94, 10, '?'); G.put(96, 13, 'c'); G.put(92, 13, 'w');
   G.put(100, 13, 'A');                                  // anchor: back from the room
   // the plate with the steam (the secret): a cubby under its far end, a hatch into BAD REFLECTION
   G.put(102, 14, '5');                                  // plate 5 (x102-109, row 14)
   G.fill(102, 15, 104, 21, '#'); G.fill(105, 15, 110, 19, '.'); G.ground(105, 110, 20); G.put(107, 19, 'D'); G.fill(111, 15, 111, 21, '#');
   G.put(107, 13, 'e');
-  G.ground(110, 121, F); G.put(114, 13, 'm'); G.put(119, 13, 'O'); G.put(117, 13, 'Z');
+  G.ground(110, 121, F); G.put(114, 13, 'j'); G.put(119, 13, 'O'); G.put(117, 13, 'Z');
   // ③ the meshed plates under a low shelf (the rims are the wall)
   G.fill(125, 7, 130, 10, 'H'); G.ground(122, 133, F + 1);
   G.put(122, 14, '6'); G.put(128, 14, '7');            // meshed pair 1 (x122-127, x128-133)
@@ -76,7 +76,7 @@ const china = (() => {
   G.pit(139, 152); G.fill(143, 7, 148, 10, 'H');
   G.put(140, 14, '8'); G.put(146, 14, '9');            // meshed pair 2 (x140-145, x146-151)
   G.put(149, 12, 'R');
-  G.ground(152, 195, F); G.coins(156, 166, 11); G.put(160, 13, 'f'); G.put(170, 13, 'm'); G.put(176, 13, 'j'); G.put(184, 13, 'G'); G.put(189, 13, 'u');
+  G.ground(152, 195, F); G.coins(156, 166, 11); G.put(160, 13, 'f'); G.put(166, 13, 'k'); G.put(170, 13, 'm'); G.put(176, 13, 'j'); G.put(184, 13, 'G'); G.put(189, 13, 'u');
   G.fill(195, 0, 195, 21, 'H');
   return G.rows();
 })();
@@ -132,7 +132,7 @@ const napkin = (() => {
   G.put(80, 13, '('); G.put(81, 13, ')'); G.put(82, 13, '['); G.put(85, 13, '4');
   G.fill(77, 8, 81, 8, '#'); G.put(78, 7, 'D'); G.put(80, 7, 'A'); G.put(79, 7, 'e'); G.put(81, 5, 'P');
   G.ground(91, 94, 8);
-  G.ground(95, 154, F); G.put(97, 13, 'j'); G.put(100, 13, 'm'); G.put(104, 10, '?'); G.put(110, 13, 'c'); G.coins(112, 120, 11); G.put(118, 13, 'k'); G.put(128, 13, 'f'); G.put(132, 13, 'w');
+  G.ground(95, 154, F); G.put(97, 13, 'j'); G.put(122, 13, 'm'); G.put(104, 10, '?'); G.put(110, 13, 'c'); G.coins(112, 120, 11); G.put(118, 13, 'k'); G.put(128, 13, 'f'); G.put(132, 13, 'w');
   // ③ N5 half under the low glass: flat to get in; it rises once Brady has crossed its centre crease
   G.put(136, 13, 'c'); G.put(138, 13, 'V'); G.put(142, 13, ']'); G.put(143, 13, '{'); G.put(144, 13, '}');
   G.put(146, 11, 'Y'); G.put(150, 13, '5');
@@ -288,8 +288,8 @@ const L4 = { n: 4, name: 'Soup Without the Spoon', mapLabel: 'Soup', arch: 'crou
 const course = (() => {
   const G = mk(124, 22), F = 14;
   G.ground(0, 123, F); G.put(2, 13, '@'); G.put(4, 13, 'n'); G.put(6, 10, '?');
-  G.put(10, 13, '1'); G.coins(20, 25, 11); G.put(24, 13, 'k'); G.put(27, 13, 'c');
-  G.put(31, 13, '2'); G.put(31, 9, '*'); G.put(42, 10, '?'); G.put(45, 13, 'f');
+  G.put(10, 13, '1'); G.coins(20, 25, 11); G.put(24, 13, 'r'); G.put(27, 13, 'c');
+  G.put(31, 13, '2'); G.put(31, 9, '*'); G.put(42, 10, '?'); G.put(86, 13, 'f');
   G.put(50, 13, '3'); G.put(61, 13, 'm'); G.put(64, 9, 'R'); G.put(66, 13, 'c');
   G.put(70, 13, '4'); G.put(84, 13, 'w'); G.put(88, 13, 'j');
   G.put(90, 13, 'A'); G.put(92, 13, 'D'); G.put(96, 13, 'u'); G.put(100, 13, 'x');
@@ -314,7 +314,7 @@ const L5 = { n: 5, name: 'After You', mapLabel: 'After You', arch: 'lair', theme
   gimmick: 'The hostess offers Brady the last bite: pass the bread plate back to her (THROW on its mark) and she lets him on to the next place. Then the booth, and Madame Manners',
   hint: 'Tap THROW on the bread plate\'s mark while she offers. At dessert only her second offer lets go. In the booth every courtesy is THROW from a saucer: the bread, from her open side, and the olive when her tines spread',
   postcard: 'BRADY. The fork finally ate. We have the booth. You have the bill. Best dinner of my life. ♥ C',
-  enemies: [['tabCrumb', 1], ['tabPepper', 1], ['tabButter', 1]],
+  enemies: [['tabRest', 1], ['tabPepper', 1], ['tabButter', 1]],
   mapCell: [4, 1], mapFrom: 3,
   exits: { main: {} },
   areas: [

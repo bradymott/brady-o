@@ -239,7 +239,7 @@ async function session(viewport, fn) {
   const pin = () => page.evaluate(() => { const G = window.BRADY.Game; G.slowT = -1e9; G.lowered = 0; G.dprCap = null; G.quality = 1; G.resize(); });
   const shot = async name => { await pin(); if (checksOnly) return; await page.waitForTimeout(300); await page.screenshot({ path: path.join(out, name) }); };
   const pano = async (name, k) => { if (checksOnly) return; await pin(); const url = await page.evaluate(kk => panorama(kk), k || 0.5); fs.writeFileSync(path.join(out, name), Buffer.from(url.split(',')[1], 'base64')); };
-  const run = async (name, f) => { if (want.length && !want.some(w => name.startsWith(w))) return; try { await pin(); await f(); } catch (e) { check(name + ' runs', false, String(e.message).slice(0, 300)); } };
+  const run = async (name, f) => { if (want.length ? !want.some(w => name.startsWith(w)) : name.startsWith('bot')) return; try { await pin(); await f(); } catch (e) { check(name + ' runs', false, String(e.message).slice(0, 300)); } };
   await fn(page, shot, run, pano);
   check(`${viewport.width}x${viewport.height}: no page errors`, !errors.length, errors.slice(0, 5));
   await browser.close();
@@ -286,6 +286,23 @@ const tableInit = () => {
     exitHatch() { return ents('Portal').find(e => /Out$/.test(e.s.targetRef || '')); },
     room() { const A = S().area; return { aid: A.aid, kind: A.roomKit && A.roomKit.kind, R: A.roomState || {} }; },
     cageOpen() { return ents('TourRoomCage').every(c => c.open); },
+    // the careful player: a critter close on the same floor gets stomped (a hop onto its head), or waited out
+    guard(maxT) {
+      const p = P(), g = S(); let t = 0;
+      const foe = () => S().entities.filter(e => e.enemy && !e.boss && !e.dead && !e.remove && !(e.constructor.name === 'TourShot') && !['sleep', 'puddle'].includes(e.state) && Math.abs(e.cx - p.cx) < 6 * 32 && Math.abs(e.y + e.h - p.y - p.h) < 48).sort((a, b) => Math.abs(a.cx - p.cx) - Math.abs(b.cx - p.cx))[0];
+      while (t < (maxT || 5)) {
+        if (!p || p.dead || g.state !== 'play') return false;
+        const e = foe(); if (!e) return true;
+        const d = e.cx - p.cx, dir = Math.sign(d) || 1;
+        if (Math.abs(d) < 3.4 * 32 && p.onGround) {
+          sim(1 / 120, { jump: true, jumpPressed: true, left: dir < 0, right: dir > 0 });
+          for (let k = 0; k < 90 && !p.onGround; k++) { const e2 = foe(); const dd = e2 ? e2.cx - p.cx : 0; sim(1 / 60, { jump: k < 14, left: dd < -4, right: dd > 4 }); }
+          t += 0.8; sim(0.1); continue;
+        }
+        sim(0.1); t += 0.1;
+      }
+      return true;
+    },
     // a hop on the spot (to land on a crease)
     hop() { sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.12, { jump: true }); for (let k = 0; k < 120 && !P().onGround; k++) sim(1 / 60); sim(0.15); },
     // walk to tile x on this floor and hop onto it
@@ -642,6 +659,83 @@ LEVELS.map = async (page, shot, run) => {
   });
 };
 
+// ---------------- the bot: every stage start to finish with enemies ON and no invulnerability, as a careful player ----
+// (opt-in: node tools/sbw_table_shots.js <dir> --checks bot). Each stage is a list of legs, each starting from where a
+// checkpoint (or the start) puts Brady; a death sends the bot back to the leg that begins at the respawn point. Deaths
+// are reported per stage with where they happened; the boss is fought with damage on.
+const BOT = {
+  '36-1': `[[2, () => { const r = AP.go([12, 10]); return r.ok && TB.chipDrop(11, 16).row === 14; }],
+    [10, () => AP.route([[24, 14], [31, 14], [44, 14], [52, 14]]).ok],
+    [49, () => AP.route([[57, 11], [61, 8], [68, 8]]).ok && TB.chipDrop(66, 70).row === 12 && TB.chipDrop(66, 70).row === 16],
+    [64, () => AP.route([[80, 16], [88, 16], [96, 14], [101, 14], [112, 14], [120, 14]]).ok],
+    [96, () => AP.route([[112, 14], [120, 14]]).ok && AP.go([126, 14]).ok && TB.meshCross(TB.plates().find(q => q.mesh === 'm1' && q.lead)).ok],
+    [130, () => AP.route([[137, 14], [141, 14]]).ok && AP.go([144, 14]).ok && TB.meshCross(TB.plates().find(q => q.mesh === 'm2' && q.lead)).ok && TB.walkOver(TB.plates().find(q => q.mesh === 'm2' && !q.lead), 153).ok],
+    [152, () => AP.route([[160, 14], [178, 14]]).ok]]`,
+  '36-2': `[[2, () => TB.crease(9) && AP.route([[16, 14], [24, 14]]).ok],
+    [16, () => TB.crease(29) && AP.route([[34, 11], [41, 8], [46, 8]]).ok],
+    [40, () => AP.route([[50, 14]]).ok && TB.crease(49) && AP.route([[55, 11], [64, 11], [70, 14]]).ok],
+    [68, () => AP.route([[78, 14]]).ok && TB.crease(80) && AP.route([[86, 11], [92, 8], [97, 14], [112, 14]]).ok],
+    [108, () => AP.route([[124, 14], [140, 14]]).ok],
+    [134, () => { TB.crease(144); for (let t = 0; t < 3 && ents('tabNapkin').find(q => q.id === 'n5').form !== 0; t += 1 / 60) sim(1 / 60, { right: true }); sim(0.6); return AP.route([[160, 9], [176, 9]]).ok; }]]`,
+  '36-3': `[[2, () => AP.go([10, 15]).ok && TB.pull(ents('tabCloth').sort((a, b) => a.x - b.x)[0], 3.6, -1).state !== 'on' && AP.route([[24, 9], [36, 9]]).ok],
+    [20, () => AP.route([[38, 9], [42, 15], [44, 15]]).ok && TB.pull(ents('tabCloth').sort((a, b) => a.x - b.x)[1], 3.4, -1).state !== 'on' && AP.route([[54, 9]]).ok],
+    [52, () => AP.route([[58, 9]]).ok && TB.pull(ents('tabCloth').sort((a, b) => a.x - b.x)[2], 3.4, -1).state !== 'on' && AP.route([[67, 4], [86, 4], [95, 9], [104, 15], [118, 15]]).ok],
+    [98, () => AP.route([[118, 15]]).ok && TB.pull(ents('tabCloth').sort((a, b) => a.x - b.x)[3], 3.6, -1).state !== 'on' && AP.route([[132, 9], [150, 9]]).ok]]`,
+  '36-4': `[[2, () => { const R = ents('tabRaft').sort((a, b) => a.x0 - b.x0); return AP.go([11, 12]).ok && TB.paddle(R[0], 24).ok && AP.route([[28, 12], [34, 12]]).ok && AP.go([37, 12]).ok && TB.paddle(R[1], 56).ok && AP.route([[59, 12], [62, 12]]).ok; }],
+    [60, () => { const R = ents('tabRaft').sort((a, b) => a.x0 - b.x0); return AP.go([68, 12]).ok && TB.paddle(R[2], 78).ok && AP.go([81, 12]).ok && AP.go([84, 12]).ok && TB.paddle(R[3], 93).ok && AP.route([[97, 9], [104, 9]]).ok; }],
+    [98, () => { const R = ents('tabRaft').sort((a, b) => a.x0 - b.x0)[4]; if (!AP.go([110, 9]).ok) return false; sim(0.4, { right: true }); sim(1.6); TB.onRaftAt(R, 0.5); TB.hop(); return TB.paddle(R, 142).ok && AP.route([[147, 10], [160, 10]]).ok; }]]`,
+  '36-5': `[[2, () => { const H = ents('tabHostess').sort((x, y) => x.x - y.x), marks = [10, 31, 50, 70]; for (let i = 0; i < 4; i++) { if (H[i].done) continue; if (!AP.go([marks[i], 14]).ok) return false; for (let k = 0; k < 300 && !(H[i].st === 'offer' && (!H[i].feint || H[i].real) && H[i].at > 0.2); k++) { sim(0.05); TB.guard(0.4); if (Math.abs(P().cx / 32 - marks[i] - 0.5) > 0.7) AP.go0([marks[i], 14]); } sim(1 / 120, { action: true, actionPressed: true }); sim(1); if (!H[i].done) return false; if (i < 3 && !AP.go([marks[i] + 6, 14]).ok) return false; } return AP.go([92, 14]).ok && TB.door() === 'booth'; }]]`
+};
+LEVELS.bot = async (page) => {
+  for (const id of Object.keys(BOT)) await (async () => {
+    const r = await page.evaluate(([id, legsSrc]) => {
+      fresh(); const B = window.BRADY; play(id); const legs = eval(legsSrc); if (!AP.go0) { AP.go0 = AP.go; } AP.go = (t, o) => { if (window.BOTON) TB.guard(); return AP.go0(t, o); }; window.BOTON = true; for (let k = 0; k < 50 && S().state !== 'play'; k++) sim(0.2); P().invuln = 0; B.Save.data.lives = 20;
+      const deaths = []; let i = 0, tries = 0, t0 = Date.now();
+      while (i < legs.length && tries < 14 && Date.now() - t0 < 240000) {
+        const lives0 = B.Save.data.lives, scene0 = S();
+        let ok = false; try { ok = legs[i][1](); } catch (e) { ok = false; }
+        const died = S() !== scene0 || B.Save.data.lives < lives0 || (P() && P().dead);
+        if (died || !ok) {
+          tries++;
+          if (died) { deaths.push({ leg: i, x: Math.floor((scene0.player ? scene0.player.cx : 0) / 32) }); for (let k = 0; k < 80 && (S() === scene0 || S().state !== 'play'); k++) sim(0.1); for (let k = 0; k < 50 && S().state !== 'play'; k++) sim(0.2); sim(0.5); P().invuln = 0; }
+          const x = P().cx / 32; let j = 0; for (let q = 0; q < legs.length; q++) if (legs[q][0] <= x + 1) j = q; i = j; continue;
+        }
+        i++;
+      }
+      window.BOTON = false;
+      // to the gate (or, for the boss level, into the booth)
+      if (i >= legs.length && id !== '36-5') { sim(4, { right: true }); }
+      return { id, leg: i, tries, done: i >= legs.length && (id === '36-5' ? S().area.aid === 'booth' : S().state !== 'play'), deaths, sec: Math.round((Date.now() - t0) / 1000) };
+    }, [id, BOT[id]]);
+    console.log('BOT ' + JSON.stringify(r));
+    check(`bot ${id}: played start to finish with enemies on, no invulnerability (${r.deaths.length} deaths)`, r.done, r);
+    const spots = {}; for (const d of r.deaths) spots[d.x] = (spots[d.x] || 0) + 1;
+    check(`bot ${id}: nothing kills the careful bot twice in one spot`, Object.values(spots).every(n => n < 2), spots);
+  })();
+  // the boss with damage on: the bot answers each courtesy as a thumb would
+  const b = await page.evaluate(() => {
+    const B = window.BRADY; fresh(); play('36-5'); B.Save.data.lives = 20; toArea('booth', 6, 13); P().invuln = 0; sim(3);
+    const boss = () => S().entities.find(e => e.boss && !e.remove), sau = () => ents('TabSaucer').sort((a, c) => a.x - c.x);
+    let hits = 0, deaths = 0, t = 0; const p0 = P().power;
+    const stand = s => { const p = P(); const d = s.cx - p.cx; sim(1 / 60, { left: d < -6, right: d > 6 }); return Math.abs(d) <= 8 && p.onGround; };
+    while (t < 150) {
+      const b = boss(); if (!b || b.state === 'dying') break;
+      const p = P(); if (!p || p.dead || S().state !== 'play') { deaths++; for (let k = 0; k < 80 && (!P() || S().state !== 'play'); k++) sim(0.1); toArea('booth', 6, 13); P().invuln = 0; sim(2); t += 8; continue; }
+      if (p.invuln > 0 && p.invuln < 1.95 && !p._seen) { hits++; p._seen = true; } if (!(p.invuln > 0)) p._seen = false;
+      // a shot rolling along the table at him: hop it
+      const sh = S().entities.find(e => e.constructor.name === 'TourShot' && !e.remove && Math.abs(e.cx - p.cx) < 80 && Math.sign(e.vx) === Math.sign(p.cx - e.cx));
+      if (sh && p.onGround) { sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.3, { jump: true }); t += 0.3; continue; }
+      const S0 = sau(), want = S0.find(s => s.item === 'bread') || (b.act === 'open' ? S0.find(s => s.lit) : null) || (b.act === 'spread' ? S0.reduce((m, s) => !m || Math.abs(s.cx - p.cx) < Math.abs(m.cx - p.cx) ? s : m, null) : null);
+      if (want) { if (stand(want)) { sim(0.05); sim(1 / 120, { action: true, actionPressed: true }); sim(0.3); t += 0.35; } else t += 1 / 60; continue; }
+      // otherwise wait at the left saucer (out of her reach)
+      if (!stand(S0[0])) {} sim(1 / 60); t += 1 / 30;
+    }
+    const b2 = boss(); return { beaten: !b2 || b2.state === 'dying', hits, deaths, t: Math.round(t) };
+  });
+  console.log('BOT boss ' + JSON.stringify(b));
+  check('bot 36-5 boss: Madame Manners beaten with damage on (hits taken and deaths reported)', b.beaten && b.deaths === 0, b);
+};
+
 // ---------------- the hidden entrance: Spain 6-1, the café after the third plaza ----------------
 LEVELS.entry = async (page, shot, run) => {
   await run('entry', async () => {
@@ -672,6 +766,7 @@ LEVELS.entry = async (page, shot, run) => {
     await page.evaluate(() => { sim(1.2); freeze(); }); await shot('02-entrance-cleared.png');
   });
 };
+
 
 
 
