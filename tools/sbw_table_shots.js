@@ -333,6 +333,51 @@ LEVELS.china = async (page, shot, run, pano) => {
 };
 
 
+
+// ---------------- the hidden entrance: Spain 6-1, the café after the third plaza ----------------
+LEVELS.entry = async (page, shot, run) => {
+  await run('entry', async () => {
+    const r0 = await page.evaluate(() => {
+      fresh(); const T = window.BRADY_TOUR; window.BRADY.Save.data.unlocked['6-1'] = true;
+      const hiddenBefore = T.TourProgress.countryUnlocked(T.Tour.countries.table);
+      play('6-1'); const d = ents('tabShadowDoor')[0]; const ax0 = d.ax0, ay = d.ay;
+      place(ax0 - 6, ay + 3); sim(0.5); P().invuln = 999;
+      return { hiddenBefore, ax0, ay, sx0: d.sx0, exits: Object.keys(T.Tour.specOf('6-1').exits) };
+    });
+    check('entry: the land is hidden before its entrance is used; 6-1 has its new exit', !r0.hiddenBefore && r0.exits.includes('table') && r0.exits.includes('main') && r0.exits.includes('secret'), r0);
+    await page.evaluate(() => { const g = S(); g.camX = Math.max(0, P().cx - 120); freeze(); });
+    await shot('00-entrance-before-the-cafe.png');
+    // walking past the reserved table (over its shadow) does nothing
+    const r1 = await page.evaluate(([ax0, ay]) => { thaw(); P().invuln = 999; AP.exec({ walkTo: (ax0 + 9) * 32, dir: 0 }, 4); sim(1); return { state: S().state, x: Math.floor(P().cx / 32) }; }, [r0.ax0, r0.ay]);
+    check('entry: walking over the shadow does nothing', r1.state === 'play', r1);
+    // the real way: onto the flower box, up onto the awning, walk off its end and drop through the shadow
+    const r2 = await page.evaluate(([ax0, ay]) => {
+      play('6-1'); place(ax0 - 6, ay + 3); sim(0.4); P().invuln = 999;
+      const a = AP.route([[ax0 - 2, ay + 2], [ax0 + 2, ay]]); if (!a.ok) return { a };
+      const g = S(), p = P(); let t = 0; while (t < 2 && g.state === 'play' && !(p.stunT > 0)) { sim(1 / 60, { right: true }); t += 1 / 60; }
+      sim(0.6); return { arriving: p.stunT > 0, banner: g.bannerText };
+    }, [r0.ax0, r0.ay]);
+    check('entry: played: up the flower box onto the awning, off its end through the shadow: Brady slips through', r2.arriving && r2.banner === 'TABLE FOR TWO', r2);
+    await page.evaluate(() => freeze()); await shot('01-entrance-arrival.png');
+    const r3 = await page.evaluate(() => { thaw(); for (let k = 0; k < 40 && S().state === 'play'; k++) sim(0.1); const T = window.BRADY_TOUR; return { state: S().state, key: S().exitKey, open: T.TourProgress.countryUnlocked(T.Tour.countries.table), first: T.TourProgress.isUnlocked('36-1'), lands: !!T.TourProgress.data().lands.table }; });
+    check('entry: the level clears through the table exit and the land opens (36-1 can be entered)', r3.key === 'table' && r3.open && r3.first && r3.lands, r3);
+    await page.evaluate(() => { sim(1.2); freeze(); }); await shot('02-entrance-cleared.png');
+  });
+};
+
+LEVELS.dbg = async (page, shot, run) => {
+  await run('dbg', async () => {
+    const r = await page.evaluate(() => {
+      fresh(); window.BRADY.Save.data.unlocked['6-1'] = true; play('6-1'); const d = ents('tabShadowDoor')[0]; const ax0 = d.ax0, ay = d.ay;
+      place(ax0 - 6, ay + 3); sim(0.4); P().invuln = 999;
+      const a = AP.route([[ax0 - 2, ay + 2], [ax0 + 2, ay]]); const out = [JSON.stringify(a), 'fy=' + d.fy + ' sx=' + d.sx0 + '-' + d.sx1];
+      const g = S(), p = P(); for (let k = 0; k < 40; k++) { sim(1 / 30, { right: true }); out.push([+(p.cx / 32).toFixed(1), p.groundTy, p.onGround ? 1 : 0, +(g.t - d.awnT).toFixed(2), d.arr].join(',')); }
+      return out;
+    });
+    console.log(r.join(' | '));
+  });
+};
+
 (async () => {
   await session({ width: 844, height: 390 }, async (page, shot, run, pano) => {
     await page.evaluate(tableInit);

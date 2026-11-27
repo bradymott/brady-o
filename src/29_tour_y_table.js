@@ -121,15 +121,18 @@ const TabArt = {
     ctx.fillStyle = RED; ctx.beginPath(); ctx.ellipse(x + r * 0.45, y - r * 0.1, r * 0.3, r * 0.26, 0, 0, TAU); ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.ellipse(x - r * 0.35, y - r * 0.35, r * 0.25, r * 0.12, -0.4, 0, TAU); ctx.fill(); ctx.restore();
   },
-  // the shadow of two joined hands (the entrance's clue, and the land's emblem)
+  // the shadow of two joined hands (the entrance's clue, and the land's emblem): two forearms meeting in the middle,
+  // the fingers laced together, the thumbs crossed over the top. About 64 x 34 at s = 1
   hands(ctx, x, y, s, col) {
     ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.fillStyle = col || 'rgba(30,14,20,0.42)';
     for (const d of [-1, 1]) {
-      ctx.beginPath(); ctx.moveTo(d * 26, 3); ctx.quadraticCurveTo(d * 16, -2, d * 9, -3); ctx.lineTo(d * 3, -4);
-      ctx.quadraticCurveTo(0, -2, d * 1, 1); ctx.lineTo(d * 7, 5); ctx.quadraticCurveTo(d * 16, 6, d * 26, 9); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(d * 34, 10); ctx.lineTo(d * 12, 2); ctx.quadraticCurveTo(d * 8, -8, d * 14, -12); ctx.lineTo(d * 34, -1); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(d * 8, -4, 9, 10, d * 0.3, 0, TAU); ctx.fill();
     }
-    ctx.beginPath(); ctx.ellipse(0, -0.5, 5.5, 4.2, 0, 0, TAU); ctx.fill();
-    for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.ellipse(-3 + k * 3, -4.5, 1.4, 2.4, 0.3, 0, TAU); ctx.fill(); }
+    // the laced fingers: a row of knuckles across the top, alternating sides
+    for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.ellipse(-6 + k * 4, -14 + (k % 2) * 2, 2.6, 4.2, (k % 2 ? 0.4 : -0.4), 0, TAU); ctx.fill(); }
+    // the two thumbs crossed
+    ctx.beginPath(); ctx.ellipse(-3, -15, 2.2, 5, 0.9, 0, TAU); ctx.ellipse(3, -15, 2.2, 5, -0.9, 0, TAU); ctx.fill();
     ctx.restore();
   },
   // a wisp of steam curling up (the land's tell for a hidden way: something warm is through there)
@@ -332,7 +335,7 @@ if (typeof LIQUIDS !== 'undefined') LIQUIDS.soup = ['#ffb870', '#e8783a', '#a840
 
 /* ---------------- props (Decor: drawn each frame, plain shapes) ---------------- */
 const decor = {
-  tabCandle(ctx, x, y, t, th, d) { TabArt.candle(ctx, x, y, 30 + ((d || 0) % 3) * 8, t + (d || 0)); },
+  tabCandle(ctx, x, y, t, th, d) { const sd = (d && d.seed) || 0; TabArt.candle(ctx, x, y, 30 + (sd % 3) * 8, t + sd); },
   tabShaker(ctx, x, y, t, th, d) {
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 1.5;
     for (const [dx, col] of [[-9, '#ffffff'], [9, '#3a3436']]) { ctx.fillStyle = 'rgba(230,240,255,0.7)'; rr(ctx, x + dx - 7, y - 30, 14, 30, 5); ctx.fill(); ctx.stroke(); ctx.fillStyle = col; ctx.fillRect(x + dx - 5, y - 16, 10, 14); ctx.fillStyle = '#c8ccd8'; rr(ctx, x + dx - 7, y - 36, 14, 8, 3); ctx.fill(); ctx.stroke(); }
@@ -359,7 +362,7 @@ const decor = {
     ctx.restore();
   },
   // the land's tell: a wisp of steam curling out of a hidden way
-  tabSteam(ctx, x, y, t, th, d) { TabArt.steam(ctx, x, y, t + (d || 0) * 0.3, 0.9); },
+  tabSteam(ctx, x, y, t, th, d) { TabArt.steam(ctx, x, y, t + ((d && d.seed) || 0) * 0.3, 0.9); },
   // a RESERVED card on a little stand
   tabReserved(ctx, x, y) {
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 1.4; ctx.fillStyle = IVORY; ctx.beginPath(); ctx.moveTo(x - 16, y); ctx.lineTo(x - 12, y - 18); ctx.lineTo(x + 12, y - 18); ctx.lineTo(x + 16, y); ctx.closePath(); ctx.fill(); ctx.stroke();
