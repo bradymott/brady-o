@@ -38213,6 +38213,10 @@ TourHats.NOT = new Set([].concat(
   // ridges, tumbling frames, auction lots and paddles, posing marks, the cord rack (and its crawling gnat), the rooms'
   // props, the fountain's way in
   'galPill galSitter galViewer galRidge galTumble galLot galPaddle galSitting galRack galCrawler galRoomProp galFountainGate'.split(' '),
+  // The Department of Unclaimed Shadows (world 35, hidden land A10): floating lines, claim boards, lamps and shelves,
+  // overlap screens, cutters and mail slots, split lamps, the filing wall (and its flea), the rooms' props, the keyhole,
+  // the secret nooks' painted covers
+  'shadPill shadBoard shadLamp shadOverlap shadCutter shadSlot shadSplit shadFiling shadCrawler shadRoomProp shadKeyholeGate shadCover'.split(' '),
   // Morocco: tagines, teapots, oranges, storms, pots, mirages, gales, lanterns, slabs, lines, portcullises, hooks, chains, grilles, winds
   'maTagine maTeapot maOrange maStorm maPot maMirage maGale maKickPot maShopLantern maMirageSlab maPhaseLine maPortcullis maLidHook maChain maRoofGrille maDownWind'.split(' '),
   // Mexico: peppers, elotes, popcorn, the piñata burro, lava blobs, salsa, melon carts, swingers, cannons, rails, sunbeams, bubbles, the Casa's gates
@@ -38333,6 +38337,8 @@ Object.assign(TourHats.HEADS, {
   seatsCrab: [0.42, 0.42, -1.55, 0], seatsShrew: [0.55, 0.55, -1.2, 0], seatsHen: [0.4, 0.4, -1.4, 0], seatsStoat: [0.45, 0.45, -1.45, 0],
   // The Table Salt Sea (34): the grain wren, the brine shrimp, the cork weevil, the salt lick
   saltWren: [0.3, 0.3, -1.3, 0], saltShrimp: [0.4, 0.4, -1.1, 0], saltWeevil: [0.4, 0.4, -1.15, 0], saltLick: [0.05, 0.05, -1.25, 0],
+  // The Department of Unclaimed Shadows (world 35): the thumb rabbit, the staple hound, the shade flea, the carbon crow
+  shadRabbit: [0.3, 0.3, -0.9, 0], shadHound: [0.59, 0.59, -1.08, 0], shadFlea: [0.37, 0.37, -1.0, 0], shadCrow: [0.33, 0.33, -1.0, 0]
 
 });
 
@@ -109152,6 +109158,2095 @@ if (typeof TOUR_OW_MAPS !== 'undefined') TOUR_OW_MAPS.seats = {
 };
 })();
 
+/* ---- 29_tour_y_shad.js ---- */
+/* ============================================================
+   THE DEPARTMENT OF UNCLAIMED SHADOWS (world 35, cc 'shad'): hidden land A10 (docs/design/CHATGPT_RELAY.md §A10).
+   "Piwi's spotlight left town with several shadows still waiting to be picked up."
+   Butter-yellow walls, grape shadows, salmon filing slots and white pinprick lamps. Every shadow in the land is a flat,
+   solid grape shape with ONE conspicuous notch (the department's tag that it has been filed). Lamps throw clear pale
+   cones. Brady's own shadow is only ever a flat cast shadow on the wall or the floor that he stretches, trims and points
+   with; it is never a character. The owners of the lost shadows are animals and objects (an umbrella, a teapot, a
+   rabbit, a watering can, a kettle): there are no human-like figures anywhere.
+   Its door: on the Moon, 18-1 ONE SMALL HOP, a grey sample locker just left of the start throws a long black shadow,
+   and in that shadow there is a keyhole of light (29_tour_y_shad_e_entry.js).
+   This file: the stop, the looks (tiles, themes, painted backdrops, props), the critters, the route-map emblem, the
+   map's sprites, the music and the country. The mechanics: 29_tour_y_shad_a_mech.js; the secret rooms:
+   29_tour_y_shad_b_rooms.js; the boss: 29_tour_y_shad_c_boss.js; the levels and the map: 29_tour_y_shad_d_levels.js.
+   ============================================================ */
+(function () {
+Tour.addStop({ id: 'shad', world: 35, name: 'The Department of Unclaimed Shadows', sub: 'a hidden land', lon: 168, lat: 57, secret: true, bonus: true, d0: 0.8, pin: 'shad' });
+const COL = { a: '#5a2a6a', b: '#f6dc7a', c: '#f08470' };
+const INK = '#1c1426';
+const BUT = '#f6dc7a', BUT_HI = '#fff0b4', BUT_LO = '#d8b856', GRA = '#5a2a6a', GRA_HI = '#7c4a8c', GRA_LO = '#3a1848', GRA_DK = '#2a1036';
+const SAL = '#f08470', SAL_HI = '#ffa898', SAL_LO = '#c8604e', WHITE = '#fffdf2', LIGHT = 'rgba(255,248,200,';
+
+/* ---------------- tiles: salmon filing-room baseboard, the shadow shelf, filing drawers ---------------- */
+const floorTile = {
+  style: 'shadFloor', cap: BUT, capHi: BUT_HI, dirt: SAL, dirt2: SAL_LO, rock: SAL_LO,
+  paint(ctx, rng) {
+    rng = rng || (() => 0.5);
+    ctx.fillStyle = SAL; ctx.fillRect(0, 0, TS, TS);
+    ctx.fillStyle = SAL_LO; ctx.fillRect(0, TS - 3, TS, 3); ctx.fillRect(TS - 2, 0, 2, TS);
+    ctx.strokeStyle = 'rgba(28,20,38,0.25)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(0, 15.5); ctx.lineTo(TS, 15.5); ctx.stroke();
+    if (rng() < 0.35) { ctx.fillStyle = GRA_LO; ctx.fillRect(12, 20, 8, 3); }
+  },
+  // the cap: a butter-yellow top over the salmon baseboard (the building block), an ink line under it
+  paintCap(ctx, x0, x1) {
+    ctx.fillStyle = BUT_LO; ctx.fillRect(x0, 0, x1 - x0, 12);
+    ctx.fillStyle = BUT; ctx.fillRect(x0, 0, x1 - x0, 9);
+    ctx.fillStyle = BUT_HI; ctx.fillRect(x0, 0, x1 - x0, 2);
+    ctx.fillStyle = INK; ctx.fillRect(x0, 11, x1 - x0, 1.5);
+  }
+};
+// the one-way ledge: an overlapping shadow shelf, two grape shadows laid over each other, the overlap darker
+const shelfSemi = {
+  style: 'shadShelf', c1: GRA_HI, c2: GRA,
+  paint(ctx, part, x0, x1) {
+    ctx.fillStyle = GRA; ctx.fillRect(x0, 0, x1 - x0, 10);
+    ctx.fillStyle = GRA_DK; for (let x = x0 + 6; x < x1; x += 40) ctx.fillRect(x, 0, 18, 10);
+    ctx.fillStyle = GRA_HI; ctx.fillRect(x0, 0, x1 - x0, 2);
+    ctx.fillStyle = INK; ctx.fillRect(x0, 10, x1 - x0, 1.4);
+    ctx.fillStyle = GRA; for (let x = x0 + 14; x < x1; x += 40) { ctx.beginPath(); ctx.moveTo(x, 11); ctx.lineTo(x + 10, 11); ctx.lineTo(x + 4, 17); ctx.closePath(); ctx.fill(); }
+  }
+};
+// a filing drawer block: salmon front, a pull and a label card
+const drawerBrick = {
+  style: 'shadDrawer', c1: SAL_HI, c2: SAL, mortar: SAL_LO,
+  paint(ctx) {
+    ctx.fillStyle = SAL; ctx.fillRect(0, 0, TS, TS);
+    ctx.fillStyle = SAL_HI; ctx.fillRect(2, 2, TS - 4, 3);
+    ctx.fillStyle = BUT; ctx.fillRect(10, 8, 12, 7); ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.strokeRect(10, 8, 12, 7);
+    ctx.fillStyle = GRA_LO; ctx.fillRect(9, 20, 14, 4);
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.strokeRect(0.75, 0.75, TS - 1.5, TS - 1.5);
+  }
+};
+// the hard wall: dark grape panelling
+const grapeWall = {
+  c1: GRA, c2: GRA_LO,
+  paint(ctx) {
+    ctx.fillStyle = GRA_LO; ctx.fillRect(0, 0, TS, TS);
+    ctx.strokeStyle = 'rgba(255,230,160,0.14)'; ctx.lineWidth = 1.5; ctx.strokeRect(4.5, 4.5, TS - 9, TS - 9);
+    ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(0, TS - 3, TS, 3);
+  }
+};
+const office = { ground: floorTile, semi: shelfSemi, brick: drawerBrick, hard: grapeWall, pillar: { c1: SAL, c2: SAL_LO, cap: BUT, style: 'column' }, accent: SAL, tint: {}, bloom: 0.08, liquid: 'shad_ink' };
+
+/* ---------------- shared drawings ---------------- */
+const ShadArt = {
+  INK, BUT, BUT_HI, BUT_LO, GRA, GRA_HI, GRA_LO, GRA_DK, SAL, SAL_HI, SAL_LO, WHITE,
+  // a lamp's cone of light from (x, y) down to the floor at fy, half-width at the floor hw; k: brightness 0..1
+  cone(ctx, x, y, fy, hw, k, dir) {
+    ctx.save(); const a = k == null ? 1 : k;
+    const g = ctx.createLinearGradient(0, y, 0, fy); g.addColorStop(0, LIGHT + (0.55 * a) + ')'); g.addColorStop(1, LIGHT + (0.18 * a) + ')');
+    ctx.fillStyle = g; ctx.beginPath();
+    if (dir) { ctx.moveTo(x, y - 6); ctx.lineTo(x, y + 6); ctx.lineTo(x + dir * hw * 2, fy); ctx.lineTo(x + dir * 6, fy); }
+    else { ctx.moveTo(x - 6, y); ctx.lineTo(x + 6, y); ctx.lineTo(x + hw, fy); ctx.lineTo(x - hw, fy); }
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = LIGHT + (0.6 * a) + ')'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.restore();
+  },
+  // a floor lamp (feet-centre), its shade at height h, lit or dim
+  floorLamp(ctx, x, y, h, lit, t) {
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    ctx.fillStyle = GRA_LO; ctx.beginPath(); ctx.ellipse(x, y - 3, 14, 4, 0, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = INK; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(x, y - 4); ctx.lineTo(x, y - h + 10); ctx.stroke();
+    ctx.strokeStyle = '#8a8070'; ctx.lineWidth = 3; ctx.stroke();
+    ctx.fillStyle = lit ? WHITE : '#c8c0a8'; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y - h + 12, 6, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = SAL; ctx.beginPath(); ctx.moveTo(x - 10, y - h); ctx.lineTo(x + 10, y - h); ctx.lineTo(x + 18, y - h + 16); ctx.lineTo(x - 18, y - h + 16); ctx.closePath(); ctx.fill(); ctx.stroke();
+    if (lit) { const k = 0.6 + 0.4 * Math.sin((t || 0) * 5); ctx.fillStyle = `rgba(255,255,240,${k})`; ctx.beginPath(); ctx.arc(x, y - h + 18, 3, 0, TAU); ctx.fill(); }
+    ctx.restore();
+  },
+  // a pinprick lamp on the wall (a white dot with a soft halo)
+  pin(ctx, x, y, t) { ctx.save(); ctx.fillStyle = LIGHT + '0.25)'; ctx.beginPath(); ctx.arc(x, y, 9 + Math.sin((t || 0) * 2 + x) * 1, 0, TAU); ctx.fill(); ctx.fillStyle = WHITE; ctx.beginPath(); ctx.arc(x, y, 2.6, 0, TAU); ctx.fill(); ctx.restore(); },
+  // the department's notch: a little triangular bite out of an edge (drawn in the wall colour over the shadow)
+  notch(ctx, x, y, s, a, col) { ctx.save(); ctx.translate(x, y); ctx.rotate(a || 0); ctx.fillStyle = col || BUT; ctx.beginPath(); ctx.moveTo(-5 * s, -1); ctx.lineTo(5 * s, -1); ctx.lineTo(0, 7 * s); ctx.closePath(); ctx.fill(); ctx.restore(); },
+  // a tag on a string (claim tickets everywhere)
+  tag(ctx, x, y, s, col) { ctx.save(); ctx.translate(x, y); ctx.scale(s || 1, s || 1); ctx.strokeStyle = INK; ctx.lineWidth = 1.3; ctx.fillStyle = col || WHITE; ctx.beginPath(); ctx.moveTo(-6, -4); ctx.lineTo(4, -4); ctx.lineTo(8, 0); ctx.lineTo(4, 4); ctx.lineTo(-6, 4); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(4, 0, 1.2, 0, TAU); ctx.fill(); ctx.restore(); }
+};
+/* The owners and their shadows: shape(ctx, kind, x, y, s, o) draws an object's outline as a path (feet-centre), so the
+   same path is the coloured owner and its grape shadow. Kinds: umb (closed umbrella), umbOpen (open, o.spoke: the
+   missing spoke 0..4), pot (teapot), rab (rabbit), can (watering can), ket (kettle). o.notch: where the notch bites
+   (0..3), drawn by notchOf(). */
+const SHAPES = {
+  umb(c) { c.moveTo(0, -46); c.lineTo(7, -12); c.lineTo(2, -12); c.lineTo(2, -4); c.quadraticCurveTo(2, 0, -2, 0); c.quadraticCurveTo(-6, 0, -6, -4); c.lineTo(-3, -4); c.lineTo(-2, -12); c.lineTo(-7, -12); c.closePath(); },
+  umbOpen(c) { c.moveTo(-22, -24); c.quadraticCurveTo(0, -50, 22, -24); c.lineTo(15, -26); c.lineTo(8, -24); c.lineTo(0, -26); c.lineTo(-8, -24); c.lineTo(-15, -26); c.closePath(); c.rect(-1.5, -26, 3, 22); c.moveTo(1.5, -4); c.quadraticCurveTo(1.5, 0, -2, 0); c.quadraticCurveTo(-5, 0, -5, -4); c.lineTo(-3, -4); c.quadraticCurveTo(-3, -2, -2, -2); c.quadraticCurveTo(-0.5, -2, -0.5, -4); c.closePath(); },
+  pot(c) { c.ellipse(0, -14, 14, 13, 0, 0, TAU); c.moveTo(12, -16); c.lineTo(26, -26); c.lineTo(24, -22); c.lineTo(13, -9); c.closePath(); c.moveTo(-12, -20); c.quadraticCurveTo(-24, -18, -12, -6); c.lineTo(-12, -10); c.quadraticCurveTo(-18, -14, -12, -16); c.closePath(); c.moveTo(-3, -27); c.arc(0, -29, 3, 0, TAU); c.rect(-9, -27, 18, 3); },
+  rab(c) { c.ellipse(0, -10, 13, 10, 0, 0, TAU); c.moveTo(14, -18); c.arc(9, -18, 6, 0, TAU); c.ellipse(7, -32, 3, 10, -0.2, 0, TAU); c.ellipse(12, -31, 3, 10, 0.25, 0, TAU); c.moveTo(-10, -12); c.arc(-13, -12, 4, 0, TAU); },
+  can(c) { c.rect(-12, -24, 22, 24); c.moveTo(10, -18); c.lineTo(28, -30); c.lineTo(30, -26); c.lineTo(10, -10); c.closePath(); c.moveTo(-12, -20); c.quadraticCurveTo(-24, -14, -12, -4); c.lineTo(-12, -8); c.quadraticCurveTo(-17, -14, -12, -16); c.closePath(); },
+  ket(c) { c.moveTo(-14, 0); c.lineTo(-12, -20); c.quadraticCurveTo(0, -26, 12, -20); c.lineTo(14, 0); c.closePath(); c.moveTo(-8, -22); c.quadraticCurveTo(0, -38, 8, -22); c.lineTo(5, -22); c.quadraticCurveTo(0, -32, -5, -22); c.closePath(); c.moveTo(12, -14); c.lineTo(24, -20); c.lineTo(22, -16); c.lineTo(13, -7); c.closePath(); }
+};
+// where each kind's notch can bite: [x, y, angle] in shape coordinates
+const NOTCHES = {
+  umb: [[0, -40, 0], [5, -20, -1.4], [-5, -20, 1.4], [0, -12, Math.PI]],
+  umbOpen: [[-18, -27, 0.4], [-8, -40, 0.3], [8, -40, -0.3], [18, -27, -0.4]],
+  pot: [[0, -26, 0], [13, -14, -1.6], [-13, -14, 1.6], [0, -2, Math.PI]],
+  rab: [[0, -19, 0], [12, -11, -1.6], [-12, -10, 1.6], [0, -1, Math.PI]],
+  can: [[-6, -24, 0], [10, -14, -1.6], [-12, -6, 1.6], [0, 0, Math.PI]],
+  ket: [[0, -24, 0], [13, -8, -1.6], [-13, -8, 1.6], [0, 0, Math.PI]]
+};
+ShadArt.shape = function (ctx, kind, x, y, s, o) {
+  o = o || {}; ctx.save(); ctx.translate(x, y); ctx.scale(s * (o.flip ? -1 : 1), s);
+  ctx.beginPath(); (SHAPES[kind] || SHAPES.pot)(ctx);
+  if (o.fill) { ctx.fillStyle = o.fill; ctx.fill('nonzero'); }
+  if (o.lw !== 0) { ctx.strokeStyle = o.ink || INK; ctx.lineWidth = (o.lw || 2) / s; ctx.stroke(); }
+  // the missing spoke of an open umbrella: a wedge of wall showing through its canopy
+  if (kind === 'umbOpen' && o.spoke != null) { const sx = -15 + o.spoke * 7.5; ctx.fillStyle = o.hole || BUT; ctx.beginPath(); ctx.moveTo(sx - 3.5, -25); ctx.lineTo(sx + 3.5, -25); ctx.lineTo(sx * 0.3, -40); ctx.closePath(); ctx.fill(); }
+  if (o.notch != null && NOTCHES[kind]) { const N = NOTCHES[kind][o.notch % 4]; ShadArt.notch(ctx, N[0], N[1], 1, N[2], o.hole || BUT); }
+  ctx.restore();
+};
+// an owner: the object in colour, a dashed grape outline on the floor where its shadow should be
+const OWN_COL = { umb: '#3a7ac8', umbOpen: '#3a7ac8', pot: '#e8f0f4', rab: '#f2ece0', can: '#4aa86a', ket: '#c8d0d8' };
+ShadArt.owner = function (ctx, kind, x, y, s, t, o) {
+  o = o || {};
+  ctx.save();
+  // the empty place where its shadow belongs: a bold dashed outline on the wall behind it
+  ctx.save(); ctx.setLineDash([6, 4]); ctx.lineDashOffset = -(t || 0) * 10; ShadArt.shape(ctx, kind, x + 30 * s, y, s, { ink: INK, lw: 5 }); ShadArt.shape(ctx, kind, x + 30 * s, y, s, { ink: SAL_HI, lw: 2.5 }); ctx.restore();
+  ShadArt.shape(ctx, kind, x, y + Math.sin((t || 0) * 3) * (o.happy ? 2 : 0), s, { fill: OWN_COL[kind] || WHITE, notch: o.notch, hole: o.hole || BUT, spoke: o.spoke, lw: 2 });
+  // two little eyes (they are the department's customers, waiting)
+  const ey = { umb: -30, umbOpen: -32, pot: -16, rab: -20, can: -16, ket: -12 }[kind] || -16, ex = kind === 'rab' ? 9 : 0;
+  for (const dx of [-3.5, 3.5]) { ctx.fillStyle = WHITE; ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x + (ex + dx) * s, y + ey * s, 2.6 * s, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(x + (ex + dx) * s, y + (ey + (o.happy ? -0.5 : 0.6)) * s, 1.2 * s, 0, TAU); ctx.fill(); }
+  ctx.restore();
+};
+// Brady's own flat cast shadow (the only shadow of his here): a grape shape of his outline, feet at (x, y), height h
+// (px), leaning `lean` px at the top (away from the light), one arm up when `arm` (its hand: the returned point)
+ShadArt.bradyShadow = function (ctx, x, y, h, lean, o) {
+  o = o || {}; const w = Math.max(14, h * 0.32), hy = y - h, hx = x + lean, arm = o.arm !== false;
+  const P = k => [x + lean * k, y - h * k];
+  ctx.save(); ctx.fillStyle = o.col || 'rgba(58,24,72,0.9)'; ctx.beginPath();
+  const [bx0, by0] = P(0), [bx1, by1] = P(0.72);
+  ctx.moveTo(bx0 - w * 0.38, by0); ctx.lineTo(bx1 - w * 0.5, by1); ctx.lineTo(bx1 + w * 0.5, by1); ctx.lineTo(bx0 + w * 0.38, by0); ctx.closePath(); ctx.fill();
+  const [hx0, hy0] = P(0.86); ctx.beginPath(); ctx.arc(hx0, hy0, w * 0.34, 0, TAU); ctx.fill();
+  // the bun
+  ctx.beginPath(); ctx.arc(hx0 + w * 0.24, hy0 - w * 0.3, w * 0.16, 0, TAU); ctx.fill();
+  let hand = null;
+  if (arm) {
+    const [sx, sy] = P(0.7), ax = o.armDir || Math.sign(lean) || 1; hand = [hx + ax * w * 0.55, hy - h * 0.12];
+    ctx.strokeStyle = ctx.fillStyle; ctx.lineWidth = Math.max(4, w * 0.2); ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(sx + ax * w * 0.3, sy); ctx.lineTo(hand[0], hand[1]); ctx.stroke();
+    ctx.beginPath(); ctx.arc(hand[0], hand[1], Math.max(4, w * 0.16), 0, TAU); ctx.fill();
+  }
+  ctx.restore();
+  return hand;
+};
+
+/* ---------------- painted backdrops (dim, outline-free: nothing here looks like a prop) ---------------- */
+const painters = {
+  // the department's far wall: butter plaster, rows of dim salmon filing slots, pinprick lamps, a long counter rail
+  shadWall(ctx, L, rng, H) {
+    const b = L.base, c = L.color;
+    ctx.fillStyle = c; ctx.fillRect(0, 0, BG_W, H);
+    ctx.fillStyle = shade(c, -0.08); for (let y = 70; y < b - 100; y += 46) for (let x = (y / 46 % 2) * 30; x < BG_W; x += 60) ctx.fillRect(x + 4, y, 44, 30);
+    ctx.fillStyle = shade(c, -0.16); for (let y = 70; y < b - 100; y += 46) for (let x = (y / 46 % 2) * 30; x < BG_W; x += 60) ctx.fillRect(x + 18, y + 22, 16, 4);
+    for (let x = 40; x < BG_W; x += 150) { ctx.fillStyle = 'rgba(255,255,240,0.5)'; ctx.beginPath(); ctx.arc(x, 40, 3, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(255,250,210,0.18)'; ctx.beginPath(); ctx.arc(x, 40, 12, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = shade(c, -0.22); ctx.fillRect(0, b - 60, BG_W, H - b + 60);
+    ctx.fillStyle = shade(c, -0.1); ctx.fillRect(0, b - 64, BG_W, 5);
+  },
+  // the long shelves of the lost-property store: tall racks of parcels, each throwing a soft grape shadow
+  shadRacks(ctx, L, rng, H) {
+    const b = L.base, c = L.color;
+    for (let x = 0; x < BG_W; x += 190) {
+      ctx.fillStyle = shade(c, -0.1); ctx.fillRect(x + 10, 60, 150, b - 60);
+      for (let y = 90; y < b - 20; y += 52) { ctx.fillStyle = shade(c, -0.2); ctx.fillRect(x + 10, y, 150, 5); for (let k = 0; k < 4; k++) { const w = 18 + rng() * 14, hh = 16 + rng() * 22; ctx.fillStyle = shade(c, -0.04 + rng() * 0.06); ctx.fillRect(x + 18 + k * 36, y - hh, w, hh); ctx.fillStyle = 'rgba(58,24,72,0.12)'; ctx.fillRect(x + 18 + k * 36 + w, y - hh + 4, 8, hh - 4); } }
+    }
+    ctx.fillStyle = shade(c, -0.24); ctx.fillRect(0, b, BG_W, H - b);
+  },
+  // the lamp room: tall wainscoted walls, long soft grape shadows slanting across them (no lamps back here)
+  shadLamps(ctx, L, rng, H) {
+    const b = L.base, c = L.color;
+    ctx.fillStyle = c; ctx.fillRect(0, 0, BG_W, H);
+    ctx.fillStyle = shade(c, -0.06); for (let x = 0; x < BG_W; x += 64) ctx.fillRect(x, b - 150, 30, 150);
+    ctx.fillStyle = 'rgba(58,24,72,0.08)'; for (let x = 40; x < BG_W; x += 230) { ctx.beginPath(); ctx.moveTo(x, b); ctx.lineTo(x + 30, b); ctx.lineTo(x + 150, b - 200); ctx.lineTo(x + 110, b - 200); ctx.closePath(); ctx.fill(); }
+    ctx.fillStyle = shade(c, -0.24); ctx.fillRect(0, b, BG_W, H - b);
+  },
+  // the screen room: folding screens far back, their panels overlapping into darker patches
+  shadScreens(ctx, L, rng, H) {
+    const b = L.base, c = L.color;
+    ctx.fillStyle = c; ctx.fillRect(0, 0, BG_W, H);
+    for (let x = 20; x < BG_W; x += 170) for (let k = 0; k < 3; k++) { ctx.fillStyle = shade(c, -0.06 - (k % 2) * 0.05); ctx.beginPath(); ctx.moveTo(x + k * 36, b - 150 + (k % 2) * 8); ctx.lineTo(x + k * 36 + 36, b - 150 + ((k + 1) % 2) * 8); ctx.lineTo(x + k * 36 + 36, b); ctx.lineTo(x + k * 36, b); ctx.closePath(); ctx.fill(); }
+    ctx.fillStyle = 'rgba(58,24,72,0.08)'; for (let x = 60; x < BG_W; x += 170) ctx.fillRect(x, b - 120, 90, 120);
+    ctx.fillStyle = shade(c, -0.24); ctx.fillRect(0, b, BG_W, H - b);
+  },
+  // the alterations room: bolts of cloth on racks, a long tape measure along the wall, spools
+  shadTailor(ctx, L, rng, H) {
+    const b = L.base, c = L.color;
+    ctx.fillStyle = c; ctx.fillRect(0, 0, BG_W, H);
+    ctx.fillStyle = shade(c, 0.08); ctx.fillRect(0, 54, BG_W, 12); ctx.fillStyle = shade(c, -0.14); for (let x = 0; x < BG_W; x += 16) ctx.fillRect(x, 54, 1.5, x % 64 ? 5 : 10);
+    for (let x = 30; x < BG_W; x += 120) for (let k = 0; k < 3; k++) { ctx.fillStyle = shade(['#c87a6a', '#7a8ac8', '#8ab87a'][(x / 120 + k | 0) % 3], -0.05); ctx.fillRect(x + k * 26, b - 130, 20, 70); ctx.fillStyle = 'rgba(0,0,0,0.08)'; ctx.fillRect(x + k * 26 + 14, b - 130, 6, 70); }
+    for (let x = 90; x < BG_W; x += 240) { ctx.fillStyle = shade(c, -0.14); ctx.beginPath(); ctx.arc(x, b - 30, 14, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = shade(c, -0.24); ctx.fillRect(0, b, BG_W, H - b);
+  },
+  // the claims office: a long counter with ticket windows far back, a bell on each, a clock face
+  shadOffice(ctx, L, rng, H) {
+    const b = L.base, c = L.color;
+    ctx.fillStyle = c; ctx.fillRect(0, 0, BG_W, H);
+    for (let x = 30; x < BG_W; x += 140) { ctx.fillStyle = shade(c, -0.12); ctx.fillRect(x, b - 180, 90, 90); ctx.fillStyle = shade(c, 0.06); ctx.fillRect(x + 8, b - 172, 74, 60); ctx.fillStyle = shade(c, -0.16); ctx.fillRect(x + 30, b - 112, 30, 10); }
+    for (let x = 100; x < BG_W; x += 420) { ctx.fillStyle = shade(c, 0.1); ctx.beginPath(); ctx.arc(x, 60, 26, 0, TAU); ctx.fill(); ctx.strokeStyle = shade(c, -0.2); ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, 60); ctx.lineTo(x, 42); ctx.moveTo(x, 60); ctx.lineTo(x + 12, 64); ctx.stroke(); }
+    ctx.fillStyle = shade(c, -0.18); ctx.fillRect(0, b - 80, BG_W, 80); ctx.fillStyle = shade(c, -0.08); ctx.fillRect(0, b - 84, BG_W, 6);
+    ctx.fillStyle = shade(c, -0.26); ctx.fillRect(0, b, BG_W, H - b);
+  },
+  /* ---------- the secret rooms' own backdrops (all different) ---------- */
+  // 35-1 DOWNBEAT DELIVERY: the parcel room: a conveyor of brown parcels far back, a big round clock
+  roomParcel(ctx, L, rng, H) { const b = L.base; ctx.fillStyle = '#6a8a9a'; ctx.fillRect(0, 0, BG_W, H); ctx.fillStyle = '#5a7a8a'; for (let x = 0; x < BG_W; x += 64) ctx.fillRect(x, 0, 30, b); ctx.fillStyle = '#4a5a64'; ctx.fillRect(0, b - 90, BG_W, 10); for (let x = 10; x < BG_W; x += 44) { ctx.fillStyle = '#b8946a'; ctx.fillRect(x, b - 114, 30, 24); ctx.fillStyle = '#9a7a54'; ctx.fillRect(x + 13, b - 114, 4, 24); } ctx.fillStyle = '#2e3a44'; ctx.fillRect(0, b - 8, BG_W, H - b + 8); },
+  // 35-2 ONE WINDOW AJAR: the night-shift corridor: a wall of dark glass, rain streaks, a radiator
+  roomRain(ctx, L, rng, H) { const b = L.base; ctx.fillStyle = '#2a3450'; ctx.fillRect(0, 0, BG_W, H); ctx.strokeStyle = 'rgba(170,190,230,0.25)'; ctx.lineWidth = 1.2; for (let k = 0; k < 140; k++) { const x = rng() * BG_W, y = rng() * b; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 3, y + 12); ctx.stroke(); } ctx.fillStyle = '#3a4460'; ctx.fillRect(0, b - 50, BG_W, 50); ctx.fillStyle = '#4a5474'; for (let x = 0; x < BG_W; x += 12) ctx.fillRect(x, b - 46, 6, 36); ctx.fillStyle = '#1a2236'; ctx.fillRect(0, b - 8, BG_W, H - b + 8); },
+  // 35-3 BORROWED FOOT: the boot room: rows of cubbies far back, tiled floor
+  roomBoot(ctx, L, rng, H) { const b = L.base; ctx.fillStyle = '#8a9a6a'; ctx.fillRect(0, 0, BG_W, H); ctx.fillStyle = '#7a8a5a'; for (let y = 30; y < b - 60; y += 40) for (let x = 0; x < BG_W; x += 40) ctx.fillRect(x + 3, y + 3, 34, 34); ctx.fillStyle = '#5a6a40'; ctx.fillRect(0, b - 8, BG_W, H - b + 8); },
+  // 35-4 COLD CUP: the staff kitchen: tiles, a kettle shelf, a hatch far back
+  roomKitchen(ctx, L, rng, H) { const b = L.base; ctx.fillStyle = '#e8e4d8'; ctx.fillRect(0, 0, BG_W, H); ctx.strokeStyle = '#cfcabc'; ctx.lineWidth = 1.5; for (let y = 0; y < b; y += 24) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(BG_W, y); ctx.stroke(); } for (let x = 0; x < BG_W; x += 24) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, b); ctx.stroke(); } ctx.fillStyle = '#b8a888'; ctx.fillRect(0, 70, BG_W, 6); ctx.fillStyle = '#8a7a6a'; ctx.fillRect(0, b - 8, BG_W, H - b + 8); },
+  // 35-5 PRINT RUN: the cut-out workshop: paper sheets pinned up, a long cutting mat, a lamp hanging low
+  roomCutout(ctx, L, rng, H) { const b = L.base; ctx.fillStyle = '#3a2a4a'; ctx.fillRect(0, 0, BG_W, H); for (let x = 20; x < BG_W; x += 70) { ctx.fillStyle = '#5a4a6a'; ctx.fillRect(x, 30 + (x % 3) * 8, 46, 58); ctx.fillStyle = '#6a5a7a'; ctx.fillRect(x + 8, 40 + (x % 3) * 8, 30, 4); } ctx.fillStyle = '#4a7a5a'; ctx.fillRect(0, b - 40, BG_W, 30); ctx.strokeStyle = '#5a8a6a'; ctx.lineWidth = 1; for (let x = 0; x < BG_W; x += 20) { ctx.beginPath(); ctx.moveTo(x, b - 40); ctx.lineTo(x, b - 10); ctx.stroke(); } ctx.fillStyle = '#221630'; ctx.fillRect(0, b - 8, BG_W, H - b + 8); }
+};
+// each secret room its own floor and walls
+const MATS = {
+  crate: { base: '#8a6a4a', cap: '#c89a62', capLo: '#6a4a2e', pat(ctx) { ctx.fillStyle = '#7a5a3a'; ctx.fillRect(0, 10, TS, 2); ctx.fillRect(0, 22, TS, 2); ctx.fillRect(TS / 2, 0, 2, 10); } },
+  rubber: { base: '#3a4258', cap: '#6a7a9a', capLo: '#2a3246', pat(ctx) { ctx.fillStyle = '#323a50'; for (let y = 4; y < TS; y += 8) ctx.fillRect(0, y, TS, 3); } },
+  tile: { base: '#c8c0a0', cap: '#6a7a4a', capLo: '#4a5a30', pat(ctx) { ctx.fillStyle = '#b8b090'; ctx.fillRect(0, 0, TS / 2 - 1, TS / 2 - 1); ctx.fillRect(TS / 2, TS / 2, TS / 2 - 1, TS / 2 - 1); } },
+  lino: { base: '#a84a4a', cap: '#f0ece0', capLo: '#c8c0b0', pat(ctx) { ctx.fillStyle = '#984040'; for (let k = 0; k < 5; k++) ctx.fillRect((k * 13) % TS, (k * 7) % TS, 6, 2); } },
+  mat: { base: '#2a5a3a', cap: '#5a9a6a', capLo: '#1a4028', pat(ctx) { ctx.strokeStyle = '#3a6a4a'; ctx.lineWidth = 1; ctx.strokeRect(0.5, 0.5, TS / 2, TS / 2); ctx.strokeRect(TS / 2 + 0.5, TS / 2 + 0.5, TS / 2 - 1, TS / 2 - 1); } }
+};
+const mat = k => {
+  const M = MATS[k];
+  const ground = { style: 'shadroom_' + k, cap: M.cap, capHi: M.cap, dirt: M.base, dirt2: M.capLo, rock: M.base,
+    paint(ctx, rng) { ctx.fillStyle = M.base; ctx.fillRect(0, 0, TS, TS); M.pat(ctx, rng || (() => 0.5)); },
+    paintCap(ctx, x0, x1) { ctx.fillStyle = M.capLo; ctx.fillRect(x0, 0, x1 - x0, 10); ctx.fillStyle = M.cap; ctx.fillRect(x0, 0, x1 - x0, 7); ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(x0, 0, x1 - x0, 1.5); ctx.fillStyle = INK; ctx.fillRect(x0, 9.5, x1 - x0, 1.5); } };
+  return { ground, hard: { c1: M.base, c2: M.capLo, paint(ctx, rng) { ctx.fillStyle = shade(M.base, -0.2); ctx.fillRect(0, 0, TS, TS); M.pat(ctx, rng || (() => 0.5)); } } };
+};
+const room = (name, painter, extra) => Object.assign({}, office, { name, music: 'tour_shad_room', particles: 'none', rays: null, sky: ['#2a2032', '#3a2c40', '#4a3848'], horizonGlow: '#ffe0b0', celestial: { type: 'none' }, stars: 0, layers: [{ kind: painter, base: 400, f: 0.05 }], fog: '#3a2c40', decor: [] }, extra || {});
+const inside = (name, sky, layers, extra) => Object.assign({}, office, { name, music: 'tour_shad', particles: 'none', rays: null, sky, horizonGlow: sky[2], celestial: { type: 'none' }, stars: 0, layers, fog: sky[1], decor: ['shadCrate', 'shadBell', 'shadSpool'] }, extra || {});
+const themes = {
+  shad_lost: inside('Lost Property', ['#e8cc70', '#f0d67c', '#f6dc88'], [{ kind: 'shadWall', color: '#f0d478', base: 392, f: 0.06 }, { kind: 'shadRacks', color: '#e2c468', base: 400, f: 0.12 }]),
+  shad_lamp: inside('The Lamp Room', ['#c8a85a', '#d4b466', '#e0c072'], [{ kind: 'shadLamps', color: '#d2b264', base: 392, f: 0.07 }], { decor: ['shadCrate', 'shadSpool'], music: 'tour_shad_lamp' }),
+  shad_screens: inside('The Screen Room', ['#e6c0a0', '#ecc8a8', '#f2d0b0'], [{ kind: 'shadScreens', color: '#eac6a4', base: 392, f: 0.07 }], { decor: ['shadBell', 'shadCrate'] }),
+  shad_tailor: inside('Alterations', ['#d8c890', '#e0d09a', '#e8d8a4'], [{ kind: 'shadTailor', color: '#dccc94', base: 392, f: 0.07 }], { decor: ['shadSpool', 'shadCrate'], music: 'tour_shad_lamp' }),
+  shad_claims: inside('The Claims Office', ['#b8a070', '#c4ac7a', '#d0b884'], [{ kind: 'shadOffice', color: '#c2aa78', base: 392, f: 0.06 }], { decor: ['shadBell', 'shadCrate'] }),
+  shad_arena: inside('The Understudy\'s Counter', ['#4a3a4a', '#5a4858', '#6a5666'], [{ kind: 'shadOffice', color: '#7a6870', base: 392, f: 0.05 }], { decor: [], music: 'tour_shad_boss' }),
+  shad_room_parcel: room('The Parcel Room', 'roomParcel', mat('crate')),
+  shad_room_rain: room('The Night Corridor', 'roomRain', mat('rubber')),
+  shad_room_boot: room('The Boot Room', 'roomBoot', mat('tile')),
+  shad_room_kitchen: room('The Staff Kitchen', 'roomKitchen', mat('lino')),
+  shad_room_cutout: room('The Cut-Out Workshop', 'roomCutout', mat('mat'))
+};
+
+/* ---------------- props (Decor) ---------------- */
+const decor = {
+  // an unclaimed parcel with its ticket, and its own little grape shadow (with the notch)
+  shadCrate(ctx, x, y, t, th, d) { ctx.save(); ctx.fillStyle = 'rgba(58,24,72,0.55)'; ctx.fillRect(x - 6, y - 18, 22, 18); ShadArt.notch(ctx, x + 12, y - 18, 0.7, 0, 'rgba(240,212,120,0.9)'); ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.fillStyle = '#c89a62'; ctx.fillRect(x - 12, y - 20, 22, 20); ctx.strokeRect(x - 12, y - 20, 22, 20); ctx.fillStyle = '#a87a42'; ctx.fillRect(x - 3, y - 20, 4, 20); ShadArt.tag(ctx, x + 12, y - 8, 0.8); ctx.restore(); },
+  // a counter bell on a little stool
+  shadBell(ctx, x, y) { ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.fillStyle = SAL_LO; ctx.fillRect(x - 8, y - 18, 3, 18); ctx.fillRect(x + 5, y - 18, 3, 18); ctx.fillStyle = SAL; rr(ctx, x - 11, y - 22, 22, 5, 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#e8c84a'; ctx.beginPath(); ctx.arc(x, y - 22, 7, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.arc(x, y - 30, 1.8, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore(); },
+  // a cotton spool, big as a stool
+  shadSpool(ctx, x, y) { ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.fillStyle = '#d8b88a'; ctx.fillRect(x - 10, y - 4, 20, 4); ctx.strokeRect(x - 10, y - 4, 20, 4); ctx.fillRect(x - 10, y - 22, 20, 4); ctx.strokeRect(x - 10, y - 22, 20, 4); ctx.fillStyle = SAL; ctx.fillRect(x - 7, y - 18, 14, 14); ctx.strokeRect(x - 7, y - 18, 14, 14); ctx.strokeStyle = SAL_LO; ctx.lineWidth = 1; for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.moveTo(x - 7, y - 16 + k * 3.5); ctx.lineTo(x + 7, y - 15 + k * 3.5); ctx.stroke(); } ctx.restore(); },
+  // the land's tell: a door's shadow on the wall with no door to cast it (and the notch), right by a way in
+  shadTell(ctx, x, y, t) { ctx.save(); ctx.fillStyle = 'rgba(58,24,72,0.7)'; const w = 22, h = 40, x0 = x - 4; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0, y - h + 8); ctx.quadraticCurveTo(x0, y - h, x0 + 8, y - h); ctx.lineTo(x0 + w - 4, y - h); ctx.lineTo(x0 + w + 4, y); ctx.closePath(); ctx.fill(); ShadArt.notch(ctx, x0 + w * 0.5, y - h, 0.8, 0); ctx.fillStyle = 'rgba(255,240,190,0.55)'; ctx.beginPath(); ctx.arc(x0 + w - 4, y - h * 0.5, 2, 0, TAU); ctx.fill(); ctx.restore(); },
+  shadTellLow(ctx, x, y, t) { decor.shadTell(ctx, x, y + 40, t); }
+};
+const decorLights = {};
+
+/* ---------------- door looks: the department's office door, a hatch in the filing wall ---------------- */
+{
+  const dr0 = DoorArt.draw;
+  DoorArt.draw = function (ctx, x, y, look, t, near) {
+    if (look === 'shadDoor' || look === 'shadHatch') {
+      ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+      if (look === 'shadDoor') {
+        ctx.fillStyle = SAL; rr(ctx, x - 20, y - 60, 40, 60, 4); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#e8f0f0'; ctx.fillRect(x - 13, y - 52, 26, 20); ctx.strokeRect(x - 13, y - 52, 26, 20);
+        ctx.fillStyle = INK; ctx.font = '6px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('CLAIMS', x, y - 40);
+        ctx.fillStyle = BUT; ctx.beginPath(); ctx.arc(x + 13, y - 28, 2.6, 0, TAU); ctx.fill(); ctx.stroke();
+      } else {
+        ctx.fillStyle = GRA_LO; rr(ctx, x - 16, y - 40, 32, 40, 3); ctx.fill(); ctx.stroke();
+        ctx.strokeStyle = SAL; ctx.lineWidth = 1.5; ctx.strokeRect(x - 11, y - 35, 22, 30);
+        ctx.fillStyle = BUT; ctx.fillRect(x - 6, y - 22, 12, 3);
+      }
+      if (near) { ctx.fillStyle = '#ffffff'; ctx.font = '9px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('▲', x, y - 68 + Math.sin(t * 6) * 2); }
+      ctx.restore(); return;
+    }
+    return dr0.call(this, ctx, x, y, look, t, near);
+  };
+}
+
+/* ---------------- the critters ---------------- */
+// THUMB RABBIT: a flat grape rabbit (a hand shadow come loose). Every few seconds it stops and folds its ears into a
+// comic hand-shadow duck, quacking at nobody (a harmless, stompable moment); then back to a rabbit.
+const rabbitArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, m === 'flat' ? 0.4 : 1);
+  const duck = e.rst === 'duck', hop = m === 'walk' ? Math.abs(Math.sin(t * 9)) * 3 : 0;
+  ctx.translate(0, -hop); ctx.fillStyle = GRA; ctx.strokeStyle = INK; ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.ellipse(-2, -11, 13, 10, 0, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(-15, -10, 5, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(9, -19, 8, 0, TAU); ctx.fill(); ctx.stroke();
+  if (duck) {
+    // the ears turned into a duck's head and bill, quacking
+    const q = Math.sin(t * 14) > 0 ? 3 : 0;
+    ctx.beginPath(); ctx.arc(10, -34, 7, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = GRA_HI; ctx.beginPath(); ctx.moveTo(15, -36); ctx.lineTo(27, -36 - q); ctx.lineTo(16, -33); ctx.lineTo(27, -30 + q); ctx.lineTo(15, -31); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = WHITE; ctx.beginPath(); ctx.arc(11, -36, 1.8, 0, TAU); ctx.fill();
+  } else {
+    ctx.beginPath(); ctx.ellipse(5, -34, 3.5, 11, -0.25, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(12, -33, 3.5, 11, 0.3, 0, TAU); ctx.fill(); ctx.stroke();
+  }
+  ShadArt.notch(ctx, -6, -21, 0.7, 0);
+  ctx.fillStyle = WHITE; ctx.beginPath(); ctx.ellipse(12, -21, 3, 3.4, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.stroke(); ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(13, -21, 1.4, 0, TAU); ctx.fill();
+  ctx.restore();
+};
+// STAPLE HOUND: a salmon stapler shaped like a dog. When Brady comes near it staples its own leash to the floor (CHK!,
+// a staple and a taut leash: the tell), then lunges, but only as far as the leash lets it.
+const houndArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, m === 'flat' ? 0.4 : 1); ctx.strokeStyle = INK; ctx.lineWidth = 1.7;
+  const notice = m === 'notice', lunge = m === 'charge', st = m === 'walk' ? Math.sin(t * 12) * 2 : 0;
+  ctx.fillStyle = SAL_LO; for (const [lx, d] of [[-12, st], [-5, -st], [6, st], [12, -st]]) ctx.fillRect(lx - 2.5 + d * 0.4, -8, 5, 8);
+  // the stapler body: a base and a hinged top (open while it lunges)
+  ctx.fillStyle = SAL; rr(ctx, -18, -14, 36, 8, 3); ctx.fill(); ctx.stroke();
+  ctx.save(); ctx.translate(-14, -14); ctx.rotate(lunge ? -0.35 : notice ? -0.12 : 0); ctx.fillStyle = SAL_HI; rr(ctx, 0, -10, 34, 10, 4); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#d8dce0'; ctx.fillRect(4, -2, 26, 3); ctx.restore();
+  ctx.fillStyle = BUT; ctx.beginPath(); ctx.arc(-14, -12, 3.4, 0, TAU); ctx.fill(); ctx.stroke();
+  // the head, a floppy ear, a nose
+  ctx.fillStyle = SAL; ctx.beginPath(); ctx.ellipse(20, -20, 9, 8, 0, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = SAL_LO; ctx.beginPath(); ctx.ellipse(16, -22, 4, 8, 0.5, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(28, -20, 2.6, 0, TAU); ctx.fill();
+  ctx.fillStyle = WHITE; ctx.beginPath(); ctx.ellipse(22, -24, 2.6, notice ? 1.4 : 2.6, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(23, -24, 1.2, 0, TAU); ctx.fill();
+  if (notice) { ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(18, -29); ctx.lineTo(25, -27); ctx.stroke(); }
+  // the tail: a curled leash
+  ctx.strokeStyle = BUT; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(-18, -12); ctx.quadraticCurveTo(-26, -20, -22, -26); ctx.stroke();
+  ctx.restore();
+  // stapled: a taut yellow leash from the staple on the floor (world coordinates)
+  if (e.staple != null && (notice || lunge)) {
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(e.staple, e.y + e.h); ctx.lineTo(x - (e.dir || 1) * 16, y - 10); ctx.stroke(); ctx.strokeStyle = BUT; ctx.lineWidth = 2.4; ctx.stroke();
+    ctx.fillStyle = '#d8dce0'; ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.fillRect(e.staple - 6, e.y + e.h - 4, 12, 4); ctx.strokeRect(e.staple - 6, e.y + e.h - 4, 12, 4);
+    ctx.restore();
+  }
+};
+// SHADE FLEA: a butter-yellow flea that hops high; its grape shadow can't keep up and scuttles after it on foot
+const fleaArt = (ctx, e, x, y, m, t) => {
+  // the shadow on the floor, scuttling to catch up (drawn first, flat and dark, with the notch)
+  const fy = e.floorY != null ? e.floorY : y, sx = e.shX != null ? e.shX : x;
+  ctx.save(); ctx.fillStyle = GRA; ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(sx, fy - 4, 10, 4.5, 0, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = GRA; ctx.lineWidth = 1.6; for (let k = -1; k <= 1; k++) { const l = Math.sin(t * 22 + k) * 3; ctx.beginPath(); ctx.moveTo(sx + k * 5, fy - 3); ctx.lineTo(sx + k * 5 + l, fy); ctx.stroke(); }
+  ctx.restore();
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, m === 'flat' ? 0.4 : 1); ctx.strokeStyle = INK; ctx.lineWidth = 1.5;
+  ctx.fillStyle = BUT; ctx.beginPath(); ctx.ellipse(-2, -12, 11, 8, 0, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = BUT_LO; ctx.lineWidth = 1.5; for (const xx of [-7, -2, 3]) { ctx.beginPath(); ctx.moveTo(xx, -19); ctx.lineTo(xx, -5); ctx.stroke(); }
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.fillStyle = BUT_HI; ctx.beginPath(); ctx.arc(9, -14, 6, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = WHITE; ctx.beginPath(); ctx.arc(11, -15, 2.6, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(11.6, -15, 1.2, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(10, -20); ctx.quadraticCurveTo(14, -28, 18, -26); ctx.stroke();
+  const tuck = m === 'hop'; for (const lx of [-8, -2, 4]) { ctx.beginPath(); ctx.moveTo(lx, -5); ctx.lineTo(lx + (tuck ? -4 : 2), tuck ? -2 : 0); ctx.stroke(); }
+  ctx.restore();
+};
+// CARBON CROW: a grape crow with a salmon beak that steals outlines: it carries the dashed outline of a key, and now and
+// then the shiny key itself drops out (it only wanted the outline) and lies twinkling on the floor a moment
+const crowArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(-(e.dir || 1), 1); ctx.strokeStyle = INK; ctx.lineWidth = 1.5;
+  const f = Math.sin(t * 10);
+  ctx.fillStyle = GRA_HI; ctx.save(); ctx.translate(2, -6); ctx.rotate(-0.3 - f * 0.5); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(18, -10); ctx.lineTo(14, -2); ctx.lineTo(20, 2); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
+  ctx.fillStyle = GRA; ctx.beginPath(); ctx.ellipse(0, -4, 12, 8, 0, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(10, -4); ctx.lineTo(18, -8); ctx.lineTo(18, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(-10, -10, 6.5, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = SAL; ctx.beginPath(); ctx.moveTo(-15, -12); ctx.lineTo(-25, -9); ctx.lineTo(-15, -7); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = WHITE; ctx.beginPath(); ctx.arc(-11, -12, 2.4, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(-11.8, -12, 1.1, 0, TAU); ctx.fill();
+  ShadArt.notch(ctx, 0, -12, 0.6, 0, BUT);
+  // the stolen outline of a key, dangling from its feet
+  ctx.save(); ctx.setLineDash([3, 2]); ctx.strokeStyle = WHITE; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.arc(-2, 10, 4, 0, TAU); ctx.moveTo(2, 10); ctx.lineTo(12, 10); ctx.lineTo(12, 14); ctx.moveTo(8, 10); ctx.lineTo(8, 13); ctx.stroke(); ctx.restore();
+  ctx.restore();
+  if (e.keyT > 0) { ctx.save(); const k = Math.min(1, e.keyT); ctx.globalAlpha = k; ctx.fillStyle = '#ffd84a'; ctx.strokeStyle = INK; ctx.lineWidth = 1.2; const kx = e.keyX, ky = e.keyY; ctx.beginPath(); ctx.arc(kx - 6, ky - 4, 4, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillRect(kx - 2, ky - 5, 12, 3); ctx.strokeRect(kx - 2, ky - 5, 12, 3); ctx.fillStyle = 'rgba(255,255,255,0.9)'; const s = 3 + Math.sin(e.t * 9) * 2; ctx.fillRect(kx + 4, ky - 12 - s, 2, s * 2); ctx.restore(); }
+};
+const rabbitThink = (e, dt) => {
+  e.rt = (e.rt || 0) + dt; if (!e.rst) e.rst = 'walk';
+  if (e.rst === 'walk') { e.mode = 'walk'; if (!e.vx || e.hitWall) e.vx = e.dir * e.speed; if (e.rt > 3.0) { e.rst = 'duck'; e.rt = 0; e.vx = 0; if (e.g.onScreen(e)) Tour.shadKit.pill(e.g, e.cx, e.y - 16, 'QUACK? (IT\'S A HAND DUCK)', '#e8d0ff'); } }
+  else { e.mode = 'idle'; e.vx = 0; if (e.rt > 1.6) { e.rst = 'walk'; e.rt = 0; e.vx = e.dir * e.speed; } }
+};
+const fleaHop = e => { if (e.shX == null) e.shX = e.cx; };
+const harmlessWhen = (cls, fn) => { const tp = cls.prototype.touchPlayer; cls.prototype.touchPlayer = function (p) { if (fn(this)) return; return tp.call(this, p); }; return cls; };
+const enemies = {
+  shadRabbit: { cls: harmlessWhen(TourEnemy.make({ w: 30, h: 30, speed: 1.0, edgeTurn: true, art: rabbitArt, burst: GRA_HI, think: rabbitThink }), e => e.rst === 'duck'), place: 'walk' },
+  shadHound: { cls: TourEnemy.make({ w: 34, h: 26, speed: 0.9, edgeTurn: true, behavior: 'charge', range: 4.5, windup: 0.8, chargeT: 0.42, chargeSpeed: 5.2, art: houndArt, burst: SAL,
+    onNotice: e => { e.staple = e.cx - e.dir * 20; if (e.g.onScreen(e)) Tour.shadKit.pill(e.g, e.cx, e.y - 18, 'CHK! (STAPLED)', '#ffd0c0'); } }), place: 'walk' },
+  shadFlea: { cls: TourEnemy.make({ w: 24, h: 20, speed: 1.1, edgeTurn: true, behavior: 'hop', hopV: 8.5, hopEvery: 1.6, art: fleaArt, burst: BUT, onHop: fleaHop }), place: 'walk' },
+  shadCrow: { cls: TourFlyer.make({ w: 30, h: 22, range: 3, speed: 0.9, art: crowArt, burst: GRA_HI }), place: 'fly' }
+};
+// the flea's shadow runs after it along the floor; the crow drops its shiny key now and then
+{
+  const F = enemies.shadFlea.cls, u0 = F.prototype.update;
+  F.prototype.update = function (dt) { const r = u0.call(this, dt); if (this.shX == null) this.shX = this.cx; this.shX += clamp(this.cx - this.shX, -2.2 * TS * dt, 2.2 * TS * dt); if (this.onGround) this.floorY = this.y + this.h; else if (this.floorY == null) this.floorY = this.y + this.h; return r; };
+  const C = enemies.shadCrow.cls, u1 = C.prototype.update;
+  C.prototype.update = function (dt) { const r = u1.call(this, dt); this.kt = (this.kt || 0) + dt; if (this.keyT > 0) this.keyT -= dt * 0.5; if (this.kt > 5 && !this.dead) { this.kt = 0; this.keyX = this.cx; this.keyY = this.y + this.h + 40; this.keyT = 1.6; } return r; };
+}
+
+/* ---------------- the route map: a notched grape shadow on a salmon tag ---------------- */
+const emblem = (ctx, x, y, r, t) => {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(Math.sin(t * 1.2) * 0.06);
+  ShadArt.tag(ctx, 0, 0, r / 8, SAL);
+  ShadArt.shape(ctx, 'umb', -r * 0.15, r * 0.55, r / 46, { fill: GRA, notch: 1, lw: 1.2 });
+  ctx.restore();
+};
+
+/* ---------------- the land's map: sprites ---------------- */
+Object.assign(TourOWPaint.art, {
+  shadLampS(c, r) { ShadArt.cone(c, 0, -r * 1.4, 0, r * 0.7, 0.9); ShadArt.floorLamp(c, 0, 0, r * 1.6, true, 0); },
+  shadUmbS(c, r) { ShadArt.shape(c, 'umb', r * 0.4, 0, r / 40, { fill: GRA, notch: 1, lw: 1 }); ShadArt.shape(c, 'umb', 0, 0, r / 40, { fill: '#3a7ac8', lw: 1 }); },
+  shadPotS(c, r) { ShadArt.shape(c, 'pot', r * 0.5, 0, r / 26, { fill: GRA, notch: 0, lw: 1 }); ShadArt.shape(c, 'pot', 0, 0, r / 26, { fill: WHITE, lw: 1 }); },
+  shadDrawerS(c, r) { c.save(); c.fillStyle = SAL; c.strokeStyle = INK; c.lineWidth = 1.4; c.fillRect(-r * 0.7, -r * 1.4, r * 1.4, r * 1.4); c.strokeRect(-r * 0.7, -r * 1.4, r * 1.4, r * 1.4); c.beginPath(); c.moveTo(-r * 0.7, -r * 0.7); c.lineTo(r * 0.7, -r * 0.7); c.stroke(); c.fillStyle = BUT; c.fillRect(-r * 0.25, -r * 1.1, r * 0.5, r * 0.15); c.fillRect(-r * 0.25, -r * 0.4, r * 0.5, r * 0.15); c.restore(); }
+});
+// the land under the trails: butter floor with long grape shadows lying across it
+TourOWScenes.groundPaint.shad = function (c, ow) {
+  const R = TourOWPaint.rng('shadground');
+  c.save(); c.globalAlpha = 0.18; c.fillStyle = GRA; for (let k = 0; k < 9; k++) { const x = 200 + R() * 1100, y = 200 + R() * 460; c.beginPath(); c.moveTo(x, y); c.lineTo(x + 140, y + 40); c.lineTo(x + 150, y + 58); c.lineTo(x + 6, y + 18); c.closePath(); c.fill(); } c.restore();
+};
+TourLandscape.looks.shad = ['#f0d478', '#f08470', '#5a2a6a', '#fff0b4', '#fffdf2', '#3a1848', 'shadLamp'];
+{
+  const lm0 = TourLandscape.landmark;
+  TourLandscape.landmark = function (ctx, kind, x, y, size, ink, accent) {
+    if (kind !== 'shadLamp') return lm0.call(this, ctx, kind, x, y, size, ink, accent);
+    ctx.save(); ctx.translate(x, y); ctx.scale(size / 40, size / 40);
+    ShadArt.cone(ctx, 0, -40, 0, 22, 0.8); ShadArt.floorLamp(ctx, 0, 0, 46, true, 0); ShadArt.shape(ctx, 'umb', 20, 0, 0.6, { fill: GRA, notch: 1, lw: 1 });
+    ctx.restore();
+  };
+}
+
+/* ---------------- music: a soft office foxtrot, a lamp-lit tango, a music-box room tune, the boss ---------- */
+const tracks = {
+  tour_shad: {
+    bpm: 112, bars: 8, rv: 0.36, sw: 0.18, hx: 0.04,
+    ch: 'F Dm Gm C F A7 Dm C7',
+    ld: 'A6:2 C7:2 F7:4 E7:2 D7:2 | C7:4 A6:4 F6:8 | Bb6:2 D7:2 G7:4 F7:2 E7:2 | E7:4 C7:4 G6:8 |' +
+        'A6:2 C7:2 F7:4 A7:2 G7:2 | E7:4 C#7:4 A6:8 | D7:2 F7:2 A7:4 G7:2 F7:2 | E7:4 G7:4 C7:8',
+    li: 'vibes', lv: 0.13,
+    bp: 'r...f...r...f...', bi: 'pluck', bv: 0.24,
+    ap: '..c...c...c...c.', ai: 'harp', av: 0.05, ao: 60,
+    dr: ['k.......k.......', '....s.......s...', 'h.h.h.h.h.h.h.h.'], dv: 0.22
+  },
+  tour_shad_lamp: {
+    bpm: 100, bars: 8, rv: 0.32, hx: 0.04,
+    ch: 'Am E7 Am Dm G C E7 Am',
+    ld: 'E6:3 A6:1 C7:2 B6:2 A6:8 | G#6:3 B6:1 E7:4 D7:8 | C7:3 E7:1 A7:4 G7:8 | F7:3 E7:1 D7:4 A6:8 |' +
+        'B6:3 D7:1 G7:4 F7:8 | E7:3 C7:1 G6:4 C7:8 | B6:3 G#6:1 E6:4 D7:8 | C7:4 B6:4 A6:8',
+    li: 'clav', lv: 0.12,
+    bp: 'r..r..r.r...r...', bi: 'slapb', bv: 0.24,
+    ap: '.c...c...c...c..', ai: 'vibes', av: 0.05, ao: 58,
+    dr: ['k..k..k.....k...', '....s.......s...', '..h...h...h...h.'], dv: 0.24
+  },
+  tour_shad_room: {
+    bpm: 88, bpb: 3, bars: 8, rv: 0.5, dl: 0.2, hx: 0.03,
+    ch: 'C G Am F C G F G',
+    ld: 'E7:3 G7:3 C7:6 | D7:3 B6:3 G6:6 | C7:3 E7:3 A7:6 | F7:6 A7:6 | G7:3 E7:3 C7:6 | B6:3 D7:3 G7:6 | A7:3 F7:3 C7:6 | D7:12',
+    li: 'mbox', lv: 0.13,
+    bp: 'r.....r.....', bi: 'sub', bv: 0.2,
+    ap: 'c.c.c.c.c.c.', ai: 'harp', av: 0.05, ao: 64,
+    dr: ['k...........', '......s.....', '..h...h...h.'], dv: 0.15
+  },
+  tour_shad_boss: {
+    bpm: 140, bars: 8, rv: 0.3, hx: 0.07,
+    ch: 'Dm Dm Bb C Dm Dm Gm A7',
+    ld: 'D6:2 F6:2 A6:2 D7:2 C7:4 A6:4 | Bb6:2 A6:2 G6:2 F6:2 D6:8 | Bb6:2 D7:2 F7:2 D7:2 C7:4 Bb6:4 | C7:4 E7:4 G7:8 |' +
+        'A6:2 G6:2 F6:2 D6:2 F6:4 A6:4 | G6:2 F6:2 E6:2 F6:2 D6:8 | G6:2 Bb6:2 D7:2 G7:2 F7:4 D7:4 | E7:4 C#7:4 A6:8',
+    li: 'clav', lv: 0.15,
+    bp: 'r-.r-.r-.r-.r-o-', bi: 'reese', bv: 0.3,
+    ap: '..c...c...c...c.', ai: 'brass', av: 0.05, ao: 55,
+    dr: ['k...k...k...k...', '....s.......s..s', 'h.h.h.h.h.h.h.h.'], dv: 0.4
+  }
+};
+
+Tour.country({
+  id: 'shad', secret: true, bonus: true, colors: COL, tagline: 'A hidden land: shadows that Piwi\'s spotlight left behind, waiting to be claimed',
+  themes, painters, decor, decorLights, enemies, tracks,
+  music: { level: 'tour_shad', boss: 'tour_shad_boss', map: null },
+  landmark: 'the lost-property office for shadows', emblem,
+  arrival: 'Brady! You found the keyhole in the locker\'s shadow. Behind it is a whole department of shadows nobody came back for. I asked if they had yours. They gave me a ticket. ♥ C',
+  coin: { name: 'TICKETS', draw(ctx, x, y) {
+    ctx.save(); ctx.fillStyle = SAL; ctx.strokeStyle = INK; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(x - 7, y - 6); ctx.lineTo(x + 7, y - 6); ctx.lineTo(x + 7, y - 2); ctx.arc(x + 7, y, 2, -Math.PI / 2, Math.PI / 2, true); ctx.lineTo(x + 7, y + 6); ctx.lineTo(x - 7, y + 6); ctx.lineTo(x - 7, y + 2); ctx.arc(x - 7, y, 2, Math.PI / 2, -Math.PI / 2, true); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = BUT; ctx.fillRect(x - 4, y - 2, 8, 4); ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillRect(x - 6, y - 5, 4, 1.5); ctx.restore();
+  } },
+  levels: []
+});
+LIQUIDS.shad_ink = ['#3a1848', '#2a1036', '#1a0824', 'rgba(124,74,140,0.4)', null, 'rgba(200,170,230,0.6)'];
+// a floating line on a dark rounded pill (readable on any wall), kept clear of Brady's head and the top bar
+class ShadPill extends Ent {
+  constructor(g, x, y, text, col) { super(g, null, 4, 4); this.x = x; this.y = y; this.text = String(text); this.col = col || '#ffe08a'; this.life = 1.8; this.friendly = true; }
+  update(dt) { this.t += dt; this.y -= 10 * dt; if (this.t > this.life) this.remove = true; }
+  touchPlayer() {}
+  draw(ctx) {
+    const g = this.g, p = g.player, a = Math.min(1, (this.life - this.t) * 3, this.t * 8);
+    ctx.save(); ctx.globalAlpha = a; ctx.font = '10px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const w = ctx.measureText(this.text).width + 18;
+    let x = clamp(this.x, g.camX + w / 2 + 6, g.camX + Game.viewW - w / 2 - 6), y = this.y;
+    if (p && Math.abs(x - p.cx) < w / 2 + 16 && y > p.y - 30 && y < p.y + p.h) y = p.y - 30;
+    y = Math.max(y, g.camY + 64);
+    ctx.fillStyle = 'rgba(28,20,38,0.9)'; rr(ctx, x - w / 2, y - 10, w, 20, 10); ctx.fill();
+    ctx.fillStyle = this.col; ctx.fillText(this.text, x, y + 1); ctx.restore();
+  }
+}
+ENTITY_TYPES.shadPill = ShadPill;
+const pill = (g, x, y, text, col) => { if (g && g.spawn) g.spawn(new ShadPill(g, x, y, text, col)); };
+Tour.shadKit = { pill, ShadArt, COL, INK, BUT, BUT_HI, BUT_LO, GRA, GRA_HI, GRA_LO, GRA_DK, SAL, SAL_HI, SAL_LO, WHITE, LIGHT, crowArt, rabbitArt };
+})();
+
+/* ---- 29_tour_y_shad_a_mech.js ---- */
+/* ============================================================
+   THE DEPARTMENT OF UNCLAIMED SHADOWS: the land's mechanics (world 35).
+   Shared: the area system `shad` (rides onto the built area and the checker's copy), the THROW claim (a prop takes the
+   action button only while Brady stands on its mark), the claims grille (a lock: a salmon filing grille that rolls up),
+   the filing wall (a two-faced climbing surface: the drying-net physics of 29_tour_y_wash_a_net.js, re-dressed as a wall
+   of salmon drawers whose pulls and their grape shadow rungs are the holds; an open drawer is where Brady crosses to
+   the far face, the dark inside of the cabinets).
+   35-1 CLAIM     shadows pinned on the wall, each with one notch, each over a pair of chalk heel marks; an owner (an
+                  umbrella, a teapot, a rabbit...) waits by a grille with an empty dashed outline where its shadow belongs.
+                  Stand with your heels on the matching shadow's heels and THROW: it unpins and flies home; the grille
+                  rolls up. The last two umbrella shadows look the same until Brady stands on one: it opens and shows
+                  (or doesn't show) the missing spoke.
+   35-2 LAMPLEN   a floor lamp throws Brady's own shadow up the wall, leaning away from it: the nearer the lamp, the
+                  taller the shadow. Its raised hand must meet a folded shelf's handle: a REACH tick, and the shelf
+                  folds down into a ledge. The last handle sits over a tall lip: only a jump at the right distance
+                  lifts the shadow's hand to it.
+   35-3 OVERLAP   two wall shadows (a fixed one and one thrown by a folding screen on castors) are solid only where they
+                  overlap (drawn dark with a bright edge). Stand at the screen and walk: it rolls, and the solid patch
+                  grows, shrinks or climbs. The last one: slide it further to give up half the patch for a taller step.
+   35-4 TRIM      a tailor's station: a floor lamp lays Brady's shadow out long behind him, under a paper cutter. Stand on
+                  the chalk mark (the shadow's excess lies under the blade) and THROW: trimmed to fit. A mail slot in a
+                  wall takes a shadow of the right size only: walk into it and the wall opens. The last slot wants a long
+                  arm and a short body: JUMP on the mark and THROW in the air (the arm is up, clear of the blade).
+   35-5 SPLIT     two clerks' lamps throw two shadows of Brady, one each way. Stand where both shadows' feet are on their
+                  claim slots for a breath: both claims stamp and the grille rolls up. The last desk: the hat marks line
+                  up one spot early (a decoy); only the feet count.
+   The checker: each puzzle's result is a lock (the grille; its key the spot that solves it) or a toggle group (B tiles:
+   the shelf, the overlap step) switched where it is solved.
+   ============================================================ */
+(function () {
+const K = Tour.shadKit, INK = K.INK, SA = K.ShadArt;
+const BUT = K.BUT, BUT_HI = K.BUT_HI, GRA = K.GRA, GRA_HI = K.GRA_HI, GRA_LO = K.GRA_LO, GRA_DK = K.GRA_DK, SAL = K.SAL, SAL_HI = K.SAL_HI, SAL_LO = K.SAL_LO, WHITE = K.WHITE;
+const BREATH = 0.8;
+
+/* ---------------- the `shad` area system ---------------- */
+if (TourBuild.SYSTEMS.indexOf('shad') < 0) TourBuild.SYSTEMS.push('shad');
+{
+  const px0 = Validator.proxyArea;
+  Validator.proxyArea = function (area, mask) { const A = px0.call(this, area, mask); if (area.shad) A.shad = area.shad; return A; };
+}
+const inShad = g => !!(g && g.area && g.area.shad);
+const setRect = (g, r, t) => { for (let y = r[1]; y <= r[3]; y++) for (let x = r[0]; x <= r[2]; x++) g.setTile(x, y, t); };
+const hideRect = (g, r, v) => { const A = g.area; if (!A.hide) return; for (let y = r[1]; y <= r[3]; y++) for (let x = r[0]; x <= r[2]; x++) if (x >= 0 && y >= 0 && x < A.W && y < A.H) A.hide[y * A.W + x] = v; };
+const say = (g, x, y, text, col) => K.pill(g, x, y, text, col);
+const ring = (ctx, x, y, k, r) => { ctx.save(); ctx.strokeStyle = 'rgba(28,20,38,0.7)'; ctx.lineWidth = 7; ctx.beginPath(); ctx.arc(x, y, r || 14, 0, TAU); ctx.stroke(); ctx.strokeStyle = BUT_HI; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(x, y, r || 14, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(k, 0, 1)); ctx.stroke(); ctx.restore(); };
+const onRow = (p, row) => p && !p.dead && p.onGround && p.groundTy === row;
+// a big bold tick on a dark disc (REACH! / FITS / MATCH): readable on a phone at a glance
+const tick = (ctx, x, y, k) => { ctx.save(); ctx.translate(x, y); ctx.scale(k, k); ctx.fillStyle = 'rgba(28,20,38,0.88)'; ctx.beginPath(); ctx.arc(0, 0, 14, 0, TAU); ctx.fill(); ctx.strokeStyle = '#8af07a'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(-1, 5); ctx.lineTo(7, -6); ctx.stroke(); ctx.restore(); };
+// chalk heel marks on the floor (a pair of little U's)
+const heels = (ctx, x, y, lit) => { ctx.save(); ctx.strokeStyle = lit ? '#fff8c0' : 'rgba(255,253,242,0.9)'; ctx.lineWidth = lit ? 3.5 : 2.5; for (const dx of [-7, 7]) { ctx.beginPath(); ctx.arc(x + dx, y - 3, 4.5, 0, Math.PI); ctx.stroke(); } ctx.restore(); };
+
+/* ---------------- the THROW claim ---------------- */
+{
+  const up0 = Player.prototype.update;
+  Player.prototype.update = function (dt, inp) {
+    const g = this.g;
+    if (inShad(g) && inp && this.state === 'play' && !this.dead) {
+      let claim = null;
+      for (const e of g.entities) if (e.shadClaim && !e.remove && e.shadClaim(this)) { claim = e; break; }
+      g.shadIn = claim ? { pressed: !!inp.actionPressed, held: !!inp.action, by: claim } : null;
+      if (claim) inp = Object.assign({}, inp, { actionPressed: false, action: false });
+    } else if (g && g.shadIn) g.shadIn = null;
+    return up0.call(this, dt, inp);
+  };
+  if (typeof TourPicker !== 'undefined') { const vis0 = TourPicker.visible; TourPicker.visible = function (play) { if (play && play.shadIn) return false; return vis0.call(this, play); }; }
+}
+// a word on a dark pill over a prop Brady stands at (THROW's meaning there), kept above his head
+const hint = (e, ctx, x, y, word) => {
+  const p = e.g.player; if (p) { y = Math.min(y, p.y - 30); x = clamp(x, p.cx - 70, p.cx + 70); }
+  ctx.save(); ctx.font = '10px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const w = ctx.measureText(word).width + 16, yy = y + Math.sin(e.t * 5) * 1.5; ctx.fillStyle = 'rgba(28,20,38,0.9)'; rr(ctx, x - w / 2, yy - 10, w, 20, 10); ctx.fill();
+  ctx.fillStyle = '#ffe08a'; ctx.fillText(word, x, yy + 1); ctx.restore();
+};
+
+/* ---------------- the claims grille: a lock drawn as a salmon roll-up grille with a ticket window ---------------- */
+{
+  const L = ENTITY_TYPES.lock, d0 = L.prototype.draw;
+  L.prototype.draw = function (ctx) {
+    if (this.lookName !== 'shadGrille') return d0.call(this, ctx);
+    const x = this.x, y = this.y, w = this.w, h = this.h, k = this.open ? 1 - Math.max(0, this.openT || 0) / 0.6 : 0, hh = h * (1 - k);
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    ctx.fillStyle = SAL_LO; ctx.fillRect(x - 3, y - 8, w + 6, 8); ctx.strokeRect(x - 3, y - 8, w + 6, 8);
+    if (hh > 2) {
+      ctx.fillStyle = SAL; ctx.fillRect(x + 2, y, w - 4, hh); ctx.strokeRect(x + 2, y, w - 4, hh);
+      ctx.strokeStyle = SAL_LO; ctx.lineWidth = 2; for (let yy = y + 8; yy < y + hh - 2; yy += 9) { ctx.beginPath(); ctx.moveTo(x + 4, yy); ctx.lineTo(x + w - 4, yy); ctx.stroke(); }
+      ctx.fillStyle = BUT; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.fillRect(x + 6, y + hh - 10, w - 12, 6); ctx.strokeRect(x + 6, y + hh - 10, w - 12, 6);
+    }
+    ctx.restore();
+  };
+}
+const openGrilles = (g, id) => {
+  for (const e of g.entities) if (e instanceof ENTITY_TYPES.lock && e.id === id && !e.open) { e.open = true; e.openT = 0.6; for (const [x, y] of e.tiles) g.setTile(x, y, T.EMPTY); g.burst(e.cx, e.cy, 14, BUT_HI, 'confetti'); }
+  TourKit.sfx('grille', 'secret', { vol: 0.5, pitch: 1.2 });
+};
+// a grille h tiles tall, its bottom on the letter's row: { id, h }
+Tour.pieces['shad.grille'] = function (st, o) { st.B.lock(st.x, st.gy - (o.h || 4), st.gy - 1, o.id, 'shadGrille'); return st.x; };
+
+/* ======================= 35-1 CLAIM: reunite a pinned shadow with its owner ======================= */
+// { owner: [kind, notch, dx, spoke?], pins: [[kind, notch, dx, spoke?], ...] (dx: tiles right of the letter),
+//   right: index, lock, umb: true (the umbrellas: closed until Brady stands on the heels) }
+class ShadBoard extends Ent {
+  constructor(g, s) {
+    super(g, s, 4, 4); this.friendly = true; this.back = true; this.s = s; this.row = Math.round(s.y / TS); this.tx = Math.round((s.x - TS / 2) / TS);
+    const xs = s.pins.map(q => q[2]).concat([s.owner[2]]);
+    this.x = (this.tx + Math.min(...xs)) * TS - 30; this.w = (Math.max(...xs) - Math.min(...xs) + 1) * TS + 60; this.y = (this.row - 4) * TS; this.h = 4 * TS;
+    this.done = false; this.fly = -1;
+  }
+  markX(k) { return (this.tx + this.s.pins[k][2] + 0.5) * TS; }
+  at() { const p = this.g.player; if (!onRow(p, this.row)) return -1; for (let k = 0; k < this.s.pins.length; k++) if (Math.abs(p.cx - this.markX(k)) < 16) return k; return -1; }
+  shadClaim(p) { return !this.done && this.at() >= 0; }
+  update(dt) {
+    this.t += dt; const g = this.g;
+    if (this.done) { this.fly = Math.min(1, this.fly + dt * 1.4); return; }
+    const I = g.shadIn; if (!I || I.by !== this || !I.pressed) return;
+    const k = this.at(); if (k < 0) return;
+    if (k === this.s.right) {
+      this.done = true; this.fly = 0; this.won = k; openGrilles(g, this.s.lock);
+      say(g, this.markX(k), this.row * TS - 110, 'CLAIMED! A PERFECT FIT', '#ffe08a'); Sound.play('secret', { vol: 0.5 });
+      g.burst(this.markX(k), this.row * TS - 40, 18, BUT_HI, 'confetti');
+    } else { say(g, this.markX(k), this.row * TS - 110, 'NOT THEIRS: WRONG NOTCH', '#ffb0a0'); TourKit.sfx('fizz', 'bump', { vol: 0.4, pitch: 0.7 }); }
+  }
+  touchPlayer() {}
+  draw(ctx) {
+    const s = this.s, t = this.t, fy = this.row * TS, k0 = this.at(), sc = 1.45;
+    ctx.save();
+    // the owner, by its grille: its colour self, and the dashed outline where its shadow belongs
+    const O = s.owner, ox = (this.tx + O[2] + 0.5) * TS;
+    SA.owner(ctx, O[0], ox, fy, sc, t, { notch: O[1], spoke: O[3], happy: this.done });
+    s.pins.forEach((q, k) => {
+      if (this.done && k === this.won) return;
+      const x = this.markX(k), open = s.umb && k0 === k, kind = open ? 'umbOpen' : q[0];
+      // the pins at the top and the shadow itself, flat against the wall, with its one notch
+      const by = fy - 62;
+      ctx.strokeStyle = 'rgba(255,253,242,0.8)'; ctx.lineWidth = 2; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(x, by); ctx.lineTo(x, fy - 6); ctx.stroke(); ctx.setLineDash([]);
+      SA.shape(ctx, kind, x + 4, by, sc, { fill: GRA, notch: open ? null : q[1], spoke: open ? q[3] : null, hole: BUT, lw: 2 });
+      const top = { umb: -46, umbOpen: -38, pot: -30, rab: -42, can: -30, ket: -34 }[kind] || -30;
+      SA.pin(ctx, x + 4, by + top * sc + 4, t);
+      heels(ctx, x, fy, k0 === k);
+    });
+    // the reunited shadow flying home to its owner, then lying behind it
+    if (this.done) {
+      const q = s.pins[this.won], f = this.fly, x = lerp(this.markX(this.won) + 4, ox + 10 * sc, f), y = lerp(fy - 62, fy, f) - Math.sin(f * Math.PI) * 40;
+      SA.shape(ctx, f >= 1 && s.umb ? 'umbOpen' : q[0], x, y, sc, { fill: GRA, notch: f >= 1 && s.umb ? null : q[1], spoke: q[3], lw: 2 });
+      if (f >= 1) SA.owner(ctx, O[0], ox, fy, sc, t, { notch: O[1], spoke: O[3], happy: true });
+    }
+    if (k0 >= 0 && !this.done) hint(this, ctx, this.markX(k0), fy - 150, 'THROW: CLAIM IT');
+    ctx.restore();
+  }
+}
+ENTITY_TYPES.shadBoard = ShadBoard;
+Tour.pieces['shad.board'] = function (st, o) {
+  const B = st.B; B.spawn('shadBoard', st.x, st.gy - 1, o);
+  if (o.lock) B.vkey(o.lock, [[st.x + o.pins[o.right][2], st.gy - 1]]);
+  return st.x;
+};
+
+/* ======================= 35-2 LAMPLEN: the shadow's hand meets the shelf's handle ======================= */
+// Brady's shadow on the wall from a floor lamp: H0 tall at a distance, up to ~4x as tall right by the lamp, leaning away
+// from it. The same numbers place each handle (shadHand) and draw the shadow, so a handle is exactly where the hand
+// goes when Brady stands on (or jumps from) the spot the level means.
+const H0 = 54, RANGE = 6 * TS;
+const shadScale = d => 1 + 3.0 * clamp((RANGE - Math.max(0.5 * TS, d)) / RANGE, 0, 1);
+// the hand of Brady's wall shadow: lamp at pixel x lx, Brady's centre cx, his feet `rise` px above the floor fy
+const shadHand = (lx, cx, fy, rise) => {
+  const d = Math.abs(cx - lx), s = shadScale(d), side = cx >= lx ? 1 : -1, H = H0 * s;
+  const feetX = cx + side * H * 0.3, lean = side * H * 0.15, feetY = fy - (rise || 0) * s;
+  return { x: feetX + lean + side * H * 0.16, y: feetY - H * 1.08, H, s, side, lean, feetX, feetY };
+};
+// a level's handle for a lamp tile and a target tile (jump: the hand at a jump's apex there, one and a half tiles up)
+const handleAt = (lampTx, atTx, floorRow, jump) => { const h = shadHand((lampTx + 0.5) * TS, (atTx + 0.5) * TS, floorRow * TS, jump ? 1.5 * TS : 0); return [h.x, h.y]; };
+// the shelf a handle belongs to: folded up against the wall, its hinge w tiles under the handle; pulled, it swings down
+// (toward dir) into a one-way ledge w tiles wide on the hinge's row
+const shelfOf = (lampTx, atTx, floorRow, jump, w, dir) => {
+  const [hx, hy] = handleAt(lampTx, atTx, floorRow, jump), hTx = Math.floor(hx / TS), R = Math.floor(hy / TS) + w;
+  const x0 = dir > 0 ? hTx : hTx - w + 1;
+  return { hx, hy, R, x0, x1: x0 + w - 1, px: dir > 0 ? hTx * TS : (hTx + 1) * TS, py: R * TS };
+};
+class ShadLamp extends Ent {
+  // { lamp: tile, at: tile, row: floor row, jump, w (shelf tiles), dir (the way it swings down), g }
+  constructor(g, s) {
+    super(g, s, 4, 4); this.friendly = true; this.back = true; this.s = s; this.fy = s.row * TS; this.lx = (s.lamp + 0.5) * TS;
+    this.S = shelfOf(s.lamp, s.at, s.row, s.jump, s.w || 2, s.dir || 1); this.hx = this.S.hx; this.hy = this.S.hy; this.done = false; this.fold = 0;
+    this.x = Math.min(this.lx, this.S.x0 * TS, this.hx) - 4 * TS; this.w = Math.max(this.lx, (this.S.x1 + 1) * TS, this.hx) + 4 * TS - this.x; this.y = this.hy - 3 * TS; this.h = this.fy - this.y + TS;
+  }
+  hand() { const p = this.g.player; if (!p || p.dead) return null; return shadHand(this.lx, p.cx, this.fy, Math.max(0, this.fy - (p.y + p.h))); }
+  near() { const p = this.g.player; return p && !p.dead && Math.abs(p.cx - this.lx) < RANGE + 2 * TS && p.y + p.h > this.fy - 6 * TS && p.y + p.h <= this.fy + 4; }
+  update(dt) {
+    this.t += dt; if (this.done) { this.fold = Math.min(1, this.fold + dt * 2.5); return; }
+    if (!this.near()) return;
+    const h = this.hand(), p = this.g.player; if (!h) return;
+    const dd = Math.hypot(h.x - this.hx, h.y - this.hy), ok = dd < 22 && (!this.s.jump || !p.onGround);
+    if (ok) {
+      this.done = true; const g = this.g, r = [this.S.x0, this.S.R, this.S.x1, this.S.R];
+      setRect(g, r, T.SEMI); hideRect(g, r, 1); g.refreshPlatforms && g.refreshPlatforms();
+      Sound.play('secret', { vol: 0.5 }); g.burst(this.hx, this.hy, 14, BUT_HI, 'spark');
+      say(g, this.hx, this.hy - 30, 'REACH! THE SHELF COMES DOWN', '#ffe08a');
+    } else if (this.s.jump && dd < 40 && p.onGround && !this.lipSaid) { this.lipSaid = true; say(this.g, this.hx, this.hy - 30, 'THE LIP\'S IN THE WAY: JUMP!', '#c8d8ff'); }
+  }
+  touchPlayer() {}
+  draw(ctx) {
+    const s = this.s, t = this.t, fy = this.fy, S = this.S, dir = s.dir || 1, len = (s.w || 2) * TS;
+    ctx.save();
+    // the lamp's cone, wide and pale, across the wall
+    SA.cone(ctx, this.lx, fy - 3.1 * TS + 18, fy, 3.2 * TS, 0.9);
+    // Brady's own shadow on the wall, leaning away from the lamp, its hand up
+    if (this.near()) { const h = this.hand(); if (h) SA.bradyShadow(ctx, h.feetX, h.feetY, h.H, h.lean, { armDir: h.side, col: 'rgba(58,24,72,0.9)' }); }
+    // the shelf: a salmon board on its hinge, folded up to the handle, then swung down into a ledge
+    const up = Math.atan2(this.hy - S.py, this.hx - S.px), down = dir > 0 ? 0 : Math.PI, a = lerp(up, down, this.done ? this.fold : 0);
+    ctx.save(); ctx.translate(S.px, S.py); ctx.rotate(a); ctx.fillStyle = SAL; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(0, -6, len, 12); ctx.strokeRect(0, -6, len, 12); ctx.fillStyle = SAL_LO; ctx.fillRect(4, 2, len - 8, 3); ctx.restore();
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(S.px, S.py, 3.5, 0, TAU); ctx.fill();
+    if (!this.done) {
+      // the handle: a big brass ring where the hand must go, its dashed halo bright when the hand comes near
+      const h = this.near() ? this.hand() : null, dd = h ? Math.hypot(h.x - this.hx, h.y - this.hy) : 999, k = 0.5 + 0.5 * Math.sin(t * 6);
+      ctx.strokeStyle = INK; ctx.lineWidth = 7; ctx.beginPath(); ctx.arc(this.hx, this.hy, 10, 0, TAU); ctx.stroke(); ctx.strokeStyle = '#e8c84a'; ctx.lineWidth = 4; ctx.stroke();
+      ctx.strokeStyle = dd < 60 ? `rgba(255,248,180,${0.6 + 0.4 * k})` : 'rgba(255,253,242,0.7)'; ctx.lineWidth = 3; ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.arc(this.hx, this.hy, 20, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+      if (s.jump) { ctx.fillStyle = GRA_LO; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(this.hx - 28, this.hy + 24, 56, 10); ctx.strokeRect(this.hx - 28, this.hy + 24, 56, 10); }
+    } else if (this.fold < 1) tick(ctx, this.hx, this.hy - 24, 1);
+    SA.floorLamp(ctx, this.lx, fy, 3.1 * TS, true, t);
+    ctx.restore();
+  }
+}
+ENTITY_TYPES.shadLamp = ShadLamp;
+Tour.pieces['shad.lamp'] = function (st, o) {
+  const B = st.B, row = st.gy, S = shelfOf(o.lamp, o.at, row, o.jump, o.w || 2, o.dir || 1); B.spawn('shadLamp', st.x, st.gy - 1, Object.assign({ row }, o));
+  if (o.g != null) { B.toggle(o.g, [], [[S.x0, S.R, S.x1, S.R, T.SEMI]], { kind: 'shadLamp' }); B.switchAt(o.g, o.at, row - 1); }
+  return st.x;
+};
+
+/* ======================= the carriage: a prop on a floor rail that rolls along with Brady ======================= */
+// { rail: [x0, x1, y] (the carriage's left tile from x0 to x1; y the floor row), w (tiles), at (start tile) }
+const carriage = {
+  init(e, s) { e.rail = s.rail; e.cw = s.w || 2; e.cxF = ((s.at != null ? s.at : s.rail[0]) + e.cw / 2) * TS; e.holding = false; },
+  sx(e) { return Math.round(e.cxF / TS - e.cw / 2); },
+  update(e, dt) {
+    const p = e.g.player, R = e.rail, lo = (R[0] + e.cw / 2) * TS, hi = (R[1] + e.cw / 2) * TS;
+    e.holding = !!(p && !p.dead && p.onGround && p.groundTy === R[2] && Math.abs(p.cx - e.cxF) < e.cw * TS / 2 + 2);
+    if (e.holding) { const nx = clamp(p.cx, lo, hi); if (Math.abs(nx - e.cxF) > 0.5) TourKit.sfx('roll', 'select', { vol: 0.1, pitch: 0.6 }); e.cxF = nx; }
+    else { const tgt = (carriage.sx(e) + e.cw / 2) * TS; e.cxF = lerp(e.cxF, tgt, Math.min(1, dt * 10)); }
+  },
+  drawRail(ctx, e) {
+    const R = e.rail, y = R[2] * TS, x0 = R[0] * TS + 4, x1 = (R[1] + e.cw) * TS - 4;
+    ctx.save(); ctx.strokeStyle = 'rgba(28,20,38,0.6)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x0, y + 4); ctx.lineTo(x1, y + 4); ctx.stroke();
+    for (const xx of [x0, x1]) { ctx.fillStyle = SAL; ctx.beginPath(); ctx.arc(xx, y + 4, 3.5, 0, TAU); ctx.fill(); }
+    ctx.restore();
+  }
+};
+
+/* ======================= 35-3 OVERLAP: solid only where two shadows overlap ======================= */
+// { a: [[x0, y0, x1, y1], ...] the fixed shadow's cells, b: [...] the screen's shadow's cells with the screen at rail[0],
+//   rail: [x0, x1, row], at: start tile, good: the tile the checker uses, g }
+const cellsOf = (rects, dx) => { const S = new Set(); for (const r of rects) for (let y = r[1]; y <= r[3]; y++) for (let x = r[0]; x <= r[2]; x++) S.add((x + dx) + ',' + y); return S; };
+const overlapCells = (s, sx) => { const A = cellsOf(s.a, 0), B = cellsOf(s.b, sx - s.rail[0]), out = []; for (const k of B) if (A.has(k)) out.push(k.split(',').map(Number)); return out; };
+class ShadOverlap extends Ent {
+  constructor(g, s) {
+    super(g, s, 4, 4); this.friendly = true; this.back = true; this.s = s; carriage.init(this, s); this.cur = []; this.lastSx = null;
+    const all = s.a.concat(s.b.map(r => [r[0], r[1], r[2] + s.rail[1] - s.rail[0], r[3]]));
+    this.x = Math.min(...all.map(r => r[0]), s.rail[0]) * TS - 3 * TS; this.w = (Math.max(...all.map(r => r[2]), s.rail[1] + 2) + 4) * TS - this.x;
+    this.y = Math.min(...all.map(r => r[1])) * TS - 3 * TS; this.h = (s.rail[2] + 1) * TS - this.y;
+  }
+  apply() {
+    const g = this.g, sx = carriage.sx(this); if (sx === this.lastSx) return; this.lastSx = sx;
+    const nu = overlapCells(this.s, sx), key = c => c[0] + ',' + c[1], keep = new Set(nu.map(key));
+    for (const c of this.cur) if (!keep.has(key(c))) { g.setTile(c[0], c[1], T.EMPTY); hideRect(g, [c[0], c[1], c[0], c[1]], 0); }
+    for (const c of nu) { g.setTile(c[0], c[1], T.SEMI); hideRect(g, [c[0], c[1], c[0], c[1]], 1); }
+    this.cur = nu; g.refreshPlatforms && g.refreshPlatforms();
+    if (this.started && nu.length) TourKit.sfx('click', 'select', { vol: 0.25, pitch: 1.2 + nu.length * 0.03 });
+    this.started = true;
+  }
+  update(dt) { this.t += dt; carriage.update(this, dt); this.apply(); }
+  touchPlayer() {}
+  draw(ctx) {
+    const s = this.s, t = this.t, sx = this.cxF / TS - this.cw / 2, dx = (sx - s.rail[0]) * TS, fy = s.rail[2] * TS;
+    ctx.save();
+    // the fixed lamp's shadow (A) and the screen's shadow (B): pale grape, see-through, dashed edges
+    const paint = (rects, ox, fill) => { ctx.fillStyle = fill; for (const r of rects) ctx.fillRect(r[0] * TS + ox, r[1] * TS, (r[2] - r[0] + 1) * TS, (r[3] - r[1] + 1) * TS); };
+    const edge = (rects, ox, col) => { ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.setLineDash([6, 4]); for (const r of rects) ctx.strokeRect(r[0] * TS + ox + 1, r[1] * TS + 1, (r[2] - r[0] + 1) * TS - 2, (r[3] - r[1] + 1) * TS - 2); ctx.setLineDash([]); };
+    const bb = (rects, ox) => [Math.min(...rects.map(r => r[0])) * TS + ox, Math.min(...rects.map(r => r[1])) * TS, (Math.max(...rects.map(r => r[2])) + 1) * TS + ox, (Math.max(...rects.map(r => r[3])) + 1) * TS];
+    const A = bb(s.a, 0), Bx = bb(s.b, dx), cone = (lx, ly, R) => { ctx.fillStyle = 'rgba(255,248,200,0.22)'; ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(R[0] - 10, R[1] - 10); ctx.lineTo(R[2] + 10, R[1] - 10); ctx.lineTo(R[2] + 10, R[3] + 6); ctx.lineTo(R[0] - 10, R[3] + 6); ctx.closePath(); ctx.fill(); };
+    // what casts shadow A: a hat on a wall hook, lit by a wall lamp above and behind it (a fixed cone)
+    const lax = A[0] - 2.6 * TS, lay = A[1] - 1.3 * TS, hx = lerp(lax, (A[0] + A[2]) / 2, 0.35), hy = lerp(lay, (A[1] + A[3]) / 2, 0.35);
+    cone(lax, lay, A);
+    ctx.fillStyle = SAL; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(lax - 8, lay - 4, 16, 8); ctx.strokeRect(lax - 8, lay - 4, 16, 8); SA.pin(ctx, lax, lay + 6, t);
+    ctx.fillStyle = '#8a6a4a'; ctx.fillRect(hx - 2, hy - 14, 4, 14); ctx.strokeRect(hx - 2, hy - 14, 4, 14);
+    ctx.fillStyle = '#3a7ac8'; ctx.beginPath(); ctx.ellipse(hx, hy - 2, 13, 4, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(hx - 8, hy - 3); ctx.quadraticCurveTo(hx - 8, hy - 15, hx, hy - 15); ctx.quadraticCurveTo(hx + 8, hy - 15, hx + 8, hy - 3); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // what casts shadow B: the screen's clip-on lamp, a cone from it
+    cone(this.cxF, fy - 84, Bx);
+    paint(s.a, 0, 'rgba(124,74,140,0.45)'); paint(s.b, dx, 'rgba(124,74,140,0.45)');
+    edge(s.a, 0, 'rgba(58,24,72,0.85)'); edge(s.b, dx, 'rgba(58,24,72,0.85)');
+    SA.notch(ctx, (A[0] + A[2]) / 2, A[1], 1.1, 0, '#f2d8b8'); SA.notch(ctx, (Bx[0] + Bx[2]) / 2 + 8, Bx[1], 1.1, 0, '#f2d8b8');
+    // the overlap: solid, near-black grape with a bright butter edge on top (the step)
+    for (const [x, y] of this.cur) {
+      ctx.fillStyle = GRA_DK; ctx.fillRect(x * TS, y * TS, TS, TS);
+      const up = this.cur.some(c => c[0] === x && c[1] === y - 1); if (!up) { ctx.fillStyle = BUT_HI; ctx.fillRect(x * TS, y * TS, TS, 4); ctx.fillStyle = INK; ctx.fillRect(x * TS, y * TS + 4, TS, 1.5); }
+      const lf = this.cur.some(c => c[0] === x - 1 && c[1] === y), rt = this.cur.some(c => c[0] === x + 1 && c[1] === y);
+      ctx.fillStyle = 'rgba(255,240,180,0.75)'; if (!lf) ctx.fillRect(x * TS, y * TS, 2.5, TS); if (!rt) ctx.fillRect(x * TS + TS - 2.5, y * TS, 2.5, TS);
+    }
+    // the folding screen on castors (it throws shadow B): three salmon panels, a little lamp clipped on top
+    carriage.drawRail(ctx, this);
+    const cx = this.cxF; ctx.translate(cx, fy);
+    for (let k = -1; k <= 1; k++) { ctx.fillStyle = k ? SAL : SAL_HI; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(k * 18 - 9, -6); ctx.lineTo(k * 18 - 9, -78 + Math.abs(k) * 4); ctx.lineTo(k * 18 + 9, -78 + (k === 1 ? 4 : 0)); ctx.lineTo(k * 18 + 9, -6); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    ctx.fillStyle = INK; for (const wx of [-22, 22]) { ctx.beginPath(); ctx.arc(wx, -4, 4, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = WHITE; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, -84, 5, 0, TAU); ctx.fill(); ctx.stroke();
+    if (this.holding) hint(this, ctx, 0, -110, '◀ WALK TO SLIDE IT ▶');
+    ctx.restore();
+  }
+}
+ENTITY_TYPES.shadOverlap = ShadOverlap;
+Tour.pieces['shad.overlap'] = function (st, o) {
+  const B = st.B; B.spawn('shadOverlap', st.x, st.gy - 1, o);
+  if (o.g != null) { B.toggle(o.g, [], overlapCells(o, o.good).map(c => [c[0], c[1], c[0], c[1], T.SEMI]), { kind: 'shadOverlap' }); B.switchAt(o.g, o.good, o.rail[2] - 1); }
+  return st.x;
+};
+
+/* ======================= 35-4 TRIM: cut the shadow to fit the mail slot ======================= */
+// the station: { cutter: tile (the blade), mark: tile (the chalk mark), row, id (its slot), arm: true (the last one) };
+// the lamp stands three tiles past the mark, so the shadow lies from Brady's heels back under the blade
+const LONG = 6 * TS;
+class ShadCutter extends Ent {
+  constructor(g, s) {
+    super(g, s, 4, 4); this.friendly = true; this.back = true; this.s = s; this.fy = s.row * TS; this.dir = s.mark > s.cutter ? 1 : -1;
+    this.bx = (s.cutter + 0.5) * TS; this.mx = (s.mark + 0.5) * TS; this.lx = this.mx + this.dir * 3 * TS;
+    this.x = Math.min(this.bx, this.lx) - 7 * TS; this.w = Math.abs(this.lx - this.bx) + 14 * TS; this.y = this.fy - 5 * TS; this.h = 5 * TS + 8; this.chop = 0;
+  }
+  zone(p) { return p && !p.dead && p.y + p.h > this.fy - 6 * TS && p.y + p.h < this.fy + 8 && (p.cx - this.bx) * this.dir > 8 && (this.lx - p.cx) * this.dir > 8; }
+  onMark(p) { return Math.abs(p.cx - this.mx) < 18; }
+  shadClaim(p) { return this.zone(p) && (p.onGround ? p.groundTy === this.s.row : this.s.arm); }
+  update(dt) {
+    this.t += dt; if (this.chop > 0) this.chop -= dt;
+    const g = this.g, p = g.player, I = g.shadIn; if (!I || I.by !== this || !I.pressed) return;
+    const ok = this.onMark(p), arm = !p.onGround;
+    this.chop = 0.4; TourKit.sfx('chop', 'bump', { vol: 0.5, pitch: 1.4 }); g.burst(this.bx, this.fy - 6, 10, GRA_HI, 'dust');
+    p.shadTrim = { id: this.s.id, ok: ok && (!this.s.arm || arm), arm, len: Math.abs(p.cx - this.bx) };
+    if (!ok) say(g, p.cx, p.y - 40, Math.abs(p.cx - this.bx) > Math.abs(this.mx - this.bx) ? 'CUT TOO LONG: STAND ON THE CHALK' : 'CUT TOO SHORT: STAND ON THE CHALK', '#ffb0a0');
+    else if (this.s.arm && !arm) say(g, p.cx, p.y - 40, 'THE ARM GOT CUT TOO: JUMP, THEN CUT', '#ffb0a0');
+    else say(g, p.cx, p.y - 40, 'TRIMMED TO FIT! TO THE SLOT', '#ffe08a');
+  }
+  touchPlayer() {}
+  draw(ctx) {
+    const s = this.s, t = this.t, fy = this.fy, p = this.g.player, d = this.dir;
+    ctx.save();
+    SA.cone(ctx, this.lx, fy - 2.6 * TS + 18, fy, 1.4 * TS, 0.7, -d);
+    // the chalk mark: a bold white cross on the floor, a little chalk triangle beside it
+    ctx.strokeStyle = WHITE; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.moveTo(this.mx - 9, fy - 1); ctx.lineTo(this.mx + 9, fy - 1); ctx.moveTo(this.mx, fy - 8); ctx.lineTo(this.mx, fy + 2); ctx.stroke();
+    // Brady's shadow, laid out flat on the floor behind him (from his heels back past the blade), when he is here
+    if (this.zone(p)) {
+      const hx = p.cx, rise = Math.max(0, fy - (p.y + p.h)), len = p.shadTrim && p.shadTrim.id === s.id ? p.shadTrim.len : LONG, x1 = hx - d * len;
+      ctx.fillStyle = 'rgba(58,24,72,0.88)'; ctx.beginPath(); ctx.moveTo(hx, fy - 1); ctx.lineTo(x1 + d * 10, fy - 1); ctx.quadraticCurveTo(x1, fy - 6, x1 + d * 10, fy - 10); ctx.lineTo(hx, fy - 12); ctx.closePath(); ctx.fill();
+      // the arm: lying flat with the body, or raised up off the floor while Brady is in the air
+      ctx.strokeStyle = 'rgba(58,24,72,0.88)'; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.beginPath(); const ax = hx - d * Math.min(len, LONG) * 0.6;
+      if (rise > 6) { ctx.moveTo(ax, fy - 8); ctx.lineTo(ax - d * 6, fy - 8 - Math.min(60, rise)); } else { ctx.moveTo(ax, fy - 8); ctx.lineTo(ax - d * 26, fy - 14); }
+      ctx.stroke();
+      if (this.onMark(p) && p.onGround) tick(ctx, this.mx, fy - 92, 0.8);
+    }
+    // the paper cutter: a salmon board with a long blade on a hinge (down for a moment after THROW)
+    const up = this.chop > 0 ? 0.05 : 0.9;
+    ctx.fillStyle = BUT; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(this.bx - 18, fy - 8, 36, 8); ctx.strokeRect(this.bx - 18, fy - 8, 36, 8);
+    ctx.save(); ctx.translate(this.bx - d * 14, fy - 8); ctx.rotate(-d * up); ctx.fillStyle = '#d8dce4'; ctx.fillRect(d > 0 ? 0 : -64, -5, 64, 6); ctx.strokeRect(d > 0 ? 0 : -64, -5, 64, 6); ctx.fillStyle = SAL; ctx.fillRect(d > 0 ? 50 : -64, -7, 14, 10); ctx.strokeRect(d > 0 ? 50 : -64, -7, 14, 10); ctx.restore();
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(this.bx - d * 14, fy - 8, 3, 0, TAU); ctx.fill();
+    SA.floorLamp(ctx, this.lx, fy, 2.6 * TS, true, t);
+    if (this.g.shadIn && this.g.shadIn.by === this) hint(this, ctx, p.cx, p.y - 34, s.arm ? 'JUMP, THEN THROW: CUT' : 'THROW: CUT');
+    ctx.restore();
+  }
+}
+ENTITY_TYPES.shadCutter = ShadCutter;
+// the mail slot: a lock (a salmon wall with a brass slot) that opens when Brady walks into it with the right cut
+class ShadSlot extends ENTITY_TYPES.lock {
+  constructor(g, s) { super(g, s); this.lookName = 'shadSlot'; this.arm = !!s.arm; this.accept = s.accept || this.id; }
+  touchPlayer() {}
+  update(dt) {
+    super.update && super.update(dt); this.t2 = (this.t2 || 0) + dt;
+    const g = this.g, p = g.player; if (this.open || !p || p.dead) return;
+    const touch = p.x < this.x + this.w + 6 && p.x + p.w > this.x - 6 && p.y < this.y + this.h && p.y + p.h > this.y;
+    if (!touch) { this.told = false; return; }
+    const tr = p.shadTrim;
+    if (tr && tr.id === this.accept && tr.ok) { p.shadTrim = null; openGrilles(g, this.id); say(g, this.cx, this.y - 20, 'POSTED! IT FITS', '#ffe08a'); Sound.play('secret', { vol: 0.5 }); }
+    else if (!this.told) { this.told = true; say(g, this.cx, this.y - 20, !tr || tr.id !== this.accept ? 'YOUR SHADOW\'S TOO LONG TO POST' : this.arm ? 'IT WANTS A LONG ARM, SHORT BODY' : 'WRONG SIZE: CUT IT ON THE CHALK', '#ffb0a0'); }
+  }
+  draw(ctx) {
+    const x = this.x, y = this.y, w = this.w, h = this.h, k = this.open ? 1 - Math.max(0, this.openT || 0) / 0.6 : 0;
+    if (k >= 1) return;
+    ctx.save(); ctx.globalAlpha = 1 - k; ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    ctx.fillStyle = SAL; ctx.fillRect(x + 1, y, w - 2, h); ctx.strokeRect(x + 1, y, w - 2, h);
+    const sy = y + h - 1.6 * TS; ctx.fillStyle = '#e8c84a'; ctx.fillRect(x + 4, sy, w - 8, 10); ctx.strokeRect(x + 4, sy, w - 8, 10); ctx.fillStyle = INK; ctx.fillRect(x + 7, sy + 3, w - 14, 4);
+    // what fits: a little grape silhouette over the slot (short body; with a long raised arm for the last one)
+    ctx.fillStyle = GRA; const cx = x + w / 2, by = sy - 6; ctx.fillRect(cx - 9, by - 14, 18, 14); ctx.beginPath(); ctx.arc(cx, by - 19, 5, 0, TAU); ctx.fill();
+    if (this.arm) { ctx.fillRect(cx + 6, by - 40, 4, 28); ctx.beginPath(); ctx.arc(cx + 8, by - 42, 3.5, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = BUT; ctx.font = '7px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('POST', cx, y + 12);
+    ctx.restore();
+  }
+}
+ENTITY_TYPES.shadSlot = ShadSlot;
+Tour.pieces['shad.cutter'] = function (st, o) {
+  const B = st.B; B.spawn('shadCutter', st.x, st.gy - 1, Object.assign({ row: st.gy }, o));
+  B.vkey(o.id, [[o.mark, st.gy - 1]]); for (const id of o.also || []) B.vkey(id, [[o.mark, st.gy - 1]]);
+  return st.x;
+};
+// the slot's wall: { id, h, arm }
+Tour.pieces['shad.slot'] = function (st, o) {
+  const B = st.B, h = o.h || 4; B.lock(st.x, st.gy - h, st.gy - 1, o.id, 'shadSlot');
+  const L = B.spawns[B.spawns.length - 1]; if (L && L.type === 'lock') { L.type = 'shadSlot'; L.arm = !!o.arm; L.accept = o.accept || null; }
+  return st.x;
+};
+
+/* ======================= 35-5 SPLIT: both shadows' feet on their claim slots ======================= */
+// { lamps: [l1, l2] tiles, at: tile (where both line up), decoy: tile (the hats line up there), row, lock }
+const splitFeet = (l1, l2, cx) => [cx + (cx - l1) * 0.7, cx - (l2 - cx) * 0.7];
+const splitHeads = (l1, l2, cx) => [cx + (cx - l1) * 1.25, cx - (l2 - cx) * 1.25];
+class ShadSplit extends Ent {
+  constructor(g, s) {
+    super(g, s, 4, 4); this.friendly = true; this.back = true; this.s = s; this.fy = s.row * TS;
+    this.l1 = (s.lamps[0] + 0.5) * TS; this.l2 = (s.lamps[1] + 0.5) * TS; this.slots = splitFeet(this.l1, this.l2, (s.at + 0.5) * TS);
+    this.hats = s.decoy != null ? splitHeads(this.l1, this.l2, (s.decoy + 0.5) * TS) : null;
+    this.x = Math.min(this.l1, this.slots[0], this.slots[1]) - 3 * TS; this.w = Math.max(this.l2, this.slots[0], this.slots[1]) + 3 * TS - this.x; this.y = this.fy - 6 * TS; this.h = 6 * TS + 8;
+    this.k = 0; this.done = false;
+  }
+  inside(p) { return onRow(p, this.s.row) && p.cx > this.l1 + 10 && p.cx < this.l2 - 10; }
+  update(dt) {
+    this.t += dt; if (this.done) return;
+    const p = this.g.player, inn = this.inside(p);
+    const f = inn ? splitFeet(this.l1, this.l2, p.cx) : null, ok = !!f && Math.abs(f[0] - this.slots[0]) < 14 && Math.abs(f[1] - this.slots[1]) < 14 && Math.abs(p.vx) < 40;
+    this.k = ok ? this.k + dt / BREATH : Math.max(0, this.k - dt * 2);
+    if (this.hats && inn && !this.hatSaid) { const h = splitHeads(this.l1, this.l2, p.cx); if (Math.abs(h[0] - this.hats[0]) < 14) { this.hatSaid = true; say(this.g, p.cx, p.y - 50, 'THE HATS MATCH... THE FEET DON\'T', '#c8d8ff'); } }
+    if (this.k >= 1) { this.done = true; openGrilles(this.g, this.s.lock); say(this.g, p.cx, p.y - 50, 'BOTH CLAIMS STAMPED!', '#ffe08a'); Sound.play('secret', { vol: 0.5 }); }
+  }
+  touchPlayer() {}
+  draw(ctx) {
+    const s = this.s, t = this.t, fy = this.fy, p = this.g.player, inn = this.inside(p) || this.done;
+    ctx.save();
+    for (const [lx, d] of [[this.l1, 1], [this.l2, -1]]) SA.cone(ctx, lx, fy - 2.4 * TS + 16, fy, 2.4 * TS, 0.6, d);
+    // the claim slots on the wall at floor level: salmon trays with a shoe drawn in each; lit when a foot is on one
+    const f = inn && p ? splitFeet(this.l1, this.l2, p.cx) : null;
+    this.slots.forEach((sx, k) => {
+      const on = this.done || (f && Math.abs(f[k] - sx) < 14);
+      ctx.fillStyle = on ? BUT_HI : SAL; ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.fillRect(sx - 20, fy - 16, 40, 16); ctx.strokeRect(sx - 20, fy - 16, 40, 16);
+      ctx.fillStyle = GRA_LO; ctx.beginPath(); ctx.moveTo(sx - 10, fy - 4); ctx.lineTo(sx - 10, fy - 12); ctx.lineTo(sx - 2, fy - 12); ctx.lineTo(sx + 2, fy - 7); ctx.lineTo(sx + 12 * (k ? -1 : 1), fy - 4); ctx.closePath(); ctx.fill();
+      if (on) tick(ctx, sx, fy - 30, 0.75);
+    });
+    if (this.hats) for (const hx of this.hats) { ctx.strokeStyle = 'rgba(255,253,242,0.85)'; ctx.lineWidth = 2.5; ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.ellipse(hx, fy - 3.4 * TS, 16, 5, 0, 0, TAU); ctx.moveTo(hx - 9, fy - 3.4 * TS); ctx.lineTo(hx - 9, fy - 3.4 * TS - 10); ctx.lineTo(hx + 9, fy - 3.4 * TS - 10); ctx.lineTo(hx + 9, fy - 3.4 * TS); ctx.stroke(); ctx.setLineDash([]); }
+    // the two shadows of Brady, one thrown each way (flat on the wall, leaning away from their lamps)
+    if (inn && p && !this.done) {
+      const fe = splitFeet(this.l1, this.l2, p.cx), he = splitHeads(this.l1, this.l2, p.cx);
+      for (let k = 0; k < 2; k++) SA.bradyShadow(ctx, fe[k], fy, 2.1 * TS, he[k] - fe[k], { arm: false, col: 'rgba(58,24,72,0.75)' });
+      if (this.k > 0) ring(ctx, p.cx, p.y - 26, this.k);
+    }
+    for (const lx of [this.l1, this.l2]) SA.floorLamp(ctx, lx, fy, 2.4 * TS, true, t);
+    ctx.restore();
+  }
+}
+ENTITY_TYPES.shadSplit = ShadSplit;
+Tour.pieces['shad.split'] = function (st, o) {
+  const B = st.B; B.spawn('shadSplit', st.x, st.gy - 1, Object.assign({ row: st.gy }, o));
+  if (o.lock) B.vkey(o.lock, [[o.at, st.gy - 1]]);
+  return st.x;
+};
+
+/* ---------------- the secret nook's painted face: a cover over the hollow block, see-through while Brady is in it ---------------- */
+class ShadCover extends Ent {
+  constructor(g, s) { super(g, s, s.w * TS, s.h * TS); this.x = s.tx * TS; this.y = s.ty * TS; this.friendly = true; this.a = 1; }
+  update(dt) { this.t += dt; const p = this.g.player, inn = p && p.x + p.w > this.x + 4 && p.x < this.x + this.w - 4 && p.y + p.h > this.y && p.y < this.y + this.h; this.a = approach(this.a, inn ? 0.3 : 1, dt * 4); }
+  touchPlayer() {}
+  draw() {}
+  paint(ctx) {
+    ctx.save(); ctx.globalAlpha = this.a;
+    for (let y = this.y; y < this.y + this.h; y += TS) for (let x = this.x; x < this.x + this.w; x += TS) { ctx.fillStyle = GRA_LO; ctx.fillRect(x, y, TS, TS); ctx.strokeStyle = 'rgba(255,230,160,0.14)'; ctx.lineWidth = 1.5; ctx.strokeRect(x + 4.5, y + 4.5, TS - 9, TS - 9); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(x, y + TS - 3, TS, 3); }
+    ctx.restore();
+  }
+}
+ENTITY_TYPES.shadCover = ShadCover;
+TourHooks.on('afterEntities', (play, ctx) => { if (!inShad(play)) return; for (const e of play.entities) if (e instanceof ShadCover) e.paint(ctx); });
+// { w, h }: the letter is the block's top-left cell (solid)
+Tour.pieces['shad.cover'] = function (st, o) { const B = st.B, x = st.x, y = st.gy - 1; B.set(x, y, T.HARD); B.spawn('shadCover', x, y, { tx: x, ty: y, w: o.w || 5, h: o.h || 3 }); return st.x; };
+
+/* ======================= the filing wall: a climbing surface with two faces ======================= */
+// the drying-net physics and checker (29_tour_y_wash_a_net.js) read any zone of kind 'washNet'; this draws it as a wall
+// of salmon filing drawers: each pull and the grape shadow it throws make a rung; an open drawer is where Brady crosses
+// to the far face (the dark inside of the cabinets, drawn as grape with the pulls' shadows in front of him)
+let wallN = 0;
+class ShadFiling extends Ent {
+  constructor(g, s) { super(g, s, s.w * TS, s.h * TS); this.back = true; this.x = s.tx * TS; this.y = s.ty * TS; this.holes = s.holes || []; this.nid = s.nid; }
+  update(dt) { this.t += dt; }
+  touchPlayer() {}
+  rungs(ctx, a) {
+    const x = this.x, y = this.y, w = this.w, h = this.h;
+    ctx.save(); ctx.globalAlpha = a;
+    for (let yy = y + 10; yy < y + h; yy += 16) for (let xx = x + 4; xx < x + w - 8; xx += 32) { ctx.fillStyle = GRA; ctx.fillRect(xx + 6, yy + 4, 22, 4); }
+    ctx.restore();
+  }
+  draw(ctx) {
+    const x = this.x, y = this.y, w = this.w, h = this.h, t = this.t, g = this.g;
+    ctx.save();
+    ctx.fillStyle = SAL_LO; ctx.fillRect(x - 6, y - 6, w + 12, h + 12); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(x - 6, y - 6, w + 12, h + 12);
+    ctx.fillStyle = BUT; ctx.fillRect(x - 10, y - 14, w + 20, 8); ctx.strokeRect(x - 10, y - 14, w + 20, 8);
+    // drawer fronts, two rows per tile pair, each with its pull (a rung) and the pull's grape shadow (a second rung)
+    for (let yy = y; yy < y + h; yy += 32) for (let xx = x; xx < x + w; xx += 32) {
+      ctx.fillStyle = SAL; ctx.fillRect(xx + 1, yy + 1, 30, 30); ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.strokeRect(xx + 1, yy + 1, 30, 30);
+      ctx.fillStyle = WHITE; ctx.fillRect(xx + 11, yy + 4, 10, 5);
+      for (const ry of [12, 26]) { ctx.fillStyle = GRA; ctx.fillRect(xx + 8, yy + ry + 3, 18, 3); ctx.fillStyle = '#e8c84a'; ctx.fillRect(xx + 6, yy + ry - 2, 18, 4); ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.strokeRect(xx + 6, yy + ry - 2, 18, 4); }
+    }
+    // the open drawers (crossing places): a dark mouth with a pale card sticking out
+    for (const [hx, hy] of this.holes) { const cx = hx * TS + TS / 2, cy = hy * TS + TS / 2; ctx.fillStyle = GRA_DK; ctx.fillRect(cx - 14, cy - 12, 28, 24); ctx.strokeStyle = BUT_HI; ctx.lineWidth = 3; ctx.strokeRect(cx - 14, cy - 12, 28, 24); ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.strokeRect(cx - 16, cy - 14, 32, 28); ctx.fillStyle = WHITE; ctx.fillRect(cx - 6, cy - 16, 12, 6); }
+    const p = g.player, W = p && p.wash;
+    if (W && W.grip && W.grip.nid === this.nid && !(W.crossT > 0) && Tour.washKit && Tour.washKit.holeAt) {
+      const hh = Tour.washKit.holeAt(W.grip, p.x + p.w / 2, p.y + 8);
+      if (hh) { const k = 0.5 + 0.5 * Math.sin(t * 8); ctx.strokeStyle = `rgba(255,240,150,${0.5 + 0.5 * k})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(hh[0] * TS + TS / 2, hh[1] * TS + TS / 2, 22 + k * 3, 0, TAU); ctx.stroke(); hint(this, ctx, hh[0] * TS + TS / 2, hh[1] * TS - 18, 'JUMP: THROUGH'); }
+    }
+    ctx.restore();
+  }
+}
+ENTITY_TYPES.shadFiling = ShadFiling;
+// on the far face Brady is inside the cabinets: a grape veil over him and the rungs in front
+TourHooks.on('afterEntities', (play, ctx) => {
+  const p = play.player, W = p && p.wash; if (!inShad(play) || !W || !W.grip || W.face !== 1) return;
+  for (const e of play.entities) if (e instanceof ShadFiling && e.nid === W.grip.nid) { ctx.save(); ctx.fillStyle = 'rgba(42,16,54,0.45)'; ctx.fillRect(e.x, e.y, e.w, e.h); ctx.restore(); e.rungs(ctx, 0.95); }
+});
+// a flea on the filing wall (lazily made from the wash critter once every file has loaded)
+let CrawlerReal = null;
+const crawlerType = () => {
+  if (CrawlerReal || !ENTITY_TYPES.washCrawler) return CrawlerReal;
+  CrawlerReal = class ShadCrawler extends ENTITY_TYPES.washCrawler {
+    art(c, x, y, mode) { c.save(); c.translate(x, y - 12); c.rotate(this.ay ? -Math.PI / 2 * Math.sign(this.dirU || 1) : 0); c.fillStyle = GRA; c.strokeStyle = INK; c.lineWidth = 1.5; c.beginPath(); c.ellipse(0, 0, 13, 9, 0, 0, TAU); c.fill(); c.stroke(); c.fillStyle = BUT; c.beginPath(); c.ellipse(-2, -2, 8, 5, 0, 0, TAU); c.fill(); c.fillStyle = WHITE; c.beginPath(); c.arc(8, -3, 3, 0, TAU); c.fill(); c.stroke(); c.fillStyle = INK; c.beginPath(); c.arc(8.8, -3, 1.3, 0, TAU); c.fill(); c.strokeStyle = GRA; c.lineWidth = 2; for (const k of [-6, 0, 6]) { const l = Math.sin(this.t * 16 + k) * 3; c.beginPath(); c.moveTo(k, 6); c.lineTo(k + l, 12); c.stroke(); } c.restore(); }
+  };
+  return CrawlerReal;
+};
+ENTITY_TYPES.shadCrawler = class ShadCrawlerShim extends Ent { constructor(g, s) { const C = crawlerType(); if (C) return new C(g, s); super(g, s, 26, 30); this.remove = true; } update() {} touchPlayer() {} draw() {} };
+Object.assign(Tour.pieces, {
+  // a filing wall with its top-left cell at the letter: { w, h, holes: [[dx, dy], ...] }
+  'shad.filing'(st, o) {
+    const B = st.B, x0 = st.x, y0 = st.gy - 1, nid = 'sf' + (++wallN), holes = (o.holes || []).map(([dx, dy]) => [x0 + dx, y0 + dy]);
+    B.zone(x0, y0, o.w, o.h, 0, 0, 0, 'washNet', { holes, nid, pulse: true });
+    B.spawn('shadFiling', x0, y0, { tx: x0, ty: y0, w: o.w, h: o.h, holes, nid });
+    return st.x;
+  },
+  // { face, ax, ay, speed, phase }
+  'shad.crawler'(st, o) {
+    const B = st.B, x = st.x, y = st.gy - 1;
+    const z = B.zones.find(q => q.kind === 'washNet' && x * TS >= q.x && x * TS < q.x + q.w && y * TS >= q.y && y * TS < q.y + q.h);
+    B.spawn('shadCrawler', x, y, { nid: z ? z.nid : null, face: o.face || 0, kind: 'moth', ax: o.ax || 0, ay: o.ay || 0, speed: o.speed || 1.0, phase: o.phase || 0 });
+    return st.x;
+  }
+});
+
+Object.assign(TourLandscape.ARCH_LABEL, { claim: 'LOST PROPERTY', lamplen: 'LONG DIVISION', overlap: 'OVERLAP ALLOWANCE', trim: 'ALTERATIONS' });
+Object.assign(Tour.shadKit, { setRect, hideRect, carriage, openGrilles, hint, ring, tick, heels, BREATH, shadHand, handleAt, shelfOf, overlapCells, splitFeet, splitHeads, ShadBoard, ShadLamp, ShadOverlap, ShadCutter, ShadSlot, ShadSplit, ShadFiling, inShad });
+try { if (typeof window !== 'undefined') window.BRADY_SHAD = { phys: (b, inp, A, dt, pl, o) => playerPhysicsFlip(b, inp, A, dt, pl, o), spikeContact: (b, A) => spikeContact(b, A), lavaContact: (b, A) => lavaContact(b, A), kit: Tour.shadKit }; } catch (e) { /* not in a browser */ }
+})();
+
+/* ---- 29_tour_y_shad_b_rooms.js ---- */
+/* ============================================================
+   THE DEPARTMENT OF UNCLAIMED SHADOWS: the secret rooms (world 35), one per stage: B46 to B50 of the relay
+   (docs/design/CHATGPT_RELAY.md §B) re-skinned for the department. Each a different game in a different place, with its
+   own floor, walls and arrangement of door, game and cage:
+     shadBeat   35-1 DOWNBEAT DELIVERY  the parcel room: eight bulbs light one per beat, the last a big flash; a parcel
+                                        passes along three pairs of oven mitts, one pair per beat, to Pupo. THROW at the
+                                        bell on the beat that lands it in Pupo's paws on the big flash
+     shadWindow 35-2 ONE WINDOW AJAR    the night corridor: four windows, every curtain stirring in the draught; one
+                                        flutters OUTSIDE its frame. Stand under it and THROW to shut it, twice
+     shadFoot   35-3 BORROWED FOOT      the boot room: four trails of round prints wind down to four cubbies; one trail
+                                        has a single square print. Follow it to its cubby and THROW, twice
+     shadCup    35-4 COLD CUP           the staff kitchen: three teapots steam, one has frost on its handle. THROW to
+                                        pick it up, carry it to the mitten at the hatch, THROW to hand it over, twice
+     shadFish   35-5 PRINT RUN          the cut-out workshop: a line of near-identical shadow fish; one has its scales
+                                        pointing toward its head. Stand under it and THROW to lift it out, twice
+   Every room fits one landscape phone view, shows its rule in motion as Brady comes in, opens its prize cage the
+   moment it is won, and a miss only restarts the turn. Each room's door out leads further along the stage.
+   ============================================================ */
+(function () {
+if (typeof TourRooms === 'undefined') return;
+const K = Tour.shadKit, INK = K.INK, SA = K.ShadArt, RK = TourRoomKit;
+const BUT = K.BUT, BUT_HI = K.BUT_HI, GRA = K.GRA, GRA_HI = K.GRA_HI, GRA_LO = K.GRA_LO, SAL = K.SAL, SAL_HI = K.SAL_HI, SAL_LO = K.SAL_LO, WHITE = K.WHITE;
+const Y = 6, F = 7;
+// the shared frame: a 28 x 14 room (21 playable columns); the door left or right, the cage right or left, either one
+// optionally up on a plinth
+function frame(keep, A, o, opts) {
+  opts = opts || {};
+  const g = RK.room(28, 14, F);
+  g.fill(22, 1, 26, Y, '#');
+  if (opts.roof) g.fill(opts.roof[0], 1, opts.roof[1], opts.roof[2], '#');
+  if (opts.doorRight) { g.put(19, Y, '@'); if (keep.door) g.door(20, Y, keep.door); }
+  else g.west(keep, Y);
+  const items = RK.prize(o, keep);
+  if (opts.cageLeft) {
+    const y = opts.plinth ? Y - 1 : Y, h = opts.cageH || 4, w = 3, x = 2, top = y - h + 1;
+    if (opts.plinth) g.fill(1, Y, 6, Y, '#');
+    g.fill(1, top - 1, x + w, top - 1, '#'); g.fill(x, top, x + w - 1, y, '.');
+    g.vline(x + w, top, y, g.L(['lock', 'room:' + A.id]));
+    items.forEach((it, k) => g.box(x + 1 + k, top, it));
+    g.data.cage = { x: x + w, top, y, w };
+  } else {
+    const y = opts.plinth ? Y - 1 : Y;
+    if (opts.plinth) g.fill(opts.cageX - 1, Y, 21, Y, '#');
+    g.cage(A.id, opts.cageX || 17, y, items, { w: 3, h: opts.cageH || 4 });
+  }
+  return { g };
+}
+const tag = (ctx, x, y, str, col, size) => { ctx.save(); ctx.font = (size || 10) + 'px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; const w = ctx.measureText(str).width + 12, h = (size || 10) + 8; ctx.fillStyle = 'rgba(28,20,38,0.9)'; rr(ctx, x - w / 2, y - h / 2, w, h, h / 2); ctx.fill(); ctx.fillStyle = col; ctx.fillText(str, x, y + 1); ctx.restore(); };
+const fail = (play, txt) => { TourKit.sfx('fizz', 'bump', { vol: 0.5, pitch: 0.6 }); const p = play.player; if (p) K.pill(play, p.cx, p.y - 24, txt, '#ffb0a0'); };
+const good = (play, txt) => { TourKit.sfx('chime', 'pick', { vol: 0.5, pitch: 1.2 }); const p = play.player; if (p) K.pill(play, p.cx, p.y - 24, txt, '#ffe08a'); };
+// the room's counter / prompt: one pill in a fixed spot above the room's game (never over it), after the title and rule
+const hud = (play, ctx, str, y) => {
+  if (play.bannerT > 0 || play.toastT > 0) return;
+  const x = play.camX + Game.viewW / 2, yy = Math.max(y || 100, play.camY + 62);
+  ctx.save(); ctx.font = '12px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; const w = ctx.measureText(str).width + 22;
+  ctx.fillStyle = 'rgba(28,20,38,0.9)'; rr(ctx, x - w / 2, yy - 11, w, 22, 11); ctx.fill(); ctx.fillStyle = '#ffe08a'; ctx.fillText(str, x, yy + 1); ctx.restore();
+};
+// the camera holds still on the room
+{
+  const uc0 = Play.prototype.updateCamera;
+  Play.prototype.updateCamera = function (dt) {
+    const r = uc0.call(this, dt), A = this.area;
+    if (A && A.shad && A.shad.room) { this.camX = clamp(11.5 * TS - Game.viewW / 2, 0, Math.max(0, A.W * TS - Game.viewW)); this.camY = clamp(1 * TS, 0, Math.max(0, A.H * TS - Game.viewH)); }
+    return r;
+  };
+  const ct0 = Play.prototype.camTargetY;
+  Play.prototype.camTargetY = function (snap) { const A = this.area; if (A && A.shad && A.shad.room) return clamp(1 * TS, 0, Math.max(0, A.H * TS - Game.viewH)); return ct0.call(this, snap); };
+}
+// a room prop: drawn by its role; the THROW ones claim the button while Brady stands at them
+class ShadRoomProp extends Ent {
+  constructor(g, s) { super(g, s, (s.w || 1) * TS, (s.h || 2) * TS); this.x = s.x - this.w / 2; this.y = s.y - this.h; this.friendly = true; this.role = s.role; this.k = s.k || 0; this.back = true; this.claims = ['bell', 'window', 'cubby', 'pot', 'hatch', 'fish'].indexOf(s.role) >= 0; }
+  shadClaim(p) { return !!this.claims && p.onGround && Math.abs(p.cx - this.cx) < (this.role === 'bell' || this.role === 'hatch' ? 26 : 18); }
+  update(dt) { this.t += dt; }
+  touchPlayer() {}
+  draw(ctx) { const R = this.g.area && this.g.area.roomState; const D = DRAW[this.role]; if (D) D(ctx, this, R || {}); }
+}
+ENTITY_TYPES.shadRoomProp = ShadRoomProp;
+const DRAW = {};
+const pressed = (play, role) => { const I = play.shadIn; return I && I.pressed && I.by instanceof ShadRoomProp && I.by.role === role ? I.by : null; };
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const pick = (n, not) => { let k; do k = Math.floor(Math.random() * n); while (k === not && n > 1); return k; };
+const markAt = (ctx, x, y, lit) => K.heels(ctx, x, y, lit);
+const near = (e) => { const p = e.g.player; return p && Math.abs(p.cx - e.cx) < 18 && p.onGround; };
+
+/* ================= shadBeat: DOWNBEAT DELIVERY (the parcel room) ================= */
+const BEAT = 0.62, BULBS = 8, CYCLE = 10, MITTS = [15, 12, 9], PUPO_X = 7, BELL_X = 18, WIN_START = BULBS - 1 - MITTS.length;
+TourRooms.def('shadBeat', {
+  title: 'DOWNBEAT DELIVERY', rule: 'RING SO PUPO GETS IT ON THE BIG FLASH', need: 'DELIVER THE PARCEL FIRST!',
+  make(o, keep, ctx, A, rng) {
+    const { g } = frame(keep, A, o, { doorRight: true, cageLeft: true });
+    g.spawn(12, Y, 'shadRoomProp', { role: 'beat', w: 14, h: 5 });
+    g.spawn(BELL_X, Y, 'shadRoomProp', { role: 'bell', w: 1, h: 2 });
+    g.winSpot(A.id, BELL_X, Y);
+    return g;
+  },
+  enter(play, A, R) { R.clock = 0; R.sent = null; R.demo = !R.won; R.cool = 0; R.last = -1; },
+  beat(R) { return Math.floor(R.clock / BEAT) % CYCLE; },
+  update(play, dt, A, R) {
+    R.clock += dt; if (R.cool > 0) R.cool -= dt;
+    const b = this.beat(R);
+    if (b !== R.last) {
+      R.last = b;
+      if (b < BULBS) TourKit.sfx(b === BULBS - 1 ? 'flash' : 'tick', b === BULBS - 1 ? 'secret' : 'select', { vol: b === BULBS - 1 ? 0.5 : 0.25, pitch: b === BULBS - 1 ? 1 : 1.6 });
+      // the demo: on the first cycle the bell rings itself on the right beat
+      if (R.demo && b === WIN_START) R.sent = { start: WIN_START, demo: true };
+      if (R.sent && b === R.sent.start + MITTS.length) {
+        const ok = R.sent.start === WIN_START;
+        if (R.sent.demo) { R.demo = false; good(play, 'LIKE THAT! YOUR TURN'); }
+        else if (ok && !R.won) TourRooms.win(play, A, R, { text: 'ON THE FLASH! PUPO HAS IT', coins: 3 });
+        else if (!R.won) fail(play, R.sent.start < WIN_START ? 'TOO EARLY: IT BEAT THE FLASH' : 'TOO LATE: THE FLASH WENT BY');
+        R.sent = null;
+      }
+      if (b === 0 && R.sent && R.sent.start >= BULBS) R.sent = null;
+    }
+    if (R.won || R.demo || R.sent) return;
+    if (pressed(play, 'bell') && R.cool <= 0) {
+      R.cool = 0.3; const q = R.clock / BEAT, nb = Math.round(q) % CYCLE;
+      TourKit.sfx('ding', 'pick', { vol: 0.5, pitch: 1.5 });
+      if (nb >= BULBS - MITTS.length) fail(play, 'TOO LATE FOR THIS ROUND');
+      else R.sent = { start: nb };
+    }
+  },
+  draw(play, ctx, A, R) { hud(play, ctx, R.won ? 'DELIVERED!' : R.demo ? 'WATCH THE DEMO' : 'COUNT THE BULBS. RING THE BELL', 100); }
+});
+DRAW.beat = (ctx, e, R) => {
+  const t = e.t, fy = F * TS, b = R.clock != null ? Math.floor(R.clock / BEAT) % CYCLE : -1;
+  ctx.save();
+  // the eight bulbs over the counter (the eighth big): lit one per beat
+  for (let k = 0; k < BULBS; k++) {
+    const x = (6.5 + k * 1.55) * TS, y = 3.4 * TS, big = k === BULBS - 1, on = b === k, past = b > k && b < BULBS, r = big ? 14 : 9;
+    ctx.fillStyle = on ? (big ? '#ffffff' : '#fff6a0') : past ? '#c8b060' : '#5a5040'; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); ctx.stroke();
+    if (on) { ctx.fillStyle = big ? 'rgba(255,255,230,0.5)' : 'rgba(255,246,160,0.35)'; ctx.beginPath(); ctx.arc(x, y, r * (big ? 3 : 2), 0, TAU); ctx.fill(); }
+    ctx.fillStyle = on ? INK : '#e8dcc0'; ctx.font = '9px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(k + 1), x, y + 1);
+  }
+  // the counter, the three pairs of oven mitts on stands, Pupo at the end with his paws out
+  ctx.fillStyle = '#8a6a4a'; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(6 * TS, fy - 30, 11 * TS, 8); ctx.strokeRect(6 * TS, fy - 30, 11 * TS, 8);
+  const pos = R.sent ? (b - R.sent.start) : -1;
+  MITTS.forEach((mx, k) => {
+    const x = mx * TS + TS / 2, holding = pos === k;
+    ctx.fillStyle = '#6a4a2a'; ctx.fillRect(x - 3, fy - 22, 6, 22);
+    for (const s of [-1, 1]) { ctx.save(); ctx.translate(x + s * 13, fy - 44); ctx.rotate(s * (holding ? 0.1 : 0.35)); ctx.fillStyle = k % 2 ? SAL : '#e86a8a'; ctx.strokeStyle = INK; ctx.lineWidth = 1.8; rr(ctx, -8, -12, 16, 24, 7); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.ellipse(s * -6, -4, 4, 7, s * 0.6, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = WHITE; ctx.fillRect(-8, 8, 16, 4); ctx.restore(); }
+  });
+  if (typeof Pupo !== 'undefined') { try { Pupo.draw(ctx, { x: PUPO_X * TS + TS / 2, y: fy, scale: 1.0, t, pose: pos === MITTS.length ? 'happy' : 'idle', facing: 1 }); } catch (err) { /* drawn without him */ } }
+  // the parcel: in the pair it has reached (or Pupo's paws), hopping one pair per beat
+  if (pos >= 0 && pos <= MITTS.length) {
+    const xs = MITTS.map(m => m * TS + TS / 2).concat([PUPO_X * TS + TS / 2 + 14]), frac = (R.clock / BEAT) % 1, k = Math.min(pos, xs.length - 1);
+    const x = k > 0 && frac < 0.3 ? lerp(xs[k - 1], xs[k], frac / 0.3) : xs[k], y = fy - 56 - (k > 0 && frac < 0.3 ? Math.sin(frac / 0.3 * Math.PI) * 20 : 0);
+    ctx.globalAlpha = R.sent && R.sent.demo ? 0.75 : 1;
+    ctx.fillStyle = '#c89a62'; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(x - 12, y - 10, 24, 20); ctx.strokeRect(x - 12, y - 10, 24, 20); ctx.fillStyle = '#a87a42'; ctx.fillRect(x - 2, y - 10, 4, 20); SA.tag(ctx, x + 14, y, 0.8);
+    ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+};
+DRAW.bell = (ctx, e, R) => {
+  const x = e.cx, y = e.y + e.h, ring = R.sent && !R.sent.demo && R.clock != null;
+  ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = SAL_LO; ctx.fillRect(x - 4, y - 30, 8, 30); ctx.strokeRect(x - 4, y - 30, 8, 30);
+  ctx.fillStyle = '#e8c84a'; ctx.beginPath(); ctx.arc(x, y - 30, 13, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.arc(x, y - 46, 3, 0, TAU); ctx.fill(); ctx.stroke();
+  if (ring) { ctx.strokeStyle = BUT_HI; ctx.lineWidth = 2; for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(x, y - 36, 20, s > 0 ? -0.5 : Math.PI - 0.5 + 0.0, s > 0 ? 0.5 : Math.PI + 0.5); ctx.stroke(); } }
+  if (near(e) && !R.won && !R.demo) K.hint(e, ctx, x, y - 70, 'THROW: RING');
+  ctx.restore();
+};
+
+/* ================= shadWindow: ONE WINDOW AJAR (the night corridor) ================= */
+const WIN_X = [5, 8, 11, 14];
+TourRooms.def('shadWindow', {
+  title: 'ONE WINDOW AJAR', rule: 'SHUT THE CURTAIN FLAPPING OUTSIDE ITS FRAME', need: 'SHUT THE WINDOW FIRST!',
+  make(o, keep, ctx, A, rng) {
+    const { g } = frame(keep, A, o, { cageX: 17 });
+    WIN_X.forEach((x, k) => g.spawn(x, Y, 'shadRoomProp', { role: 'window', k, w: 2, h: 5 }));
+    g.winSpot(A.id, WIN_X[1], Y);
+    return g;
+  },
+  enter(play, A, R) { if (R.odd == null) { R.odd = pick(WIN_X.length); R.round = 0; R.shut = []; } R.cool = 0; },
+  update(play, dt, A, R) {
+    if (R.cool > 0) R.cool -= dt; if (R.won) return;
+    const e = pressed(play, 'window'); if (!e || R.cool > 0) return; R.cool = 0.4;
+    if (e.k === R.odd) {
+      R.shut.push(e.k); R.round++; TourKit.sfx('shut', 'bump', { vol: 0.5, pitch: 1.2 });
+      if (R.round >= 2) TourRooms.win(play, A, R, { text: 'SHUT TIGHT! NO MORE DRIZZLE', coins: 3 });
+      else { good(play, 'SHUT! ANOTHER ONE\'S AJAR'); R.odd = pick(WIN_X.length, e.k); }
+    } else fail(play, 'THAT CURTAIN STAYS IN ITS FRAME');
+  },
+  draw(play, ctx, A, R) { hud(play, ctx, R.won ? 'ALL SHUT' : 'SHUT ' + (R.round || 0) + ' / 2', 100); }
+});
+DRAW.window = (ctx, e, R) => {
+  const x = e.cx, fy = F * TS, t = e.t, top = 3.0 * TS, w = 50, h = 62, odd = !R.won && R.odd === e.k, shut = R.won || (R.shut && R.shut.indexOf(e.k) >= 0 && !odd);
+  ctx.save();
+  // the frame and the rainy night outside
+  ctx.fillStyle = '#1a2440'; ctx.fillRect(x - w / 2, top, w, h);
+  ctx.strokeStyle = 'rgba(170,200,240,0.6)'; ctx.lineWidth = 1.2; for (let k = 0; k < 6; k++) { const xx = x - w / 2 + ((k * 13 + t * 40) % w), yy = top + ((k * 23 + t * 160) % h); ctx.beginPath(); ctx.moveTo(xx, yy); ctx.lineTo(xx - 2, yy + 8); ctx.stroke(); }
+  ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.strokeRect(x - w / 2, top, w, h); ctx.fillStyle = '#e8dcc0'; ctx.fillRect(x - w / 2 - 6, top - 6, w + 12, 6); ctx.fillRect(x - w / 2 - 6, top + h, w + 12, 6); ctx.strokeRect(x - w / 2 - 6, top + h, w + 12, 6);
+  ctx.fillStyle = '#e8dcc0'; ctx.fillRect(x - 1.5, top, 3, h);
+  // the curtain: salmon, swaying inside the frame; the odd one billows out past the frame's edge and flaps
+  const sway = Math.sin(t * 3 + e.k) * 3, out = odd ? 14 + Math.sin(t * 9) * 6 : 0;
+  ctx.fillStyle = SAL; ctx.strokeStyle = INK; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x - w / 2 + 2, top + 2); ctx.lineTo(x - 4, top + 2); ctx.quadraticCurveTo(x - 8 + sway, top + h * 0.5, x - 6 + sway * 0.5, top + h - 2); ctx.lineTo(x - w / 2 + 2, top + h - 2); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + 4, top + 2); ctx.lineTo(x + w / 2 - 2, top + 2); ctx.quadraticCurveTo(x + w / 2 + out, top + h * 0.45, x + w / 2 - 2 + out * 1.2, top + h - 6 + (odd ? Math.sin(t * 11) * 6 : 0)); ctx.lineTo(x + 6 - sway * 0.5, top + h - 2); ctx.quadraticCurveTo(x + 8 - sway, top + h * 0.5, x + 4, top + 2); ctx.closePath(); ctx.fill(); ctx.stroke();
+  if (shut) { ctx.strokeStyle = BUT_HI; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x - w / 2, top + h / 2); ctx.lineTo(x + w / 2, top + h / 2); ctx.stroke(); }
+  // the radiator under it and the spot to stand
+  markAt(ctx, x, fy, near(e));
+  if (near(e) && !R.won) K.hint(e, ctx, x, fy - 72, 'THROW: SHUT');
+  ctx.restore();
+};
+
+/* ================= shadFoot: BORROWED FOOT (the boot room) ================= */
+const CUB_X = [6, 9, 12, 15], TRACK_COL = ['#5a2a6a', '#3a5a8a', '#8a3a3a', '#3a6a3a'];
+TourRooms.def('shadFoot', {
+  title: 'BORROWED FOOT', rule: 'FOLLOW THE TRAIL WITH ONE SQUARE PRINT', need: 'FIND ITS CUBBY FIRST!',
+  make(o, keep, ctx, A, rng) {
+    const { g } = frame(keep, A, o, { cageX: 17, plinth: true });
+    g.spawn(10, Y, 'shadRoomProp', { role: 'trails', w: 14, h: 5 });
+    CUB_X.forEach((x, k) => g.spawn(x, Y, 'shadRoomProp', { role: 'cubby', k, w: 1, h: 1 }));
+    g.winSpot(A.id, CUB_X[2], Y);
+    return g;
+  },
+  deal(R) { R.map = shuffle([0, 1, 2, 3]); while (R.map.every((v, i) => v === i)) R.map = shuffle(R.map); R.odd = pick(4, R.odd); R.sq = 0.3 + Math.random() * 0.4; },
+  enter(play, A, R) { if (R.map == null) { R.round = 0; this.deal(R); } R.cool = 0; },
+  update(play, dt, A, R) {
+    if (R.cool > 0) R.cool -= dt; if (R.won) return;
+    const e = pressed(play, 'cubby'); if (!e || R.cool > 0) return; R.cool = 0.4;
+    if (R.map[R.odd] === e.k) { R.round++; if (R.round >= 2) TourRooms.win(play, A, R, { text: 'FOUND THE BORROWED FOOT!', coins: 3 }); else { good(play, 'FOUND IT! NEW TRAILS'); this.deal(R); } }
+    else fail(play, 'NOT THAT TRAIL. LOOK FOR THE SQUARE');
+  },
+  draw(play, ctx, A, R) { hud(play, ctx, R.won ? 'WELL TRACKED' : 'FOUND ' + (R.round || 0) + ' / 2', 100); }
+});
+// a trail from its start (top) to its cubby: a wiggly curve; pt(k, u) the point at u in 0..1
+const trailPt = (R, k, u) => { const x0 = CUB_X[k] * TS + TS / 2, x1 = CUB_X[R.map[k]] * TS + TS / 2, y0 = 3.2 * TS, y1 = F * TS - 34, e = u * u * (3 - 2 * u); return [lerp(x0, x1, e) + Math.sin(u * Math.PI * 3 + k) * 10, lerp(y0, y1, u)]; };
+DRAW.trails = (ctx, e, R) => {
+  if (!R.map) return;
+  ctx.save();
+  // the bare patch: a pale board on the wall the trails cross
+  ctx.fillStyle = 'rgba(240,232,200,0.85)'; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(4.6 * TS, 2.9 * TS, 12 * TS, F * TS - 2.9 * TS - 26); ctx.strokeRect(4.6 * TS, 2.9 * TS, 12 * TS, F * TS - 2.9 * TS - 26);
+  for (let k = 0; k < 4; k++) {
+    const N = 11;
+    for (let i = 0; i < N; i++) {
+      const u = (i + 0.5) / N, [x, y] = trailPt(R, k, u), sq = k === R.odd && Math.abs(u - R.sq) < 0.5 / N;
+      ctx.fillStyle = TRACK_COL[k];
+      if (sq) { ctx.fillRect(x - 4.5, y - 4.5, 9, 9); ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.strokeRect(x - 4.5, y - 4.5, 9, 9); }
+      else { ctx.beginPath(); ctx.arc(x + (i % 2 ? 3 : -3), y, 4, 0, TAU); ctx.fill(); }
+    }
+  }
+  ctx.restore();
+};
+DRAW.cubby = (ctx, e, R) => {
+  const x = e.cx, fy = F * TS;
+  ctx.save(); ctx.fillStyle = '#4a3a2a'; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(x - 15, fy - 26, 30, 26); ctx.strokeRect(x - 15, fy - 26, 30, 26); ctx.fillStyle = '#1a120a'; rr(ctx, x - 10, fy - 20, 20, 20, 8); ctx.fill();
+  ctx.fillStyle = WHITE; for (const dx of [-4, 4]) { ctx.beginPath(); ctx.arc(x + dx, fy - 10, 2, 0, TAU); ctx.fill(); }
+  if (near(e) && !R.won) K.hint(e, ctx, x, fy - 60, 'THROW: THIS ONE');
+  ctx.restore();
+};
+
+/* ================= shadCup: COLD CUP (the staff kitchen) ================= */
+const POT_X = [12, 15, 18], HATCH_X = 8;
+TourRooms.def('shadCup', {
+  title: 'COLD CUP', rule: 'GIVE THE MITTEN THE TEAPOT WITH THE FROSTY HANDLE', need: 'HAND OVER THE COLD ONE FIRST!',
+  make(o, keep, ctx, A, rng) {
+    const { g } = frame(keep, A, o, { doorRight: true, cageLeft: true, plinth: true });
+    POT_X.forEach((x, k) => g.spawn(x, Y, 'shadRoomProp', { role: 'pot', k, w: 1, h: 2 }));
+    g.spawn(HATCH_X, Y, 'shadRoomProp', { role: 'hatch', w: 2, h: 4 });
+    g.winSpot(A.id, HATCH_X, Y);
+    return g;
+  },
+  enter(play, A, R) { if (R.cold == null) { R.cold = pick(3); R.round = 0; } R.carry = null; R.cool = 0; },
+  update(play, dt, A, R) {
+    if (R.cool > 0) R.cool -= dt; if (R.won || R.cool > 0) return;
+    const pot = pressed(play, 'pot'), hatch = pressed(play, 'hatch');
+    if (pot) { R.cool = 0.15; if (R.carry === pot.k) { R.carry = null; return; } R.carry = pot.k; TourKit.sfx('lift', 'pick', { vol: 0.4, pitch: 1.3 }); return; }
+    if (hatch) {
+      R.cool = 0.4; if (R.carry == null) { fail(play, 'BRING A TEAPOT FIRST'); return; }
+      if (R.carry === R.cold) { R.round++; R.carry = null; if (R.round >= 2) TourRooms.win(play, A, R, { text: 'THE MITTEN SAYS THANK YOU', coins: 3 }); else { good(play, 'COLD ONE DELIVERED! AGAIN'); R.cold = pick(3, R.cold); } }
+      else { fail(play, 'TOO HOT! THE MITTEN WANTS THE FROSTY ONE'); R.carry = null; }
+    }
+  },
+  draw(play, ctx, A, R) {
+    hud(play, ctx, R.won ? 'TEA FOR THE MITTEN' : 'DELIVERED ' + (R.round || 0) + ' / 2', 100);
+    if (R.carry != null && !R.won) { const p = play.player; potArt(ctx, p.cx, p.y - 4, R.carry === R.cold, play.t || 0, R.carry); }
+  }
+});
+const potArt = (ctx, x, y, frost, t, k) => {
+  ctx.save();
+  SA.shape(ctx, 'pot', x, y, 1.15, { fill: ['#e8f0f4', '#f4e8d0', '#e0ecd8'][k % 3], lw: 2 });
+  // steam from every spout (they all look hot)
+  ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 2; for (let s = 0; s < 2; s++) { const q = (t * 0.8 + s * 0.5) % 1; ctx.globalAlpha = 1 - q; ctx.beginPath(); ctx.moveTo(x + 28, y - 32 - q * 20); ctx.quadraticCurveTo(x + 34, y - 38 - q * 20, x + 28, y - 44 - q * 20); ctx.stroke(); } ctx.globalAlpha = 1;
+  if (frost) {
+    // frost on the handle: white crystal spikes and a little snowflake
+    ctx.strokeStyle = WHITE; ctx.lineWidth = 2.2; for (const [dx, dy] of [[-20, -20], [-24, -14], [-20, -9]]) { ctx.beginPath(); ctx.moveTo(x + dx, y + dy); ctx.lineTo(x + dx - 5, y + dy - 3); ctx.moveTo(x + dx, y + dy); ctx.lineTo(x + dx - 4, y + dy + 3); ctx.stroke(); }
+    ctx.strokeStyle = '#a8e0ff'; ctx.lineWidth = 1.6; const sx = x - 30, sy = y - 26; for (let a = 0; a < 3; a++) { ctx.beginPath(); ctx.moveTo(sx + Math.cos(a) * 5, sy + Math.sin(a) * 5); ctx.lineTo(sx - Math.cos(a) * 5, sy - Math.sin(a) * 5); ctx.stroke(); }
+  }
+  ctx.restore();
+};
+DRAW.pot = (ctx, e, R) => {
+  const x = e.cx, fy = F * TS;
+  ctx.save(); ctx.fillStyle = '#8a6a4a'; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(x - 14, fy - 16, 28, 5); ctx.strokeRect(x - 14, fy - 16, 28, 5); ctx.fillRect(x - 12, fy - 11, 4, 11); ctx.fillRect(x + 8, fy - 11, 4, 11);
+  if (R.carry !== e.k) potArt(ctx, x, fy - 16, !R.won && R.cold === e.k, e.t, e.k);
+  if (near(e) && !R.won) K.hint(e, ctx, x, fy - 78, R.carry === e.k ? 'THROW: PUT IT BACK' : 'THROW: PICK IT UP');
+  ctx.restore();
+};
+DRAW.hatch = (ctx, e, R) => {
+  const x = e.cx, fy = F * TS, t = e.t;
+  ctx.save(); ctx.fillStyle = '#6a5a4a'; ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.fillRect(x - 30, fy - 118, 60, 50); ctx.strokeRect(x - 30, fy - 118, 60, 50); ctx.fillStyle = '#2a2018'; ctx.fillRect(x - 24, fy - 112, 48, 40);
+  // the mitten, reaching out of the hatch, waving for its cold cup
+  ctx.save(); ctx.translate(x, fy - 78 + Math.sin(t * 3) * 3); ctx.rotate(Math.sin(t * 2) * 0.15); ctx.fillStyle = '#c84a4a'; rr(ctx, -12, -16, 24, 30, 10); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.ellipse(-12, -2, 5, 8, -0.5, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = WHITE; ctx.fillRect(-12, 10, 24, 6); ctx.strokeRect(-12, 10, 24, 6); ctx.restore();
+  ctx.fillStyle = '#8a6a4a'; ctx.fillRect(x - 34, fy - 70, 68, 6); ctx.strokeRect(x - 34, fy - 70, 68, 6);
+  if (near(e) && !R.won) K.hint(e, ctx, x, fy - 140, R.carry != null ? 'THROW: HAND IT OVER' : 'BRING THE FROSTY ONE');
+  ctx.restore();
+};
+
+/* ================= shadFish: PRINT RUN (the cut-out workshop) ================= */
+const FISH_X = [5, 8, 11, 14];
+TourRooms.def('shadFish', {
+  title: 'PRINT RUN', rule: 'LIFT THE FISH WHOSE SCALES POINT TO ITS HEAD', need: 'LIFT OUT THE ODD FISH FIRST!',
+  make(o, keep, ctx, A, rng) {
+    const { g } = frame(keep, A, o, { cageX: 16, roof: [1, 3, 1] });
+    FISH_X.forEach((x, k) => g.spawn(x, Y, 'shadRoomProp', { role: 'fish', k, w: 2, h: 4 }));
+    g.winSpot(A.id, FISH_X[2], Y);
+    return g;
+  },
+  deal(R) { R.odd = pick(FISH_X.length, R.odd); R.face = FISH_X.map(() => Math.random() < 0.5 ? 1 : -1); },
+  enter(play, A, R) { if (R.odd == null) { R.round = 0; this.deal(R); } R.cool = 0; },
+  update(play, dt, A, R) {
+    if (R.cool > 0) R.cool -= dt; if (R.won) return;
+    const e = pressed(play, 'fish'); if (!e || R.cool > 0) return; R.cool = 0.4;
+    if (e.k === R.odd) { R.round++; R.lift = { k: e.k, t: 0 }; if (R.round >= 2) TourRooms.win(play, A, R, { text: 'OUT OF THE PRINT RUN!', coins: 3 }); else { good(play, 'THAT\'S THE ODD ONE! NEXT SHEET'); this.deal(R); } }
+    else fail(play, 'ITS SCALES POINT TO ITS TAIL');
+  },
+  draw(play, ctx, A, R) { hud(play, ctx, R.won ? 'ODD FISH OUT' : 'FOUND ' + (R.round || 0) + ' / 2', 100); }
+});
+DRAW.fish = (ctx, e, R) => {
+  if (!R.face) return;
+  const x = e.cx, fy = F * TS, t = e.t, d = R.face[e.k], y = 4.1 * TS + Math.sin(t * 2 + e.k) * 2, odd = R.odd === e.k && !R.won;
+  ctx.save();
+  // its peg on the line
+  ctx.strokeStyle = 'rgba(255,253,242,0.7)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x - 40, 3.1 * TS); ctx.lineTo(x + 40, 3.1 * TS); ctx.stroke();
+  ctx.fillStyle = '#d8b88a'; ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.fillRect(x - 3, 3.1 * TS - 6, 6, 14); ctx.strokeRect(x - 3, 3.1 * TS - 6, 6, 14);
+  // the paper fish: a grape shadow cut-out with its notch, an eye hole, scales as butter chevrons
+  ctx.translate(x, y); ctx.scale(d, 1);
+  ctx.fillStyle = GRA; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(26, 0); ctx.quadraticCurveTo(12, -18, -14, -6); ctx.lineTo(-28, -16); ctx.lineTo(-24, 0); ctx.lineTo(-28, 16); ctx.lineTo(-14, 6); ctx.quadraticCurveTo(12, 18, 26, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+  SA.notch(ctx, 4, -11, 0.7, 0, '#3a2a4a');
+  ctx.fillStyle = BUT_HI; ctx.beginPath(); ctx.arc(16, -3, 3, 0, TAU); ctx.fill();
+  ctx.strokeStyle = BUT; ctx.lineWidth = 2; const s = odd ? 1 : -1;   // chevrons: pointing to the tail (-) or the head (+)
+  for (const cx of [-6, 2]) for (const cy of [-4, 4]) { ctx.beginPath(); ctx.moveTo(cx - 3 * s, cy - 4); ctx.lineTo(cx + 3 * s, cy); ctx.lineTo(cx - 3 * s, cy + 4); ctx.stroke(); }
+  ctx.restore();
+  markAt(ctx, x, fy, near(e));
+  if (near(e) && !R.won) K.hint(e, ctx, x, fy - 60, 'THROW: LIFT IT OUT');
+};
+
+/* the room test's scripted wins (tools/sbw_rooms_test.js calls K.testWin(g, A, R, kit, frame) for a kind it has no
+   script for): each plays its game through the room's own entities with the buttons a player uses */
+const steps = (g, frame, n, keys) => { for (let k = 0; k < n; k++) frame(g, keys || {}); };
+const stand = (g, tx) => { const p = g.player; p.x = tx * TS + TS / 2 - p.w / 2; p.y = F * TS - p.h; p.vx = p.vy = 0; };
+const press = (g, frame) => { frame(g, { action: true, actionPressed: true }); steps(g, frame, 10); };
+const until = (g, frame, fn, sec) => { for (let k = 0; k < 120 * (sec || 10) && !fn(); k++) frame(g, {}); };
+TourRooms.kinds.shadBeat.testWin = function (g, A, R, kit, frame) {
+  stand(g, BELL_X); steps(g, frame, 10);
+  const Kd = TourRooms.kinds.shadBeat;
+  until(g, frame, () => !R.demo && !R.sent, 20);
+  // a miss: ring on bulb 1, then the win on bulb 5
+  until(g, frame, () => Kd.beat(R) === 0 && (R.clock / BEAT) % 1 < 0.3, 10); press(g, frame); until(g, frame, () => !R.sent, 10);
+  until(g, frame, () => Kd.beat(R) === WIN_START && (R.clock / BEAT) % 1 < 0.3, 10); press(g, frame); until(g, frame, () => R.won, 6);
+};
+TourRooms.kinds.shadWindow.testWin = function (g, A, R, kit, frame) {
+  stand(g, WIN_X[(R.odd + 1) % WIN_X.length]); steps(g, frame, 8); press(g, frame);
+  for (let k = 0; k < 3 && !R.won; k++) { stand(g, WIN_X[R.odd]); steps(g, frame, 8); press(g, frame); steps(g, frame, 40); }
+};
+TourRooms.kinds.shadFoot.testWin = function (g, A, R, kit, frame) {
+  stand(g, CUB_X[(R.map[R.odd] + 1) % 4]); steps(g, frame, 8); press(g, frame);
+  for (let k = 0; k < 3 && !R.won; k++) { stand(g, CUB_X[R.map[R.odd]]); steps(g, frame, 8); press(g, frame); steps(g, frame, 40); }
+};
+TourRooms.kinds.shadCup.testWin = function (g, A, R, kit, frame) {
+  const carry = k => { stand(g, POT_X[k]); steps(g, frame, 8); press(g, frame); steps(g, frame, 30); stand(g, HATCH_X); steps(g, frame, 8); press(g, frame); steps(g, frame, 60); };
+  carry((R.cold + 1) % 3);
+  for (let k = 0; k < 3 && !R.won; k++) carry(R.cold);
+};
+TourRooms.kinds.shadFish.testWin = function (g, A, R, kit, frame) {
+  stand(g, FISH_X[(R.odd + 1) % FISH_X.length]); steps(g, frame, 8); press(g, frame);
+  for (let k = 0; k < 3 && !R.won; k++) { stand(g, FISH_X[R.odd]); steps(g, frame, 8); press(g, frame); steps(g, frame, 40); }
+};
+// title first, then the rule: the kit toasts the rule as the banner shows; ours waits for the banner to go
+for (const k of ['shadBeat', 'shadWindow', 'shadFoot', 'shadCup', 'shadFish']) {
+  const Kd = TourRooms.kinds[k], e0 = Kd.enter, u0 = Kd.update;
+  Kd.enter = function (play, A, R, kit) { play.toastT = 0; R.ruleAt = true; if (e0) return e0.apply(this, arguments); };
+  Kd.update = function (play, dt, A, R, kit) { if (R.ruleAt && !(play.bannerT > 0)) { R.ruleAt = false; if (!R.won) { play.toast(kit.rule); play.toastT = 4; } } if (u0) return u0.apply(this, arguments); };
+}
+Tour.shadKit.ROOMS = { BEAT, MITTS, BELL_X, WIN_START, WIN_X, CUB_X, POT_X, HATCH_X, FISH_X };
+})();
+
+/* ---- 29_tour_y_shad_c_boss.js ---- */
+/* ============================================================
+   THE DEPARTMENT OF UNCLAIMED SHADOWS: the boss, THE UNDERSTUDY (35-5), a shadow that signs for everything.
+   A flat grape shadow-clerk on the wall of the claims counter: a bowler hat (with the department's notch in its brim),
+   a green visor, salmon sleeve garters, long thin arms, a pen behind one ear. An office silhouette, not Brady's shape,
+   not a person: it is a shadow nobody claimed, and it has been signing for everyone else's ever since. Touching it never
+   hurts (it is only a shadow on the wall); its reach, its kick and its rush along the floor do. Two clerks' lamps stand
+   on the floor: L (left) and R (right); claim slots are cut into the skirting board.
+   1 THE REACH   it flattens one palm (the tell: a dashed reach line along the skirting, 1.1 s), then its arm shoots along
+                 the wall to wherever Brady stands: jump the hand. If Brady stood on the HAND slot, the hand lies over it:
+                 cross lamp L (walk past it) and the light swings round and pulls the hand into the slot (a hit).
+   2 THE KICK    it lifts a heel (the tell: a dashed line at ankle height, 1.1 s), then a long flat kick along the floor to
+                 wherever Brady stands: jump the shoe. If he stood on the BOOT slot, the shoe lies in it: cross back over
+                 lamp R and the boot is claimed (a hit).
+   3 THE SPLIT   between the two lamps it splits in two halves, each with its own hat; their feet follow Brady. Both
+                 hats rise (the tell, 1.1 s), then the halves swap heads and rush flat along the floor: jump them. If both
+                 halves' feet were on their claim slots when the hats rose, both claims stamp shut on them (a hit).
+   Brady gets his own shadow back at the end, complete with the bun.
+   ============================================================ */
+(function () {
+const K = Tour.shadKit, INK = K.INK, SA = K.ShadArt, BUT = K.BUT, BUT_HI = K.BUT_HI, GRA = K.GRA, GRA_HI = K.GRA_HI, GRA_LO = K.GRA_LO, SAL = K.SAL, SAL_LO = K.SAL_LO, WHITE = K.WHITE;
+const say = (b, t, c) => { const L = { text: t, col: c || '#fff0d0', t: 0 }; if (b.line && b.line.t < 1.1 && b.line.text !== t) b.lineNext = L; else b.line = L; };
+const VISOR = '#3a9a6a';
+const TELL = 1.1, OUT = 0.38, HOLD = 2.6;
+const brain = {
+  phases: [4, 2],
+  guardText: ' ',
+  // the counter's furniture (pixels): the lamps, the hand and boot slots, the two foot slots, the clerk's place
+  geo(b) {
+    if (b.geoC) return b.geoC;
+    const x0 = b.arenaX0, x1 = b.arenaX1, L = x0 + 9 * TS, R = x0 + 12.5 * TS, at = x0 + 10.5 * TS, feet = K.splitFeet(L, R, at);
+    // everything Brady plays with stays clear of the stick (left) and the two buttons (right)
+    return (b.geoC = { x0, x1, L, R, hand: x0 + 6.5 * TS, boot: x0 + 15 * TS, at, feet, home: x0 + 18.4 * TS, lo: x0 + 5.5 * TS });
+  },
+  wake(b) {
+    const G = this.geo(b); b.phase = 1; b.ext = 0; b.claimed = false; b.noShadow = true;
+    b.x = G.home - b.w / 2; b.y = b.floorY - b.h;
+    say(b, 'SIGN HERE. AND HERE. AND THIS ONE IS YOURS NOW.'); b.go('palm');
+  },
+  phase(b, n) {
+    const g = b.g; b.ext = 0; b.claimed = false;
+    if (n === 2) { g.bannerText = 'THE KICK!'; g.bannerT = 2; say(b, 'I SIGN WITH MY FEET TOO, YOU KNOW.'); b.go('rest2'); }
+    if (n === 3) { g.bannerText = 'THE SPLIT!'; g.bannerT = 2; say(b, 'TWO LAMPS? THEN THERE ARE TWO OF ME.'); b.go('split'); }
+  },
+  hurt(b) {},
+  hit(b, kind) { if (!(b.flatT > b.t)) { b.flatT = b.t + 1.5; say(b, 'I\'M A SHADOW. YOU CAN\'T STAND ON ME.', '#c8d8ff'); } return kind === 'stomp' || kind === 'spin' ? 'bounce' : false; },
+  touch(b, p) { return true; },
+  lastHit(b) { b.go('gone'); b.state = 'fight'; return true; },
+  claim(b, text) { b.line = null; say(b, text, '#ffe08a'); b.claimed = true; const ph = b.phase; b.damage(1, { col: BUT_HI }); if (b.phase !== ph) b.claimed = false; Sound.play('secret', { vol: 0.5 }); },
+  update(b, dt) {
+    const g = b.g, p = g.player, ph = b.phase || 1, G = this.geo(b), A = b.act, alive = p && !p.dead;
+    if (b.line) b.line.t += dt;
+    if ((!b.line || b.line.t > 2.6) && b.lineNext) { b.line = b.lineNext; b.lineNext = null; }
+    b.x = G.home - b.w / 2;
+    const band = (top, tipX) => alive && Math.abs(p.cx - tipX) < 20 && p.y + p.h > b.floorY - top;
+    if (A === 'gone') {
+      if (b.first) { say(b, 'FINE. HERE\'S YOUR SHADOW BACK. BUN AND ALL.', '#ffe08a'); g.burst(b.cx, b.cy, 30, BUT_HI, 'confetti'); }
+      b.fade = Math.min(1, b.at / 2); if (b.at > 2.4 && !b.done) { b.done = true; b.die(); }
+      return;
+    }
+    /* ---- phase 1: the reach (to the left, toward lamp L and the hand slot) ---- */
+    if (A === 'palm') { if (b.first) say(b, 'ONE MOMENT... I\'LL JUST REACH FOR THAT.'); b.tx = clamp(alive ? p.cx : G.hand, G.lo, G.home - 3 * TS); if (b.at > TELL) { b.go('reach'); b.hitArm = false; } }
+    else if (A === 'reach') { b.ext = Math.min(1, b.at / OUT); const tip = lerp(G.home - 30, b.tx, b.ext); if (!b.hitArm && band(30, tip)) { b.hitArm = true; p.hurt(b); } if (b.ext >= 1) { b.go('hold'); b.side0 = alive ? Math.sign(p.cx - G.L) : 0; b.lined = Math.abs(b.tx - G.hand) < 30; if (b.lined) say(b, 'HEY, THAT\'S A SLOT. I DON\'T LIKE SLOTS.', '#ffe08a'); } }
+    else if (A === 'hold') {
+      const Lx = ph === 1 ? G.L : G.R;
+      if (b.lined && !b.claimed && alive && Math.sign(p.cx - Lx) !== b.side0 && b.side0 !== 0) { this.claim(b, ph === 1 ? 'MY HAND! IT\'S BEEN CLAIMED!' : 'MY BOOT! SIGNED, SEALED, CLAIMED!'); b.pullT = 0; if (b.act !== 'hold') return; }
+      if (b.claimed) b.pullT = (b.pullT || 0) + dt;
+      if (b.at > HOLD || (b.claimed && b.pullT > 0.9)) b.go('back');
+    }
+    else if (A === 'back') { b.ext = Math.max(0, 1 - b.at / 0.4); if (b.at > 0.45) { b.ext = 0; b.claimed = false; b.go(ph === 1 ? 'rest1' : 'rest2'); } }
+    else if (A === 'rest1') { if (b.at > 1.0) b.go('palm'); }
+    /* ---- phase 2: the kick (toward lamp R and the boot slot) ---- */
+    else if (A === 'rest2') { if (b.at > 1.0) b.go('heel'); }
+    else if (A === 'heel') { if (b.first) say(b, 'A LONG STRIDE FOR A SHORT SIGNATURE...'); b.tx = clamp(alive ? p.cx : G.boot, G.lo, G.home - 3 * TS); if (b.at > TELL) { b.go('kick'); b.hitArm = false; } }
+    else if (A === 'kick') { b.ext = Math.min(1, b.at / OUT); const tip = lerp(G.home - 30, b.tx, b.ext); if (!b.hitArm && band(26, tip)) { b.hitArm = true; p.hurt(b); } if (b.ext >= 1) { b.go('hold'); b.side0 = alive ? Math.sign(p.cx - G.R) : 0; b.lined = Math.abs(b.tx - G.boot) < 30; if (b.lined) say(b, 'MY SHOE IS IN A SLOT. WHY IS MY SHOE IN A SLOT?', '#ffe08a'); } }
+    /* ---- phase 3: the split ---- */
+    else if (A === 'split') { if (b.first) say(b, 'WHICH OF US IS THE REAL ONE? NEITHER!'); if (b.at > 1.6) b.go('hats'); }
+    else if (A === 'hats') {
+      if (b.first) say(b, 'HATS OFF... AND SWAP!');
+      if (b.at > TELL) { const f = this.halves(b); b.locked = !!f && Math.abs(f[0] - G.feet[0]) < 16 && Math.abs(f[1] - G.feet[1]) < 16; b.rushFrom = f || G.feet.slice(); b.go('rush'); b.hitArm = false; if (b.locked) say(b, 'BOTH FEET IN THE SLOTS?! WAIT...', '#ffe08a'); }
+    }
+    else if (A === 'rush') {
+      const k = Math.min(1, Math.max(0, b.at - 0.1) / 0.5), xa = lerp(b.rushFrom[0], b.rushFrom[1], k), xb = lerp(b.rushFrom[1], b.rushFrom[0], k);
+      if (!b.hitArm && b.at > 0.14 && (band(26, xa) || band(26, xb))) { b.hitArm = true; p.hurt(b); }
+      if (k >= 1) { if (b.locked) { this.claim(b, 'BOTH HALVES CLAIMED! THAT\'S ME SIGNED FOR!'); if (b.act === 'rush') b.go('stamp'); } else { say(b, 'MISSED THE SLOTS. AGAIN!', '#c8d8ff'); b.go('split'); } }
+    }
+    else if (A === 'stamp') { if (b.at > 1.4) { b.claimed = false; b.go('split'); } }
+    else if (A === 'wait') { /* held still (the boss test walks Brady into place) */ }
+    else b.go(ph === 1 ? 'palm' : ph === 2 ? 'heel' : 'split');
+  },
+  // phase 3: where the two halves' feet are (they follow Brady while he stands between the lamps), or null
+  halves(b) {
+    const G = this.geo(b), p = b.g.player; if (!p || p.dead || p.cx <= G.L + 6 || p.cx >= G.R - 6) return null;
+    return K.splitFeet(G.L, G.R, p.cx);
+  },
+  // the clerk: a shadow cast on the wall at (x, feet y), height h. Painted flat into its own little canvas (grape, no ink,
+  // no modelling, no eyes: the visor's green band and the hat's notch are its face), its feet fading out into the
+  // skirting, then laid on the wall see-through and leaning like a cast shadow. o: { palm, heel, hat (lift px), half
+  // (-1 / 1: one half only), a (alpha), arm < 0 (the arm is down along the wall, drawn by the attack) }
+  clerk(ctx, x, y, h, t, o) {
+    o = o || {}; const s = h / 150, W = 200, H = 250, R = 2, FY = 236;
+    const C = this.canvas || (this.canvas = (() => { const c = document.createElement('canvas'); c.width = W * R; c.height = H * R; return c; })()), c = C.getContext('2d');
+    c.setTransform(R, 0, 0, R, 0, 0); c.globalCompositeOperation = 'source-over'; c.clearRect(0, 0, W, H);
+    c.save(); c.translate(W / 2, FY); c.scale(s, s);
+    if (o.half) { c.beginPath(); c.rect(o.half < 0 ? -100 : 0, -260, 100, 280); c.clip(); }
+    c.fillStyle = GRA;
+    const heel = o.heel ? 10 : 0;
+    c.fillRect(-20, -60, 16, 60 - heel); c.fillRect(4, -60, 16, 60);
+    c.beginPath(); c.ellipse(-12, -2 - heel, 14, 6, 0, 0, TAU); c.ellipse(14, -2, 14, 6, 0, 0, TAU); c.fill();
+    c.beginPath(); c.moveTo(-26, -60); c.lineTo(-30, -112); c.lineTo(30, -112); c.lineTo(26, -60); c.closePath(); c.fill();
+    if (o.arm < 0) c.fillRect(-36, -106, 12, 90);
+    else { c.fillRect(-36, -106, 12, 46); c.beginPath(); c.ellipse(-30, -56, o.palm ? 15 : 8, o.palm ? 6 : 8, 0, 0, TAU); c.fill(); }
+    c.fillRect(24, -106, 12, 46); c.beginPath(); c.arc(30, -56, 8, 0, TAU); c.fill();
+    c.fillStyle = SAL; c.fillRect(-36, -100, 12, 6); c.fillRect(24, -100, 12, 6);
+    c.fillStyle = GRA; c.beginPath(); c.ellipse(0, -130, 20, 19, 0, 0, TAU); c.fill();
+    c.fillStyle = VISOR; c.beginPath(); c.moveTo(-22, -140); c.lineTo(26, -140); c.lineTo(30, -133); c.lineTo(-18, -133); c.closePath(); c.fill();
+    const hl = o.hat || 0;
+    c.fillStyle = GRA; c.beginPath(); c.ellipse(0, -146 - hl, 30, 6, 0, 0, TAU); c.fill(); c.beginPath(); c.moveTo(-18, -148 - hl); c.quadraticCurveTo(-18, -172 - hl, 0, -172 - hl); c.quadraticCurveTo(18, -172 - hl, 18, -148 - hl); c.closePath(); c.fill();
+    c.fillStyle = BUT; c.fillRect(-18, -154 - hl, 36, 5);
+    // the department's notch: a bite out of the brim (the wall shows through)
+    c.globalCompositeOperation = 'destination-out'; c.beginPath(); c.moveTo(16, -147 - hl); c.lineTo(28, -147 - hl); c.lineTo(22, -139 - hl); c.closePath(); c.fill();
+    c.restore();
+    // the feet fade into the skirting
+    c.globalCompositeOperation = 'destination-out'; const gr = c.createLinearGradient(0, FY - 34 * s, 0, FY + 2); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,0.95)'); c.fillStyle = gr; c.fillRect(0, FY - 34 * s, W, 40 * s + 4);
+    c.globalCompositeOperation = 'source-over';
+    ctx.save(); ctx.globalAlpha *= 0.72 * (o.a == null ? 1 : o.a); ctx.translate(x, y); ctx.transform(1, 0, -0.16, 1, 0, 0);
+    ctx.drawImage(C, -W / 2, -FY, W, H); ctx.restore();
+  },
+  draw(b, ctx, t) {
+    const A = b.act, G = this.geo(b), ph = b.phase || 1;
+    if (ph === 3 && A !== 'gone') return;   // the halves are drawn with the floor tells (they move with Brady)
+    const reaching = A === 'reach' || (A === 'hold' && ph === 1) || (A === 'back' && ph === 1);
+    const kicking = A === 'kick' || (A === 'hold' && ph === 2) || (A === 'back' && ph === 2);
+    const fade = A === 'gone' ? 1 - (b.fade || 0) : 1;
+    this.clerk(ctx, G.home, b.floorY, b.h, t, { palm: A === 'palm', arm: reaching ? -1 : 0, heel: A === 'heel', a: fade });
+  }
+};
+// the counter's lamps, slots and tells; the reach and the kick along the floor; the two halves; one line at a time on
+// a pill under the boss bar
+TourHooks.on('afterEntities', (play, ctx) => {
+  const b = play.boss; if (!b || b.style !== 'shad_understudy' || b.remove || b.state !== 'fight') return;
+  const G = brain.geo(b), A = b.act, t = b.t, fy = b.floorY, ph = b.phase || 1, k = 0.5 + 0.5 * Math.sin(t * 6), p = play.player;
+  ctx.save();
+  // the two clerks' lamps and their cones (L throws to the right, R to the left)
+  SA.cone(ctx, G.L, fy - 2.6 * TS + 16, fy, 2.6 * TS, 0.7, 1); SA.cone(ctx, G.R, fy - 2.6 * TS + 16, fy, 2.6 * TS, 0.7, -1);
+  const slot = (x, kind, lit, label) => {
+    ctx.fillStyle = lit ? BUT_HI : SAL; ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.fillRect(x - 26, fy - 22, 52, 22); ctx.strokeRect(x - 26, fy - 22, 52, 22);
+    ctx.fillStyle = GRA_LO;
+    if (kind === 'hand') { ctx.beginPath(); ctx.ellipse(x, fy - 9, 9, 7, 0, 0, TAU); ctx.fill(); for (let f = -2; f <= 1; f++) ctx.fillRect(x - 14 + (f + 2) * 0, fy - 13 + f * 3, 10, 2.5); }
+    else if (kind === 'boot') { ctx.beginPath(); ctx.moveTo(x - 12, fy - 4); ctx.lineTo(x - 12, fy - 18); ctx.lineTo(x - 2, fy - 18); ctx.lineTo(x, fy - 10); ctx.lineTo(x + 18, fy - 6); ctx.lineTo(x + 18, fy - 4); ctx.closePath(); ctx.fill(); }
+    else { ctx.beginPath(); ctx.ellipse(x, fy - 8, 14, 5, 0, 0, TAU); ctx.fill(); }
+    if (label) { ctx.fillStyle = lit ? '#ffe08a' : 'rgba(255,253,242,0.95)'; ctx.font = '9px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText(label, x, fy + 16); }
+  };
+  if (ph === 1) slot(G.hand, 'hand', A === 'hold' && b.lined, 'HAND');
+  if (ph === 2) slot(G.boot, 'boot', A === 'hold' && b.lined, 'BOOT');
+  // the tell lines: the reach along the skirting (a dashed line to Brady), the kick at ankle height
+  if (A === 'palm' || A === 'heel') {
+    const y = fy - (A === 'palm' ? 18 : 12); ctx.strokeStyle = 'rgba(255,253,242,0.95)'; ctx.lineWidth = 3; ctx.setLineDash([8, 6]); ctx.lineDashOffset = t * 14;
+    ctx.beginPath(); ctx.moveTo(G.home - 40, y); ctx.lineTo(b.tx, y); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = `rgba(255,120,90,${0.5 + 0.5 * k})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(b.tx, fy - 2, 22, 6, 0, 0, TAU); ctx.stroke();
+  }
+  // the reach: a long thin arm along the skirting and its flat palm
+  if (ph === 1 && (A === 'reach' || A === 'hold' || A === 'back')) {
+    const tip = lerp(G.home - 30, b.tx, b.ext || 0);
+    ctx.fillStyle = GRA; ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.fillRect(tip + 12, fy - 26, G.home - 36 - tip, 11); ctx.strokeRect(tip + 12, fy - 26, G.home - 36 - tip, 11);
+    ctx.beginPath(); ctx.ellipse(tip, fy - 18, 16, 11, 0, 0, TAU); ctx.fill(); ctx.stroke();
+    for (let f = 0; f < 4; f++) { ctx.beginPath(); ctx.ellipse(tip - 14, fy - 27 + f * 6, 8, 3, 0, 0, TAU); ctx.fill(); ctx.stroke(); }
+    if (A === 'reach') { ctx.strokeStyle = BUT_HI; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(tip - 4, fy - 18, 22, 14, 0, 0, TAU); ctx.stroke(); }
+    ctx.fillStyle = SAL; ctx.fillRect(tip + 20, fy - 26, 6, 11);
+  }
+  // the kick: a long flat leg along the floor and its pointed shoe
+  if (ph === 2 && (A === 'kick' || A === 'hold' || A === 'back')) {
+    const tip = lerp(G.home - 30, b.tx, b.ext || 0);
+    ctx.fillStyle = GRA; ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.fillRect(tip + 10, fy - 22, G.home - 30 - tip, 14); ctx.strokeRect(tip + 10, fy - 22, G.home - 30 - tip, 14);
+    ctx.beginPath(); ctx.moveTo(tip + 12, fy - 24); ctx.lineTo(tip - 22, fy - 4); ctx.lineTo(tip + 14, fy - 2); ctx.closePath(); ctx.fill(); ctx.stroke();
+    if (A === 'kick') { ctx.strokeStyle = BUT_HI; ctx.lineWidth = 3; ctx.stroke(); }
+  }
+  // the claim pulling the hand or the boot into its slot
+  if (A === 'hold' && b.claimed) { const x = ph === 1 ? G.hand : G.boot; ctx.strokeStyle = `rgba(255,240,150,${0.6 + 0.4 * k})`; ctx.lineWidth = 5; ctx.strokeRect(x - 30, fy - 26, 60, 28); }
+  // the prompt when lined up: cross the lamp (on a pill over the lamp, never over Brady)
+  if (A === 'hold' && b.lined && !b.claimed) { const Lx = ph === 1 ? G.L : G.R; K.ShadArt && tag(ctx, Lx, fy - 3.4 * TS, ph === 1 ? 'CROSS THIS LAMP ▶' : '◀ CROSS THIS LAMP', '#ffe08a'); ctx.strokeStyle = `rgba(255,240,150,${0.5 + 0.5 * k})`; ctx.lineWidth = 3; ctx.setLineDash([6, 5]); ctx.beginPath(); ctx.moveTo(Lx, fy - 2.9 * TS); ctx.lineTo(Lx, fy); ctx.stroke(); ctx.setLineDash([]); }
+  // phase 3: the two foot slots, the two halves (their feet follow Brady between the lamps), the hats, the rush
+  if (ph === 3) {
+    const f = brain.halves(b), on = f ? [Math.abs(f[0] - G.feet[0]) < 16, Math.abs(f[1] - G.feet[1]) < 16] : [false, false];
+    G.feet.forEach((x, i) => { slot(x, 'foot', on[i] || A === 'stamp', 'FEET'); if (on[i]) K.tick(ctx, x, fy - 40, 0.75); });
+    let xs = f || [G.feet[0] + 2 * TS, G.feet[1] - 2 * TS];
+    if (A === 'rush') { const q = Math.min(1, Math.max(0, b.at - 0.1) / 0.5); xs = [lerp(b.rushFrom[0], b.rushFrom[1], q), lerp(b.rushFrom[1], b.rushFrom[0], q)]; }
+    if (A === 'stamp') xs = G.feet.slice();
+    const hat = A === 'hats' ? Math.min(1, b.at / 0.4) * 24 : 0, flat = A === 'rush';
+    xs.forEach((x, i) => {
+      if (flat) { ctx.save(); ctx.fillStyle = GRA; ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(x, fy - 12, 40, 13, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = BUT_HI; ctx.lineWidth = 3; ctx.stroke(); ctx.restore(); }
+      else brain.clerk(ctx, x, fy, b.h * 0.86, t, { half: i ? 1 : -1, hat, a: A === 'stamp' ? 1 - Math.min(1, b.at / 1.2) * 0.6 : 0.95 });
+    });
+    if (A === 'stamp') for (const x of G.feet) { ctx.fillStyle = '#c84a4a'; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.save(); ctx.translate(x, fy - 60); ctx.rotate(-0.2); ctx.fillRect(-30, -10, 60, 20); ctx.strokeRect(-30, -10, 60, 20); ctx.fillStyle = WHITE; ctx.font = '9px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('CLAIMED', 0, 4); ctx.restore(); }
+    if ((A === 'split' || A === 'hats') && p && !p.dead) { const inn = !!f; if (!inn) tag(ctx, (G.L + G.R) / 2, fy - 3.6 * TS, 'STAND BETWEEN THE LAMPS', '#ffe08a'); }
+  }
+  for (const x of [G.L, G.R]) SA.floorLamp(ctx, x, fy, 2.6 * TS, true, t);
+  if (b.line) {
+    const L = b.line, a = Math.min(1, (2.8 - L.t) * 3); if (a <= 0) b.line = null;
+    else { ctx.save(); ctx.globalAlpha = a; ctx.font = '11px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; const x = play.camX + Game.viewW / 2, y = play.camY + 74, w = ctx.measureText(L.text).width + 22; ctx.fillStyle = 'rgba(28,20,38,0.92)'; rr(ctx, x - w / 2, y - 11, w, 22, 11); ctx.fill(); ctx.fillStyle = L.col; ctx.fillText(L.text, x, y + 1); ctx.restore(); }
+  }
+  ctx.restore();
+});
+const tag = (ctx, x, y, str, col) => { ctx.save(); ctx.font = '10px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; const w = ctx.measureText(str).width + 16; ctx.fillStyle = 'rgba(28,20,38,0.9)'; rr(ctx, x - w / 2, y - 10, w, 20, 10); ctx.fill(); ctx.fillStyle = col; ctx.fillText(str, x, y + 1); ctx.restore(); };
+// a shadow has no ink line: the Understudy is drawn straight onto the wall, without the bosses' ink pass
+TourHooks.on('entityDraw', (play, ctx, e) => {
+  if (!e || !e.boss || e.style !== 'shad_understudy') return false;
+  if (e.state === 'dying') ctx.globalAlpha *= Math.max(0, e.timer / 1.6);
+  if (e.hurtT > 0 && Math.floor(e.hurtT * 24) % 2 === 0) ctx.globalAlpha *= 0.5;
+  brain.draw(e, ctx, e.t); return true;
+});
+const boss = { id: 'shad_understudy', name: 'The Understudy', hp: 6, dims: [80, 150], music: 'tour_shad_boss', country: 'shad', brain };
+Tour.boss(boss);
+if (typeof BOSS_INK_REACH !== 'undefined') BOSS_INK_REACH.shad_understudy = [60, 60, 60, 20];
+// the counter: a bell and a parcel at the ends (the lamps and the slots are the boss's own)
+Tour.pieces['shad.arena_counter'] = function (st, o) {
+  const B = st.B, { x0, w, GY } = o;
+  B.decorAt('shadBell', x0 + 1, GY, 1); B.decorAt('shadCrate', x0 + w - 2, GY, 2);
+};
+Tour.shadKit.understudyBrain = brain;
+})();
+
+/* ---- 29_tour_y_shad_d_levels.js ---- */
+/* ============================================================
+   THE DEPARTMENT OF UNCLAIMED SHADOWS: the levels (world 35) and the land's map. A hidden bonus land at about Nepal's
+   level (d0 0.8): each stage teaches its one new idea where a slip costs nothing, tests it among the critters, then
+   twists it ("late on / the last one"); the last ordinary stage and the boss are the hardest.
+   35-1 LOST PROPERTY (claim)              heels on the matching shadow's heels, THROW: it goes home; the last two
+                                           umbrellas look the same until one opens on its missing spoke
+   35-2 LONG DIVISION (lamplen)            walk to or from a floor lamp until the shadow's hand meets the shelf's
+                                           handle; a filing-wall climb; the last handle is over a lip: jump for it
+   35-3 OVERLAP ALLOWANCE (overlap)        slide a folding screen till two wall shadows overlap into a step; the last
+                                           one: give up half the patch to get a step tall enough
+   35-4 ALTERATIONS WHILE YOU WAIT (trim)  stand on the chalk mark, THROW: trimmed to fit the mail slot; the last slot
+                                           wants a long arm and a short body (jump, then cut)
+   35-5 JOINT CUSTODY (lair)               both shadows' feet on their claim slots (the last desk's hats lie), then
+                                           the Understudy himself
+   Every stage's secret room is found the same way: a door's shadow on the wall with no door to cast it (the land's tell),
+   right by the way in (a wall that is only painted, a gap in a ceiling, a mail slot off the path).
+   ============================================================ */
+(function () {
+const C = Tour.countries.shad, SK = Tour.shadKit;
+if (!C || !SK) return;
+const grid = (W, H, ch) => Array.from({ length: H }, () => Array(W).fill(ch));
+const put = (Gr, x, y, str) => { for (let k = 0; k < str.length; k++) if (x + k >= 0 && x + k < Gr[0].length && str[k] !== ' ') Gr[y][x + k] = str[k]; };
+const fillG = (Gr, x0, y0, x1, y1, ch) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) Gr[y][x] = ch; };
+const ground = (Gr, x0, x1, top, ch) => fillG(Gr, x0, top, x1, Gr.length - 1, ch || '#');
+const pit = (Gr, x0, x1) => fillG(Gr, x0, 0, x1, Gr.length - 1, '.');
+const ink = (Gr, x0, x1, top) => { pit(Gr, x0, x1); fillG(Gr, x0, top, x1, Gr.length - 1, 'L'); };
+const rowsOf = Gr => Gr.map(r => r.join(''));
+// the secret nook: a solid block (x0..x0+4, rows top..floor-1) whose one face is only painted (fake), a hollow behind it
+// with the room's door and a postcard; the land's tell (a door's shadow, no door) on the wall beside the painted face
+const nook = (Gr, x0, top, fl, side) => {
+  fillG(Gr, x0, top, x0 + 4, fl - 1, 'H'); Gr[top][x0] = '%';
+  const fx = side < 0 ? x0 : x0 + 4, hx0 = side < 0 ? x0 + 1 : x0 + 1, hx1 = side < 0 ? x0 + 3 : x0 + 3;
+  fillG(Gr, fx, fl - 2, fx, fl - 1, 'F'); fillG(Gr, hx0, fl - 2, hx1, fl - 1, '.');
+  put(Gr, fx + side, fl - 1, 'x'); put(Gr, side < 0 ? hx0 + 1 : hx1 - 1, fl - 2, 'A'); put(Gr, side < 0 ? hx1 : hx0, fl - 1, 'D');
+};
+const stamps = {};
+const oldRoom = (to, items, look) => ({ floor: 12, rows: ['##############################', '#............................#'].concat(Array(9).fill('#............................#')).concat(['#.@D.....................?...#', '##############################', '##############################']), items, doors: [{ to, look: look || 'shadDoor' }] });
+const SIGN = text => ['spawn', 'sign', { text }];
+const GRILLE = (id, h) => ['piece', 'shad.grille', { id, h: h || 5 }];
+const COMMON = { '%': ['piece', 'shad.cover', { w: 5, h: 3 }], k: ['decor', 'shadCrate'], l: ['decor', 'shadBell'], q: ['decor', 'shadSpool'], x: ['decor', 'shadTell'],
+  u: ['enemy', 'shadRabbit'], w: ['enemy', 'shadHound'], j: ['enemy', 'shadFlea'], M: ['enemy', 'shadCrow'] };
+const GOLD = { '*': 'must', A: 'hidden', E: 'risky' };
+
+/* ---------------- 35-1 Lost Property ---------------- */
+// ① the teach: a rabbit's shadow beside a teapot's (easy: the shapes differ); ② the test: two teapots and a watering
+// can (the notch decides), critters about; a block whose left face is only painted (the tell beside it: the parcel room);
+// kettles; ③ the twist: three closed umbrella shadows, identical until Brady stands on one and it opens
+const lostRows = (() => {
+  const W = 170, H = 24, Gr = grid(W, H, '.');
+  ground(Gr, 0, 30, 19); put(Gr, 3, 18, '@'); put(Gr, 5, 18, 'n'); put(Gr, 7, 15, '?');
+  put(Gr, 9, 18, '1'); put(Gr, 18, 18, 'r'); put(Gr, 21, 15, 'o.o.o'); put(Gr, 25, 18, 'u'); put(Gr, 27, 15, '?');
+  ink(Gr, 31, 34, 21); put(Gr, 32, 13, 'M'); put(Gr, 31, 15, 'o.o');
+  ground(Gr, 35, 90, 19); put(Gr, 37, 18, 'c'); put(Gr, 40, 18, '2'); put(Gr, 52, 18, 'R'); put(Gr, 55, 15, '*');
+  // the parcel room's block (its left face only painted)
+  nook(Gr, 58, 16, 19, -1);
+  put(Gr, 66, 18, 'k'); put(Gr, 64, 15, '?'); put(Gr, 70, 18, 'w'); put(Gr, 76, 15, 'h'); put(Gr, 79, 18, 'j');
+  ground(Gr, 81, 86, 17); put(Gr, 82, 14, 'o.o.o'); put(Gr, 88, 18, 'a');
+  ink(Gr, 91, 94, 21); put(Gr, 92, 13, 'M');
+  ground(Gr, 95, 115, 19); put(Gr, 97, 18, 'c'); put(Gr, 100, 18, '3'); put(Gr, 112, 18, 'P');
+  ink(Gr, 116, 125, 21); fillG(Gr, 118, 16, 119, 16, '-'); fillG(Gr, 122, 15, 123, 15, '-'); put(Gr, 121, 12, 'E'); put(Gr, 120, 10, 'M');
+  ground(Gr, 126, W - 1, 19); put(Gr, 128, 18, 'c'); put(Gr, 132, 18, 'O'); put(Gr, 136, 18, '4'); put(Gr, 148, 18, 'X');
+  put(Gr, 152, 18, 'u'); put(Gr, 156, 18, 'k'); put(Gr, 158, 15, 'o.o.o'); put(Gr, 162, 18, 'G'); fillG(Gr, W - 1, 0, W - 1, 18, '#');
+  return rowsOf(Gr);
+})();
+const BOARD = o => ['piece', 'shad.board', o];
+stamps.shadLost = { floor: 19, rows: lostRows, gold: GOLD, items: ['power', 'pick', 'power'], hidden: ['oneup'], doors: [{ to: 'parcel@in', look: 'shadHatch' }], legend: Object.assign({}, COMMON, {
+  n: SIGN('WHOSE SHADOW? HEELS ON ITS HEELS, THEN THROW'),
+  O: SIGN('THESE UMBRELLAS LOOK THE SAME. STAND ON ONE'),
+  '1': BOARD({ pins: [['rab', 1, 0], ['pot', 0, 3]], owner: ['rab', 1, 6], right: 0, lock: 'shad:l1' }),
+  '2': BOARD({ pins: [['pot', 2, 0], ['can', 2, 3], ['pot', 3, 6]], owner: ['pot', 3, 9], right: 2, lock: 'shad:l2' }),
+  '3': BOARD({ pins: [['ket', 1, 0], ['ket', 3, 3], ['can', 3, 6]], owner: ['ket', 3, 9], right: 1, lock: 'shad:l3' }),
+  '4': BOARD({ pins: [['umb', 1, 0, null], ['umb', 1, 3, 2], ['umb', 1, 6, null]], owner: ['umbOpen', null, 9, 2], right: 1, lock: 'shad:l4', umb: true }),
+  r: GRILLE('shad:l1'), R: GRILLE('shad:l2'), P: GRILLE('shad:l3'), X: GRILLE('shad:l4'),
+  a: ['anchor', 'parcelOut']
+}) };
+stamps.shadParcelOld = oldRoom('lost@parcelOut', ['oneup']);
+const L1 = { n: 1, name: 'Lost Property', mapLabel: 'Lost Property', arch: 'claim', theme: 'shad_lost',
+  gimmick: 'Shadows pinned to the wall, each with one notch. Find the one whose notch matches its owner, stand with your heels on its heels and THROW to send it home. The last two umbrellas look the same until one opens on its missing spoke',
+  hint: 'Match the notch, stand on the chalk heels, THROW. Stand on an umbrella to open it. A door\'s shadow with no door...',
+  postcard: 'Brady! A whole office of shadows nobody came back for. I asked for yours. The clerk said it left with a man in sunglasses. I said, darling, that WAS him. ♥ C',
+  enemies: [['shadRabbit', 2], ['shadHound', 1], ['shadFlea', 1], ['shadCrow', 3]],
+  mapCell: [0, 0], mapFrom: -1,
+  exits: { main: { to: '35-2' } },
+  areas: [
+    { id: 'lost', gen: 'room', theme: 'shad_lost', stamp: 'shadLost', shad: { claim: true }, bottomKill: true },
+    { id: 'parcel', gen: 'room', role: 'secret', room: 'shadBeat', theme: 'shad_room_parcel', stamp: 'shadParcelOld', shad: { room: true } }
+  ] };
+
+/* ---------------- 35-2 Long Division ---------------- */
+// ① the teach: a floor lamp; walk toward it until the shadow's hand meets the shelf's handle: the shelf folds into a
+// step up a filing cliff; ② the test: a filing wall to climb (fleas on it, an open drawer to cross), a low passage whose
+// ceiling has a gap by the tell (the night corridor above), a second lamp further off; ③ the twist: the last handle
+// over a lip: jump from the right spot
+const L2_SHELVES = [[9, 12, 0], [92, 96, 0], [136, 141, 1]];
+const divRows = (() => {
+  const W = 180, H = 24, Gr = grid(W, H, '.');
+  ground(Gr, 0, 16, 19); put(Gr, 3, 18, '@'); put(Gr, 5, 18, 'n'); put(Gr, 6, 15, '?'); put(Gr, 9, 18, '1');
+  ground(Gr, 17, 38, 13); put(Gr, 20, 9, 'o.o.o'); put(Gr, 26, 9, '*'); put(Gr, 30, 12, 'u'); put(Gr, 34, 12, 'c');
+  ground(Gr, 39, 57, 19); put(Gr, 42, 15, 'o.o'); put(Gr, 45, 18, 'j'); put(Gr, 48, 18, 'N');
+  // the filing wall up to the top floor
+  put(Gr, 50, 9, 'f'); put(Gr, 52, 15, 'z'); put(Gr, 55, 11, 'Z');
+  ground(Gr, 58, 81, 9); put(Gr, 60, 8, 'c'); put(Gr, 66, 5, '?'); put(Gr, 69, 5, 'h');
+  // the low passage: a ceiling of drawers with a gap by the tell; the night corridor's hatch on top
+  fillG(Gr, 72, 6, 80, 6, 'H'); fillG(Gr, 71, 1, 71, 6, 'H'); fillG(Gr, 81, 1, 81, 6, 'H'); fillG(Gr, 76, 6, 77, 6, '.'); put(Gr, 75, 8, 'x');
+  put(Gr, 72, 5, 'o.o.o'); put(Gr, 78, 4, 'A'); put(Gr, 79, 5, 'D');
+  ground(Gr, 82, 99, 19); put(Gr, 84, 18, 'a'); put(Gr, 87, 18, 'k'); put(Gr, 90, 18, 'w'); put(Gr, 92, 18, '2');
+  ground(Gr, 100, 125, 14); put(Gr, 103, 10, 'o.o.o'); put(Gr, 106, 13, 'j'); put(Gr, 110, 10, '?'); put(Gr, 112, 9, 'M'); put(Gr, 118, 13, 'u'); put(Gr, 122, 13, 'c');
+  ground(Gr, 126, 144, 19); put(Gr, 130, 18, 'q'); put(Gr, 133, 18, 'O'); put(Gr, 136, 18, '3');
+  ground(Gr, 145, W - 1, 13); put(Gr, 147, 12, 'c'); put(Gr, 149, 9, 'o.o');
+  ink(Gr, 153, 155, 15); put(Gr, 154, 10, 'E');
+  put(Gr, 160, 12, 'j'); put(Gr, 164, 12, 'k'); put(Gr, 170, 12, 'G'); fillG(Gr, W - 1, 0, W - 1, 12, '#');
+  return rowsOf(Gr);
+})();
+const LAMP = (k, g) => ['piece', 'shad.lamp', { lamp: L2_SHELVES[k][0], at: L2_SHELVES[k][1], jump: !!L2_SHELVES[k][2], w: 2, dir: 1, g }];
+stamps.shadDiv = { floor: 19, rows: divRows, gold: GOLD, items: ['pick', 'power', 'power'], hidden: ['oneup'], doors: [{ to: 'rain@in', look: 'shadHatch' }], legend: Object.assign({}, COMMON, {
+  n: SIGN('NEARER THE LAMP, TALLER YOUR SHADOW. HAND ON THE HANDLE'),
+  N: SIGN('PUSH UP INTO THE DRAWERS TO CLIMB. JUMP AT AN OPEN DRAWER: THROUGH'),
+  O: SIGN('THIS HANDLE IS OVER A LIP. JUMP AT THE RIGHT SPOT'),
+  '1': LAMP(0, 0), '2': LAMP(1, 1), '3': LAMP(2, 2),
+  f: ['piece', 'shad.filing', { w: 8, h: 10, holes: [[4, 4]] }],
+  z: ['piece', 'shad.crawler', { face: 0, ay: 2.5, speed: 0.9 }], Z: ['piece', 'shad.crawler', { face: 1, ax: 1.5, speed: 0.8, phase: 1 }],
+  a: ['anchor', 'rainOut']
+}) };
+stamps.shadRainOld = oldRoom('div@rainOut', ['oneup']);
+const L2 = { n: 2, name: 'Long Division', mapLabel: 'Long Division', arch: 'lamplen', theme: 'shad_lamp',
+  gimmick: 'A floor lamp throws Brady\'s own shadow up the wall: the nearer the lamp, the taller it grows. Put its hand on a folded shelf\'s handle and the shelf comes down as a step. A wall of filing drawers to climb. The last handle sits over a lip: jump at the right spot',
+  hint: 'Walk to or from the lamp until the hand meets the brass ring. Push up into the drawers to climb. A door\'s shadow with no door...',
+  postcard: 'Brady! A lamp here makes your shadow taller the closer you stand. I stood very close for a while. I was enormous, darling. The shadow clerk asked me to step back. ♥ C',
+  enemies: [['shadFlea', 3], ['shadHound', 1], ['shadRabbit', 1], ['shadCrow', 1]],
+  mapCell: [1, 0], mapFrom: 0,
+  exits: { main: { to: '35-3' } },
+  areas: [
+    { id: 'div', gen: 'room', theme: 'shad_lamp', stamp: 'shadDiv', shad: { lamp: true }, bottomKill: true },
+    { id: 'rain', gen: 'room', role: 'secret', room: 'shadWindow', theme: 'shad_room_rain', stamp: 'shadRainOld', shad: { room: true } }
+  ] };
+
+/* ---------------- 35-3 Overlap Allowance ---------------- */
+// ① the teach: the screen's shadow slides over a fixed one above an ink trench; where they overlap, a step; ② the test:
+// a step up to a ledge (a block on it whose right face is only painted: the boot room), the trench again with a crow;
+// ③ the twist: an L-shaped shadow: the wide overlap is too low, the narrow one climbs to the high ledge
+const OV = [
+  { a: [[22, 15, 26, 17]], b: [[14, 14, 19, 17]], rail: [8, 16, 19], at: 8, good: 16, g: 0 },
+  { a: [[46, 13, 49, 17]], b: [[40, 16, 44, 17]], rail: [36, 42, 19], at: 36, good: 42, g: 1 },
+  { a: [[91, 16, 99, 17]], b: [[84, 15, 88, 17]], rail: [80, 88, 19], at: 80, good: 88, g: 2 },
+  { a: [[124, 16, 127, 17], [126, 12, 127, 15]], b: [[118, 11, 119, 17]], rail: [112, 120, 19], at: 112, good: 120, g: 3 }
+];
+const ovRows = (() => {
+  const W = 170, H = 24, Gr = grid(W, H, '.');
+  ground(Gr, 0, 20, 19); put(Gr, 3, 18, '@'); put(Gr, 5, 18, 'n'); put(Gr, 6, 15, '?'); put(Gr, 8, 18, '1');
+  ink(Gr, 21, 29, 21);
+  ground(Gr, 30, 49, 19); put(Gr, 32, 18, 'c'); put(Gr, 34, 18, 'N'); put(Gr, 36, 18, '2');
+  ground(Gr, 50, 70, 13); put(Gr, 54, 9, '*'); put(Gr, 57, 12, 'u'); put(Gr, 52, 10, 'o.o');
+  nook(Gr, 64, 10, 13, 1);
+  ground(Gr, 71, 89, 19); put(Gr, 73, 18, 'c'); put(Gr, 75, 18, 'a'); put(Gr, 77, 18, 'w'); put(Gr, 79, 15, '?'); put(Gr, 80, 18, '3');
+  ink(Gr, 90, 99, 21); put(Gr, 95, 11, 'E'); put(Gr, 86, 9, 'M');
+  ground(Gr, 100, 127, 19); put(Gr, 103, 18, 'c'); put(Gr, 106, 15, 'o.o.o'); put(Gr, 156, 18, 'j'); put(Gr, 108, 15, 'h'); put(Gr, 110, 18, 'O'); put(Gr, 112, 18, '4');
+  ground(Gr, 128, 150, 9); put(Gr, 131, 8, 'c'); put(Gr, 134, 5, 'o.o.o'); put(Gr, 140, 5, '?');
+  ground(Gr, 151, W - 1, 19); put(Gr, 154, 18, 'u'); put(Gr, 158, 18, 'k'); put(Gr, 162, 18, 'G'); fillG(Gr, W - 1, 0, W - 1, 18, '#');
+  return rowsOf(Gr);
+})();
+const OVER = k => ['piece', 'shad.overlap', OV[k]];
+stamps.shadOver = { floor: 19, rows: ovRows, gold: GOLD, items: ['pick', 'power', 'power'], hidden: ['oneup'], doors: [{ to: 'boot@in', look: 'shadHatch' }], legend: Object.assign({}, COMMON, {
+  n: SIGN('TWO SHADOWS: SOLID ONLY WHERE THEY OVERLAP. ROLL THE SCREEN'),
+  N: SIGN('STAND AT THE SCREEN AND WALK: IT ROLLS WITH YOU'),
+  O: SIGN('THE WIDEST OVERLAP ISN\'T ALWAYS THE TALLEST'),
+  '1': OVER(0), '2': OVER(1), '3': OVER(2), '4': OVER(3),
+  a: ['anchor', 'bootOut']
+}) };
+stamps.shadBootOld = oldRoom('over@bootOut', ['oneup']);
+const L3 = { n: 3, name: 'Overlap Allowance', mapLabel: 'Overlap Allowance', arch: 'overlap', theme: 'shad_screens',
+  gimmick: 'Two shadows on the wall are only solid where they overlap. Stand at a folding screen and walk to roll it: its shadow slides, and the dark overlap becomes a step. The last one: give up half the overlap for a taller step',
+  hint: 'Roll the screen until the overlap is dark with a bright top: that\'s a step. Wide isn\'t always tall. A door\'s shadow with no door...',
+  postcard: 'Brady! Two shadows overlapped and I stood on them. The clerk said that is not what they are for. I said it was exactly what I needed them for. ♥ C',
+  enemies: [['shadRabbit', 2], ['shadHound', 1], ['shadFlea', 1], ['shadCrow', 1]],
+  mapCell: [2, 0], mapFrom: 1,
+  exits: { main: { to: '35-4' } },
+  areas: [
+    { id: 'over', gen: 'room', theme: 'shad_screens', stamp: 'shadOver', shad: { overlap: true }, bottomKill: true },
+    { id: 'boot', gen: 'room', role: 'secret', room: 'shadFoot', theme: 'shad_room_boot', stamp: 'shadBootOld', shad: { room: true } }
+  ] };
+
+/* ---------------- 35-4 Alterations While You Wait ---------------- */
+// ① the teach: a cutter, the chalk mark, the slot; ② the test: a mirrored station up on a raised floor, the main slot
+// further on; a second slot in the raised floor's face, off the path by the tell, takes the same cut (the staff
+// kitchen); a station across an ink trench with a crow; ③ the twist: the last slot wants a long arm and a short body
+const altRows = (() => {
+  const W = 170, H = 24, Gr = grid(W, H, '.');
+  ground(Gr, 0, 38, 19); put(Gr, 3, 18, '@'); put(Gr, 5, 18, 'n'); put(Gr, 7, 15, '?'); put(Gr, 10, 18, '1'); put(Gr, 21, 18, 'Y');
+  put(Gr, 24, 15, '*'); put(Gr, 28, 18, 'u'); put(Gr, 30, 15, '?'); put(Gr, 34, 18, 'c');
+  fillG(Gr, 37, 17, 38, 17, '-');
+  // the raised floor: a mirrored station; its right face holds the kitchen's slot (and the hollow behind it)
+  ground(Gr, 39, 60, 15); put(Gr, 41, 14, 'N'); put(Gr, 50, 14, '2');
+  fillG(Gr, 56, 16, 59, 18, '.'); put(Gr, 60, 18, 'V'); put(Gr, 57, 18, 'D'); put(Gr, 58, 17, 'A'); put(Gr, 61, 18, 'x');
+  fillG(Gr, 63, 17, 63, 17, '-');
+  ground(Gr, 61, 91, 19); put(Gr, 66, 18, 'U'); put(Gr, 70, 18, 'a'); put(Gr, 73, 18, 'w'); put(Gr, 79, 18, 'c'); put(Gr, 82, 18, '3');
+  ink(Gr, 92, 96, 21); put(Gr, 94, 13, 'M');
+  ground(Gr, 97, W - 1, 19); put(Gr, 100, 18, 'K'); put(Gr, 104, 18, 'j'); put(Gr, 108, 15, 'h'); put(Gr, 112, 15, 'o.o.o');
+  put(Gr, 116, 18, 'c'); put(Gr, 118, 18, 'O'); put(Gr, 122, 18, '4'); put(Gr, 136, 18, 'J');
+  put(Gr, 140, 18, 'u'); ink(Gr, 145, 149, 21); put(Gr, 147, 13, 'E'); put(Gr, 150, 15, '?');
+  ground(Gr, 150, W - 1, 19); put(Gr, 154, 18, 'k'); put(Gr, 162, 18, 'G'); fillG(Gr, W - 1, 0, W - 1, 18, '#');
+  return rowsOf(Gr);
+})();
+const CUT = o => ['piece', 'shad.cutter', o], SLOT = o => ['piece', 'shad.slot', o];
+stamps.shadAlt = { floor: 19, rows: altRows, gold: GOLD, items: ['power', 'power', 'pick'], hidden: ['oneup'], doors: [{ to: 'kitchen@in', look: 'shadHatch' }], legend: Object.assign({}, COMMON, {
+  n: SIGN('STAND ON THE CHALK, THROW: TRIMMED TO FIT THE SLOT'),
+  N: SIGN('THIS CUTTER FACES THE OTHER WAY'),
+  O: SIGN('THE LAST SLOT WANTS A LONG ARM: JUMP, THEN THROW'),
+  '1': CUT({ cutter: 10, mark: 13, id: 'shad:t1' }), Y: SLOT({ id: 'shad:t1', h: 5 }),
+  '2': CUT({ cutter: 50, mark: 47, id: 'shad:t2', also: ['shad:t2s'] }), U: SLOT({ id: 'shad:t2', h: 5 }), V: SLOT({ id: 'shad:t2s', accept: 'shad:t2', h: 3 }),
+  '3': CUT({ cutter: 84, mark: 88, id: 'shad:t3' }), K: SLOT({ id: 'shad:t3', h: 5 }),
+  '4': CUT({ cutter: 122, mark: 126, id: 'shad:t4', arm: true }), J: SLOT({ id: 'shad:t4', h: 5, arm: true }),
+  a: ['anchor', 'kitchenOut']
+}) };
+stamps.shadKitchenOld = oldRoom('alt@kitchenOut', ['oneup']);
+const L4 = { n: 4, name: 'Alterations While You Wait', mapLabel: 'Alterations', arch: 'trim', theme: 'shad_tailor',
+  gimmick: 'A tailor\'s station: a lamp lays Brady\'s shadow out long behind him, under a paper cutter. Stand on the chalk mark and THROW: trimmed to fit, it posts through the mail slot and the wall opens. The last slot wants a long arm and a short body: jump on the mark and cut in the air',
+  hint: 'Stand on the chalk cross, THROW, then walk into the slot. For the last one: JUMP on the chalk and THROW in the air. A door\'s shadow with no door...',
+  postcard: 'Brady! A tailor here takes in shadows while you wait. Mine was a little long at the back. Now it fits like a glove. It is a very small glove. ♥ C',
+  enemies: [['shadRabbit', 2], ['shadHound', 1], ['shadFlea', 1], ['shadCrow', 1]],
+  mapCell: [3, 0], mapFrom: 2,
+  exits: { main: { to: '35-5' } },
+  areas: [
+    { id: 'alt', gen: 'room', theme: 'shad_tailor', stamp: 'shadAlt', shad: { trim: true }, bottomKill: true },
+    { id: 'kitchen', gen: 'room', role: 'secret', room: 'shadCup', theme: 'shad_room_kitchen', stamp: 'shadKitchenOld', shad: { room: true } }
+  ] };
+
+/* ---------------- 35-5 Joint Custody (the boss) ---------------- */
+// the claims office: two clerks' lamps throw two shadows of Brady; stand where both shadows' feet are on their claim
+// slots for a breath. The last desk: dashed hat marks line up one spot early (only the feet count). A block whose left
+// face is only painted (the tell beside it): the cut-out workshop, before the boss; then the counter and the Understudy
+const custRows = (() => {
+  const W = 100, H = 22, Gr = grid(W, H, '.');
+  ground(Gr, 0, W - 1, 19); put(Gr, 3, 18, '@'); put(Gr, 5, 18, 'n'); put(Gr, 6, 15, '?'); put(Gr, 9, 18, '1'); put(Gr, 24, 18, 'r');
+  put(Gr, 28, 15, '*'); put(Gr, 32, 18, 'u'); put(Gr, 36, 18, 'c'); put(Gr, 40, 15, '?'); put(Gr, 42, 18, 'N'); put(Gr, 44, 18, '2'); put(Gr, 60, 18, 'R');
+  nook(Gr, 64, 16, 19, -1);
+  put(Gr, 72, 18, 'a'); put(Gr, 75, 18, 'k'); ink(Gr, 80, 82, 21); put(Gr, 81, 15, 'E');
+  put(Gr, 86, 18, 'l'); put(Gr, 92, 18, 'D'); fillG(Gr, W - 1, 0, W - 1, 18, '#');
+  return rowsOf(Gr);
+})();
+const SPLIT = o => ['piece', 'shad.split', o];
+stamps.shadCust = { floor: 19, rows: custRows, gold: GOLD, items: ['power', 'power'], doors: [{ to: 'cutout@in', look: 'shadHatch' }, { to: 'counter@in', look: 'shadDoor' }], legend: Object.assign({}, COMMON, {
+  n: SIGN('TWO LAMPS, TWO SHADOWS. BOTH FEET ON THEIR SLOTS'),
+  N: SIGN('THE HATS LINE UP FIRST. ONLY THE FEET COUNT'),
+  '1': SPLIT({ lamps: [10, 18], at: 14, lock: 'shad:j1' }), r: GRILLE('shad:j1'),
+  '2': SPLIT({ lamps: [46, 54], at: 50, decoy: 48, lock: 'shad:j2' }), R: GRILLE('shad:j2'),
+  a: ['anchor', 'cutoutOut']
+}) };
+stamps.shadCutoutOld = oldRoom('cust@cutoutOut', ['star']);
+const L5 = { n: 5, name: 'Joint Custody', mapLabel: 'Joint Custody', arch: 'lair', theme: 'shad_claims', boss: 'shad_understudy',
+  gimmick: 'The Understudy, a shadow that signs for everything. Never stomp it: line its reach up with the hand slot and cross the lamp, lead its kick into the boot slot and cross back, then stand between the lamps till both halves\' feet are on their slots',
+  hint: 'Phase 1: stand on the HAND slot, jump the reach, walk past the lamp. Phase 2: the same with the BOOT slot. Phase 3: stand between the lamps till both FEET slots glow, then jump the rush. A door\'s shadow with no door...',
+  postcard: 'BRADY! You got your shadow back. I checked: bun and all. The Understudy signed for my umbrella on the way out. I am letting him keep it. He looked so pleased. ♥ C',
+  enemies: [['shadRabbit', 1], ['shadCrow', 1]],
+  mapCell: [4, 0], mapFrom: 3,
+  exits: { main: { to: null } },
+  areas: [
+    { id: 'cust', gen: 'room', theme: 'shad_claims', stamp: 'shadCust', shad: { split: true }, bottomKill: true },
+    { id: 'cutout', gen: 'room', role: 'secret', room: 'shadFish', theme: 'shad_room_cutout', stamp: 'shadCutoutOld', shad: { room: true } },
+    { id: 'counter', gen: 'arena', role: 'arena', layout: 'counter', arenaW: 25, H: 18, roof: false, theme: 'shad_arena', shad: { boss: true } }
+  ] };
+
+Tour.amend('shad', { stamps, levels: [L1, L2, L3, L4, L5] });
+SK.LEVELS = { L2_SHELVES, OV };
+
+/* ---------------- the land's map: the department's long counter, its back offices off it ---------------- */
+if (typeof TOUR_OW_MAPS !== 'undefined') TOUR_OW_MAPS.shad = {
+  labels: { '35-1': 'Lost Property', '35-2': 'Long Division', '35-3': 'Overlap Allowance', '35-4': 'Alterations', '35-5': 'Joint Custody' },
+  w: 1520, h: 760,
+  pal: { sea: '#3a1848', deep: '#2a1036', land: '#f0d478', light: '#fff0b4', path: '#f08470', beach: '#fff0b4', cliff: '#c8604e', roof: '#5a2a6a', wall: '#fffdf2' },
+  sea: 'waves', tufts: 'none', trail: 'dots', bridge: 'steps', meadow: false, woods: false, foam: false, birds: false,
+  // the department is a long counter in a T: the way in at its foot, the offices along the bar
+  land: [[[640, 680], [620, 360], [180, 330], [160, 150], [1360, 130], [1380, 330], [900, 360], [880, 690]]],
+  nodes: { start: [760, 620], '35-1': [760, 460, 's'], '35-2': [420, 250, 'n'], '35-3': [640, 220, 's'], '35-4': [940, 230, 'n'], '35-5': [1240, 240, 's'] },
+  paths: { 'start>35-1': [[760, 540]], '35-1>35-2': [[560, 330]], '35-2>35-3': [[530, 190]], '35-3>35-4': [[790, 290]], '35-4>35-5': [[1090, 190]] },
+  feat: [
+    ['sprite', 'shadLampS', 300, 190, 30], ['sprite', 'shadUmbS', 700, 560, 26], ['sprite', 'shadDrawerS', 1100, 290, 26],
+    ['sprite', 'shadPotS', 830, 410, 24], ['sprite', 'shadLampS', 1300, 180, 26], ['sprite', 'shadUmbS', 220, 280, 24]
+  ],
+  flora: ['rock'], density: 0,
+  live: []
+};
+})();
+
+/* ---- 29_tour_y_shad_e_entry.js ---- */
+/* ============================================================
+   THE DEPARTMENT OF UNCLAIMED SHADOWS: the hidden way in (the land's best secret), on the Moon, 18-1 ONE SMALL HOP.
+   ChatGPT's entrance: "walk all the way into the shadow of the sample locker, past the point where Brady's shoes
+   disappear. The locker's shadow has a keyhole."
+   A few steps right of where Brady lands on the Moon, a grey sample locker stands on the dust (labelled like the Moon's
+   own crates, painted the way 18-1's props are). The low sun behind it throws its shadow long across the ground to the
+   left, back toward the start, black as the sky, deeper the further it reaches. Near its far end there is a
+   keyhole-shaped patch of light: the only odd thing in the scene. Walk into the shadow (Brady's shoes go dark), and on
+   the keyhole crouch (stick down) a moment: he slips through it. Walking over it does nothing.
+   No sign, no arrow, no coin trail, nothing on the level card. 18-1 keeps every tile, coin, anchor and exit where it was:
+   this file turns one empty cell of its start ground into the locker's letter and adds the 'shad' exit.
+   ============================================================ */
+(function () {
+const MOON = Tour.countries.moon, K = Tour.shadKit;
+if (!MOON || !K || !MOON.levels[0]) return;
+const INK = '#1a1426', STEEL = '#b8bcc8', STEEL_HI = '#dfe2ea', STEEL_LO = '#7e8292', DUST_LO = '#8e889c', PIWI = '#d6307a';
+const LOCKER_TX = 9, TIP_TX = 5, KEY_TX = 6;   // the locker's column, the shadow's far end, the keyhole's column (18-1's own tiles)
+
+/* ---------------- the locker and its long black shadow ---------------- */
+Object.assign(Decor, {
+  // a steel sample locker on four stubby feet, the Moon crates' stencil on its door (feet-centre at its middle)
+  shadLocker(ctx, x, y, t) {
+    const w = 52, h = 84, x0 = x - w / 2, y0 = y - h - 6;
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    ctx.fillStyle = STEEL_LO; for (const fx of [x0 + 4, x0 + w - 10]) { ctx.fillRect(fx, y - 7, 6, 7); ctx.strokeRect(fx, y - 7, 6, 7); }
+    ctx.fillStyle = STEEL; ctx.fillRect(x0, y0, w, h); ctx.strokeRect(x0, y0, w, h);
+    ctx.fillStyle = STEEL_HI; ctx.fillRect(x0 + 3, y0 + 3, 5, h - 6);
+    ctx.fillStyle = STEEL_LO; ctx.fillRect(x0 + w - 6, y0 + 2, 4, h - 4);
+    ctx.strokeRect(x0 + 6, y0 + 6, w - 12, h - 12);
+    // the hinges, the latch
+    ctx.fillStyle = STEEL_HI; for (const hy of [y0 + 14, y0 + h - 22]) { ctx.fillRect(x0 + w - 9, hy, 5, 10); ctx.strokeRect(x0 + w - 9, hy, 5, 10); }
+    ctx.fillStyle = STEEL_LO; rr(ctx, x0 + 8, y0 + h / 2 - 5, 16, 9, 3); ctx.fill(); ctx.stroke(); ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(x0 + 13, y0 + h / 2 - 0.5, 1.8, 0, TAU); ctx.fill();
+    ctx.fillStyle = INK; ctx.font = '6px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('SAMPLES', x + 2, y0 + 20); ctx.fillText('KEEP SHUT', x + 2, y0 + h - 14);
+    ctx.fillStyle = PIWI; ctx.font = '9px ' + FONT_DISPLAY; ctx.fillText('P', x + 2, y0 + 32);
+    ctx.restore();
+  }
+});
+// the shadow, drawn over Brady (so his shoes go dark in it): a black wedge lying on the dust from the locker's foot to
+// the far left, thicker the further it reaches; at its far end, a keyhole of light
+const shadowOf = (ctx, g, gate, t) => {
+  const fy = gate.fy, x1 = gate.lockerX - 22, x0 = gate.wallX, far = 14;
+  ctx.save();
+  ctx.fillStyle = 'rgba(6,4,12,0.96)';
+  ctx.beginPath(); ctx.moveTo(x1, fy + 2); ctx.lineTo(x1, fy - 2); ctx.lineTo(x0 + 50, fy - far); ctx.quadraticCurveTo(x0 - 8, fy - far, x0 - 10, fy + 2); ctx.lineTo(x0 - 4, fy + 16); ctx.lineTo(x1 - 20, fy + 16); ctx.closePath(); ctx.fill();
+  // the keyhole: a round head and a flared foot, pale as the sunlit dust, lying in the shadow
+  const kx = gate.cx + 4, ky = fy + 3;
+  ctx.fillStyle = '#f2eee0'; ctx.beginPath(); ctx.arc(kx, ky - 4, 4.6, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(kx - 2.4, ky - 2); ctx.lineTo(kx + 2.4, ky - 2); ctx.lineTo(kx + 5, ky + 9); ctx.lineTo(kx - 5, ky + 9); ctx.closePath(); ctx.fill();
+  ctx.restore();
+};
+
+/* ---------------- the way in: stand on the keyhole at the shadow's deep end and keep pushing left ---------------- */
+class ShadKeyholeGate extends ENTITY_TYPES.gate {
+  constructor(g, s) {
+    super(g, s); this.exitKey = s.exit || 'shad'; this.secret = true;
+    this.w = TS; this.h = TS; this.x = s.x - TS / 2; this.y = s.y - TS; this.dive = null; this.friendly = false; this.pushT = 0; this.row = Math.round(s.y / TS); this.fy = this.row * TS;
+    this.lockerX = s.lockerX || (this.cx + 6 * TS); this.wallX = s.wallX || 0;
+  }
+  at(p) { return p && !p.dead && p.state === 'play' && p.onGround && p.groundTy === this.row && Math.abs(p.cx - (this.cx + 4)) < 18; }
+  update(dt) {
+    this.t += dt; const g = this.g, p = g.player;
+    if (this.dive == null) {
+      const inp = p && p.inp;
+      this.pushT = this.at(p) && inp && inp.down && !inp.left && !inp.right ? this.pushT + dt : 0;
+      if (this.pushT > 0.6 && !this.used && g.state === 'play') {
+        this.used = true; this.dive = 0; p.state = 'portal'; p.portalT = 0; p.vx = 0; p.vy = 0; p.invuln = 3; this.px = p.cx; this.py = p.y;
+        TourKit.sfx('keyhole', 'secret', { vol: 0.5, pitch: 0.7 }); g.burst(this.cx, this.fy, 14, '#f2eee0', 'spark');
+      }
+      return;
+    }
+    this.dive += dt;
+    if (p && p.state === 'portal') { p.x = lerp(this.px, this.cx, Math.min(1, this.dive / 0.3)) - p.w / 2; p.y = this.py + Math.max(0, this.dive - 0.3) * 60; p.shadSlipK = Math.min(1, this.dive / 1.0); }
+    if (this.dive > 0.6 && !this.named) { this.named = true; g.bannerText = 'THE DEPARTMENT OF UNCLAIMED SHADOWS'; g.bannerT = 2.6; TourKit.sfx('secret', 'secret', { vol: 0.8 }); g.burst(this.cx, this.fy - 20, 18, '#f6dc7a', 'confetti'); }
+    if (this.dive > 2.0 && !this.cleared) { this.cleared = true; g.levelClear(this); }
+  }
+  touchPlayer() {}
+  draw(ctx) {}
+  get light() { return null; }
+}
+ENTITY_TYPES.shadKeyholeGate = ShadKeyholeGate;
+VALIDATOR_EXITS.shadKeyholeGate = { w: TS, h: TS };
+TourHooks.on('afterEntities', (play, ctx) => {
+  if (!play.entities || !play.area || !play.area.shadMoon) return;
+  const e = play.shadKey && play.shadKey.g === play && !play.shadKey.remove ? play.shadKey : (play.shadKey = play.entities.find(q => q instanceof ShadKeyholeGate) || null);
+  if (e) shadowOf(ctx, play, e, play.t || 0);
+});
+// Brady slipping through the keyhole: squeezed thin and sinking into the light
+{
+  const dr0 = Player.prototype.draw;
+  Player.prototype.draw = function (ctx, t) {
+    if (!(this.shadSlipK > 0) || this.state !== 'portal') return dr0.call(this, ctx, t);
+    const k = this.shadSlipK; ctx.save(); ctx.globalAlpha *= Math.max(0, 1 - k * 1.05);
+    ctx.translate(this.cx, this.y + this.h); ctx.scale(Math.max(0.15, 1 - k * 0.85), 1); ctx.translate(-this.cx, -(this.y + this.h));
+    const r = dr0.call(this, ctx, t); ctx.restore(); return r;
+  };
+}
+TourHooks.exitKind('shadKeyhole', { title: 'A HIDDEN LAND!', marksDone: false });
+// the locker piece: the locker (a decor prop) and the keyhole's exit at the shadow's far end
+Tour.pieces['shad.locker'] = function (st, o) {
+  const B = st.B, x = st.x, gy = st.gy;
+  B.decorAt('shadLocker', x, gy, 0);
+  B.spawn('shadKeyholeGate', KEY_TX, gy - 1, { exit: 'shad', lockerX: (x + 0.5) * TS, wallX: TIP_TX * TS });
+  return x + 2;
+};
+
+/* ---------------- 18-1, amended: twelve columns of dust on the left, the locker, the 'shad' exit ---------------- */
+{
+  const L0 = MOON.levels[0], S0 = TourStamp.get('moonHop', 'moon');
+  if (L0 && L0.areas && S0 && !L0.exits.shad) {
+    // one cell of 18-1's open start ground becomes the locker's letter: no tile, coin or anchor moves
+    const rows = S0.rows.map((r, y) => y === S0.floor - 1 && r[LOCKER_TX] === '.' ? r.slice(0, LOCKER_TX) + '!' + r.slice(LOCKER_TX + 1) : r);
+    const S1 = Object.assign({}, S0, { rows, legend: Object.assign({}, S0.legend, { '!': ['piece', 'shad.locker', {}] }) });
+    const spec = JSON.parse(JSON.stringify(Object.assign({}, L0, { index: undefined, kind: undefined, v2: undefined, legacySecret: undefined })));
+    spec.n = 1; spec.secret = L0.secret;
+    spec.exits = Object.assign({}, JSON.parse(JSON.stringify(L0.exits)), { shad: { to: 'land:shad', via: 'shadKeyhole' } });
+    const A = spec.areas.find(a => a.id === 'surface'); A.stamp = 'shadMoonHop'; A.shadMoon = true;
+    Tour.amend('moon', { stamps: { shadMoonHop: S1 }, levels: [spec] });
+    K.hostLevel = '18-1'; K.keyTx = KEY_TX;
+  }
+}
+// the area flag rides onto the built area (the shadow is drawn only there)
+if (TourBuild.SYSTEMS.indexOf('shadMoon') < 0) TourBuild.SYSTEMS.push('shadMoon');
+{
+  const px0 = Validator.proxyArea;
+  Validator.proxyArea = function (area, mask) { const A = px0.call(this, area, mask); if (area.shadMoon) A.shadMoon = true; return A; };
+}
+})();
+
 /* ---- 29_tour_y_table.js ---- */
 /* ============================================================
    TABLE FOR TWO (world 36, cc 'table'): a hidden land (docs/handoff/HIDDEN_LAND_BRIEF.md, ChatGPT's A11).
@@ -117638,6 +119733,20 @@ const BoxArt = (() => {
     // ---- The Unflattering Gallery (hidden land A5): a framed palette case, an aubergine frame round a mustard panel,
     // a powder-blue palette hanging from its brass latch; hit: the palette swings off the latch and the lid flips up;
     // empty: the lid stands open over the case's white mount ----
+    // ---- The Department of Unclaimed Shadows (hidden land A10): a salmon boot-pull filing drawer with a butter label
+    // window and a grape boot shadow in it; hit: the drawer slides out and the boot's shadow hops out of the window;
+    // empty: the drawer stands pulled out over a dark slot, the window bare but for the department's notch ----
+    shad: { name: 'The Department of Unclaimed Shadows', draw(c, p) {
+      const Sa = '#f08470', Sl = '#c8604e', Bu = '#f6dc7a', Gr = '#5a2a6a';
+      const q = ease(seg(p, 0, 0.6)), hop = io(seg(p, 0.1, 0.7)), dy = q * 4;
+      R(c, 3, 6, 26, 24, 2, Sa); R(c, 2, 4, 28, 4, 1.5, Sl);
+      if (q > 0) { c.fillStyle = HOLE; c.fillRect(5, 9, 22, 1 + dy); }
+      R(c, 4, 9 + dy, 24, 19, 1.5, Sa); shine(c, 6, 10 + dy, 20, 1.1);
+      R(c, 7, 12 + dy, 18, 11, 1, Bu, 1.1);
+      R(c, 12, 24.5 + dy, 8, 2.2, 1, Sl, 1);
+      if (p < 0.98) { const by = 21 + dy - hop * 16, bx = 14 + hop * 3; c.save(); c.globalAlpha = 1 - seg(p, 0.6, 0.95); c.beginPath(); c.moveTo(bx - 3, by); c.lineTo(bx - 3, by - 7); c.lineTo(bx + 1.5, by - 7); c.lineTo(bx + 1.5, by - 3); c.lineTo(bx + 5, by - 2); c.lineTo(bx + 5, by); c.closePath(); fs(c, Gr, 0.8); c.restore(); }
+      else { c.fillStyle = Sa; c.beginPath(); c.moveTo(14, 12 + dy); c.lineTo(18, 12 + dy); c.lineTo(16, 15 + dy); c.closePath(); c.fill(); }
+    } },
     gal: { name: 'The Unflattering Gallery', draw(c, p) {
       const Au = '#5a2346', Ah = '#844070', Mu = '#e2b33a', Bl = '#9ab8e8', Wh = '#fffdf6';
       const sw = io(seg(p, 0, 0.45)), q = ease(seg(p, 0.25, 1));
@@ -118332,6 +120441,7 @@ const NOTES = {
   seats: 'Every card from under the cheap seats! I have put a folding chair facing the wall in the hall so you feel at home. Twice I sat on it the right way round. Both times, darling, it folded me up.',   // Below the Cheap Seats (33)
   // The Table Salt Sea (34, hidden land A9)
   salt: 'Every card from the salt sea! I have stopped trusting our shaker. It says "just a pinch" and it has said that since our wedding. I weighed it. Brady, it is a lot more than a pinch.',
+  shad: 'Every postcard from the department! They gave me your shadow in a paper bag with a ticket on it. I hung it on the back of the door, darling, and it has already tried on your coat.'   // The Department of Unclaimed Shadows (hidden land A10)
 };
 const noteOf = C => (NOTES[C.id] || ('Every postcard from ' + C.name + '! I keep them all in a shoebox.')) + ' ♥ C';
 
