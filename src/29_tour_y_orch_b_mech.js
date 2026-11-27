@@ -204,7 +204,7 @@ class OrchSleeve extends Ent {
     // Brady walks on the spot (the sleeve turns under him), unless it is at its stop that way: then he just walks
     const atStop = this.dy === 0;
     this.dx = on && dir && !atStop ? -(p.vx || 0) * dt : 0;
-    if (this.hd() !== h0) { this.flipT = 1.2; say(this.g, this.cx, this.y - 50, 'THE SEAM TURNS THE OTHER WAY!', '#ffd84a'); TourKit.sfx('rip', 'kick', { vol: 0.3, pitch: 1.4 }); }
+    if (this.hd() !== h0) { this.flipT = 1.2; say(this.g, this.cx, this.y - 110, 'THE SEAM TURNS THE OTHER WAY!', '#ffd84a'); TourKit.sfx('rip', 'kick', { vol: 0.3, pitch: 1.4 }); }
     if (dir && Math.floor(this.spin * 2) !== Math.floor((this.spin - dir * dt * 6) * 2)) TourKit.sfx('crinkle', 'select', { vol: 0.12, pitch: 2.2 });
   }
   touchPlayer() {}
@@ -214,7 +214,7 @@ class OrchSleeve extends Ent {
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(cx, hy); ctx.lineTo(cx, y); ctx.stroke(); ctx.strokeStyle = OA.BARK; ctx.lineWidth = 2.2; ctx.stroke();
     ctx.strokeStyle = '#e8dcc0'; ctx.lineWidth = 3; ctx.beginPath(); for (let yy = hy + 10; yy < y - 4; yy += 3) ctx.lineTo(cx + Math.sin(yy * 0.12 + this.spin) * 9, yy); ctx.stroke(); ctx.restore();
     // the join: a rust tie on the stalk (past it the seam turns the other way)
-    if (this.join != null) { const jy = (this.join + 1) * TS - 2; OA.tie(ctx, cx, jy - 10, 1.3); if (y < jy - 4) { ctx.save(); ctx.strokeStyle = 'rgba(192,70,42,0.7)'; ctx.setLineDash([5, 5]); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - 10, jy); ctx.lineTo(x + w + 10, jy); ctx.stroke(); ctx.restore(); } }
+    if (this.join != null) { const jy = (this.join + 1) * TS - 2; OA.tie(ctx, cx, Math.min(jy - 10, y - 70), 1.5); if (true) { ctx.save(); ctx.strokeStyle = 'rgba(192,70,42,0.7)'; ctx.setLineDash([5, 5]); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - 10, jy); ctx.lineTo(x + w + 10, jy); ctx.stroke(); ctx.restore(); } }
     // the sleeve: a paper cone round a pear, a flat top (the platform); the seam's stripes slant one way or the other
     const col = h === this.hand ? '#f4ead2' : '#e8b8a0', st = h === this.hand ? '#a8987a' : OA.RUST;
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
