@@ -144,10 +144,10 @@ Object.assign(Tour.pieces, {
 });
 
 /* ================= the arena: the stage in front of the house curtain ================= */
-// columns from the arena's left: basket 1 at 12-13 (its riser and paddle at 9-10), the trap at 16-17 down to the
-// understage (rows GY+1..GY+2 from 9 to 17, its paddle at 12 straight under basket 1), basket 2 at 19-20 (its riser
-// and the far paddle at 21-22)
-const AR = { b1: 13, r1: [9, 10], trap: [16, 17], und: [9, 17], up: 12, b2: 20, r2: [22, 23] };
+// columns from the arena's left (all between the stick and the buttons): basket 1 round 11 (its riser and paddle at
+// 7-8), the trap at 13-14 down to the understage (rows GY+1..GY+2 from 7 to 14, its paddle at 10 straight under basket
+// 1), basket 2 round 17 (its riser and the far paddle at 18-19)
+const AR = { b1: 11, r1: [7, 8], trap: [13, 14], und: [7, 14], up: 10, b2: 17, r2: [18, 19] };
 Tour.pieces['seats.arena_encore'] = function (st, o) {
   const B = st.B, { x0, w, GY } = o;
   for (const x of AR.r1) B.set(x0 + x, GY - 2, T.SEMI);
@@ -299,4 +299,9 @@ Tour.boss(boss);
 if (typeof BOSS_INK_REACH !== 'undefined') BOSS_INK_REACH.seats_encore = [20, 20, 20, 20];
 Object.assign(TourLandscape.ARCH_LABEL, { encore: 'ENCORE' });
 Tour.seatsKit.encore = brain; Tour.seatsKit.AR = AR;
+// the arena's camera: three rows lower than usual, so the understage and its paddle are in view
+{
+  const ct0 = Play.prototype.camTargetY;
+  Play.prototype.camTargetY = function (snap) { const v = ct0.call(this, snap), b = this.boss; if (b && b.style === 'seats_encore' && this.area && this.area.role === 'arena') return clamp(v + 3 * TS, 0, Math.max(0, this.area.H * TS - Game.viewH)); return v; };
+}
 })();

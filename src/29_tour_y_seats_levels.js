@@ -212,7 +212,7 @@ const dockRows = (() => {
   const W = 206, H = 22, Gr = grid(W, H, '.');
   ground(Gr, 0, W - 1, 17);
   put(Gr, 3, 16, '@'); put(Gr, 6, 16, 'k'); put(Gr, 10, 13, '?'); put(Gr, 2, 12, 'o.o.o');
-  put(Gr, 16, 16, 'Q'); put(Gr, 16, 15, '1');
+  put(Gr, 16, 16, 'e'); put(Gr, 16, 15, '1');
   put(Gr, 38, 16, 'c'); fillG(Gr, 39, 13, 42, 13, '-'); put(Gr, 40, 10, '*'); put(Gr, 41, 16, 'K');
   put(Gr, 45, 16, 'i'); put(Gr, 46, 15, '2'); put(Gr, 44, 16, 'u'); put(Gr, 48, 16, 'A'); put(Gr, 62, 16, 'r');
   put(Gr, 76, 16, 'c'); put(Gr, 78, 13, '?'); fillG(Gr, 79, 11, 82, 11, '-'); put(Gr, 80, 8, 'R'); put(Gr, 81, 16, 'a'); put(Gr, 83, 16, 'l');
@@ -228,7 +228,7 @@ const DK = {
   K: SIGN('THE EYES OUT FRONT GLINT BEFORE THE HOUSE LOOKS. GET IN A DOORWAY'),
   O: SIGN('TWIN FLATS ON ONE ROPE: PUSH THE FRONT ONE AND THE BACK ONE SLIDES THE OTHER WAY. THEIR DOORWAYS MEET ONCE'),
   l: ['enemy', 'seatsCrab'], r: ['enemy', 'seatsStoat'], j: ['enemy', 'seatsHen'], d: ['enemy', 'seatsShrew'],
-  Q: ['piece', 'seats.house', { w: 20, period: 4.6, phase: 0 }],
+  e: ['piece', 'seats.house', { w: 20, period: 4.6, phase: 0 }],
   '1': ['piece', 'seats.backdrop', { w: 6, h: 5, dl: 2, dw: 2, track: 14, art: 0 }],
   i: ['piece', 'seats.house', { w: 28, period: 4.6, phase: 1.2 }],
   '2': ['piece', 'seats.backdrop', { w: 6, h: 5, dl: 3, dw: 2, track: 20, art: 1 }],
