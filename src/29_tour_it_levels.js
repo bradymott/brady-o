@@ -68,12 +68,12 @@ const L1 = { n: 1, name: 'Scooter Dash', arch: 'scoot', theme: 'it_vicolo',
         'cp',
         // the first ramp onto the roofs, a garage up there, a washing line
         ['trench', { n: 4, canal: true }],
-        ['ramp', { up: 5, roofN: 10, land: 3, sign: 'A RAMP! ROLL UP IT AND IT THROWS YOU ONTO THE ROOFS', tight: true }],
+        ['ramp', { up: 5, roofN: 10, land: 3, sign: 'A RAMP! ROLL UP IT AND IT THROWS YOU ONTO THE ROOFS', tight: true, loft: { to: 'garage@in', back: 'garageBack' } }],
         ['roofs', { gaps: [3, 4], chimney: 0, pigeon: true, tight: true }],
         ['cp', { tight: true }],
-        ['door', { to: 'garage@in', perch: 0, look: 'itGarage', back: 'garageBack', tight: true }],
         ['washing', { n: 9, gold: 'risky', tight: true }],
         ['drop', { down: 5 }],
+        ['anchor', { name: 'garageOut', tight: true }],
         'cp',
         // ② test: the oil (no brakes), crates, a canal
         ['cobbles', { n: 8, enemies: ['itCat'], item: 'power' }],
@@ -97,7 +97,7 @@ const L1 = { n: 1, name: 'Scooter Dash', arch: 'scoot', theme: 'it_vicolo',
         ['oil', { n: 6, gap: 5 }],
         ['gate', { exit: 'main' }]
       ] },
-    { id: 'garage', gen: 'room', role: 'secret', theme: 'it_cantina', stamp: 'itGarage' }
+    { id: 'garage', gen: 'room', role: 'secret', theme: 'it_garage', stamp: 'itGarage', it: { scoot: true, frame: { props: [['itTyres', 7], ['itOilCans', 22], ['itTyres', 37]] } }, room: 'itLap', itLap: { exit: 'vicolo@garageOut' } }
   ] };
 
 /* ---------------- 14-2 The Pizzeria ---------------- */
@@ -108,7 +108,7 @@ const L2 = { n: 2, name: 'The Pizzeria', arch: 'dough', theme: 'it_pizzeria',
   postcard: 'The pizza chef is a heron. He tosses the dough so high it sticks to the ceiling. He says that is the secret. ♥ C',
   enemies: [['itTomato', 2], ['itMoka', 1], ['itMeatball', 1]],
   mapCell: [1, 0], mapFrom: 0,
-  exits: { main: { to: '14-3' }, secret: { to: '14-6', hint: 'Coffee steam puffs from a crack in the pizzeria wall...' } },
+  exits: { main: { to: '14-3' }, secret: { to: '14-6', hint: 'A pigeon in the pizzeria stares up at a vent in the ceiling. Flour trickles down. Charge the dough all the way...' } },
   areas: [
     { id: 'cucina', gen: 'strip', W: 240, H: 20, gyMin: 4, gyMax: 15, liquid: 'sauce',
       script: [
@@ -125,7 +125,7 @@ const L2 = { n: 2, name: 'The Pizzeria', arch: 'dough', theme: 'it_pizzeria',
         ['padFar', { far: 8 }],
         'cp',
         ['cobbles', { n: 8, enemies: ['itMoka'] }],
-        ['secretDoor', { to: 'dispensa@in', look: 'fake', back: 'pantryBack' }],
+        ['loft', { to: 'dispensa@in', back: 'pantryBack' }],
         ['padChain', { n: 2, step: 4, gap: 4 }],
         ['drop', { down: 8 }],
         'cp',
@@ -141,7 +141,7 @@ const L2 = { n: 2, name: 'The Pizzeria', arch: 'dough', theme: 'it_pizzeria',
         ['ovens', { n: 12, ovens: 2 }],
         ['gate', { exit: 'main' }]
       ] },
-    { id: 'dispensa', gen: 'room', role: 'secret', theme: 'it_cantina', stamp: 'itDispensa' }
+    { id: 'dispensa', gen: 'room', role: 'secret', theme: 'it_pass', stamp: 'itDispensa', it: { frame: { props: [['itTomatoCans', 5], ['itFlourSacks', 19]] } }, room: 'itPizza' }
   ] };
 
 /* ---------------- 14-3 The Leaning Tower ---------------- */
@@ -163,9 +163,9 @@ const towerRows = (() => {
   // storey 2: a checkpoint, the bell over the open floor, a ledge, the trapdoor top right; the store behind a cracked
   // stretch of the left wall
   fillG(G, 7, FL[2], 22, FL[2], '.'); put(G, 4, 65, 'c'); put(G, 15, 58, 'w'); put(G, 23, 61, '-----'); hole(3, 24, 27);
-  put(G, 12, 61, 'o.o.o.o'); put(G, 14, 60, '!'); put(G, 1, 65, 'Y');
+  put(G, 12, 61, 'o.o.o.o'); put(G, 14, 60, '!'); put(G, 1, 65, 'Y'); put(G, 5, 65, 'O');
   // storey 3: the crate stack that slides across the corridor; barrels from the right wall; the trapdoor top left
-  put(G, 6, 51, 'K'); hole(4, 2, 5); fillG(G, 1, 55, 3, 56, '#'); put(G, 1, 52, '----'); put(G, 28, 56, 'V'); put(G, 14, 53, 'o.o.o');
+  put(G, 25, 56, 'X'); put(G, 6, 51, 'K'); hole(4, 2, 5); fillG(G, 1, 55, 3, 56, '#'); put(G, 1, 52, '----'); put(G, 28, 56, 'V'); put(G, 14, 53, 'o.o.o');
   // storey 4: a checkpoint, two bells over the open floor, the ledge and the trapdoor top right
   fillG(G, 7, FL[4], 24, FL[4], '.'); put(G, 3, 47, 'c'); put(G, 11, 40, 'w'); put(G, 19, 40, 'w'); put(G, 24, 43, '----'); hole(5, 24, 27);
   put(G, 4, 43, '?'); put(G, 13, 43, 'o.o.o.o');
@@ -193,7 +193,7 @@ stamps.itTorre = {
     R: ['piece', 'rack', { side: 1 }], V: ['piece', 'rack', { side: -1 }],
     w: ['piece', 'bell', { len: 5, amp: 0.7, pw: 2, rate: 0.85 }],
     r: ['decor', 'itBellRope'], E: ['decor', 'itGreatBell'],
-    Y: ['piece', 'hideDoor', { to: 'store@in', back: 'storeBack', look: 'fake' }],
+    Y: ['piece', 'hideDoor', { to: 'store@in', back: 'storeBack', look: 'fake', walkIn: true }], X: ['anchor', 'storeOut'], O: ['spawn', 'itPigeonTell', { dir: -1, look: 'ahead' }],
     n: ['enemy', 'itCat']
   },
   gold: { '*': 'must', '!': 'risky', '%': 'high' }, items: ['power', 'power']
@@ -208,24 +208,25 @@ const L3 = { n: 3, name: 'The Leaning Tower', arch: 'lean', theme: 'it_torre',
   exits: { main: { to: '14-4' } },
   areas: [
     { id: 'torre', gen: 'room', theme: 'it_torre', stamp: 'itTorre', camera: 'free', it: { tower: true } },
-    { id: 'store', gen: 'room', role: 'secret', theme: 'it_cantina', stamp: 'itStore' }
+    { id: 'store', gen: 'room', role: 'secret', theme: 'it_belfry', stamp: 'itStore', it: { frame: { props: [['itRopeCoil', 11], ['itBarrel', 17]] } }, room: 'itBells', itBells: { exit: 'torre@storeOut' } }
   ] };
 
 /* ---------------- 14-4 Night at the Opera ---------------- */
 const operaRows = (() => {
   const W = 156, H = 26, G = grid(W, H, '.');
   fillG(G, 0, 0, W - 1, 0, '#');                     // the ceiling
+  fillG(G, 18, 0, 20, 0, '.');                       // a gap in it: the way up into the gantry
   fillG(G, 0, 22, W - 1, H - 1, '#');                // the stalls (floor)
   fillG(G, 0, 1, 0, 21, '#'); fillG(G, W - 1, 1, W - 1, 21, '#');
   // ① the first diva on her box; her column over the stalls lifts Brady to the first balcony
   put(G, 2, 21, '@.j'); put(G, 9, 18, '?');
   fillG(G, 2, 17, 7, 17, '#'); put(G, 3, 16, 'O'); put(G, 5, 16, 'd');
   put(G, 12, 21, 'X');
-  fillG(G, 15, 12, 24, 12, '-'); put(G, 18, 11, '*'); put(G, 20, 11, 'o.o'); put(G, 23, 11, 'Y');
+  fillG(G, 15, 12, 24, 12, '-'); put(G, 18, 11, '*'); put(G, 21, 11, 'o.o'); put(G, 18, 11, 'A'); put(G, 16, 11, 'N');
   put(G, 30, 19, 'n'); put(G, 27, 13, 'o.o.o');
   fillG(G, 26, 15, 33, 15, '-');
   // ② the orchestra pit: two solo divas, each with a column up out of the pit
-  fillG(G, 39, 14, 45, 14, '-'); put(G, 42, 13, 'c');
+  fillG(G, 39, 14, 45, 14, '-'); put(G, 42, 13, 'c'); put(G, 40, 13, 'E');
   fillG(G, 40, 5, 45, 5, '#'); put(G, 41, 4, 'O'); put(G, 43, 4, 'e');
   fillG(G, 44, 22, 77, H - 1, '.');                   // the pit (bottomless)
   put(G, 50, 25, 'U');
@@ -263,12 +264,33 @@ stamps.itOpera = {
     Z: ['piece', 'song', { g: 4, who: 0, w: 3, h: 20 }], k: ['piece', 'diva', { g: 4, who: 0, dir: -1, off: 1.0 }],
     w: ['piece', 'bell', { len: 7, amp: 0.55, pw: 3, rate: 0.8, skin: 'itChandelier' }],
     O: ['decor', 'itBoxFront'],
-    Y: ['piece', 'hideDoor', { to: 'loggia@in', back: 'loggiaBack', look: 'curtain', backDx: -2 }],
+    A: ['piece', 'song', { g: 0, who: 0, w: 3, h: 15 }], N: ['spawn', 'itPigeonTell', { dir: 1, look: 'up' }], E: ['anchor', 'gantryOut'],
     n: ['enemy', 'itNote'], q: ['enemy', 'itNote'], r: ['decor', 'itRoses']
   },
   gold: { '*': 'must', '!': 'risky' }, items: ['power', 'power']
 };
-stamps.itLoggia = secretRoom({ stamp: { items: ['power'], hidden: ['oneup'], doors: [{ to: 'teatro@loggiaBack', look: 'itStageDoor' }], legend: { p: ['decor', 'itRoses'], q: ['decor', 'itMusicStand'] } } });
+stamps.itLoggia = secretRoom({ stamp: { items: ['power'], hidden: ['oneup'], doors: [{ to: 'loggione@loggiaBack', look: 'itStageDoor' }], legend: { p: ['decor', 'itRoses'], q: ['decor', 'itMusicStand'] } } });
+// the gantry over the house (above the ceiling): a catwalk with a spike pit and sour notes, the royal box's door,
+// and a rope down through a hole at its end, back into the house over the pit balcony
+stamps.itLoggione = (() => {
+  const W = 52, H = 14, G = grid(W, H, '#');
+  fillG(G, 1, 1, W - 2, 10, '.');
+  put(G, 3, 10, '@');
+  put(G, 6, 9, 'o.o.o.o');
+  fillG(G, 13, 11, 16, 12, '.'); fillG(G, 13, 12, 16, 12, '^');          // a spike pit
+  put(G, 12, 7, 'o.o.o.o.o');
+  put(G, 22, 6, 'n'); put(G, 30, 5, 'n');
+  fillG(G, 24, 7, 28, 7, '-'); put(G, 25, 6, 'o.o');
+  fillG(G, 33, 11, 34, 12, '.'); fillG(G, 33, 12, 34, 12, '^');
+  put(G, 38, 10, 'D'); put(G, 40, 10, 'a');
+  fillG(G, 44, 11, 46, 13, '.');                                          // the hole and its rope down
+  fillG(G, 44, 13, 46, 13, 'z'); put(G, 45, 12, 'k');
+  put(G, 48, 9, 'o');
+  return rowsOf(G);
+})();
+stamps.itLoggione = { floor: 11, rows: stamps.itLoggione,
+  legend: { n: ['enemy', 'itNote'], a: ['anchor', 'loggiaBack'], k: ['spawn', 'itRopeTell', {}], z: ['seam', 'bottom', 'teatro@gantryOut'] },
+  doors: [{ to: 'loggia@in', look: 'itStageDoor' }] };
 const L4 = { n: 4, name: 'Night at the Opera', arch: 'aria', theme: 'it_opera',
   gimmick: 'A blackbird diva sings: her long notes are columns of song that lift Brady between the balconies. When she gasps for breath they stop. Then two divas in a duet, over the orchestra pit',
   hint: 'Ride a column while the diva holds her note. When she gasps (...HH!) get onto a balcony',
@@ -277,8 +299,9 @@ const L4 = { n: 4, name: 'Night at the Opera', arch: 'aria', theme: 'it_opera',
   mapCell: [2, 1], mapFrom: 2,
   exits: { main: { to: '14-5' } },
   areas: [
-    { id: 'teatro', gen: 'room', theme: 'it_opera', stamp: 'itOpera', camera: 'free', bottomKill: true },
-    { id: 'loggia', gen: 'room', role: 'secret', theme: 'it_opera', stamp: 'itLoggia' }
+    { id: 'teatro', gen: 'room', theme: 'it_opera', stamp: 'itOpera', camera: 'free', bottomKill: true, seams: [{ side: 'top', a: 18, b: 20, to: 'loggione@in' }] },
+    { id: 'loggione', gen: 'room', role: 'sub', theme: 'it_opera', stamp: 'itLoggione' },
+    { id: 'loggia', gen: 'room', role: 'secret', theme: 'it_box', stamp: 'itLoggia', it: { frame: { w: 30, props: [['itBoxChairs', 6], ['itBoxChairs', 21]] } }, room: 'shell', shell: { title: 'THE OPERA HATS', rule: 'WATCH THE HAT WITH THE PRIZE, THEN STOMP IT', cup: 'tophat', joke: ['sock', 'chicken'] } }
   ] };
 
 /* ---------------- 14-5 Il Polpettone ---------------- */
@@ -307,7 +330,7 @@ const L5 = { n: 5, name: 'Il Polpettone', mapLabel: 'Grand Stage', arch: 'lair',
         ['postcard', { kind: 'risky', dy: -4 }],
         ['door', { to: 'palco@in', perch: 0, look: 'itStageDoor' }]
       ] },
-    { id: 'camerino', gen: 'room', role: 'secret', theme: 'it_opera', stamp: 'itCamerino' },
+    { id: 'camerino', gen: 'room', role: 'secret', theme: 'it_dressing', stamp: 'itCamerino', it: { frame: { w: 30, props: [['itLitMirror', 7], ['itWigStand', 20]] } }, room: 'prank', prank: { title: "THE TENOR'S DRESSING ROOM", rule: 'HIS GOLD RECORD! TOTALLY REAL. OPEN THE CASE', gag: 'cushion', label: 'GOLD RECORD', line: 'OK, OK. HIS REAL STASH IS IN THE CAGE.' } },
     { id: 'palco', gen: 'arena', role: 'arena', layout: 'stage', arenaW: 28, H: 18, theme: 'it_stage' }
   ] };
 
@@ -336,7 +359,9 @@ const L6 = { n: 6, name: 'Doppio', arch: 'espresso', secret: true, theme: 'it_ba
         'cp',
         ['cobbles', { n: 6, enemies: ['itMoka'] }],
         ['leap', { gap: 12, run: 9, up: 2, gold: 'risky', liquid: true }],
-        ['door', { to: 'retro@in', perch: 3, look: 'itPantry', back: 'retroBack' }],
+        ['sackPit', { to: 'retro@in' }],
+        ['cobbles', { n: 6 }],
+        ['anchor', { name: 'retroBack', tight: true }],
         'cp',
         ['leap', { gap: 12, run: 8, liquid: true }],
         ['fallers', { n: 5 }],
@@ -348,7 +373,7 @@ const L6 = { n: 6, name: 'Doppio', arch: 'espresso', secret: true, theme: 'it_ba
         ['leap', { gap: 11, run: 8, liquid: true }],
         ['gate', { exit: 'main' }]
       ] },
-    { id: 'retro', gen: 'room', role: 'secret', theme: 'it_cantina', stamp: 'itRetro' }
+    { id: 'retro', gen: 'room', role: 'secret', theme: 'it_beans', stamp: 'itRetro', it: { frame: { w: 30, props: [['itGrinder', 6], ['itBeanSacks', 22]] } }, room: 'rush', rush: { title: 'THE BEAN STORE', rule: 'THE SACKS SPLIT! ALL SIX BEANS BEFORE THE CLOCK RUNS OUT', look: 'tokBean', n: 6, t: 15 } }
   ] };
 
 Tour.amend('it', { stamps, levels: [L1, L2, L3, L4, L5, L6] });

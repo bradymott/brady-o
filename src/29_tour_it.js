@@ -994,5 +994,5 @@ Tour.country({
   levels: []
 });
 // for the other Italy files and the tests
-Tour.itKit = { ItArt, INK, COL, setTimeout0, TERRA, OCHRE, CREAM, SHUTTER, TOMATO, BASIL, CYPRESS };
+Tour.itKit = { pigeonArt, ItArt, INK, COL, setTimeout0, TERRA, OCHRE, CREAM, SHUTTER, TOMATO, BASIL, CYPRESS };
 })();

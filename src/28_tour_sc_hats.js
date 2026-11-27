@@ -218,7 +218,7 @@ TourHats.NOT = new Set([].concat(
   'auPing auWeb auRoad auWheels auFruit auFruitStall auShadow auMud auPuff auOpal'.split(' '),
   // Italy (14): meatballs, moka pots, tomatoes, sour notes (food and objects), the tenor's graters, ramps, crates, oil,
   // dough, ovens, the tilt clock, sliders, racks, barrels, bells' songs, the blackbird diva (in her tiara), cups, washing lines
-  'itMeatball itMoka itTomato itNote itGrater itRamp itCrates itOil itDough itOven itTilt itSlider itRack itBarrel itDiva itSong itCup itLine itFacade'.split(' '),
+  'itMeatball itMoka itTomato itNote itGrater itRamp itCrates itOil itDough itOven itTilt itSlider itRack itBarrel itDiva itSong itCup itLine itFacade itFlourTell itSackTell itRopeTell'.split(' '),
   // Festival Fields: wheelie bins, balloon dogs (balloons), beds
   'festBin festBalloon festBed'.split(' '),
   // Kenya (15): scenery and moving parts (gullies, thickets, the herd's spawner, rivers, lakes, the sun, clouds, puddles,
@@ -306,7 +306,7 @@ Object.assign(TourHats.HEADS, {
   isFox: [0.55, 0.55, -1.0, 0], isPuffin: [0.15, 0.15, -1.6, 0], isRam: [0.5, 0.5, -1.0, 0], isTern: [0.3, 0.3, -0.6, 0],
   lostCrab: [0.12, 0.12, -1.45, 0], lostMoth: [0.1, 0.11, -1.55, 0], lostBeagle: [0.4, 0.4, -1.12, 0],
   // Italy (14): the city pigeon, the alley cat
-  itPigeon: [0.39, 0.4, -1.5, 0], itCat: [0.53, 0.53, -1.25, 0],
+  itPigeon: [0.39, 0.4, -1.5, 0], itCat: [0.53, 0.53, -1.25, 0], itPigeonTell: [0.39, 0.4, -1.5, 0],
   // The Moon (world 18): the moon bunny, the dust mite, the luna moth
   moonBunny: [0.3, 0.3, -1.3, 0], moonMite: [0.2, 0.2, -1.05, 0], moonMoth: [0.02, 0.02, -0.95, 0]
 

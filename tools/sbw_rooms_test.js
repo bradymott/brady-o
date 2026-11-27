@@ -178,6 +178,14 @@ const WIN = {
     check(g.level.id + ' ' + A.aid + ' auOddOne: a wrong giant is a raspberry, no round', (R.round || 0) === 0 && !R.won);
     for (let k = 0; k < 3 && !R.won; k++) on(R.odd);
     wait(g, 0.3, () => R.won);
+  },
+  // Italy's kinds (src/29_tour_it_secrets.js): the scooter time trial's flags in order, the pizza order's jars, the bells' tune
+  itLap(g, A, R, kit) { wait(g, 10, () => !R.hold); for (const f of kit.data.flags) { place(g, f[0], f[1]); wait(g, 0.1); } wait(g, 0.3, () => R.won); },
+  itPizza(g, A, R, kit) { for (const k of R.order.slice()) { g.bumpBlock(kit.data.jars[k], kit.data.row, true, P(g)); frame(g); } wait(g, 0.3, () => R.won); },
+  itBells(g, A, R, kit) {
+    place(g, kit.data.bells[1] + 3, 10); wait(g, 10, () => R.phase === 'echo');
+    for (const k of R.tune.slice()) { const p = P(g); p.x = kit.data.bells[k] * TS + TS / 2 - p.w / 2; p.y = 4.5 * TS; p.vy = -5 * TS; frame(g); p.y = 8 * TS; p.vy = 3 * TS; frame(g); }
+    wait(g, 0.3, () => R.won);
   }
 };
 // kinds without a game to win: their reward is the checker's (validate_levels' room probes)
