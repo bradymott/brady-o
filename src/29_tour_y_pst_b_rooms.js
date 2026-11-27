@@ -140,8 +140,10 @@ TourRooms.kinds.pstKnock.testWin = function (g, A, R, kit, frame) {
   // fire at a window as the lamb settles at it (the aim is set where a player would steer it)
   const K0 = TourRooms.kinds.pstKnock;
   for (let n = 0; n < 3 && !R.won; n++) {
+    // wait for the lamb to arrive at the window (a fresh arrival, so it stays while the cork flies)
+    for (let k = 0; k < 120 * 12 && K0.lamb(kit, R.lambT).at === n; k++) frame(g, {});
     for (let k = 0; k < 120 * 12 && K0.lamb(kit, R.lambT).at !== n; k++) frame(g, {});
-    for (let k = 0; k < 24; k++) frame(g, {});
+    for (let k = 0; k < 12; k++) frame(g, {});
     const wx = (kit.data.mark + FORT_DX[n]) * TS + TS / 2, wy = 6 * TS - 44, sx = p.cx, sy = p.y + 6;
     // the aim that drops the cork through the window (searched the way a player nudges the stick)
     let best = null; for (let a = -Math.PI * 0.88; a <= -Math.PI * 0.12; a += 0.005) { let x = sx, y = sy, vx = Math.cos(a) * 640, vy = Math.sin(a) * 640, dmin = 1e9; for (let s = 0; s < 240; s++) { vy += 760 / 120; x += vx / 120; y += vy / 120; dmin = Math.min(dmin, Math.hypot(x - wx, y - wy)); } if (!best || dmin < best.d) best = { a, d: dmin }; }
