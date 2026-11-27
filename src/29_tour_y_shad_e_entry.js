@@ -15,7 +15,7 @@
 const MOON = Tour.countries.moon, K = Tour.shadKit;
 if (!MOON || !K || !MOON.levels[0]) return;
 const INK = '#1a1426', STEEL = '#b8bcc8', STEEL_HI = '#dfe2ea', STEEL_LO = '#7e8292', DUST_LO = '#8e889c', PIWI = '#d6307a';
-const PAD = 12, LOCKER_TX = 7;   // twelve columns of dust on the left; the locker's left edge column (in the new stamp)
+const PAD = 16, LOCKER_TX = 11, WALL = 5;   // sixteen columns of dust on the left (the first five a rock outcrop); the locker's column
 
 /* ---------------- the locker and its long black shadow ---------------- */
 Object.assign(Decor, {
@@ -39,12 +39,12 @@ Object.assign(Decor, {
 // the shadow, drawn over Brady (so his shoes go dark in it): a black wedge lying on the dust from the locker's foot to
 // the far left, thicker the further it reaches; at its far end, a keyhole of light
 const shadowOf = (ctx, g, gate, t) => {
-  const fy = gate.fy, x1 = gate.lockerX - 22, x0 = 0, far = 10;
+  const fy = gate.fy, x1 = gate.lockerX - 22, x0 = gate.wallX, far = 14;
   ctx.save();
   ctx.fillStyle = 'rgba(6,4,12,0.96)';
-  ctx.beginPath(); ctx.moveTo(x1, fy + 2); ctx.lineTo(x1, fy - 2); ctx.lineTo(x0 + 40, fy - far); ctx.lineTo(x0, fy - far); ctx.lineTo(x0, fy + 14); ctx.lineTo(x1 - 20, fy + 14); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x1, fy + 2); ctx.lineTo(x1, fy - 2); ctx.lineTo(x0 + 60, fy - far); ctx.lineTo(x0, fy - far); ctx.lineTo(x0, fy + 16); ctx.lineTo(x1 - 20, fy + 16); ctx.closePath(); ctx.fill();
   // the keyhole: a round head and a flared foot, pale as the sunlit dust, lying in the shadow
-  const kx = gate.cx, ky = fy + 3;
+  const kx = gate.cx + 4, ky = fy + 3;
   ctx.fillStyle = '#f2eee0'; ctx.beginPath(); ctx.arc(kx, ky - 4, 4.6, 0, TAU); ctx.fill();
   ctx.beginPath(); ctx.moveTo(kx - 2.4, ky - 2); ctx.lineTo(kx + 2.4, ky - 2); ctx.lineTo(kx + 5, ky + 9); ctx.lineTo(kx - 5, ky + 9); ctx.closePath(); ctx.fill();
   ctx.restore();
@@ -55,7 +55,7 @@ class ShadKeyholeGate extends ENTITY_TYPES.gate {
   constructor(g, s) {
     super(g, s); this.exitKey = s.exit || 'shad'; this.secret = true;
     this.w = TS; this.h = TS; this.x = s.x - TS / 2; this.y = s.y - TS; this.dive = null; this.friendly = false; this.pushT = 0; this.row = Math.round(s.y / TS); this.fy = this.row * TS;
-    this.lockerX = s.lockerX || (this.cx + 6 * TS);
+    this.lockerX = s.lockerX || (this.cx + 6 * TS); this.wallX = s.wallX || 0;
   }
   at(p) { return p && !p.dead && p.state === 'play' && p.onGround && p.groundTy === this.row && p.cx < this.cx + 30; }
   update(dt) {
@@ -100,7 +100,7 @@ TourHooks.exitKind('shadKeyhole', { title: 'A HIDDEN LAND!', marksDone: false })
 Tour.pieces['shad.locker'] = function (st, o) {
   const B = st.B, x = st.x, gy = st.gy;
   B.decorAt('shadLocker', x + 1, gy, 0);
-  B.spawn('shadKeyholeGate', 1, gy - 1, { exit: 'shad', lockerX: (x + 1) * TS });
+  B.spawn('shadKeyholeGate', WALL, gy - 1, { exit: 'shad', lockerX: (x + 1) * TS, wallX: WALL * TS });
   return x + 2;
 };
 
@@ -108,7 +108,7 @@ Tour.pieces['shad.locker'] = function (st, o) {
 {
   const L0 = MOON.levels[0], S0 = TourStamp.get('moonHop', 'moon');
   if (L0 && L0.areas && S0 && !L0.exits.shad) {
-    const rows = S0.rows.map((r, y) => { const c = r[0] === '#' || r[0] === 'H' ? '#' : '.'; let pad = c.repeat(PAD); if (y === S0.floor - 1) pad = pad.slice(0, LOCKER_TX) + '!' + pad.slice(LOCKER_TX + 1); return pad + r; });
+    const rows = S0.rows.map((r, y) => { const c = r[0] === '#' || r[0] === 'H' ? '#' : '.'; let pad = (y >= S0.floor - 5 ? '#' : c).repeat(WALL) + c.repeat(PAD - WALL); if (y === S0.floor - 1) pad = pad.slice(0, LOCKER_TX) + '!' + pad.slice(LOCKER_TX + 1); return pad + r; });
     const S1 = Object.assign({}, S0, { rows, legend: Object.assign({}, S0.legend, { '!': ['piece', 'shad.locker', {}] }) });
     const spec = JSON.parse(JSON.stringify(Object.assign({}, L0, { index: undefined, kind: undefined, v2: undefined, legacySecret: undefined })));
     spec.n = 1; spec.secret = L0.secret;
