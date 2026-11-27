@@ -39,7 +39,7 @@ const trelRows = (() => {
   ground(Gr, 0, 21, 23); put(Gr, 3, 22, '@'); put(Gr, 6, 22, 'k'); put(Gr, 19, 22, 'x');
   put(Gr, 10, 15, '1'); put(Gr, 11, 16, 'o.o.o.o'); put(Gr, 14, 12, '?');
   put(Gr, 20, 13, '2'); put(Gr, 22, 17, 'o.o.o.o.o'); put(Gr, 26, 15, '*');
-  ground(Gr, 30, 40, 23); put(Gr, 33, 22, 'c'); put(Gr, 31, 19, '?');
+  ground(Gr, 30, 40, 23); put(Gr, 33, 22, 'c'); put(Gr, 32, 19, '?');
   // the first fork: trellis 36-41, its branch across 42-46, trellis 47-54 over the pit; the bank at 55
   put(Gr, 36, 12, '3'); put(Gr, 41, 14, 'f'); put(Gr, 47, 12, '4'); put(Gr, 38, 22, 'K'); put(Gr, 43, 13, 'o.o.o');
   ground(Gr, 55, 60, 23); put(Gr, 57, 22, 'l');
@@ -55,10 +55,10 @@ const trelRows = (() => {
   // ③ the late fork: trellis 146-155 (a collar), its branch 156-161 (bent from behind), trellis 162-171; pit 147-172
   put(Gr, 146, 10, '7'); put(Gr, 155, 12, 'X'); put(Gr, 162, 10, '8'); put(Gr, 149, 13, 'w'); put(Gr, 166, 12, 'z'); put(Gr, 158, 12, 'R');
   put(Gr, 150, 18, 'o.o.o'); put(Gr, 165, 17, 'o.o.o');
-  ground(Gr, 173, 188, 23); put(Gr, 175, 22, 'c'); put(Gr, 180, 19, '?'); put(Gr, 184, 22, 'r');
+  ground(Gr, 173, 188, 23); put(Gr, 175, 22, 'c'); put(Gr, 182, 19, '?'); put(Gr, 179, 22, 'r');
   // ④ two late forks in a row, critters on both faces
   put(Gr, 189, 9, '9'); put(Gr, 196, 11, 'E'); put(Gr, 202, 9, '0'); put(Gr, 208, 13, 'Y'); put(Gr, 215, 9, 'Z');
-  put(Gr, 191, 12, 'U'); put(Gr, 205, 10, 'V'); put(Gr, 205, 18, 'N'); put(Gr, 218, 12, 'M');
+  put(Gr, 194, 12, 'U'); put(Gr, 205, 10, 'V'); put(Gr, 205, 18, 'N'); put(Gr, 218, 12, 'M');
   put(Gr, 192, 16, 'o.o.o'); put(Gr, 204, 14, 'o.o'); put(Gr, 217, 16, 'o.o');
   ground(Gr, 223, W - 1, 23); put(Gr, 225, 22, 'c'); put(Gr, 229, 22, 'r'); fillG(Gr, 233, 20, 234, 22, 'H'); put(Gr, 233, 16, 'P'); put(Gr, 240, 22, 'G');
   fillG(Gr, W - 1, 0, W - 1, 22, 'H');
@@ -77,15 +77,15 @@ const TRL = {
   '6': TREL(18, 14, [[4, 10], [9, 4], [14, 8]]),
   e: CRAWL({ kind: 'worm', face: 0, ax: 6, speed: 1.0 }), q: CRAWL({ kind: 'fly', face: 1, ay: -6, speed: 1.2 }),
   A: ['spawn', 'portal', { kind: 'door', look: 'orchShed', targetRef: 'shed@in' }], u: BITE(), a: ['anchor', 'shedOut'],
-  '7': TREL(10, 10, [[3, 4]]), X: FORK(6, { late: true }), '8': TREL(10, 10, [[6, 5]]),
+  '7': TREL(10, 10, [[1, 4]]), X: FORK(6, { late: true }), '8': TREL(10, 10, [[6, 5]]),
   w: CRAWL({ kind: 'fly', face: 0, ay: 6, speed: 1.2 }), z: CRAWL({ kind: 'worm', face: 0, ax: 4, speed: 1.0, phase: 1.2 }),
-  '9': TREL(8, 11, [[2, 4]]), E: FORK(5, { late: true }), '0': TREL(7, 11, [[1, 6], [5, 3]]), Y: FORK(6, { late: true }), Z: TREL(8, 11, [[4, 6]]),
+  '9': TREL(8, 11, [[1, 4]]), E: FORK(5, { late: true }), '0': TREL(7, 11, [[1, 6], [5, 3]]), Y: FORK(6, { late: true }), Z: TREL(8, 11, [[4, 6]]),
   U: CRAWL({ kind: 'fly', face: 0, ay: 7, speed: 1.1 }), V: CRAWL({ kind: 'fly', face: 1, ay: 6, speed: 1.0, phase: 1.5 }),
   N: CRAWL({ kind: 'worm', face: 0, ax: 2, speed: 0.9 }), M: CRAWL({ kind: 'fly', face: 0, ay: 6, speed: 1.1, phase: 0.8 })
 };
 stamps.orchTrellis = { floor: 23, rows: trelRows, legend: TRL, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power', 'power'] };
 stamps.orchShed = roomStamp('rows@shedOut', 'orchHatch');
-const L1 = { n: 1, name: 'Elbows on the Trellis', mapLabel: 'Elbows on the Trellis', arch: 'espalier', theme: 'orch_trellis',
+const L1 = { n: 1, time: 400, name: 'Elbows on the Trellis', mapLabel: 'Elbows on the Trellis', arch: 'espalier', theme: 'orch_trellis',
   gimmick: 'Espalier trellises over the orchard\'s ditches: grip, climb any way, slip behind a stake to pass the critters on the other face, and push a branch fork across a gap. Late forks spring back unless their tie is done up from behind',
   hint: 'Only a critter on your side of the trellis can touch you. A late fork\'s tie is round the back: bend it from there. Something has been nibbling a pear high over the tall trellis...',
   postcard: 'Brady! The pear trees here hold hands along wires all day. Once the gate shuts they let go and stretch. I did my pliés with them. ♥ C',
@@ -132,7 +132,7 @@ const BEE = {
 };
 stamps.orchBees = { floor: 21, rows: beeRows, legend: BEE, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power', 'power'] };
 stamps.orchPantry = roomStamp('meadow@pantryOut', 'orchHatch');
-const L2 = { n: 2, name: 'Appointment with a Bee', mapLabel: 'Appointment with a Bee', arch: 'pollinate', theme: 'orch_bees',
+const L2 = { n: 2, time: 400, name: 'Appointment with a Bee', mapLabel: 'Appointment with a Bee', arch: 'pollinate', theme: 'orch_bees',
   gimmick: 'Bell flowers on every bank: knock one with THROW and its bee flies to the blossom it points at, and the blossom blooms into a petal step. A shy blossom only opens once you have walked away',
   hint: 'Stand on the bell\'s gold ring and press THROW. The bee is a friend: it only visits flowers. Send it to a shy blossom from the far bell. A bitten pear sits on a ledge only a petal reaches...',
   postcard: 'Brady! A bee here keeps appointments. Ours was at six, and she was early, and the flower was not ready. I knew how she felt. ♥ C',
@@ -176,7 +176,7 @@ const CUT = {
 };
 stamps.orchCut = { floor: 21, rows: cutRows, legend: CUT, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power', 'power'] };
 stamps.orchLoft = roomStamp('yard@loftOut', 'orchShed');
-const L3 = { n: 3, name: 'Cut Above', mapLabel: 'Cut Above', arch: 'pinch', theme: 'orch_prune',
+const L3 = { n: 3, time: 400, name: 'Cut Above', mapLabel: 'Cut Above', arch: 'pinch', theme: 'orch_prune',
   gimmick: 'The pruning yard: pinch a marked bud with THROW and its two side shoots grow out into steps up the stem. The last stem\'s lower bud is the knob you stand on to reach the top one',
   hint: 'Stand on a bud\'s gold ring and press THROW. Shoots grow two rows up. On the last stem, stand on the knob and pinch the bud above it. A hedge mound on the high bank has a bitten pear on top...',
   postcard: 'Brady! I pinched one bud and the tree grew me a staircase. Piwi pinched one and it grew him a hat. He is wearing it. ♥ C',
@@ -231,7 +231,7 @@ const SLEEVE = {
 };
 stamps.orchSleeve = { floor: 25, rows: sleeveRows, legend: SLEEVE, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power', 'power'] };
 stamps.orchParlour = roomStamp('shed@parlourOut', 'orchShed');
-const L4 = { n: 4, name: 'A Pear in a Sleeve', mapLabel: 'A Pear in a Sleeve', arch: 'unscrew', theme: 'orch_sleeve',
+const L4 = { n: 4, time: 400, name: 'A Pear in a Sleeve', mapLabel: 'A Pear in a Sleeve', arch: 'unscrew', theme: 'orch_sleeve',
   gimmick: 'Pears hang in paper sleeves from the packing-shed beams: stand on one and walk against its spiral seam to unscrew it down, or with the seam to wind it up. Late sleeves change their seam at a rust tie',
   hint: 'Watch the arrows on the sleeve: walk that way to go down. Past a rust tie the seam turns: turn round with it. One sleeve keeps winding up past the bank, into the leaves...',
   postcard: 'Brady! Every pear here wears a paper sleeve, like a little nightie. I unscrewed one and rode it down to supper. ♥ C',
@@ -275,7 +275,7 @@ const GRAFT = {
 };
 stamps.orchGraft = { floor: 21, rows: graftRows, legend: GRAFT, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power', 'power'] };
 stamps.orchOffice = roomStamp('nursery@officeOut', 'orchShed');
-const L5 = { n: 5, name: 'The Graft Takes', mapLabel: 'The Graft Takes', arch: 'graft', theme: 'orch_graft',
+const L5 = { n: 5, time: 400, name: 'The Graft Takes', mapLabel: 'The Graft Takes', arch: 'graft', theme: 'orch_graft',
   gimmick: 'The grafting nursery by moonlight: stand on a cut branch\'s tip and press THROW when its notch meets the swaying far cut\'s, and the two grow into a living arch. The last one sags under your weight',
   hint: 'Wait for the gold line between the notches, then THROW. On the last graft your weight pulls the near cut down: wait for the far cut\'s low swing. Someone left a bitten pear by a soft hole...',
   postcard: 'Brady! Two branches here grew into one. The gardener says it takes a steady hand and a good tie. I said that is how we did it. ♥ C',

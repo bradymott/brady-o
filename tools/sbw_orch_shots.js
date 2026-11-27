@@ -180,7 +180,7 @@ STAGES.trellis = async ({ ev, shot, run, pano }) => {
     r = await ev(() => {
       thaw(); place(146, 22); sim(0.1); sim(0.4, { jump: true, jumpPressed: true, up: true }); goNet(155, 12);
       const f = ents('OrchFork').filter(e => e.late).sort((a, b) => a.rootX - b.rootX)[0]; window.__dbg = { g0: grip(), at: at(), n: ents('OrchFork').length }; let bentNear = false; for (let k = 0; k < 72; k++) { sim(1 / 120, { right: true }); bentNear = bentNear || f.bent; } sim(0.5); const sprang = !f.bent && !!grip();
-      goNet(149, 14); press('jump'); sim(0.45); const face = grip() && grip().face; goNet(155, 12); sim(0.6, { right: true }); const tied = f.tied; sim(0.5); const holds = f.bent;
+      goNet(147, 14); press('jump'); sim(0.45); const face = grip() && grip().face; goNet(155, 12); sim(0.6, { right: true }); const tied = f.tied; sim(0.5); const holds = f.bent;
       goNet(163, 12); const g = grip();
       return { bentNear, sprang, face, tied, holds, g, dbg: window.__dbg };
     });
@@ -369,7 +369,7 @@ const BOT_PAGE = () => {
   // one frame of input; returns false when Brady has died (then waits for the respawn)
   T.f = inp => {
     sim(1 / 120, inp || {}); T.n = (T.n || 0) + 1;
-    if (T.n % 360 === 0 && T.trace) { const q = p(); T.trace.push([T.step, Math.floor(q.cx / 32), Math.floor((q.y + q.h) / 32), S().area.aid, S().state, q.state, Math.round(S().timeLeft || 0)]); }
+    if (T.n % (window.TRN || 360) === 0 && T.trace) { const q = p(); T.trace.push([T.step, Math.floor(q.cx / 32), Math.floor((q.y + q.h) / 32), S().area.aid, S().state, q.state, Math.round(S().timeLeft || 0)]); }
     if (!T.died()) return true;
     const q = p(), why = window.__lastDie || {}; window.__lastDie = null; T.deaths.push({ id: T.id, step: T.step, x: why.x != null ? why.x : Math.floor(q.cx / 32), y: why.y != null ? why.y : Math.floor((q.y + q.h) / 32), reason: why.reason || S().state, near: why.near || [] });
     for (let k = 0; k < 120 * 8 && !(S() !== T.scene && S().state === 'play' && S().player && !S().player.dead); k++) sim(1 / 120);
@@ -400,7 +400,7 @@ const BOT_PAGE = () => {
   T.hop = (dir, action, hold) => { if (!T.f({ jump: true, jumpPressed: true, right: dir > 0, left: dir < 0, action: !!action })) return false; for (let k = 0; k < (hold || 0.45) * 120; k++) if (!T.f({ jump: true, right: dir > 0, left: dir < 0, action: !!action })) return false; for (let k = 0; k < 120 * 2 && !p().onGround; k++) if (!T.f({ right: dir > 0, left: dir < 0, action: !!action })) return false; return true; };
   // a jump that steers: (wait `delay` s, then) right/left only until Brady's centre is over tile column x
   T.hopTo = (x, hold, delay) => { const X = x * 32 + 16, d = () => p().cx < X - 6 ? 1 : p().cx > X + 6 ? -1 : 0; if (!T.f({ jump: true, jumpPressed: true })) return false; for (let k = 0; k < 120 * 2.5 && !(k > 10 && p().onGround); k++) { const go = k >= (delay || 0) * 120 ? d() : 0; if (!T.f({ jump: k < (hold || 0.45) * 120, right: go > 0, left: go < 0 })) return false; } return true; };
-  T.grip = (dir) => { if (!T.f({ jump: true, jumpPressed: true, up: true, right: dir > 0, left: dir < 0 })) return false; for (let k = 0; k < 60 && !(p().orchTr && p().orchTr.grip); k++) if (!T.f({ up: true, jump: true, right: dir > 0, left: dir < 0 })) return false; return !!(p().orchTr && p().orchTr.grip); };
+  T.grip = (dir) => { for (let k = 0; k < 24; k++) if (!T.f({})) return false; if (!T.f({ jump: true, jumpPressed: true, up: true, right: dir > 0, left: dir < 0 })) return false; for (let k = 0; k < 60 && !(p().orchTr && p().orchTr.grip); k++) if (!T.f({ up: true, jump: true, right: dir > 0, left: dir < 0 })) return false; return !!(p().orchTr && p().orchTr.grip); };
   // climb to a cell (grip row y): wait while a critter on his face is close in the way
   T.climb = (x, y) => {
     for (let k = 0; k < 120 * 30; k++) {
@@ -424,7 +424,7 @@ const BOT_PAGE = () => {
   T.push = dir => { for (let k = 0; k < 0.6 * 120; k++) if (!T.f({ right: dir > 0, left: dir < 0 })) return false; return true; };
   T.press = k => T.f({ [k]: true, [k + 'Pressed']: true });
   T.door = () => { if (!T.f({ up: true, upPressed: true })) return false; for (let k = 0; k < 600 && (S().fade.a > 0.05 || p().state !== 'play'); k++) sim(1 / 120); T.scene = S(); return true; };
-  T.gate = () => { for (let k = 0; k < 120 * 20 && !T.finished(); k++) { const gt = S().entities.find(e => e.constructor.name === 'Gate' && !e.secret && !e.remove); const tx = gt ? gt.cx : p().cx + 64; if (!T.f({ right: p().cx < tx - 4, left: p().cx > tx + 4, jump: !!(p().onGround && p().hitWall), jumpPressed: !!(p().onGround && p().hitWall) })) return false; } return T.finished() || 'stuck'; };
+  T.gate = () => { for (let k = 0; k < 120 * 20 && !T.finished(); k++) { const gt = S().entities.find(e => e.constructor.name === 'Gate' && !e.secret && !e.remove); const tx = gt ? gt.cx : p().cx + 64; if (p().onGround && p().hitWall) { if (!T.hop(p().cx < tx ? 1 : -1, false, 0.45)) return false; continue; } if (!T.f({ right: p().cx < tx - 4, left: p().cx > tx + 4 })) return false; } return T.finished() || 'stuck'; };
   T.finished = () => ['clear', 'tally', 'results'].includes(S().state);
   // a route: a list of steps [fn, ...args] and 'cp' markers; on a death the route goes back to the last 'cp'
   T.run = (id, route) => {
@@ -447,10 +447,10 @@ const BOT_PAGE = () => {
   };
 };
 const BOT_ROUTES = {
-  '28-1': [['walk', 19 * 32], ['grip', 1], ['climb', 31, 17], ['letGo', 1], 'cp', ['walk', 37 * 32], ['grip', 1], ['climb', 41, 14], ['push', 1], ['climb', 47, 14], ['climb', 54, 18], ['letGo', 1], 'cp',
+  '28-1': [['walk', 19 * 32], ['grip', 1], ['climb', 31, 17], ['letGo', 1], 'cp', ['walk', 37 * 32], ['grip', 1], ['climb', 41, 14], ['push', 1], ['climb', 47, 14], ['climb', 54, 18], ['hopTo', 56, 0.3], 'cp',
     ['walk', 59 * 32], ['grip', 1], ['climb', 62, 15], ['cross'], ['climb', 69, 15], ['cross'], ['climb', 73, 14], ['letGo', 1], 'cp',
-    ['walk', 91 * 32], ['grip', 1], ['climb', 91, 12], ['climb', 105, 12], ['letGo', 1], 'cp', ['walk', 145 * 32 + 16], ['grip', 1], ['climb', 149, 14], ['cross'], ['climb', 155, 12], ['push', 1], ['climb', 163, 12], ['climb', 170, 17], ['letGo', 1], 'cp',
-    ['walk', 188 * 32 + 16], ['grip', 1], ['climb', 191, 13], ['cross'], ['climb', 196, 11], ['push', 1], ['climb', 202, 11], ['climb', 203, 15], ['cross'], ['climb', 207, 15], ['climb', 207, 12], ['cross'], ['climb', 208, 13], ['push', 1], ['climb', 216, 13], ['climb', 222, 17], ['letGo', 1], 'cp', ['gate']],
+    ['walk', 91 * 32], ['grip', 1], ['climb', 91, 12], ['climb', 105, 12], ['letGo', 1], 'cp', ['walk', 145 * 32 + 16], ['grip', 1], ['climb', 147, 14], ['cross'], ['climb', 155, 12], ['push', 1], ['climb', 163, 12], ['climb', 170, 17], ['letGo', 1], 'cp',
+    ['walk', 187 * 32 + 16], ['grip', 1], ['climb', 190, 13], ['cross'], ['climb', 196, 11], ['push', 1], ['climb', 202, 11], ['climb', 203, 15], ['cross'], ['climb', 207, 15], ['climb', 207, 12], ['cross'], ['climb', 208, 13], ['push', 1], ['climb', 216, 13], ['climb', 222, 17], ['letGo', 1], 'cp', ['gate']],
   '28-2': [['walk', 19 * 32 + 16, { noHop: true }], ['press', 'action'], ['wait', 2.6], ['hopTo', 23, 0.45], ['walk', 36 * 32], 'cp',
     ['walk', 49 * 32 + 16, { noHop: true }], ['press', 'action'], ['wait', 2.4], ['hopTo', 54, 0.4], ['walk', 54 * 32 + 16, { noHop: true }], ['press', 'action'], ['wait', 2.4], ['hopTo', 59, 0.4], ['walk', 66 * 32], 'cp', ['walk', 92 * 32],
     ['walk', 110 * 32 + 16, { noHop: true }], ['press', 'action'], ['wait', 2.4], ['hopTo', 114, 0.45], ['walk', 114 * 32 + 16, { noHop: true }], ['press', 'action'], ['wait', 2.4], ['hopTo', 117, 0.45], ['walk', 126 * 32], 'cp',
