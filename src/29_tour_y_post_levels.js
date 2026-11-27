@@ -7,6 +7,7 @@
    27-3 BLOTTER BAY (blotter)         a pad drinks a bead, then a gap in the surf; the last needs two and a slap
    27-4 FORWARDING FOLD (fold)        hold THROW and walk back: the far bank folds over; the last needs you on it
    27-5 MISMEASURED COAST (scale)     walk a ruler to grow or shrink the harbour round a pin; the last pin has two
+   27-6 RETURN TO SENDER (lair)       torn addresses cancelled whole, then the Postmaster's Thumb
    ============================================================ */
 (function () {
 const C = Tour.countries.post;
@@ -272,7 +273,45 @@ const L5 = { n: 5, name: 'Mismeasured Coast', mapLabel: 'Mismeasured Coast', arc
     { id: 'chutes', gen: 'room', role: 'secret', theme: 'post_room_chutes', stamp: 'postChutesOld', post: { room: true } }
   ] };
 
-Tour.amend('post', { stamps, levels: [L1, L2, L3, L4, L5] });
+/* ---------------- 27-6 Return to Sender (the boss) ---------------- */
+// the sorting office: torn addresses barred by stacks of undelivered letters. Stand on an address's crease plate and
+// its halves slide together under the incoming postmark (a dotted ring settles first): the whole address is
+// cancelled and the stack lifts. A corner curls out of a pillar by the sorting desk's door (the collector's den, before
+// the boss); then the desk itself, and the Postmaster's Thumb.
+const returnRows = (() => {
+  const W = 100, H = 22, Gr = grid(W, H, '.');
+  ground(Gr, 0, W - 1, 19); put(Gr, 3, 18, '@'); put(Gr, 5, 18, 'n'); put(Gr, 7, 15, '?'); put(Gr, 10, 15, '*'); put(Gr, 11, 18, '1');
+  put(Gr, 30, 18, 'c'); put(Gr, 33, 18, 'N'); put(Gr, 35, 15, '?'); put(Gr, 38, 18, 'q'); put(Gr, 43, 18, 'e'); put(Gr, 48, 18, 'q'); put(Gr, 40, 18, '2'); put(Gr, 46, 12, 'R'); put(Gr, 44, 8, 'M');
+  put(Gr, 63, 18, 'c'); put(Gr, 66, 18, 'i');
+  // the collector's den: a fake wall in a pillar (a corner curls out of it), a passage, the door
+  fillG(Gr, 70, 10, 76, 18, 'H'); fillG(Gr, 70, 17, 70, 18, 'F'); fillG(Gr, 71, 17, 75, 18, '.'); put(Gr, 69, 17, 'x'); put(Gr, 72, 17, 'A'); put(Gr, 75, 18, 'D');
+  put(Gr, 80, 18, 'a'); put(Gr, 84, 18, 'k'); put(Gr, 90, 18, 'D'); put(Gr, 93, 18, 'l');
+  fillG(Gr, W - 1, 0, W - 1, 18, '#');
+  return rowsOf(Gr);
+})();
+const ADDR = o => ['piece', 'post.address', o];
+stamps.postReturn = { floor: 19, rows: returnRows, gold: { '*': 'must', A: 'hidden', R: 'risky' }, items: ['power', 'power'], doors: [{ to: 'den@in', look: 'postSlit' }, { to: 'desk@in', look: 'postFlap' }], legend: Object.assign({}, COMMON, {
+  n: SIGN('A TORN ADDRESS! STAND ON ITS CREASE PLATE: THE HALVES SLIDE TOGETHER. WHEN THE POSTMARK LANDS ON THE WHOLE ADDRESS, THE LETTERS LIFT'),
+  N: SIGN('THE DOTTED RING SHOWS WHERE THE POSTMARK LANDS. DON\'T STAND UNDER IT'),
+  '1': ADDR({ halves: [[12, 13], [20, 21]], y: 19, plate: [23, 19], drop: 16, barrier: [26, 11, 26, 18], period: 4.2, g: 0 }),
+  '2': ADDR({ halves: [[41, 42], [51, 52]], y: 19, plate: [54, 19], drop: 46, barrier: [57, 10, 57, 18], period: 3.8, phase: 1.5, g: 1 }),
+  x: ['decor', 'postTellWall'], a: ['anchor', 'denOut']
+}) };
+stamps.postDenOld = oldRoom('return@denOut', ['oneup'], 'postSlit');
+const L6 = { n: 6, name: 'Return to Sender', mapLabel: 'Return to Sender', arch: 'lair', theme: 'post_office', boss: 'post_thumb',
+  gimmick: 'The Postmaster\'s Thumb cancels everything on the sorting desk. Don\'t stomp it: get it to cancel a torn address, whole, and each completed address posts it back along its own arm',
+  hint: 'Stand on the first address while the ring settles, then step out. Jump the ink stripe from the crease plate. Hold the crease for the first mark, step off for the second. A corner curls out of a pillar by the desk\'s door...',
+  postcard: 'BRADY! You sent the thumb back up its own arm. It wrote "return to sender" on itself. It was very sorry. I forgave it. It has lovely penmanship. ♥ C',
+  enemies: [['postCrab', 1], ['postGull', 1]],
+  mapCell: [5, 0], mapFrom: 4,
+  exits: { main: { to: null } },
+  areas: [
+    { id: 'return', gen: 'room', theme: 'post_office', stamp: 'postReturn', post: { address: true }, bottomKill: true },
+    { id: 'den', gen: 'room', role: 'secret', theme: 'post_room_den', stamp: 'postDenOld', post: { room: true } },
+    { id: 'desk', gen: 'arena', role: 'arena', layout: 'desk', arenaW: 30, H: 18, roof: false, theme: 'post_arena', post: { boss: true } }
+  ] };
+
+Tour.amend('post', { stamps, levels: [L1, L2, L3, L4, L5, L6] });
 
 /* ---------------- the land's map: the postcard's printed harbour ---------------- */
 if (typeof TOUR_OW_MAPS !== 'undefined') TOUR_OW_MAPS.post = {

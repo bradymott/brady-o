@@ -27,14 +27,14 @@ const brain = {
     const x0 = b.arenaX0, x1 = b.arenaX1, W = x1 - x0;
     return (b.geoC = { a1: x0 + W * 0.2, a1w: 2.6 * TS, join: x0 + W * 0.52, plate: x0 + W * 0.52 + 4 * TS, rest: 4.5 * TS, x0, x1 });
   },
-  wake(b) { b.phase = 1; b.hoverY = b.floorY - b.h - 5 * TS; b.y = b.hoverY; b.joinK = 0; b.linger = 0; b.a1Torn = 1; say(b, 'EVERYTHING ON THIS DESK GETS CANCELLED. EVERYTHING.'); b.go('hover'); },
+  wake(b) { b.phase = 1; b.hoverY = b.floorY - b.h - 3 * TS; b.y = b.hoverY; b.joinK = 0; b.linger = 0; b.a1Torn = 1; say(b, 'EVERYTHING ON THIS DESK GETS CANCELLED. EVERYTHING.'); b.go('hover'); },
   phase(b, n) {
     const g = b.g;
     if (n === 2) { g.bannerText = 'THE INKED EDGE!'; g.bannerT = 2; say(b, 'ADDRESS TWO IS IN TWO PIECES. HOW UNTIDY.'); }
     if (n === 3) { g.bannerText = 'A DOUBLE IMPRESSION!'; g.bannerT = 2; say(b, 'TWICE AS CANCELLED. HOLD STILL.'); }
     b.go('rise');
   },
-  hurt(b) { b.go('rise'); },
+  hurt(b) { if (b.act !== 'roll') b.go('rise'); },
   hit(b, kind) { return 'bounce'; },
   touch(b, p) { return true; },
   lastHit(b) { b.go('mailed'); b.state = 'fight'; return true; },
@@ -85,11 +85,13 @@ const brain = {
       // phase 2's tell: the thumb goes to the end of the desk farthest from the plate and tilts; its inked edge glows
       if (b.first) { b.side = G.x0 + 1.5 * TS; say(b, 'A NICE STRAIGHT LINE OF INK...'); }
       b.x = lerp(b.x, b.side - b.w / 2 + b.w / 2, Math.min(1, dt * 5)); b.y = lerp(b.y, b.floorY - b.h - 0.5 * TS, Math.min(1, dt * 5));
-      if (b.at > 1.4) { b.go('roll'); b.sx = b.cx + b.w / 2; b.passed = false; tourFire(g, b.sx, b.floorY - 22, { vx: 4.6 * TS, w: 34, h: 22, ground: true, life: (G.x1 - b.sx) / (4.6 * TS), col: '#16141e', art: stripeArt }); Sound.play('spring', { pitch: 0.5, vol: 0.5 }); }
+      if (b.at > 1.4) { b.go('roll'); b.sx = b.cx + b.w / 2; b.passed = false; b.stripeX = b.sx; Sound.play('spring', { pitch: 0.5, vol: 0.5 }); }
     } else if (A === 'roll') {
-      const x = b.sx + 4.6 * TS * b.at;
+      const x = b.sx + 4.6 * TS * b.at; b.stripeX = x;
+      // the stripe: a low rolling wave of ink along the desk (jump it)
+      if (p && !p.dead && Math.abs(p.cx - x) < 20 && p.y + p.h > b.floorY - 20) p.hurt(b);
       if (!b.passed && x >= G.join) { b.passed = true; if (this.together(b)) this.cancel(b, 'ADDRESS TWO, JOINED AND INKED! POSTED BACK'); else say(b, 'HA! STILL IN TWO PIECES.', '#c8d8ff'); }
-      if (x > G.x1) b.go('rise');
+      if (x > G.x1) { b.stripeX = null; b.go('rise'); }
     } else if (A === 'rings') {
       // phase 3's tell: two pale half-rings: the first over the join, the second over the crease plate
       if (b.first) { say(b, 'ONE... AND TWO.'); b.tx = G.join; b.tx2 = G.plate; b.hitDone = false; b.hit2 = false; }
@@ -140,22 +142,23 @@ TourHooks.on('afterEntities', (play, ctx) => {
   ctx.save();
   // the first torn address: a card with a torn corner, pulsing while it can be cancelled
   const k = 0.5 + 0.5 * Math.sin(t * 5);
-  const card = (cx, w, tag, glow) => { ctx.fillStyle = WHITE; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(cx - w / 2, fy - 14, w, 14); ctx.strokeRect(cx - w / 2, fy - 14, w, 14); ctx.fillStyle = COBALT; for (let q = 0; q < 3; q++) ctx.fillRect(cx - w / 2 + 8, fy - 11 + q * 3.5, w - 16 - q * 10, 1.8); if (glow) { ctx.strokeStyle = `rgba(255,224,138,${0.4 + 0.5 * k})`; ctx.lineWidth = 3; ctx.strokeRect(cx - w / 2 - 4, fy - 18, w + 8, 20); } if (tag) { ctx.fillStyle = CORAL; ctx.font = '8px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText(tag, cx, fy - 20); } };
+  const card = (cx, w, tag, glow) => { ctx.fillStyle = WHITE; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(cx - w / 2, fy - 14, w, 14); ctx.strokeRect(cx - w / 2, fy - 14, w, 14); ctx.fillStyle = COBALT; for (let q = 0; q < 3; q++) ctx.fillRect(cx - w / 2 + 8, fy - 11 + q * 3.5, w - 16 - q * 10, 1.8); if (glow) { ctx.strokeStyle = `rgba(255,224,138,${0.4 + 0.5 * k})`; ctx.lineWidth = 3; ctx.strokeRect(cx - w / 2 - 4, fy - 18, w + 8, 20); } if (tag) { ctx.fillStyle = CORAL; ctx.font = '8px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText(tag, cx, fy - 30); } };
   if (b.phase === 1) card(G.a1, G.a1w, 'ADDRESS 1', b.a1Torn >= 1);
   // the second address's halves sliding together over the join, and the crease plate (big, pulsing)
   if (b.phase >= 2) {
     const j = b.joinK, w = 1.4 * TS, l = lerp(G.join - G.rest - w, G.join - w, j), r = lerp(G.join + G.rest, G.join, j);
     card(l + w / 2, w, null, false); card(r + w / 2, w, null, false);
     if (j > 0.95) { ctx.strokeStyle = `rgba(255,224,138,${0.5 + 0.5 * k})`; ctx.lineWidth = 3; ctx.strokeRect(G.join - w - 4, fy - 18, 2 * w + 8, 20); }
-    ctx.fillStyle = CORAL; ctx.font = '8px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('ADDRESS 2', G.join, fy - 22);
+    ctx.fillStyle = CORAL; ctx.font = '8px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('ADDRESS 2', G.join, fy - 38);
     const pk = 0.5 + 0.5 * Math.sin(t * 6);
     ctx.fillStyle = j > 0.5 ? '#ffe08a' : CORAL; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(G.plate, fy - 2, 22 + pk * 3, 6 + pk, 0, 0, TAU); ctx.fill(); ctx.stroke();
     ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(G.plate, fy - 30); ctx.lineTo(G.plate, fy + 4); ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle = WHITE; ctx.font = '7px ' + FONT_DISPLAY; ctx.fillText('CREASE', G.plate, fy - 34);
+    ctx.fillStyle = WHITE; ctx.font = '7px ' + FONT_DISPLAY; ctx.fillText('CREASE', G.plate, fy - 40);
   }
   // the dotted ring (phase 1), the half-rings (phase 3)
   if (A === 'ring') { const q = Math.min(1, b.at / 1.25), settled = b.at >= 0.65; ctx.strokeStyle = settled ? `rgba(255,80,60,${0.6 + 0.4 * k})` : 'rgba(22,20,30,0.6)'; ctx.lineWidth = 3; ctx.setLineDash([6, 5]); ctx.beginPath(); ctx.ellipse(b.tx, fy - 3, 70 - 30 * q, 11 - 4 * q, 0, 0, TAU); ctx.stroke(); ctx.setLineDash([]); }
   if (A === 'rings' || (A === 'double' && !b.hit2)) { for (const [xx, n] of [[b.tx, 1], [b.tx2, 2]]) { if (A === 'double' && n === 1 && b.hitDone) continue; ctx.strokeStyle = n === 1 ? 'rgba(255,240,200,0.8)' : `rgba(255,120,90,${0.5 + 0.5 * k})`; ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(xx, fy - 3, 40, 9, 0, Math.PI, 0); ctx.stroke(); ctx.fillStyle = WHITE; ctx.font = '10px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText(String(n), xx, fy - 18); } }
+  if (A === 'roll' && b.stripeX != null) stripeArt(ctx, { x: b.stripeX - 17, y: fy - 22, w: 34, h: 22 });
   for (const q of b.imp || []) PA.postmark(ctx, q.x - 14, fy - 10, 16, BLACK, Math.max(0, 1 - q.t / 1.6));
   if (b.line) {
     const L = b.line, a = Math.min(1, (2.8 - L.t) * 3); if (a <= 0) b.line = null;
