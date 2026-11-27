@@ -124,7 +124,7 @@ TourHooks.on('afterEntities', (play, ctx) => {
     const q = L[i];
     const w = ctx.measureText(q.text).width + 18 * k, h = 22 * k;
     // a boss line sits in a fixed spot under the boss bar; the others rise from where they were said
-    let x = q.who === 'boss' ? play.camX + Game.viewW / 2 : clamp(q.x, Math.min(x0 + w / 2, play.camX + Game.viewW / 2), Math.max(x1 - w / 2, play.camX + Game.viewW / 2)), y = q.who === 'boss' ? top + h / 2 + 22 * k : clamp(q.y - q.t * 22, top + h / 2, Math.max(top + h / 2, bot - h / 2));
+    let x = q.who === 'boss' ? play.camX + Game.viewW / 2 : clamp(q.x, Math.min(x0 + w / 2, play.camX + Game.viewW / 2), Math.max(x1 - w / 2, play.camX + Game.viewW / 2)), y = q.who === 'boss' ? top + h / 2 + 22 * k + (Game.viewH > Game.viewW ? 118 * k : 0) : clamp(q.y - q.t * 22, top + h / 2, Math.max(top + h / 2, bot - h / 2));
     for (const r of placed) if (Math.abs(r.x - x) < (r.w + w) / 2 && Math.abs(r.y - y) < h) y = r.y + h + 3 * k;
     placed.push({ x, y, w });
     const a = q.t > q.life - 0.4 ? (q.life - q.t) / 0.4 : Math.min(1, q.t * 8);
