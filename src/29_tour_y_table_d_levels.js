@@ -227,8 +227,59 @@ const L3 = { n: 3, name: 'Tablecloth Service', mapLabel: 'Tablecloth', arch: 'cl
     { id: 'stars', gen: 'room', role: 'secret', theme: 'table_room_sky', stamp: 'tabStars', room: 'tabStar', tabStar: { exit: 'service@b53Out' } }
   ] };
 
+/* ---------------- 36-4 Soup Without the Spoon ----------------
+   The banks' tops are row 12, the soup from row 13 down. A crouton raft: stand on its left crust and it paddles right,
+   on its right crust and it paddles left, in the middle and it drifts to a stop. ① the teach: a bowl of thin broth (a
+   fall is a swim back to the bank). ② the test: a long bowl of hot soup with bubbles that swell, then pop (ride past
+   between pops); a sugar ledge over its middle that only the raft passes under (steam, a hatch: WRONG END OF THE
+   TELESCOPE, whose hatch lets Brady out past the next bowl); a bowl of two rafts with a crust island between them.
+   ③ the twist: in the last bowl a dollop of cream sticks to the left crust, the one that paddles right: hop onto the
+   middle and the crouton flips over, cream side round, clean side into the stroke. */
+const soup = (() => {
+  const G = mk(176, 18), S = 13;
+  const bank = (x0, x1, top) => G.ground(x0, x1, top == null ? 12 : top);
+  const bowl = (x0, x1, ch) => G.fill(x0, S, x1, 17, ch || 'L');
+  bank(0, 9); G.put(2, 11, '@'); G.put(4, 11, 'n'); G.put(6, 8, '?');
+  G.fill(10, S, 25, 15, 'W'); G.ground(10, 25, 16); G.put(10, 12, '1');       // R1 in the broth (a shallow bowl)
+  bank(26, 35); G.fill(29, 9, 31, 9, 'B'); G.put(30, 6, '*'); G.put(33, 11, 'x');
+  bowl(36, 57); G.put(36, 12, '2'); G.put(44, 13, '5'); G.put(52, 13, '6');  // R2, two bubbles
+  G.fill(45, 9, 49, 9, 'B'); G.put(46, 8, 'D'); G.put(47, 8, 'e'); G.put(48, 8, 'A'); G.coins(45, 49, 7);   // the ledge over the soup (the secret)
+  bank(58, 66); G.put(62, 11, 'c'); G.put(64, 11, 'f');
+  bowl(67, 95); G.put(67, 12, '3'); G.fill(80, 12, 82, 17, '#'); G.put(81, 11, 'r'); G.put(83, 12, '4'); G.put(76, 13, '7'); G.put(90, 13, '8'); G.put(81, 7, 'R');
+  bank(96, 110, 9); G.put(100, 8, 'c'); G.put(98, 8, 'Z'); G.put(104, 5, '?'); G.put(106, 8, 'k'); G.put(108, 8, 'O');
+  bowl(111, 144); G.put(111, 12, '9'); G.put(120, 13, '5'); G.put(130, 13, '6'); G.put(139, 13, '7'); G.put(128, 8, 'P');
+  bank(145, 175, 10); G.put(150, 9, 'm'); G.put(158, 9, 'j'); G.put(166, 9, 'G'); G.put(171, 9, 'u');
+  G.fill(175, 0, 175, 17, 'H');
+  return G.rows();
+})();
+const RF = o => ['piece', 'table.raft', o];
+const BUB = (period, phase) => ['piece', 'table.bubble', { period, phase }];
+stamps.tabSoup = {
+  floor: 13, rows: soup, items: ['power', 'power'], gold: { '*': 'must', P: 'hidden', R: 'risky' }, doors: [{ to: 'scope@in', look: 'tabHatch' }],
+  legend: Object.assign({}, COMMON, {
+    n: SIGN('A CROUTON RAFT! STAND ON ITS LEFT CRUST AND IT PADDLES RIGHT, ON ITS RIGHT CRUST AND IT PADDLES LEFT. THE MIDDLE STOPS IT'),
+    O: SIGN('CREAM ON A CRUST AND THAT CRUST WON\'T PADDLE. HOP ONTO THE MIDDLE AND THE CROUTON FLIPS OVER'),
+    '1': RF({ w: 3, span: 13 }), '2': RF({ w: 3, span: 19 }), '3': RF({ w: 3, span: 10 }), '4': RF({ w: 3, span: 10 }), '9': RF({ w: 3, span: 31, cream: -1 }),
+    '5': BUB(3.4, 0), '6': BUB(3.4, 1.7), '7': BUB(3.0, 0.8), '8': BUB(3.0, 2.2),
+    e: ['piece', 'table.steam', {}], A: ['anchor', 'b54Back'], Z: ['anchor', 'b54Out'],
+    f: ['enemy', 'tabPepper'], k: ['enemy', 'tabCrumb'], m: ['enemy', 'tabButter'], r: ['enemy', 'tabRest']
+  })
+};
+stamps.tabScope = roomStamp('bowls@b54Back', ['oneup']);
+const L4 = { n: 4, name: 'Soup Without the Spoon', mapLabel: 'Soup', arch: 'crouton', theme: 'table_soup',
+  gimmick: 'Crouton rafts in thick soup: walk to one crust and the crouton paddles the other way. A dollop of cream stops a crust paddling: flip the crouton over',
+  hint: 'Left crust goes right, right crust goes left, the middle stops. Ride past the bubbles between pops. Cream on a crust? Hop onto the middle to turn it over',
+  postcard: 'Brady, I ordered the soup and they brought me a crouton with a little oar. I let it row me home. ♥ C',
+  enemies: [['tabPepper', 1], ['tabRest', 1], ['tabCrumb', 1], ['tabButter', 1]],
+  mapCell: [3, 1], mapFrom: 2,
+  exits: { main: { to: '36-5' } },
+  areas: [
+    { id: 'bowls', gen: 'room', theme: 'table_soup', stamp: 'tabSoup', bottomKill: true, waterLook: 'broth' },
+    { id: 'scope', gen: 'room', role: 'secret', theme: 'table_room_scope', stamp: 'tabScope', room: 'tabScope', tabScope: { exit: 'bowls@b54Out' } }
+  ] };
 
-Tour.amend('table', { stamps, levels: [L1, L2, L3] });
+
+Tour.amend('table', { stamps, levels: [L1, L2, L3, L4] });
 Object.assign(TourLandscape.ARCH_LABEL, { china: 'CHINA', napkin: 'NAPKIN', cloth: 'CLOTH', crouton: 'CROUTON' });
 Tour.tableLevels = { mk, stamps, roomStamp, SIGN, COMMON };
 })();

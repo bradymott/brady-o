@@ -132,7 +132,7 @@ async function session(viewport, fn) {
           if (landT != null) { inp.left = inp.right = false; inp.jump = inp.jumpPressed = false; inp.down = false; }
           // the player's own drop-through (11_player.js): down + jump on a one-way floor
           if (inp.down && inp.jumpPressed && b.onGround && b.groundTile === window.BRADY.T.SEMI) { b.dropT = 0.22; b.y += 2; b.onGround = false; inp.jumpPressed = false; }
-          window.BRADY_TABLE.phys(b, inp, A, dt, null, {});
+          window.BRADY_TABLE.phys(b, inp, A, dt, S().platforms, {}); if (b.ride && b.onGround) b.groundTy = Math.round((b.y + b.h) / 32);
           if (AP.after) AP.after(b, inp, A, dt);
           t += dt;
           if (b.y > A.H * 32 + 20 || window.BRADY_TABLE.lavaContact(b, A) || window.BRADY_TABLE.spikeContact(b, A)) return null;
@@ -260,6 +260,25 @@ const tableInit = () => {
       sim(1 / 120, {}); sim(0.4);
       return { held, state: cl.state, d: +(Math.abs(p.cx - x0) / 32).toFixed(1) };
     },
+    // ride a crouton: stand on the crust that paddles toward tile x (left crust for right), hop the bubbles' pops
+    paddle(rf, toX, maxT) {
+      const p = P(), g = S(); let t = 0;
+      while (t < (maxT || 14)) {
+        if (p.dead || g.state !== 'play') return { dead: true };
+        const goal = toX * 32, dir = rf.x + rf.w / 2 < goal - 8 ? 1 : rf.x + rf.w / 2 > goal + 8 ? -1 : 0;
+        if (!dir) break;
+        const want = dir > 0 ? rf.x + rf.w * 0.17 : rf.x + rf.w * 0.83;
+        const inp = { left: p.cx > want + 6, right: p.cx < want - 6 };
+        // a bubble about to pop where the raft is going: stand still in the middle and wait it out
+        const danger = ents('tabBubble').some(b => b.st() !== 'rest' && Math.abs(b.cx - (rf.x + rf.w / 2 + dir * 40)) < 60);
+        if (danger) { inp.left = p.cx > rf.x + rf.w / 2 + 6; inp.right = p.cx < rf.x + rf.w / 2 - 6; }
+        sim(1 / 60, inp); t += 1 / 60;
+      }
+      sim(0.3);
+      return { ok: !p.dead, x: +((rf.x + rf.w / 2) / 32).toFixed(1), t: +t.toFixed(1), cream: rf.cream };
+    },
+    // walk on a raft until Brady's centre is at fraction k of it (then stand still)
+    onRaftAt(rf, k) { const p = P(); for (let i = 0; i < 160; i++) { const kk = (p.cx - rf.x) / rf.w; if (Math.abs(kk - k) < 0.08 && Math.abs(p.vx) < 20) break; if (Math.abs(kk - k) >= 0.08) sim(1 / 60, { left: kk > k, right: kk < k }); sim(1 / 30); } sim(0.2); return +((P().cx - rf.x) / rf.w).toFixed(2); },
     // a hop on the spot (to land on a crease)
     hop() { sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.12, { jump: true }); for (let k = 0; k < 120 && !P().onGround; k++) sim(1 / 60); sim(0.15); },
     // walk to tile x on this floor and hop onto it
@@ -426,6 +445,52 @@ LEVELS.cloth = async (page, shot, run, pano) => {
   });
 };
 
+// ---------------- 36-4 Soup Without the Spoon ----------------
+LEVELS.soup = async (page, shot, run, pano) => {
+  await run('soup', async () => {
+    await page.evaluate(() => { fresh(); play('36-4'); place(6, 11); sim(0.6); freeze(); });
+    await shot('40-36-4-start.png');
+    const rafts = () => ents('tabRaft').sort((a, b) => a.x0 - b.x0);
+    const a = await page.evaluate(() => {
+      thaw(); play('36-4'); place(6, 11); sim(0.3); const R = ents('tabRaft').sort((a, b) => a.x0 - b.x0);
+      const r0 = AP.go([11, 12]); const onRaft = P().ride === R[0];
+      // the left crust paddles it right
+      const x0 = R[0].x; TB.onRaftAt(R[0], 0.2); sim(1.0); const moved = R[0].x - x0;
+      const pd = TB.paddle(R[0], 24); const r1 = AP.route([[28, 12], [34, 12]]);
+      return { onRaft, moved: Math.round(moved), pd, ok: r0.ok && r1.ok, r1 };
+    });
+    check('36-4: played: onto the crouton; on its left crust it paddles right across the broth to the next bank', a.onRaft && a.moved > 20 && a.ok, a);
+    await page.evaluate(() => { play('36-4'); place(12, 11); sim(0.2); freeze(); }); await shot('41-36-4-paddling.png');
+    const b = await page.evaluate(() => {
+      thaw(); play('36-4'); place(34, 11); sim(0.3); const R = ents('tabRaft').sort((a, b) => a.x0 - b.x0);
+      const r0 = AP.go([37, 12]); const pd = TB.paddle(R[1], 56); const r1 = AP.route([[59, 12], [62, 12]]);
+      return { pd, ok: r0.ok && pd.ok && r1.ok, r0, r1 };
+    });
+    check('36-4: played: the long bowl of hot soup, riding past the bubbles between pops', b.ok, b);
+    await page.evaluate(() => { play('36-4'); place(36, 11); sim(0.2); AP.go([37, 12]); const R = ents('tabRaft').sort((a, b) => a.x0 - b.x0)[1]; TB.paddle(R, 41); const b = ents('tabBubble').sort((a, b) => a.x - b.x)[0]; for (let k = 0; k < 600 && b.st() !== 'swell'; k++) sim(1 / 120); sim(0.5); freeze(); }); await shot('42-36-4-bubble.png');
+    const c = await page.evaluate(() => {
+      thaw(); play('36-4'); place(62, 11); sim(0.3); const R = ents('tabRaft').sort((a, b) => a.x0 - b.x0);
+      const r0 = AP.go([68, 12]); const p1 = TB.paddle(R[2], 78); const r1 = AP.go([81, 12]); const r2 = AP.go([84, 12]); const p2 = TB.paddle(R[3], 93); const r3 = AP.route([[97, 9], [104, 9]]);
+      return { ok: r0.ok && p1.ok && r1.ok && r2.ok && p2.ok && r3.ok, r0, p1, r1, r2, p2, r3 };
+    });
+    check('36-4: played: two rafts with a crust island between them, up the high bank', c.ok, c);
+    // the twist: the cream on the left crust: it will not paddle right until Brady hops onto the middle and flips it
+    const d = await page.evaluate(() => {
+      play('36-4'); place(106, 8); sim(0.3); const R = ents('tabRaft').sort((a, b) => a.x0 - b.x0)[4]; const r0 = AP.go([110, 9]); if (!r0.ok) return { r0 };
+      sim(0.4, { right: true }); sim(1.6); const p = P(); const on = p.ride === R;
+      // on the creamy left crust: it just spins
+      TB.onRaftAt(R, 0.18); const x0 = R.x; sim(1.2); const stuck = Math.abs(R.x - x0) < 8 && R.cream === -1;
+      // stand in the middle and hop: it flips
+      TB.onRaftAt(R, 0.5); TB.hop(); const flipped = R.cream === 1;
+      const pd = TB.paddle(R, 142); const r1 = AP.route([[147, 10], [160, 10]]); sim(3, { right: true });
+      return { on, stuck, flipped, pd, r1: r1.ok, state: S().state, key: S().exitKey };
+    });
+    check('36-4: played: the cream crust will not paddle; a hop onto the middle flips the crouton; across to the gate', d.on && d.stuck && d.flipped && d.pd.ok && d.r1 && d.key === 'main', d);
+    await page.evaluate(() => { play('36-4'); place(112, 11); sim(0.4); freeze(); }); await shot('43-36-4-cream-crouton.png');
+    await page.evaluate(() => { thaw(); play('36-4'); sim(0.3); }); await pano('49-36-4-panorama.png', 0.35);
+  });
+};
+
 // ---------------- the hidden entrance: Spain 6-1, the café after the third plaza ----------------
 LEVELS.entry = async (page, shot, run) => {
   await run('entry', async () => {
@@ -456,6 +521,9 @@ LEVELS.entry = async (page, shot, run) => {
     await page.evaluate(() => { sim(1.2); freeze(); }); await shot('02-entrance-cleared.png');
   });
 };
+
+
+
 
 
 

@@ -34,6 +34,9 @@ const mod = (a, n) => ((a % n) + n) % n;
 
 /* ---------------- the `tab` area system and checker-only lifts ---------------- */
 if (TourBuild.SYSTEMS.indexOf('tab') < 0) TourBuild.SYSTEMS.push('tab');
+// (36-4's first bowl is a thin warm broth: water you can swim out of, drawn as broth)
+if (TourBuild.SYSTEMS.indexOf('waterLook') < 0) TourBuild.SYSTEMS.push('waterLook');
+if (typeof LIQUIDS !== 'undefined') LIQUIDS.broth = ['#ffd8a0', '#e8b070', '#b8783a', 'rgba(255,240,210,0.3)', null, 'rgba(255,250,235,0.6)'];
 // a zone with tabVal is a lift only the level checker feels (it stands for a napkin rising under Brady); the game
 // switches it off when the area loads (the real thing is the napkin)
 TourHooks.on('areaLoaded', (play, A) => { for (const z of A.zones || []) if (z.tabVal) z.off = true; });
@@ -362,14 +365,15 @@ class TabRaft extends Ent {
     const p = this.g.player, on = p && !p.dead && p.ride === this && p.onGround;
     let want = 0;
     if (on) {
-      const k = (p.cx - this.x) / this.w, side = k < 0.36 ? -1 : k > 0.64 ? 1 : 0;
+      const k = (p.cx - this.x) / this.w, side = k < 0.3 ? -1 : k > 0.7 ? 1 : 0;
       // the left crust paddles it right, the right crust paddles it left; a creamy crust just spins in the soup
       if (side && side === this.cream) { this.spin = 1; if (!this.told) { this.told = true; this.g.parts.text(this.cx, this.y - 30, 'SPLOSH! THE CREAM SIDE WON\'T PADDLE', '#fff4e0'); } }
       else if (side) want = -side * this.sp;
-      // landing in the middle from a jump turns the crouton over (the cream goes round)
-      if (!this.wasOn && side === 0 && this.pvy > 2 * TS && this.cream) { this.cream = -this.cream; this.flipT = 0; this.told = false; TourKit.sfx('flip', 'select', { vol: 0.5, pitch: 0.7 }); this.g.parts.text(this.cx, this.y - 24, 'FLIP!', '#ffd84a'); }
+      // a hop off its own middle and back down onto it turns the crouton over (the cream goes round); arriving from
+      // a bank does not
+      if (!this.wasOn && side === 0 && this.pvy > 2 * TS && this.cream && this.t - (this.lastOn || -9) < 1.4) { this.cream = -this.cream; this.flipT = 0; this.told = false; TourKit.sfx('flip', 'select', { vol: 0.5, pitch: 0.7 }); this.g.parts.text(this.cx, this.y - 24, 'FLIP!', '#ffd84a'); }
     }
-    this.wasOn = on; if (!on && p) this.pvy = p.vy;
+    this.wasOn = on; if (!on && p) this.pvy = p.vy; if (on) this.lastOn = this.t;
     this.vx = approach(this.vx, want, (want ? 6 : 3) * TS * dt);
     let nx = this.x + this.vx * dt;
     if (nx < this.x0) { nx = this.x0; this.vx = 0; } if (nx > this.x1) { nx = this.x1; this.vx = 0; }
@@ -399,6 +403,22 @@ class TabRaft extends Ent {
       ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.font = '11px ' + FONT_DISPLAY; ctx.textAlign = 'center';
       if (this.cream !== -1) ctx.fillText('▶', x + 8, y - 4); if (this.cream !== 1) ctx.fillText('◀', x + w - 8, y - 4);
     }
+    ctx.restore();
+  }
+}
+
+// a hot bubble in the soup: it swells (0.9 s, the tell), then pops a splash of hot soup two and a half tiles high
+class TabBubble extends Ent {
+  constructor(g, s) { super(g, s, 2 * TS, 3 * TS); this.x = s.x - TS / 2; this.y = s.y - 3 * TS; this.friendly = true; this.period = s.period || 3.4; this.ph = s.phase || 0; this.back = true; }
+  k() { const P = this.period; return ((this.g.t + this.ph) % P + P) % P; }
+  st() { const k = this.k(), P = this.period; return k > P - 0.55 ? 'pop' : k > P - 1.45 ? 'swell' : 'rest'; }
+  update(dt) { this.t += dt; const s = this.st(); if (s === 'pop' && this.was !== 'pop' && this.g.onScreen(this, 60)) TourKit.sfx('blub', 'bump', { vol: 0.35, pitch: 0.5 }); this.was = s; }
+  touchPlayer(p) { if (this.st() === 'pop' && p.y + p.h > this.y + 10 && p.cx > this.x + 6 && p.cx < this.x + this.w - 6) p.hurt(this); }
+  draw(ctx) {
+    const s = this.st(), x = this.cx, bot = this.y + this.h, k = this.k(), P = this.period;
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 1.6;
+    if (s === 'swell') { const q = (k - (P - 1.45)) / 0.9; ctx.fillStyle = 'rgba(255,200,140,0.9)'; ctx.beginPath(); ctx.ellipse(x, bot - 2, 10 + q * 14, 4 + q * 12, 0, Math.PI, 0); ctx.fill(); ctx.stroke(); ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.beginPath(); ctx.arc(x - 5 - q * 4, bot - 6 - q * 6, 2 + q * 2, 0, TAU); ctx.fill(); }
+    if (s === 'pop') { const q = (k - (P - 0.55)) / 0.55; ctx.fillStyle = `rgba(255,170,90,${1 - q * 0.6})`; for (let j = 0; j < 7; j++) { const a = -Math.PI / 2 + (j - 3) * 0.32, r = 20 + q * 60; ctx.beginPath(); ctx.arc(x + Math.cos(a) * r * 0.5, bot - 4 + Math.sin(a) * r, 5 - q * 2, 0, TAU); ctx.fill(); } ctx.fillStyle = 'rgba(255,240,220,0.5)'; ctx.beginPath(); ctx.ellipse(x, bot - 40, 18, 40 * (1 - q * 0.5), 0, 0, TAU); ctx.fill(); }
     ctx.restore();
   }
 }
@@ -556,6 +576,8 @@ const P = {
     B.decor.push({ kind: 'tabBigGlass', x: (x + w / 2) * TS, y: (y1 + 1) * TS, w: w * TS, h: h * TS, seed: 0 });
     return st.x;
   },
+  // a hot bubble in the soup at the letter (the soup's top row): { period, phase }
+  bubble(st, o) { st.B.set(st.x, st.gy - 1, T.LAVA); st.B.spawn('tabBubble', st.x, st.gy - 1, { period: o.period, phase: o.phase }); return st.x; },
   // the land's tell: a wisp of steam rising out of a hidden way (decor at the letter)
   steam(st, o) { st.B.decorAt('tabSteam', st.x, st.gy, (st.x * 3) % 17); return st.x; }
 };
@@ -570,7 +592,7 @@ Decor.tabBigGlass = function (ctx, x, y, t, th, d) {
   ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(l + 2, y - 3); ctx.lineTo(l + w - 2, y - 3); ctx.stroke();
   ctx.restore();
 };
-Object.assign(ENTITY_TYPES, { tabPlate: TabPlate, tabNapkin: TabNapkin, tabCrease: TabCrease, tabCloth: TabCloth, tabRaft: TabRaft, tabGate: TabGate, tabBreadPlate: TabBreadPlate, tabHostess: TabHostess });
+Object.assign(ENTITY_TYPES, { tabBubble: TabBubble, tabPlate: TabPlate, tabNapkin: TabNapkin, tabCrease: TabCrease, tabCloth: TabCloth, tabRaft: TabRaft, tabGate: TabGate, tabBreadPlate: TabBreadPlate, tabHostess: TabHostess });
 Object.assign(Tour.tableKit, { TabPlate, TabNapkin, TabCrease, TabCloth, TabRaft, TabGate, TabBreadPlate, TabHostess, handCue, onMark, isTable, liftOut });
 try { if (typeof window !== 'undefined') window.BRADY_TABLE = { phys: (b, inp, A, dt, pl, o) => playerPhysicsFlip(b, inp, A, dt, pl, o), spikeContact: (b, A) => spikeContact(b, A), lavaContact: (b, A) => lavaContact(b, A), kit: Tour.tableKit }; } catch (e) { /* not in a browser */ }
 })();
