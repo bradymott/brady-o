@@ -210,7 +210,13 @@ function testRoom(id, lvl, k) {
   if (!NOGAME[kit.kind]) check(name + ': the game is won', R.won, { phase: R.phase });
   // the cage opens; every prize box gives its prize
   const cage = g.entities.find(e => e.constructor.name === 'TourRoomCage');
-  if (cage) { wait(g, 0.5); check(name + ': the prize cage opens', cage.tiles.every(([x, y]) => G.run('tileAt')(A, x, y) === T.EMPTY)); }
+  if (cage) {
+    wait(g, 0.5);
+    // like every entity the cage only runs inside the active window (the view and a few tiles past it): when the
+    // game was won far from it (a lamp at the other end of the room), it opens as Brady walks over for the prize
+    for (let t = 0; t < 10 * 120 && !cage.open && Math.abs(cage.cx - P(g).cx) > 6 * TS; t++) frame(g, cage.cx > P(g).cx ? { right: true } : { left: true });
+    check(name + ': the prize cage opens', cage.tiles.every(([x, y]) => G.run('tileAt')(A, x, y) === T.EMPTY));
+  }
   let boxes = 0, gave = 0;
   for (const key in A.contents) {
     const [x, y] = key.split(',').map(Number), t = G.run('tileAt')(A, x, y);
