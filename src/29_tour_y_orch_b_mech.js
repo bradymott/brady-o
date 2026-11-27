@@ -201,8 +201,9 @@ class OrchSleeve extends Ent {
     const dir = walk === 0 ? 0 : walk === -h0 ? 1 : -1, sp = 2.2 * TS;
     const y0 = this.y; this.y = clamp(this.y + dir * sp * dt, (this.top + 1) * TS, (this.bot + 1) * TS);
     this.dy = this.y - y0; this.spin += dir * dt * 6;
-    // Brady walks on the spot (the sleeve turns under him)
-    this.dx = on ? -(p.vx || 0) * dt : 0;
+    // Brady walks on the spot (the sleeve turns under him), unless it is at its stop that way: then he just walks
+    const atStop = this.dy === 0;
+    this.dx = on && dir && !atStop ? -(p.vx || 0) * dt : 0;
     if (this.hd() !== h0) { this.flipT = 1.2; say(this.g, this.cx, this.y - 50, 'THE SEAM TURNS THE OTHER WAY!', '#ffd84a'); TourKit.sfx('rip', 'kick', { vol: 0.3, pitch: 1.4 }); }
     if (dir && Math.floor(this.spin * 2) !== Math.floor((this.spin - dir * dt * 6) * 2)) TourKit.sfx('crinkle', 'select', { vol: 0.12, pitch: 2.2 });
   }

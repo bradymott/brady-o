@@ -243,11 +243,11 @@ STAGES.sleeve = async ({ ev, shot, run, pano }) => {
     await ev(() => { fresh(); play('28-4'); place(4, 11); sim(0.4); freeze(); }); await shot('40-28-4-start.png');
     let r = await ev(() => {
       thaw(); const sl = ents('OrchSleeve').sort((a, b) => a.x - b.x)[0]; walkTo(sl.cx, 6); const y0 = sl.y;
-      sim(1.0, { right: true }); const withSeam = sl.y; sim(3.0, { left: true }); const down = sl.y; walkTo(26 * 32, 6);
-      return { y0: y0 / 32, withSeam: withSeam / 32, down: down / 32, at: at() };
+      sim(3.0, { right: true }); const down = sl.y; const stopX = P().cx; sim(0.6, { right: true }); const walkedOff = P().cx > stopX + 8; walkTo(26 * 32, 6);
+      return { y0: y0 / 32, down: down / 32, walkedOff, at: at() };
     });
-    check('28-4: on the sleeve, walking with the seam does not lower it; walking against it unscrews it down to the lower ledge', r.withSeam <= r.y0 + 0.05 && r.down >= r.y0 + 5.9 && r.at.y === 17, r);
-    await ev(() => { const sl = ents('OrchSleeve').sort((a, b) => a.x - b.x)[0]; place(22, 11); sim(0.2); sim(1.0, { left: true }); freeze(); }); await shot('41-28-4-unscrewing.png');
+    check('28-4: on the sleeve, walking against the seam unscrews it down (Brady stays put on it); at its stop he walks off onto the lower ledge', r.down >= r.y0 + 5.9 && r.walkedOff && r.at.y === 17, r);
+    await ev(() => { const sl = ents('OrchSleeve').sort((a, b) => a.x - b.x)[0]; place(22, 11); sim(0.2); sim(1.0, { right: true }); freeze(); }); await shot('41-28-4-unscrewing.png');
     // the late sleeve: past its tie the seam turns; the old way winds back up
     r = await ev(() => {
       thaw(); const sl = ents('OrchSleeve').find(s2 => s2.join != null && s2.y < (s2.join + 1) * 32); place(Math.floor(sl.cx / 32) - 3, sl.top); sim(0.2); walkTo(sl.cx, 6);
@@ -419,7 +419,7 @@ const BOT_PAGE = () => {
   };
   T.cross = () => { const f0 = p().orchTr.face; if (!T.f({ jump: true, jumpPressed: true })) return false; T.wait(0.45); return p().orchTr && p().orchTr.face !== f0; };
   T.letGo = dir => T.hop(dir, false, 0.5);
-  T.ride = (dir, row) => { for (let k = 0; k < 120 * 10; k++) { const q = p(); if (Math.floor((q.y + q.h - 1) / 32) === row && q.onGround) return true; if (!T.f({ [dir]: true })) return false; } return 'stuck'; };
+  T.ride = (dir, row) => { const fr = () => Math.floor((p().y + p().h - 1) / 32), up = fr() > row; for (let k = 0; k < 120 * 10; k++) { if (up ? fr() <= row : fr() >= row) { for (let j = 0; j < 20; j++) if (!T.f({})) return false; return true; } if (!T.f({ [dir]: true })) return false; } return 'stuck'; };
   T.graft = () => { const gs = S().entities.filter(e => e.constructor.name === 'OrchGraft' && !e.done).sort((a, b) => Math.abs(a.cx - p().cx) - Math.abs(b.cx - p().cx)); const gf = gs[0]; if (!gf) return true; for (let k = 0; k < 120 * 10 && !gf.done; k++) { if (!T.f(gf.lined() && Math.abs(gf.far() - gf.near()) < 6 && p().onGround ? { action: true, actionPressed: true } : {})) return false; } return gf.done || 'stuck'; };
   // a careful last step onto a mark: short taps of the stick until Brady's centre is within 6 px of x
   T.to = x => { if (T.walk(x, { noHop: true }) === false) return false; for (let k = 0; k < 80; k++) { for (let j = 0; j < 60 && Math.abs(p().vx) > 4; j++) if (!T.f({})) return false; if (Math.abs(p().cx - x) <= 6) return true; const d = p().cx < x; for (let j = 0; j < 2; j++) if (!T.f({ right: d, left: !d })) return false; } return true; };
@@ -460,9 +460,9 @@ const BOT_ROUTES = {
   '28-3': [['walk', 15 * 32 + 16, { noHop: true }], ['press', 'action'], ['wait', 0.5], ['hopTo', 15, 0.45], ['press', 'action'], ['wait', 0.5], ['hopTo', 15, 0.45], ['walk', 30 * 32], 'cp',
     ['walk', 59 * 32 + 16], ['press', 'action'], ['wait', 0.5], ['hopTo', 59, 0.45], ['press', 'action'], ['wait', 0.5], ['hopTo', 59, 0.45], ['press', 'action'], ['wait', 0.5], ['hopTo', 59, 0.45], ['walk', 70 * 32], 'cp',
     ['walk', 112 * 32], 'cp', ['walk', 139 * 32 + 16], ['press', 'action'], ['wait', 0.5], ['hopTo', 139, 0.45], ['press', 'action'], ['wait', 0.5], ['hopTo', 139, 0.45], ['hopTo', 139, 0.45], ['press', 'action'], ['wait', 0.5], ['hopTo', 139, 0.45], ['walk', 148 * 32], 'cp', ['walk', 192 * 32], ['gate']],
-  '28-4': [['walk', 22 * 32 + 16, { noHop: true }], ['ride', 'left', 17], ['walk', 29 * 32], 'cp', ['walk', 47 * 32 + 16, { noHop: true }], ['ride', 'right', 24], ['walk', 53 * 32], 'cp',
-    ['walk', 71 * 32 + 16], ['ride', 'right', 14], ['walk', 77 * 32, { noHop: true }], 'cp', ['walk', 99 * 32], ['walk', 102 * 32 + 16, { noHop: true }], ['ride', 'left', 20], ['ride', 'right', 26], ['walk', 108 * 32], 'cp',
-    ['walk', 132 * 32 + 16, { noHop: true }], ['ride', 'right', 19], ['ride', 'left', 13], ['walk', 139 * 32, { noHop: true }], 'cp', ['walk', 166 * 32], ['walk', 170 * 32 + 16, { noHop: true }], ['ride', 'left', 18], ['ride', 'right', 24], ['walk', 176 * 32], 'cp', ['gate']],
+  '28-4': [['walk', 21 * 32 + 8, { noHop: true }], ['ride', 'right', 17], ['walk', 29 * 32], 'cp', ['to', 47 * 32 + 8], ['ride', 'right', 24], ['walk', 53 * 32], 'cp',
+    ['walk', 69 * 32], ['walk', 70 * 32 + 8, { noHop: true }], ['ride', 'right', 14], ['hop', 1, false, 0.3], ['walk', 77 * 32, { noHop: true }], 'cp', ['walk', 96 * 32], ['to', 101 * 32 + 8], ['ride', 'left', 21], ['ride', 'right', 26], ['walk', 108 * 32], 'cp',
+    ['to', 131 * 32 + 8], ['ride', 'left', 18], ['ride', 'right', 13], ['walk', 139 * 32, { noHop: true }], 'cp', ['walk', 163 * 32], ['to', 169 * 32 + 8], ['ride', 'left', 19], ['ride', 'right', 24], ['walk', 176 * 32], 'cp', ['gate']],
   '28-5': [['to', 23 * 32 + 16], ['graft'], ['walk', 41 * 32], 'cp', ['walk', 67 * 32], ['to', 69 * 32 + 16], ['graft'], ['walk', 85 * 32], 'cp', ['walk', 107 * 32], ['to', 111 * 32 + 16], ['graft'], ['walk', 127 * 32], 'cp',
     ['to', 149 * 32 + 16], ['graft'], ['walk', 167 * 32], 'cp', ['walk', 196 * 32], ['gate']],
   '28-6': [['walk', 14 * 32 + 16, { noHop: true }], ['press', 'action'], ['wait', 1.3], ['walk', 28 * 32 + 16, { noHop: true }], ['press', 'action'], ['wait', 1.3], ['walk', 37 * 32 + 16, { noHop: true }], ['press', 'action'], ['wait', 0.6],

@@ -208,7 +208,7 @@ const sleeveRows = (() => {
   put(Gr, 101, 14, '4');
   ground(Gr, 104, 130, 27); put(Gr, 107, 26, 'c'); put(Gr, 114, 26, 'l'); put(Gr, 119, 23, '?'); put(Gr, 124, 26, 'J');
   // ④ the late sleeve up, critters round it; the high run; the last one down
-  put(Gr, 131, 13, '5'); put(Gr, 128, 17, 'd'); put(Gr, 136, 19, 'd');
+  put(Gr, 131, 13, '5'); put(Gr, 126, 19, 'd'); put(Gr, 139, 10, 'd');
   ground(Gr, 134, 168, 14); put(Gr, 138, 13, 'c'); put(Gr, 146, 13, 'r'); put(Gr, 158, 13, 'z');
   put(Gr, 169, 13, '6'); put(Gr, 172, 18, 'd');
   ground(Gr, 172, W - 1, 25); put(Gr, 175, 24, 'c'); put(Gr, 182, 24, 'r'); fillG(Gr, 190, 22, 191, 24, 'H'); put(Gr, 190, 19, 'P'); put(Gr, 207, 24, 'G');
@@ -221,12 +221,12 @@ const SLEEVE = {
   K: SIGN('A SLEEVE CAN WIND UP TOO: WALK WITH THE SEAM. KEEP WINDING AND SEE HOW HIGH IT GOES...'),
   J: SIGN('A RUST TIE ON THE STALK: PAST IT THE SEAM TURNS THE OTHER WAY. KEEP ON THE OLD WAY AND YOU WIND BACK UP'),
   x: ['decor', 'orchCrate'], l: ['enemy', 'orchWorm'], r: ['enemy', 'orchFinch'], z: ['enemy', 'orchSnail'], d: ['enemy', 'orchFly'],
-  '1': SLV({ bot: 6, hand: 1, hang: 3 }),
+  '1': SLV({ bot: 6, hand: -1, hang: 3 }),
   '2': SLV({ bot: 7, hand: -1, hang: 3 }),
   '3': SLV({ bot: 17, hand: 1, hang: 3, start: 'bot' }),
   A: ['spawn', 'portal', { kind: 'door', look: 'orchHatch', targetRef: 'parlour@in' }], u: BITE(), a: ['anchor', 'parlourOut'],
   '4': SLV({ bot: 12, hand: 1, join: 6, hang: 3 }),
-  '5': SLV({ bot: 13, hand: -1, join: 6, hang: 3, start: 'bot' }),
+  '5': SLV({ bot: 13, hand: 1, join: 6, hang: 3, start: 'bot' }),
   '6': SLV({ bot: 11, hand: 1, join: 5, hang: 3 })
 };
 stamps.orchSleeve = { floor: 25, rows: sleeveRows, legend: SLEEVE, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power', 'power'] };
