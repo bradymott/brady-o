@@ -276,6 +276,9 @@ STAGES.panels = async ({ ev, shot, run, pano }) => {
     let r = await ev(() => { thaw(); const pn = ents('UmbPanel').sort((a, b) => a.tx0 - b.tx0)[0]; const shut = tile(pn.cur, 19) !== 0; place(14, 20); sim(0.2); sim(0.5, { jump: true, jumpPressed: true }); sim(0.8); return { shut, dent: pn.dent, open: tile(pn.cur, 19) === 0 }; });
     check('31-4: the rain sheet walls the way; a jump into the dent from underneath pops it: the way is open', r.shut && !r.dent && r.open, r);
     await ev(() => { sim(0.1); freeze(); }); await shot('41-31-4-popped.png');
+    await ev(() => { thaw(); const L = ents('UmbPanel').filter(e => e.group).sort((a, b) => a.gi - b.gi); const p = P(); place(L[1].tx0 + 1, 20); sim(0.2); sim(0.5, { jump: true, jumpPressed: true }); sim(0.25); p.x = (L[0].tx0 - 3) * 32; sim(0.05); freeze(); });
+    await shot('42a-31-4-one-out-two-dented.png');
+    await ev(() => { thaw(); const L = ents('UmbPanel').filter(e => e.group); for (const e of L) { e.dent = true; e.starT = 0; } });
     r = await ev(() => {
       thaw(); const L = ents('UmbPanel').filter(e => e.group).sort((a, b) => a.gi - b.gi);
       const bump = e => { place(e.tx0 + 1, 20); sim(0.2); sim(0.5, { jump: true, jumpPressed: true }); sim(0.8); };

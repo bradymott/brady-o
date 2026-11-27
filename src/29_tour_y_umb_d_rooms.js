@@ -31,7 +31,7 @@ if (typeof TourRooms === 'undefined' || !Tour.umbKit) return;
 const UK = Tour.umbKit, INK = UK.INK, UA = UK.UmbArt, RKit = TourRoomKit;
 const isUmb = kit => !!(kit && /^umb/.test(kit.kind));
 const chime = (k, ok) => Sound.play('select', { vol: 0.5, pitch: ok === false ? 0.45 : Math.pow(2, [0, 4, 7, 12][k % 4] / 12) });
-const hud = (play, ctx, str, col) => TourRooms.hudText(play, ctx, str, col, 13, 72);   // under the HUD's row of pills
+const hud = (play, ctx, str, col) => { if (!(play.toastT > 0)) TourRooms.hudText(play, ctx, str, col, 13, 72); };   // (not while the rule's pill shows: one line at a time)   // under the HUD's row of pills
 const W = 26;
 
 /* ---------------- the room's shape ----------------
