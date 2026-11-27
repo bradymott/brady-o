@@ -35,8 +35,8 @@ module.exports = async ({ page, check, shot }) => {
   await ev(() => { const b = boss(); b.go('suck'); sim(0.5); }); await snap('pst_parrot_commas.png');
   const hitPhase = (k, act) => ev(([k, act]) => {
     const b = boss(), hp0 = b.hp; for (const e of S().entities) if (e.constructor.name === 'TourShot') e.remove = true;
-    b.hurtT = 0; const ok = pushTo(k); b.go('perch'); let tell = 0;
-    for (let q = 0; q < 120 * 8 && b.act !== act; q++) sim(1 / 120);
+    b.hurtT = 0; let ok = pushTo(k); ok = ok || b.hp < hp0; b.go('perch'); let tell = 0;
+    for (let q = 0; q < 120 * 8 && b.act !== act && b.hp === hp0; q++) sim(1 / 120);
     while (b.act === act && tell < 3) { sim(1 / 60); tell += 1 / 60; }
     sim(0.2); return { ok, hp0, hp: b.hp, phase: b.phase, tell: +tell.toFixed(2), push: window.__push };
   }, [k, act]);
