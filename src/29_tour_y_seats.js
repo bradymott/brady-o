@@ -181,7 +181,7 @@ TourHooks.on('afterEntities', (play, ctx) => {
       let prop = null;
       for (const e of g.entities) if (e.seatsProp && !e.remove && e.seatsTouch(this)) { prop = e; break; }
       this.seatsProp = prop;
-      if (prop) { prop.seatsInput(this, inp, dt); if (inp.actionPressed || inp.action) inp = Object.assign({}, inp, { actionPressed: false, action: prop.seatsKeepRun ? inp.action : false }); }
+      if (prop) { prop.seatsInput(this, inp, dt); if (inp.actionPressed || inp.action) inp = Object.assign({}, inp, { actionPressed: false, action: prop.seatsKeepRun ? inp.action : false }); if (prop.seatsStick && (!prop.seatsStickOn || prop.seatsStickOn(this))) inp = Object.assign({}, inp, { left: false, right: false, down: false, up: false }); }
     } else this.seatsProp = null;
     return pu0.call(this, dt, inp);
   };

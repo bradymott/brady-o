@@ -42,7 +42,7 @@ const scafRows = (() => {
   ground(Gr, 30, 40, 23); put(Gr, 33, 22, 'c'); put(Gr, 32, 19, '?'); put(Gr, 38, 22, 'K');
   // the long scaffold over the pit 41-54: a crab paces its middle row; the collar at its left swings round the back
   put(Gr, 36, 12, '3'); put(Gr, 44, 16, 'f'); put(Gr, 43, 13, 'o.o.o');
-  ground(Gr, 55, 60, 23); put(Gr, 57, 22, 'l');
+  ground(Gr, 55, 60, 23); put(Gr, 57, 22, 'x');
   // ② collars over the second pit; the bank with a checkpoint
   put(Gr, 58, 11, '5'); put(Gr, 66, 11, 'm'); put(Gr, 65, 17, 'n'); put(Gr, 61, 12, 'o.o'); put(Gr, 69, 12, 'o.o');
   ground(Gr, 74, 91, 23); put(Gr, 76, 22, 'c'); put(Gr, 85, 22, 'r'); put(Gr, 81, 19, 'o.o.o'); put(Gr, 79, 22, 'J');
@@ -94,8 +94,60 @@ const L1 = { n: 1, time: 400, name: 'Two Ways Round a Pole', mapLabel: 'Two Ways
     { id: 'store', gen: 'room', role: 'secret', theme: 'seats_room_store', stamp: 'seatsStore', room: 'seatsSpool' }
   ] };
 
-Tour.amend('seats', { stamps, levels: [L1] });
-Tour.seatsKit.L = { L1 };
+/* ---------------- 33-2 Slack Department ---------------- */
+// the fly floor, ground tops row 17. ① the teach: a short flat over a narrow pit, its rope tail on the boards before
+// it; ② a longer flat with a Cable Hen laying coils across the rope tail; ③ a flat over a wide pit under a little fly
+// gallery: once it is clamped, a jump from its middle goes up through the gallery's gap (the wrong-way seat by it) to
+// the counterweight cage (room B37), which lets Brady out on the far bank; ④ the last flat spans three supports with
+// a narrow window: too much slack tips it off the middle support
+const fliesRows = (() => {
+  const W = 204, H = 22, Gr = grid(W, H, '.');
+  // ① the teach
+  ground(Gr, 0, 23, 17); put(Gr, 3, 16, '@'); put(Gr, 6, 16, 'k'); put(Gr, 10, 13, '?'); put(Gr, 2, 12, 'o.o.o');
+  put(Gr, 24, 17, '1'); ground(Gr, 30, 49, 17);
+  // the bank: a platform with the first postcard, a crab
+  fillG(Gr, 34, 13, 37, 13, '-'); put(Gr, 35, 10, '*'); put(Gr, 41, 16, 'l'); put(Gr, 33, 16, 'c'); put(Gr, 44, 12, 'o.o.o');
+  // ② the longer flat; the hen on its rope tail
+  put(Gr, 50, 16, 'K'); ground(Gr, 50, 60, 17); put(Gr, 47, 16, 'j'); put(Gr, 61, 17, '2'); ground(Gr, 69, 99, 17);
+  put(Gr, 64, 12, 'R'); put(Gr, 72, 16, 'c'); put(Gr, 76, 13, '?'); put(Gr, 80, 16, 'r'); fillG(Gr, 83, 13, 86, 13, '-'); put(Gr, 84, 11, 'o.o');
+  // ③ the flat under the fly gallery (the room above it), the far bank
+  put(Gr, 100, 17, '3'); fillG(Gr, 100, 8, 111, 8, 'H'); fillG(Gr, 100, 9, 100, 13, 'H'); fillG(Gr, 111, 9, 111, 13, 'H');
+  fillG(Gr, 100, 14, 111, 14, 'H'); fillG(Gr, 105, 14, 106, 14, '.'); put(Gr, 104, 13, 'u'); put(Gr, 108, 13, 'A'); put(Gr, 102, 11, 'o.o');
+  ground(Gr, 112, 145, 17); put(Gr, 115, 16, 'a'); put(Gr, 118, 16, 'c'); put(Gr, 124, 16, 'd'); fillG(Gr, 127, 13, 130, 13, '-'); put(Gr, 128, 10, '?'); put(Gr, 131, 16, 'O');
+  // ④ the last flat over the wide pit, three supports
+  put(Gr, 146, 17, '4'); ground(Gr, 162, W - 1, 17);
+  put(Gr, 165, 16, 'c'); put(Gr, 170, 16, 'l'); fillG(Gr, 174, 13, 177, 13, '-'); fillG(Gr, 179, 10, 182, 10, '-'); put(Gr, 181, 7, 'P'); put(Gr, 175, 11, 'o.o');
+  put(Gr, 186, 16, 'j'); put(Gr, 196, 16, 'G'); fillG(Gr, W - 1, 0, W - 1, 16, 'H');
+  return rowsOf(Gr);
+})();
+const FLY = {
+  k: SIGN('A FLAT ON A ROPE! STAND ON THE ROPE TAIL, HOLD THROW AND WALK: IT PAYS OUT LINE. LET GO WHEN IT READS LEVEL'),
+  K: SIGN('TOO LOW? HOLD THROW AND WALK BACK: IT HAULS THE LINE IN'),
+  O: SIGN('THE LAST FLAT SITS ON THREE SUPPORTS. GO GENTLY: TOO MUCH SLACK TIPS IT'),
+  l: ['enemy', 'seatsCrab'], r: ['enemy', 'seatsStoat'], j: ['enemy', 'seatsHen'], d: ['enemy', 'seatsShrew'],
+  '1': ['piece', 'seats.flat', { w: 6, tail: 6, gap: 2, target: 3 }],
+  '2': ['piece', 'seats.flat', { w: 8, tail: 6, gap: 2, target: 4 }],
+  '3': ['piece', 'seats.flat', { w: 12, tail: 7, gap: 2, target: 4 }],
+  '4': ['piece', 'seats.flat', { w: 16, tail: 7, gap: 2, target: 5, win: 5, mid: 8 }],
+  A: ['spawn', 'portal', { kind: 'door', look: 'seatsDoor', targetRef: 'weights@in' }], u: TELL(), a: ['anchor', 'weightsOut']
+};
+stamps.seatsFlies = { floor: 17, rows: fliesRows, legend: FLY, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power'] };
+stamps.seatsWeights = roomStamp('flies@weightsOut', 'seatsDoor');
+const L2 = { n: 2, time: 360, name: 'Slack Department', mapLabel: 'Slack Department', arch: 'slackline', theme: 'seats_flies',
+  gimmick: 'Painted flats hang over the pits from the flies. Stand on a flat\'s rope tail and hold THROW: walking pays out line, walking back hauls it in. Let go when it reads LEVEL and the stagehands clamp it into a bridge',
+  hint: 'Watch the spirit level and the dashed line. The last flat rests on three supports: too much slack tips it. A little seat faces the floor up in the fly gallery...',
+  postcard: 'Brady! The stagehands let me pay out a rope. I said "a bit more" four times and they said I was a natural. ♥ C',
+  enemies: [['seatsCrab', 2], ['seatsHen', 2], ['seatsStoat', 1], ['seatsShrew', 1]],
+  mapCell: [1, 0], mapFrom: 0,
+  exits: { main: { to: '33-3' } },
+  areas: [
+    { id: 'flies', gen: 'room', theme: 'seats_flies', stamp: 'seatsFlies', camera: 'free', bottomKill: true },
+    { id: 'weights', gen: 'room', role: 'secret', theme: 'seats_room_weights', stamp: 'seatsWeights', room: 'seatsScale' }
+  ] };
+
+//NEXT
+Tour.amend('seats', { stamps, levels: [L1, L2] });
+Tour.seatsKit.L = { L1, L2 };
 
 /* ---------------- the land's map: a stage seen from the wings, the route a loop round the trap room ---------------- */
 if (typeof TOUR_OW_MAPS !== 'undefined') TOUR_OW_MAPS.seats = {

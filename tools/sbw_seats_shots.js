@@ -95,6 +95,59 @@ async function session(viewport, fn) {
 const STAGES = {};
 
 
+/* ---------------- the hidden entrance: Festival Fields 23-1, under the last bench ---------------- */
+STAGES.door = async ({ ev, shot, run }) => {
+  await run('door', async () => {
+    await ev(ROOM_HELPERS);
+    let r = await ev(() => {
+      fresh(); const T = window.BRADY_TOUR, st = T.Tour.stops.seats;
+      return { hidden: T.TourMap.stopState(st) === 'hidden', unlocked: T.TourProgress.isUnlocked('33-1'), land: T.TourProgress.countryUnlocked(T.Tour.countries.seats), found: T.TourProgress.exitsFound('23-1') };
+    });
+    check('before the entrance: the land is hidden on the route map, 33-1 is locked, 23-1\'s card shows no seats exit found yet', r.hidden && !r.unlocked && !r.land, r);
+    r = await ev(() => {
+      play('23-1'); const g = S(), spn = g.level.areas[0].spawns.find(q => q.type === 'seatsFestStand'); window.__st = { x: spn.x, y: spn.y, tx: spn.tx, gy: spn.gy };
+      const A = g.area; let coins = 0; for (let x = Math.floor(spn.x / 32) - 10; x <= Math.floor(spn.x / 32) + 4; x++) for (let y = 0; y < A.H; y++) if (A.tiles[y * A.W + x] === 14) coins++;
+      place(spn.tx - 6, spn.gy - 1); sim(0.4); return { st: window.__st, at: at(), coins };
+    });
+    check('23-1: the little grandstand stands in guy-rope alley beside the way to the main stage', r.st.tx > 0 && !r.at.dead, r);
+    await ev(() => { const s = window.__st; place(s.tx - 4, s.gy - 1); sim(0.3); freeze(); });
+    await shot('00-entrance-23-1-the-grandstand.png');
+    // up the benches, down the back of the last one, under it; walking under without pressing down does nothing
+    r = await ev(() => {
+      thaw(); const s = window.__st, p = P(); place(s.tx - 1, s.gy - 1); sim(0.2);
+      hopOn(s.tx); hopOn(s.tx + 3); hopOn(s.tx + 5); const top = at();
+      walkTo((s.tx + 7.4) * 32, 6); sim(0.6); const behind = at();
+      walkTo(s.x, 4); sim(0.6); const stand = S().entities.find(e => e.constructor.name === 'SeatsFestStand'), quiet = stand.arr < 0;
+      return { top, behind, quiet, under: at(), cx: p.cx / 32 - s.x / 32 };
+    });
+    check('23-1: Brady climbs the benches and drops down behind the last one; standing under it does nothing on its own', r.top.y <= r.behind.y - 3 && r.quiet, r);
+    await ev(() => freeze()); await shot('01-entrance-23-1-under-the-last-bench.png');
+    r = await ev(() => { thaw(); sim(0.4, { down: true }); const stand = S().entities.find(e => e.constructor.name === 'SeatsFestStand'); sim(0.5); return { arr: stand.arr, banner: S().bannerText }; });
+    check('23-1: DOWN between the two middle legs: Brady folds down through the hanging seat, the land\'s name comes up', r.arr >= 0 && r.banner === 'BELOW THE CHEAP SEATS', r);
+    await ev(() => freeze()); await shot('02-entrance-folding-down.png');
+    r = await ev(() => {
+      thaw(); for (let k = 0; k < 900 && S().state === 'play'; k++) sim(1 / 120); sim(2);
+      const T = window.BRADY_TOUR, d = window.BRADY.Save.data;
+      return { state: S().state, key: S().exitKey, land: !!d.tour.lands.seats, unlocked: T.TourProgress.isUnlocked('33-1'), found: T.TourProgress.exitsFound('23-1') };
+    });
+    check('23-1 clears through its exit to the land: the land opens, 33-1 unlocks', r.key === 'seats' && r.land && r.unlocked, r);
+    r = await ev(() => {
+      window.BRADY.goToMap('world', 1, '23-1');
+      for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); }
+      if (S().openRoute) S().openRoute({ dest: 'seats' });
+      for (let k = 0; k < 60 && (S().rRevealQ == null || S().rReveal || (S().rRevealQ && S().rRevealQ.length)); k++) sim(0.25);
+      sim(1);
+      const T = window.BRADY_TOUR; return { state: T.TourMap.stopState(T.Tour.stops.seats), mode: S().mode };
+    });
+    check('the route map now shows Below the Cheap Seats', r.state !== 'hidden', r);
+    await ev(() => freeze()); await shot('03-entrance-route-map.png');
+    r = await ev(() => { thaw(); window.BRADY.goToMap('world', 1, '33-1'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } const s = S(); return { cc: s.ow && s.ow.cc }; });
+    check('the land has its own walkable map, and 33-1 can be entered from it', r.cc === 'seats', r);
+    await ev(() => freeze()); await shot('04-seats-overworld-map.png');
+    await ev(() => thaw());
+  });
+};
+
 /* ---------------- 33-1 Two Ways Round a Pole: grip, climb, collars, the mirror crab ---------------- */
 STAGES.scaffold = async ({ ev, shot, run, pano }) => {
   await run('scaffold', async () => {
@@ -134,7 +187,79 @@ STAGES.scaffold = async ({ ev, shot, run, pano }) => {
     await ev(() => freeze()); await shot('14-33-1-board-open.png');
     await ev(() => { thaw(); place(87, 4); P().seatsSc = null; sim(0.3); freeze(); }); await shot('15-33-1-store-ledge-tell.png');
     await ev(() => { thaw(); place(200, 18); sim(0.2); freeze(); }); await shot('16-33-1-two-scaffolds.png');
+    // B36 the cable store: up the tall scaffold's corner onto the ledge by the wrong-way seat, through the trap
+    r = await ev(() => { thaw(); fresh(); play('33-1'); const kind = intoRoom(83, 4); return { kind }; });
+    check('33-1: the cable-store trap on the ledge over the tall scaffold leads to room B36 (Spool School)', r.kind === 'seatsSpool', r);
+    await ev(() => { sim(0.7); freeze(); }); await shot('17-room-B36-spool-school-entry.png');
+    r = await ev(() => { thaw(); sim(1.8); const R = room(); const f0 = R.fails || 0; toMark(0); press('action'); const on = R.on; for (let k = 0; k < 120 * 6 && (R.fails || 0) === f0; k++) sim(1 / 120, { left: true }); return { on, fails: R.fails, f0, won: R.won }; });
+    check('33-1 B36: THROW by the drum hops Brady on; rolling it off the end is a miss that costs nothing', r.on && r.fails === r.f0 + 1 && !r.won, r);
+    r = await ev(() => {
+      sim(1.6); const R = room(); toMark(0); press('action');
+      for (let k = 0; k < 120 * 14 && !R.won; k++) { const d = 12.5 * 32 - R.dx, wk = Math.abs(d) < 3 ? 0 : (d > 0 ? -1 : 1) * (Math.abs(R.v) > 32 * 1.2 && Math.sign(R.v) === Math.sign(d) ? 0 : 1); if (Math.abs(d) < 26 && Math.abs(R.v) < 20) { sim(1 / 120, { right: R.v > 4, left: R.v < -4 }); continue; } sim(1 / 120, { right: wk > 0, left: wk < 0 }); }
+      sim(1.2); return { won: R.won, cage: cageOpen() };
+    });
+    check('33-1 B36: rolling the drum with the stick until its hole sits over the peg drops it on: won, the cage opens', r.won && r.cage, r);
+    await ev(() => freeze()); await shot('18-room-B36-won.png');
+    r = await ev(() => { thaw(); const a = leave(); return { a }; });
+    check('33-1 B36: the room lets Brady out on the high bank past the tall scaffold (not the way he came in)', r.a && r.a.area === 'rows' && r.a.x >= 130, r);
+
     await ev(() => { thaw(); play('33-1'); }); await pano('pano-33-1.png', 0.3);
+  });
+};
+
+/* ---------------- 33-2 Slack Department: pay out line, level, clamp; the last flat tips ---------------- */
+STAGES.flies = async ({ ev, shot, run, pano }) => {
+  await run('flies', async () => {
+    await ev(ROOM_HELPERS);
+    await ev(() => { fresh(); play('33-2'); place(4, 16); sim(0.4); freeze(); }); await shot('20-33-2-start.png');
+    let r = await ev(() => {
+      thaw(); const f = ents('SeatsFlat').sort((a, b) => a.x0 - b.x0)[0]; walkTo(f.ta * 32 + 16, 4); sim(0.3);
+      const a0 = f.above(), prop = P().seatsProp === f; sim(0.6, { right: true }); const a1 = f.above(), clampedEarly = f.done;
+      sim(0.4, { action: true }); for (let k = 0; k < 200 && f.above() > -f.win - 12; k++) sim(1 / 120, { action: true, right: true }); const low = f.above(); sim(0.1);
+      const notLevelRelease = !f.done;
+      return { a0, a1, prop, clampedEarly, low, notLevelRelease };
+    });
+    check('33-2: on the rope tail THROW is offered; walking WITHOUT holding THROW does nothing', r.prop && Math.abs(r.a1 - r.a0) < 1 && !r.clampedEarly, r);
+    check('33-2: holding THROW and walking pays out line (the far end comes down); let go while not level: nothing clamps', r.low < 0 && r.notLevelRelease, r);
+    await ev(() => { const f = ents('SeatsFlat').sort((a, b) => a.x0 - b.x0)[0]; sim(0.1); for (let k = 0; k < 200 && f.above() < -24; k++) sim(1 / 120, { action: true, left: true }); freeze(); }); await shot('21-33-2-tilted-low.png');
+    r = await ev(() => {
+      thaw(); const f = ents('SeatsFlat').sort((a, b) => a.x0 - b.x0)[0], a0 = f.above();
+      for (let k = 0; k < 400 && !f.level(); k++) sim(1 / 120, { action: true, left: f.above() < 0, right: f.above() > 0 });
+      const lv = f.level(); sim(0.2, { action: true }); window.BRADY.Game.scene.update(0); return { a0, lv, above: f.above() };
+    });
+    check('33-2: holding THROW and walking back hauls the line in; the spirit level reads LEVEL', r.a0 < 0 && r.lv, r);
+    await ev(() => freeze()); await shot('22-33-2-reads-level.png');
+    r = await ev(() => { thaw(); const f = ents('SeatsFlat').sort((a, b) => a.x0 - b.x0)[0]; sim(0.3); const done = f.done, t = tile(f.x0 + 2, f.gy); walkTo((f.x0 + f.wT + 2) * 32, 6); return { done, t, at: at() }; });
+    check('33-2: let go of THROW while LEVEL: the flat is clamped into a bridge and Brady walks across it', r.done && r.t !== 0 && r.at.x >= 30 && !r.at.dead, r);
+    await ev(() => freeze()); await shot('23-33-2-clamped.png');
+    // the last flat: too much slack tips it off the middle support; it is hauled back to start
+    r = await ev(() => {
+      thaw(); const f = ents('SeatsFlat').sort((a, b) => b.x0 - a.x0)[0] || null; place(140, 16); sim(0.5); const g = ents('SeatsFlat').sort((a, b) => b.x0 - a.x0)[0];
+      walkTo(g.ta * 32 + 16, 4); sim(0.2); let tipped = false; for (let k = 0; k < 600 && !tipped; k++) { sim(1 / 120, { action: true, right: true }); tipped = g.tipT > 0; }
+      return { tipped, mid: g.mid, win: g.win };
+    });
+    check('33-2: the last flat spans three supports; too much slack tips it (TIPPED)', r.tipped && r.mid != null, r);
+    await ev(() => { sim(0.25); freeze(); }); await shot('24-33-2-last-flat-tipped.png');
+    r = await ev(() => { thaw(); const g = ents('SeatsFlat').sort((a, b) => b.x0 - a.x0)[0]; sim(2); return { line: g.line, tip: g.tipT }; });
+    check('33-2: a tipped flat is hauled back to start (try again)', r.line === 0 && !(r.tip > 0), r);
+    await ev(() => { place(103, 13); P().invuln = 999; sim(0.3); freeze(); }); await shot('25-33-2-fly-gallery-tell.png');
+    // B37 the counterweight cage: up through the fly gallery's gap from the clamped flat
+    r = await ev(() => { thaw(); fresh(); play('33-2'); const kind = intoRoom(108, 13); return { kind }; });
+    check('33-2: the door in the fly gallery over the third flat leads to room B37 (Sailmaker\'s Scale)', r.kind === 'seatsScale', r);
+    await ev(() => { sim(0.7); freeze(); }); await shot('26-room-B37-sailmakers-scale-entry.png');
+    r = await ev(() => { thaw(); sim(1.8); const R = room(), f0 = R.fails || 0, m = toMark(0), s = kit().data.mirror ? -1 : 1; for (let k = 0; k < 120 * 6 && (R.fails || 0) === f0; k++) sim(1 / 120, s > 0 ? { right: true } : { left: true }); return { fails: R.fails, f0, won: R.won }; });
+    check('33-2 B37: sliding the weight to the end slams the arm onto its stop: a miss that costs nothing', r.fails === r.f0 + 1 && !r.won, r);
+    r = await ev(() => {
+      sim(1.6); const R = room(), s = kit().data.mirror ? -1 : 1; toMark(0);
+      for (let k = 0; k < 120 * 30 && !R.won; k++) { const bag = [1, 1.8, 2.6][Math.min(R.n, 2)], e = bag * 2 * 32 - R.d; sim(1 / 120, Math.abs(e) < 3 ? {} : { right: e * s > 0, left: e * s < 0 }); }
+      sim(1.2); return { won: R.won, n: R.n, cage: cageOpen() };
+    });
+    check('33-2 B37: three readings with the needle held in its notch: won, the cage opens', r.won && r.cage, r);
+    await ev(() => freeze()); await shot('27-room-B37-won.png');
+    r = await ev(() => { thaw(); const a = leave(); return { a }; });
+    check('33-2 B37: the room lets Brady out on the far bank past the third flat', r.a && r.a.area === 'flies' && r.a.x >= 112, r);
+
+    await ev(() => { thaw(); play('33-2'); }); await pano('pano-33-2.png', 0.3);
   });
 };
 
@@ -169,7 +294,7 @@ const BOT_PAGE = () => {
       if (q.onGround) {
         const gapAhead = !solid(tx, fy) && !solid(tx, fy + 1) && tileAt(tx, fy) !== 7;
         const wall = solid(Math.floor((q.cx + dir * 18) / 32), fy - 1);
-        const crit = S().entities.some(e => e.enemy && !e.dead && !e.remove && !e.boss && !e.isSeatsCrawler && (e.cx - q.cx) * dir > 0 && Math.abs(e.cx - q.cx) < 90 && Math.abs((e.y + e.h) - (q.y + q.h)) < 40);
+        const crit = S().entities.some(e => (e.enemy || e.constructor.name === 'TourShot') && !e.dead && !e.remove && !e.boss && !e.isSeatsCrawler && (e.cx - q.cx) * dir > 0 && Math.abs(e.cx - q.cx) < 90 && Math.abs((e.y + e.h) - (q.y + q.h)) < 40);
         if ((gapAhead || wall || crit || q.hitWall) && (o.noHop !== true)) jump = true;
       }
       const ok = jump ? T.hop(dir, o.action) : T.f({ right: dir > 0, left: dir < 0, action: !!o.action });
@@ -199,6 +324,7 @@ const BOT_PAGE = () => {
   };
   T.cross = () => { const f0 = p().seatsSc.face; if (!T.f({ jump: true, jumpPressed: true })) return false; T.wait(0.45); return p().seatsSc && p().seatsSc.face !== f0; };
   T.letGo = dir => T.hop(dir, false, 0.5);
+  T.slack = () => { const f = S().entities.filter(e => e.constructor.name === 'SeatsFlat' && !e.done && e.x0 * 32 > p().cx - 64).sort((a, b) => a.x0 - b.x0)[0]; if (!f) return true; if (T.to(f.ta * 32 + 20) === false) return false; for (let k = 0; k < 120 * 12 && !f.done; k++) { const a = f.above(), lv = f.level() && !(f.tipT > 0); if (!T.f(lv ? {} : f.tipT > 0 ? {} : { action: true, right: a > 0 && p().cx < (f.tb + 1) * 32 - 4, left: a < 0 && p().cx > f.ta * 32 + 4 })) return false; } return f.done || 'stuck'; };
   T.mirror = () => { const c = S().entities.find(e => e.constructor.name === 'SeatsMirrorCrab' && !e.dead); if (!c) return true; for (let k = 0; k < 120 * 6 && !c.dead; k++) if (!T.f(c.atCollar && p().seatsProp ? { action: true, actionPressed: true } : {})) return false; return c.dead || 'stuck'; };
   T.ride = (dir, row) => { const fr = () => Math.floor((p().y + p().h - 1) / 32), up = fr() > row; for (let k = 0; k < 120 * 10; k++) { if (up ? fr() <= row : fr() >= row) { for (let j = 0; j < 20; j++) if (!T.f({})) return false; return true; } if (!T.f({ [dir]: true })) return false; } return 'stuck'; };
   // a careful last step onto a mark: short taps of the stick until Brady's centre is within 6 px of x
@@ -233,6 +359,7 @@ const BOT_ROUTES = {
     ['walk', 59 * 32], ['grip', 1], ['climb', 62, 15], ['cross'], ['climb', 69, 15], ['cross'], ['climb', 73, 14], ['letGo', 1], 'cp',
     ['walk', 91 * 32], ['grip', 1], ['climb', 91, 12], ['climb', 105, 12], ['letGo', 1], 'cp', ['walk', 145 * 32 + 16], ['grip', 1], ['climb', 148, 12], ['cross'], ['climb', 156, 14], ['mirror'], ['climb', 171, 17], ['letGo', 1], 'cp',
     ['walk', 187 * 32 + 16], ['grip', 1], ['climb', 192, 13], ['cross'], ['climb', 201, 11], ['letGo', 1], ['walk', 205 * 32], ['grip', 1], ['climb', 208, 15], ['climb', 221, 17], ['letGo', 1], 'cp', ['gate']],
+  '33-2': [['slack'], ['walk', 32 * 32], 'cp', ['walk', 50 * 32], ['slack'], ['walk', 72 * 32], 'cp', ['slack'], ['walk', 116 * 32], 'cp', ['slack'], ['walk', 166 * 32], 'cp', ['gate']],
 //ROUTES
 };
 const BOT_BOSS = () => {
@@ -250,6 +377,9 @@ const ROOM_HELPERS = () => {
   window.cageOpen = () => { const c = S().entities.find(e => e.constructor.name === 'TourRoomCage'); return !!(c && c.open); };
   window.outDoor = () => S().entities.filter(e => e.constructor.name === 'Portal' && e.target && e.target.area !== S().area.idx)[0];
   window.leave = () => { const d = outDoor(); if (!d) return null; walkTo(d.cx, 6); sim(0.1, { up: true, upPressed: true }); for (let k = 0; k < 600 && (S().fade.a > 0.05 || P().state !== 'play'); k++) sim(1 / 120); sim(0.3); return at(); };
+  window.intoRoom = (tx, ty) => { place(tx, ty); P().seatsSc = null; sim(0.2); const a0 = S().area.idx; sim(0.1, { up: true, upPressed: true }); for (let k = 0; k < 600 && (S().fade.a > 0.05 || P().state !== 'play'); k++) sim(1 / 120); sim(0.2); return S().area.idx !== a0 && S().area.roomKit ? S().area.roomKit.kind : null; };
+  window.mark0 = k => S().entities.find(e => e.constructor.name === 'SeatsRoomMark' && e.k === k);
+  window.toMark = k => { const m = mark0(k); walkTo(m.cx, 3); sim(0.3); return m; };
   window.goNet = (x, y) => { const p = P(); for (let k = 0; k < 1200 && (Math.abs(p.cx - (x * 32 + 16)) > 6 || Math.abs(p.y + 8 - (y * 32 + 16)) > 6); k++) sim(1 / 120, { right: p.cx < x * 32 + 10, left: p.cx > x * 32 + 22, down: p.y + 8 < y * 32 + 10, up: p.y + 8 > y * 32 + 22 }); };
 };
 // a room's game played with real inputs: one miss (the wrong slot), then the win; screenshots on entry and won
