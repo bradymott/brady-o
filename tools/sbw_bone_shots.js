@@ -1,0 +1,698 @@
+// The Spare Bone Quarry (world 37, a hidden land): in-browser checks and phone-size screenshots.
+// (The autopilot below is the Moon tool's, tools/sbw_moon_shots.js, unchanged but for the physics hook.)
+// Each level's own mechanic is PLAYED with real inputs through the game loop: an autopilot plans each hop with the
+// game's own physics function on a copy of Brady's body (the planner never moves him), then feeds those exact
+// inputs to the real game frame by frame and checks where he really lands (closed loop: it re-plans if he is off).
+// It walks each level's main route from the start to the gate (and the secret routes), takes 844x390 landscape shots
+// of the key beats, 390x844 portrait shots of 18-1, the boss and the map, and a panorama of every level area.
+// usage: BRADY_DIST=<dist> node tools/sbw_bone_shots.js <outdir> [--checks] [name ...]   (--checks: no pictures)
+const { chromium } = require('playwright');
+const { silence } = require('./sbw_silent');
+const path = require('path'), fs = require('fs');
+const dist = process.env.BRADY_DIST ? path.resolve(process.env.BRADY_DIST) : path.join(__dirname, '..', 'dist');
+const appPage = 'file://' + path.join(dist, 'site', 'super-brady-o-world', 'index.html');
+const args = process.argv.slice(2), out = path.resolve(args[0] || 'bone-shots'), checksOnly = args.includes('--checks');
+const want = args.slice(1).filter(a => !a.startsWith('--'));
+fs.mkdirSync(out, { recursive: true });
+let failures = 0;
+const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name + (info !== undefined ? '  ' + JSON.stringify(info).slice(0, 400) : '')); if (!ok) failures++; };
+
+async function session(viewport, fn) {
+  const browser = await chromium.launch();
+  const ctx = await browser.newContext({ viewport, deviceScaleFactor: 2, isMobile: true, hasTouch: true }); await silence(ctx);
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+  await page.goto(appPage);
+  await page.waitForTimeout(1500);
+  await page.evaluate(() => {
+    const B = window.BRADY, T = window.BRADY_TOUR;
+    window.S = () => B.Game.scene; window.P = () => B.Game.scene.player;
+    const KEYS = ['left', 'right', 'up', 'down', 'jump', 'action'];
+    window.sim = (sec, inp) => {
+      const G = B.Game, I = B.Input, steps = Math.round(sec * 120);
+      for (let k = 0; k < steps; k++) {
+        if (inp) { Object.assign(I, inp); if (k > 0) { I.jumpPressed = false; I.actionPressed = false; I.upPressed = false; } }
+        G.scene.update(1 / 120);
+        if (k === 0) { I.jumpPressed = false; I.actionPressed = false; I.upPressed = false; I.downPressed = false; I.pausePressed = false; I.taps.length = 0; I.uiKey = null; }
+      }
+      if (inp) for (const key in inp) if (typeof inp[key] === 'boolean') I[key] = false;
+    };
+    window.fresh = () => { const d = B.Save.data; for (const k of ['done', 'unlocked', 'exits', 'secretExits', 'gold', 'best']) d[k] = {}; d.unlocked['1-1'] = true; d.tour = null; d.lives = 9; d.seenTourIntro = true; T.TourProgress.data(); };
+    window.play = (id, opts) => {
+      const [w, i] = id.split('-').map(Number); B.Save.data.lives = 9;
+      const g = new B.Play(B.getLevel(w, i), {}); B.Game.setScene(g); sim(1.6);
+      g.player.invuln = 999; g.player.setPower(opts && opts.big === false ? 0 : 1, true); sim(0.1); return g;
+    };
+    window.place = (tx, ty) => { const g = S(), p = P(); p.x = tx * 32 + 16 - p.w / 2; p.y = (ty + 1) * 32 - p.h; p.vx = p.vy = 0; g.camX = Math.max(0, Math.min(g.area.W * 32 - B.Game.viewW, p.cx - B.Game.viewW * 0.45)); g.camY = g.camTargetY(true); };
+    window.areaOf = (g, aid) => g.level.areas.findIndex(a => a.aid === aid);
+    window.toArea = (aid, tx, ty) => { const g = S(), k = areaOf(g, aid), A = g.level.areas[k], an = A.anchors.in || A.anchors.start; if (g.area.idx !== k) g.loadArea(k, an.x, an.y); P().invuln = 999; if (tx != null) place(tx, ty); };
+    window.freeze = () => { const g = S(); if (g.player) g.player.invuln = 0; g._upd = g.update; g.update = function () {}; };
+    window.thaw = () => { const g = S(); if (g._upd) { g.update = g._upd; g._upd = null; } if (g.player) g.player.invuln = 999; };
+    window.ents = name => S().entities.filter(e => e.constructor.name === name || (e.s && e.s.type === name));
+    window.tileOf = () => { const p = P(); return [Math.floor(p.cx / 32), Math.floor((p.y + p.h + 1) / 32)]; };
+
+    // the land's own moves with real inputs: THROW at a prop n times; climb the ribs to a tile (steering with the stick)
+    window.throwN = (n, gap) => { for (let k = 0; k < n; k++) { sim(1 / 120, { action: true, actionPressed: true }); sim(gap || 0.45); } };
+    window.climbTo = (tx, ty, maxT) => {
+      const p = P(); let t = 0;
+      if (!p.boneGrip) { for (let k = 0; k < 30 && !p.boneGrip; k++) sim(1 / 120, { up: true }); }
+      if (!p.boneGrip) return { ok: false, why: 'no grip' };
+      while (t < (maxT || 8) && p.boneGrip) {
+        let dx = tx * 32 + 16 - p.cx, dy = ty * 32 + 16 - p.cy;
+        if (Math.abs(dx) < 6 && Math.abs(dy) < 6) break;
+        if (AP.careful) {
+          // a careful climber keeps a column away from a critter on his own face that is close above or below
+          const c = S().entities.find(e => e.constructor.name === 'BoneClimber' && !e.dead && e.face === (p.boneFace || 0) && Math.abs(e.cx - p.cx) < 40 && Math.abs(e.cy - p.cy) < 90);
+          if (c) { const z = p.boneGrip, side = (c.cx >= p.cx ? -1 : 1); const nx = p.cx + side * 40; dx = (nx > z.x + 12 && nx < z.x + z.w - 12) ? side * 40 : -side * 40; dy = Math.abs(c.cy - p.cy) < 50 ? 0 : dy; }
+        }
+        sim(1 / 60, { left: dx < -5, right: dx > 5, up: dy < -5, down: dy > 5 }); t += 1 / 60;
+      }
+      return { ok: !!p.boneGrip, at: [Math.floor(p.cx / 32), Math.floor(p.cy / 32)], face: p.boneFace };
+    };
+    window.cross = () => { const p = P(), f = p.boneFace; sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.4); return { from: f, to: p.boneFace, grip: !!p.boneGrip }; };
+    window.tileT = (x, y) => { const A = S().area, T = window.BRADY.T; const t = A.tiles[y * A.W + x]; return Object.keys(T).find(k => T[k] === t); };
+
+    // wait in the tray for the press: stand, or crouch (hold down) as it comes down
+    window.pressCast = (crouch) => {
+      const pr = ents('BonePress').sort((a, b) => Math.abs(a.cx - P().cx) - Math.abs(b.cx - P().cx))[0];
+      for (let k = 0; k < 120 * 6 && pr.st !== 'tell'; k++) sim(1 / 120);
+      for (let k = 0; k < 120 * 3 && pr.st !== 'up'; k++) sim(1 / 120, crouch ? { down: true } : {});
+      sim(0.8); return { done: pr.done, bad: pr.bad };
+    };
+    // hold THROW at a cracked replica's mark and let go when the chisel has run d pixels along the seam
+    window.chiselTo = (d) => {
+      const c = ents('BoneChisel').sort((a, b) => Math.abs(a.s.mark[0] * 32 - P().cx) - Math.abs(b.s.mark[0] * 32 - P().cx))[0];
+      for (let k = 0; k < 120 * 8 && c.prog < d && !c.done && !(c.failT > 0); k++) sim(1 / 120, { action: true });
+      sim(0.1); const out = { done: c.done, prog: Math.round(c.prog), fail: c.failT > 0 }; sim(0.9); return out;
+    };
+    // stand at the room's way out (its door, wherever the room puts it)
+    window.toDoor = () => { const g = S(); const d = g.entities.find(e => e.constructor.name === 'Portal' && e.target && e.target.area !== g.area.idx); const p = P(); p.x = d.cx - p.w / 2; p.y = d.y + d.h - p.h; p.vx = p.vy = 0; sim(0.3); };
+    /* ---------------- the autopilot ----------------
+       A program is a little input plan: hold `dir` for `run` s on the ground, press jump and hold it `hold` s, then
+       steer in the air (air: 'dir' | 'none' | 'rev' at revAt | 'late' (none, then dir from lateAt)), or walk off
+       without jumping (noJump), or drop through a one-way floor (drop). Mechanic levels add their own fields (puffs
+       for the spacewalk, lean for the buggy, boots for the magnet boots); AP.input turns a program and a time into
+       the buttons held at that moment, the same function for the planner and for the real run. */
+    const AP = window.AP = {
+      hooks: [],   // (prog, t, b, inp) => {} : a level's own buttons (the moon files' mechanics)
+      input(prog, t, b) {
+        const d = prog.dir, inp = { left: false, right: false, up: false, down: false, jump: false, jumpPressed: false, action: false, actionPressed: false };
+        let dir = d;
+        if (prog.driftPlan) { const q = window.BRADY_MOON.driftInput(prog.driftPlan, prog.dir, t); for (const h of AP.hooks) h(prog, t, b, q); return q; }
+        if (prog.walkTo != null) { const dx = prog.walkTo - (b.x + b.w / 2), stop = Math.sqrt(2 * 40 * 32 * Math.abs(dx)) * 0.8; dir = Math.abs(dx) <= 6 ? (Math.abs(b.vx) > 40 ? -Math.sign(b.vx) : 0) : (b.vx * dx > 0 && Math.abs(b.vx) > stop ? -Math.sign(dx) : Math.sign(dx)); inp.left = dir < 0; inp.right = dir > 0; for (const h of AP.hooks) h(prog, t, b, inp); return inp; }
+        if (prog.drop) { inp.down = t < 0.05; inp.jumpPressed = t < 1 / 120; dir = t < 0.25 ? 0 : d; }
+        else if (prog.noJump) { dir = prog.air === 'late' && t > (prog.lateAt0 || 0) && t < prog.lateAt ? 0 : d; if (prog.air === 'rev' && t > prog.revAt) dir = -d; if (prog.air === 'stopgo') dir = t < prog.a || t > prog.b ? d : 0; }
+        else if (prog.jumpAtX != null && prog._jt == null && d * (b.x + b.w / 2 - prog.jumpAtX) < 0 && t < 3) dir = d;
+        else if (prog.jumpAtX == null && t < prog.run) dir = d;
+        else {
+          if (prog.jumpAtX != null && prog._jt == null) prog._jt = t;
+          const ta = t - (prog.jumpAtX != null ? prog._jt : prog.run);
+          if (ta < 1 / 120 + 1e-9) inp.jumpPressed = true;
+          inp.jump = ta < prog.hold;
+          if (prog.air === 'none') dir = 0; else if (prog.air === 'rev' && ta > prog.revAt) dir = -d; else if (prog.air === 'late') dir = ta < prog.lateAt ? 0 : d; else if (prog.air === 'stop') dir = ta < prog.revAt ? d : 0; else if (prog.air === 'stopgo') dir = ta < prog.a || ta > prog.b ? d : 0;
+          if (prog.delayDir && ta < prog.delayDir) dir = 0;
+        }
+        if (prog.stand) dir = 0;
+        inp.left = dir < 0; inp.right = dir > 0;
+        for (const h of AP.hooks) h(prog, t, b, inp);
+        return inp;
+      },
+      progs(target, from) {
+        const out = [], dirs = target[0] > from[0] ? [1, -1, 0] : target[0] < from[0] ? [-1, 1, 0] : [0, 1, -1];
+        if (target[1] === from[1]) out.push({ walkTo: target[0] * 32 + 16, dir: 0 });
+        const Ar = S().area;
+        if (Ar.moon && Ar.moon.drift) { for (const dir of dirs) for (const plan of window.BRADY_MOON.DRIFT_PLANS) out.push({ driftPlan: plan, dir }); return out; }
+        for (const dir of dirs) {
+          out.push({ dir, noJump: true, air: 'dir' });
+          for (const lateAt of [0.5, 1.0, 1.6, 2.4]) out.push({ dir, noJump: true, air: 'late', lateAt0: 0.25, lateAt });
+          out.push({ dir, noJump: true, air: 'rev', revAt: 0.35 }, { dir, noJump: true, air: 'rev', revAt: 0.6 });
+          out.push({ dir, drop: true }, { dir: 0, drop: true });
+          if (dir) for (const a of [0.2, 0.35, 0.5, 0.7]) for (const bb of [0.8, 1.2, 1.7, 2.3, 3.0]) { out.push({ dir, noJump: true, air: 'stopgo', a, b: bb }); for (const hold of [0.2, 3]) out.push({ dir, run: 0, hold, air: 'stopgo', a, b: bb }); }
+          for (const run of [0, 0.12, 0.3, 0.6, 1.0]) for (const hold of [0.06, 0.1, 0.16, 0.22, 0.3, 0.45, 0.7, 3]) {
+            out.push({ dir, run, hold, air: 'dir' });
+            if (dir) out.push({ dir, run, hold, air: 'none' }, { dir, run, hold, air: 'rev', revAt: 0.3 }, { dir, run, hold, air: 'rev', revAt: 0.6 }, { dir, run, hold, air: 'stop', revAt: 0.4 });
+            if (hold >= 0.7) for (const lateAt of [0.4, 0.9, 1.5]) out.push({ dir, run, hold, air: 'late', lateAt });
+          }
+        }
+        // run to the edge of this ground and jump just before it
+        const A = S().area, Tt = window.BRADY.T, SOL = window.BRADY.SOLID;
+        const stand = (x, y) => { const t2 = x >= 0 && x < A.W ? A.tiles[y * A.W + x] : Tt.HARD; return (SOL[t2] || t2 === Tt.SEMI) && !SOL[A.tiles[(y - 1) * A.W + x]] && !SOL[A.tiles[(y - 2) * A.W + x]]; };
+        for (const dir of [1, -1]) {
+          let x = from[0]; while (stand(x + dir, from[1]) && Math.abs(x - from[0]) < 40) x += dir;
+          if (x === from[0]) continue;
+          const edge = dir > 0 ? (x + 1) * 32 : x * 32;
+          for (const off of [4, 12, 22]) for (const hold of [0.1, 0.16, 0.22, 0.3, 0.45, 0.7, 3]) {
+            const jumpAtX = edge - dir * off;
+            out.push({ dir, jumpAtX, hold, air: 'dir' }, { dir, jumpAtX, hold, air: 'none' }, { dir, jumpAtX, hold, air: 'rev', revAt: 0.4 });
+            for (const a of [0.2, 0.4]) for (const bb of [0.9, 1.5, 2.2]) out.push({ dir, jumpAtX, hold, air: 'stopgo', a, b: bb });
+          }
+        }
+        for (const p of AP.extra) for (const q of p(target, from)) out.push(q);
+        return out;
+      },
+      extra: [],
+      // drifting junk is where it will be by then (its path is a clock): a plan that meets it is no plan
+      // a careful player's plan never runs into a critter where it will be by then (walkers keep walking; a landing
+      // on top of one is a stomp, fine); only used when AP.careful is on (the bot)
+      bad(b, A, t) {
+        if (!AP.careful) return false;
+        const p0 = P();
+        for (const e of S().entities) {
+          if (!e.enemy || e.dead || e.remove || e.friendly || e.boss || e.knocked) continue;
+          if (e.face === 1) continue;
+          if (Math.abs(e.cx - p0.cx) > 14 * 32) continue;
+          const tt = Math.min(t, 1.2), ex = e.x + (e.vx || 0) * tt, ey = e.y + (e.constructor.name === 'BoneClimber' ? e.vy * tt : 0), m = 6;
+          if (b.x < ex + e.w + m && b.x + b.w > ex - m && b.y < ey + e.h + m && b.y + b.h > ey - m) {
+            if (b.vy > 0 && b.y + b.h < ey + 12 && !e.prickly && e.constructor.name !== 'BoneClimber') continue;
+            return true;
+          }
+        }
+        return false;
+      },
+      body(p) {
+        const b = {}; for (const k of ['x', 'y', 'w', 'h', 'vx', 'vy', 'onGround', 'coyote', 'jumpBuf', 'jumping', 'runT', 'airMax', 'facing', 'groundTile', 'groundTx', 'groundTy', 'dropT', 'flipped', 'liftPin', 'liftStill', 'liftPx', 'liftOff', 'moon']) b[k] = p[k] && typeof p[k] === 'object' ? JSON.parse(JSON.stringify(p[k])) : p[k];
+        b.crouch = false; b.inWater = false; b.stroke = 0; b.ride = null; b.sim = true; return b;
+      },
+      // simulate a program from Brady's current state on the live area; where does he settle?
+      trial(prog, maxT) {
+        const g = S(), A = g.area, b = AP.body(P()), dt = 1 / 120;
+        let t = 0, air = false, landT = null; prog._jt = null; prog._s = {};
+        while (t < (maxT || 6)) {
+          const inp = AP.input(prog, t, b);
+          if (landT != null) { inp.left = inp.right = false; inp.jump = inp.jumpPressed = false; inp.down = false; if (A.moon && A.moon.rover && Math.abs(b.vx) > 40) inp[b.vx > 0 ? 'left' : 'right'] = true; }
+          // the player's own drop-through (11_player.js): down + jump on a one-way floor
+          if (inp.down && inp.jumpPressed && b.onGround && b.groundTile === window.BRADY.T.SEMI) { b.dropT = 0.22; b.y += 2; b.onGround = false; inp.jumpPressed = false; }
+          window.BRADY_BONE.phys(b, inp, A, dt, null, {});
+          if (AP.after) AP.after(b, inp, A, dt);
+          t += dt;
+          if (b.y > A.H * 32 + 20 || window.BRADY_BONE.lavaContact(b, A) || window.BRADY_BONE.spikeContact(b, A)) return null;
+          if (AP.bad && AP.bad(b, A, t)) return null;
+          if (!b.onGround) air = true;
+          if (prog.walkTo != null) { if (b.onGround && !air && Math.abs(b.x + b.w / 2 - prog.walkTo) <= 8 && Math.abs(b.vx) < 4) return { tx: Math.floor((b.x + b.w / 2) / 32), ty: b.groundTy, t, flipped: !!b.flipped }; continue; }
+          if (b.onGround && (air || (prog.noJump && prog.air !== 'stopgo') || prog.stand) && landT == null && t > 0.05) { landT = t; prog._landTx = Math.floor((b.x + b.w / 2) / 32); prog._landTy = b.groundTy; }
+          if (prog.driftPlan && !air && t > 0.6) return null;
+          if (landT != null && Math.abs(b.vx) < 4 && b.onGround) return { tx: Math.floor((b.x + b.w / 2) / 32), ty: b.groundTy, t, flipped: !!b.flipped, landTx: prog._landTx, landTy: prog._landTy };
+        }
+        return null;
+      },
+      // is tile x on the same stretch of floor as the target (walkable between them)?
+      samePlate(x, target, tol) {
+        if (Math.abs(x - target[0]) <= (tol != null ? tol : 1)) return true;
+        if (target[2]) return false;
+        const A = S().area, Tt = window.BRADY.T, SOL = window.BRADY.SOLID, y = target[1];
+        const st = xx => { const t2 = A.tiles[y * A.W + xx]; return (SOL[t2] || t2 === Tt.SEMI) && !SOL[A.tiles[(y - 1) * A.W + xx]] && !SOL[A.tiles[(y - 2) * A.W + xx]]; };
+        const d = Math.sign(target[0] - x); for (let xx = x; xx !== target[0]; xx += d) if (!st(xx)) return false;
+        return st(target[0]);
+      },
+      plan(target, o) {
+        o = o || {};
+        const p = P(), from = [Math.floor(p.cx / 32), p.groundTy];
+        let best = null;
+        for (const prog of AP.progs(target, from)) {
+          if (o.jump && (prog.walkTo != null || prog.noJump || prog.drop)) continue;
+          if (prog.run == null) prog.run = 0;
+          const r = AP.trial(prog, o.maxT);
+          if (!r) continue;
+          const okY = r.ty === target[1] && (!!target[2] === r.flipped);
+          if (!okY || (o.jump ? (r.landTx !== target[0] || r.landTy !== target[1]) : !AP.samePlate(r.tx, target, o.tol))) continue;
+          const score = r.t + Math.abs(r.tx - target[0]) * 0.3;
+          if (!best || score < best.score) best = { prog, score, r };
+        }
+        return best;
+      },
+      // play a program in the real game with real inputs, frame by frame; then let him settle
+      exec(prog, maxT) {
+        const g = S(), I = window.BRADY.Input, dt = 1 / 120; let t = 0, landed = false, air = false; prog._jt = null; prog._s = {};
+        const keys = ['left', 'right', 'up', 'down', 'jump', 'jumpPressed', 'action', 'actionPressed'];
+        while (t < (maxT || 6)) {
+          const p = P(); if (!p || p.dead || g.state !== 'play') break;
+          const inp = AP.input(prog, t, p);
+          if (landed) { inp.left = inp.right = inp.jump = inp.jumpPressed = inp.down = false; if (g.area.moon && g.area.moon.rover && Math.abs(p.vx) > 40) inp[p.vx > 0 ? 'left' : 'right'] = true; }
+          for (const k of keys) I[k] = !!inp[k];
+          if (inp.down) I.downPressed = t < dt;
+          g.update(dt);
+          I.jumpPressed = false; I.actionPressed = false; I.downPressed = false; I.upPressed = false;
+          t += dt;
+          if (!p.onGround) air = true;
+          if (prog.walkTo != null) { if (p.onGround && Math.abs(p.cx - prog.walkTo) <= 8 && Math.abs(p.vx) < 4) break; continue; }
+          if (p.onGround && (air || (prog.noJump && prog.air !== 'stopgo') || prog.stand) && t > 0.05) landed = true;
+          if (landed && Math.abs(p.vx) < 4 && p.onGround) break;
+        }
+        for (const k of keys) I[k] = false;
+        const p = P(), gone = g.state === 'tally' || g.state === 'clear' || g.state === 'results'; return { tx: Math.floor(p.cx / 32), ty: p.groundTy, flipped: !!p.flipped, dead: !gone && !!(p.dead || g.state !== 'play'), exit: gone ? g.exitKey || 'main' : null, area: g.area.aid };
+      },
+      // hop to a standing tile [x, row(, flipped)]: plan, play, re-plan if he ended up elsewhere
+      go(target, o) {
+        o = Object.assign({ tol: 0 }, o || {});
+        for (let tries = 0; tries < 3; tries++) {
+          let pl = AP.plan(target, o);
+          // no plan from exactly here: step to the middle of this tile, or a tile either side, and look again
+          if (!pl) { const f = tileOf(), back = -(Math.sign(target[0] - f[0]) || 1); for (const dx of [0, -1, 1, -2, 2, 3 * back, 5 * back, 7 * back]) { if (P().flipped) break; if (dx && !AP.samePlate(f[0] + dx, [f[0], f[1]])) continue; AP.exec({ walkTo: (f[0] + dx) * 32 + 16, dir: 0 }, 3); if (tileOf()[1] !== f[1]) break; pl = AP.plan(target, o); if (pl) break; } }
+          if (!pl) return { ok: false, why: 'no plan', from: tileOf(), target };
+          const r = AP.exec(pl.prog, o.maxT);
+          if (r.dead) return { ok: false, why: 'died', r, prog: pl.prog, target };
+          if (r.exit) return { ok: true, r, exit: r.exit };
+          if (o.jump) return { ok: true, r, prog: pl.prog };
+          if (o.area && r.area !== o.area) return { ok: false, why: 'area', r };
+          if (r.ty === target[1] && Math.abs(r.tx - target[0]) <= (o.tol != null ? o.tol : 1)) return { ok: true, r, prog: pl.prog };
+          if (r.ty === target[1] && AP.samePlate(r.tx, target)) { AP.exec({ walkTo: target[0] * 32 + 16, dir: 0 }, 4); const t2 = tileOf(); if (Math.abs(t2[0] - target[0]) <= (o.tol || 0)) return { ok: true, r, prog: pl.prog }; }
+        }
+        return { ok: false, why: 'off target', at: tileOf(), target };
+      },
+      route(list, o) {
+        const done = [];
+        for (const tg of list) {
+          if (typeof tg === 'function') { tg(); continue; }
+          const r = AP.go(tg, o);
+          if (!r.ok) return { ok: false, at: done.length, fail: r, done };
+          done.push(tg);
+        }
+        return { ok: true, n: done.length };
+      }
+    };
+    // a whole area as one picture: the camera steps across it, each view is drawn without the HUD and copied in
+    window.panorama = (k) => {
+      const g = S(), G = window.BRADY.Game, A = g.area, VW = G.viewW, VH = G.viewH, Sc = G.S, gx = G.gameRect.x * G.dpr, gy = G.gameRect.y * G.dpr;
+      k = k || 0.5;
+      const W = Math.ceil(A.W * 32 * k), H = Math.ceil(A.H * 32 * k);
+      const big = document.createElement('canvas'); big.width = W; big.height = H; const bx = big.getContext('2d');
+      const save = { hud: g.drawHUD, toast: g.drawToast, tut: g.drawTutorial, ctl: window.BRADY.Input.drawControls, camX: g.camX, camY: g.camY, shake: g.shakeAmt };
+      g.drawHUD = () => {}; g.drawToast = () => {}; g.drawTutorial = () => {}; window.BRADY.Input.drawControls = () => {}; g.shakeAmt = 0;
+      for (let cy = 0; cy < A.H * 32; cy += VH) for (let cx = 0; cx < A.W * 32; cx += VW) {
+        g.camX = Math.min(cx, Math.max(0, A.W * 32 - VW)); g.camY = Math.min(cy, Math.max(0, A.H * 32 - VH));
+        G.ctx.setTransform(1, 0, 0, 1, 0, 0); g.draw(G.ctx);
+        bx.drawImage(G.canvas, gx, gy, VW * Sc, VH * Sc, g.camX * k, g.camY * k, VW * k, VH * k);
+      }
+      g.drawHUD = save.hud; g.drawToast = save.toast; g.drawTutorial = save.tut; window.BRADY.Input.drawControls = save.ctl; g.camX = save.camX; g.camY = save.camY; g.shakeAmt = save.shake;
+      return big.toDataURL('image/png');
+    };
+  });
+  const pin = () => page.evaluate(() => { const G = window.BRADY.Game; G.slowT = -1e9; G.lowered = 0; G.dprCap = null; G.quality = 1; G.resize(); });
+  const shot = async name => { await pin(); if (checksOnly) return; await page.waitForTimeout(300); await page.screenshot({ path: path.join(out, name) }); };
+  const pano = async (name, k) => { if (checksOnly) return; await pin(); const url = await page.evaluate(kk => panorama(kk), k || 0.5); fs.writeFileSync(path.join(out, name), Buffer.from(url.split(',')[1], 'base64')); };
+  const run = async (name, f) => { if (want.length && !want.some(w => name.startsWith(w))) return; try { await pin(); await f(); } catch (e) { check(name + ' runs', false, String(e.message).slice(0, 300)); } };
+  await fn(page, shot, run, pano);
+  check(`${viewport.width}x${viewport.height}: no page errors`, !errors.length, errors.slice(0, 5));
+  await browser.close();
+}
+
+const LEVELS = {};
+
+// ---------------- the hidden entrance: Ecuador 2-1, the fossil slab at the trail's end ----------------
+LEVELS.entry = async (page, shot, run, pano) => {
+  await run('entry', async () => {
+    let r = await page.evaluate(() => { fresh(); const T = window.BRADY_TOUR; return { stop: T.TourMap ? T.TourMap.stopState(T.Tour.stops.bone) : null, open: T.TourProgress.countryUnlocked(T.Tour.countries.bone) }; });
+    check('entrance: on a fresh save the quarry is hidden (no pin, not open)', r.stop === 'hidden' && !r.open, r);
+    r = await page.evaluate(() => { play('2-1'); const A = S().level.areas[0], s = A.spawns.find(q => q.type === 'boneSlabGate'); window.__slab = { x: Math.floor(s.x / 32), row: Math.floor(s.y / 32) }; return window.__slab; });
+    const sx = r.x, row = r.row;   // the gate's column (under the odd print) and the recess's top row + 1
+    // BEFORE: Brady on the trail before the ledges, the slab and its prints in view at game scale
+    await page.evaluate(x => { place(x - 11, 10); sim(0.6); freeze(); }, sx); await shot('01-entrance-before-ecuador-2-1.png');
+    // the main route goes over the ledges and along the top of the slab, then down to the finish: it never needs the recess
+    r = await page.evaluate(x => { thaw(); return AP.route([[x - 8, 9], [x - 3, 6], [x + 3, 6], [x + 8, 11]]); }, sx);
+    check('entrance: the trail climbs the two ledges, runs along the top of the slab and drops back down to the finish path', r.ok, r);
+    await page.evaluate(x => { place(x + 7, 10); sim(0.5); freeze(); }, sx); await shot('02-entrance-recess-from-the-trail.png'); await page.evaluate(() => thaw());
+    // walk back left into the recess behind the ledge, under the slab, and jump up into the underside
+    r = await page.evaluate(x => { const a = AP.go([x, 11], { tol: 0 }); if (!a.ok) return a; sim(0.2); freeze(); return { ok: true, at: tileOf() }; }, sx);
+    check('entrance: walk back behind the last ledge into the recess under the slab', r.ok, r);
+    await shot('03-entrance-in-the-recess.png');
+    r = await page.evaluate(() => { thaw(); const p = P(); sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.25, { jump: true }); return { state: p.state }; });
+    check('entrance: a jump up into the underside under the odd print: Brady slips up through the crack', r.state === 'portal', r);
+    await page.evaluate(() => { sim(0.5); freeze(); }); await shot('04-entrance-slipping-through.png');
+    r = await page.evaluate(() => { thaw(); sim(1.6); const g = S(); return { state: g.state, key: g.exitKey, banner: g.bannerText }; });
+    check('entrance: the land\'s name shows and 2-1 clears through its hidden exit', r.state !== 'play' && r.key === 'bone', r);
+    r = await page.evaluate(() => { const T = window.BRADY_TOUR, d = window.BRADY.Save.data; return { land: !!T.TourProgress.data().lands.bone, open: T.TourProgress.countryUnlocked(T.Tour.countries.bone), first: !!d.unlocked['37-1'], done21: !!d.done['2-1'] }; });
+    check('entrance: the quarry is open, 37-1 unlocked; 2-1 itself is not marked done by the secret door', r.land && r.open && r.first && !r.done21, r);
+    // the arrival on the route map: the new land pops up and the plane flies there
+    r = await page.evaluate(() => { const T = window.BRADY_TOUR.TourProgress.data(); T.seen.ec = true; window.BRADY.goToMap('world', 2, '2-1'); const out = []; for (let k = 0; k < 40; k++) { sim(0.1); const s = S(); if (s.card) s.card = null; out.push(s.mode + (s.rReveal ? ':' + s.rReveal.r.kind : '')); if (s.rReveal && s.rReveal.r.kind === 'land' && s.rReveal.t > 0.6) break; } return { seq: [...new Set(out)] }; });
+    await page.evaluate(() => freeze()); await shot('05-entrance-arrival-new-land.png'); await page.evaluate(() => thaw());
+    check('entrance: back on the map the route map plays the NEW LAND reveal', r.seq.some(q => /land/.test(q)), r);
+    r = await page.evaluate(() => { for (let k = 0; k < 60; k++) { const s = S(); if (s.card) s.card = null; sim(0.25); if (s.mode === 'land' && s.ow && s.ow.cc === 'bone') break; } const s = S(); return { mode: s.mode, cc: s.ow && s.ow.cc, stop: window.BRADY_TOUR.TourMap.stopState(window.BRADY_TOUR.Tour.stops.bone) }; });
+    check('entrance: the route map reveals the new land and flies Brady to the quarry\'s own map', r.cc === 'bone', r);
+    await page.evaluate(() => { sim(1.5); freeze(); }); await shot('06-entrance-arrival-quarry-map.png'); await page.evaluate(() => thaw());
+  });
+};
+const tileIs = (x, y, name) => `window.BRADY_TOUR && (() => { const A = S().area, T = window.BRADY.T; return A.tiles[${y} * A.W + ${x}] === T.${name}; })()`;
+// ---------------- 37-1 Walk Like This ----------------
+LEVELS.walk = async (page, shot, run, pano) => {
+  await run('walk', async () => {
+    await page.evaluate(() => { fresh(); play('37-1'); place(4, 18); sim(0.6); freeze(); });
+    await shot('10-37-1-start.png');
+    // a wrong foot first (the hoof, when the plinth shows a paw): the pair starts again, nothing else happens
+    let r = await page.evaluate(() => { thaw(); place(15, 18); sim(0.3); const a = AP.go([19, 19], { jump: true }); sim(0.2); const t = ents('BoneTrack')[0]; return { ok: a.ok, next: t.next, fail: t.failT > 0 }; });
+    check('37-1: jumping onto the wrong print (the plinth shows a paw) only starts the pair again', r.ok && r.next === 0 && r.fail, r);
+    await page.evaluate(() => freeze()); await shot('11-37-1-wrong-foot.png'); await page.evaluate(() => thaw());
+    r = await page.evaluate(() => { const a = AP.go([25, 19], { jump: true }); const b = AP.go([22, 19], { jump: true }); sim(0.6); const A = S().area, T = window.BRADY.T; return { a: a.ok, b: b.ok, steps: A.tiles[17 * A.W + 29] === T.HARD && A.tiles[15 * A.W + 31] === T.HARD, done: ents('BoneTrack')[0].done }; });
+    check('37-1: played: the paw, then the bird: a pair, and two giant stone steps rise', r.a && r.b && r.steps && r.done, r);
+    await page.evaluate(() => freeze()); await shot('12-37-1-steps-rise.png'); await page.evaluate(() => thaw());
+    r = await page.evaluate(() => AP.route([[29, 17], [31, 15], [40, 13], [54, 13], [62, 19], [72, 19], [80, 19]]));
+    check('37-1: played: up the risen steps onto the first bench (P1), down, over the scree pit', r.ok, r);
+    // the second trackway: four prints in two pairs, the brush sweeping between them
+    r = await page.evaluate(() => { const out = []; for (const x of [88, 96, 92, 84]) { const a = AP.go([x, 19], { jump: true }); out.push(a.ok); sim(0.2); } sim(0.6); const t = ents('BoneTrack')[1]; return { out, done: t.done, next: t.next }; });
+    check('37-1: played: the second trackway, two pairs (flipper and bird, hoof and lizard)', r.done, r);
+    await page.evaluate(() => freeze()); await shot('13-37-1-second-trackway.png'); await page.evaluate(() => thaw());
+    r = await page.evaluate(() => AP.route([[97, 17], [99, 15], [101, 13], [103, 11], [110, 9], [128, 9], [134, 21], [146, 21]]));
+    check('37-1: played: up four risen steps to the high bench, down to the low floor, into the tunnel', r.ok, r);
+    await page.evaluate(() => { place(150, 20); sim(0.4); freeze(); }); await shot('14-37-1-tunnel-tell.png'); await page.evaluate(() => thaw());
+    r = await page.evaluate(() => AP.route([[166, 21], [176, 21], [186, 21]]));
+    check('37-1: played: through the tunnel, over the scree pit (P3)', r.ok, r);
+    // the twist: walk up the staircase (the prints there are WRONG this way), then follow the toes back down
+    r = await page.evaluate(() => {
+      const t = ents('BoneTrack')[2], a = AP.route([[191, 19], [194, 17]]); const wrong = t.next === 0;
+      const b = AP.route([[197, 15], [200, 13]]); const c = [197, 194, 191].map(x => AP.go([x, ({ 197: 15, 194: 17, 191: 19 })[x]], { jump: true }).ok);
+      sim(0.6); const A = S().area, T = window.BRADY.T;
+      return { a: a.ok, wrong, b: b.ok, c, done: t.done, steps: A.tiles[11 * A.W + 202] === T.HARD };
+    });
+    check('37-1: the twist: up the slope the prints are the wrong way; top print first, down along the toes: the last steps rise', r.wrong && r.done && r.steps, r);
+    await page.evaluate(() => freeze()); await shot('15-37-1-backwards.png'); await page.evaluate(() => thaw());
+    r = await page.evaluate(() => { const a = AP.route([[194, 17], [197, 15], [200, 13], [202, 11], [212, 9]]); if (!a.ok) return a; sim(3, { right: true }); return { ok: true, state: S().state, key: S().exitKey }; });
+    check('37-1: played to the gate', r.ok && r.state !== 'play', r);
+    // the secret: the crack in the tunnel roof (the whiskers), up onto the run, to the great hall
+    r = await page.evaluate(() => { play('37-1'); place(151, 20); sim(0.3); return AP.route([[154, 20], [156, 17], [166, 17], [168, 17]]); });
+    check('37-1: played: from the bump under the crack, up through the roof onto the run above, along it to the hatch', r.ok, r);
+    await page.evaluate(() => freeze()); await shot('16-37-1-run-above.png'); await page.evaluate(() => thaw());
+    r = await page.evaluate(() => { for (let k = 0; k < 20 && S().area.aid !== 'hall'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.4); return { area: S().area.aid }; });
+    check('37-1: the hatch leads into the great hall', r.area === 'hall', r);
+    await page.evaluate(() => { sim(0.5); freeze(); }); await shot('17-37-1-room-giant.png');
+    r = await page.evaluate(() => { thaw(); place(12, 6); sim(2.5); const R = S().area.roomState; sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.9); return { won: R.won }; });
+    check('37-1 hall: a tap hop under the bar is too short (a miss, nothing lost)', !r.won, r);
+    r = await page.evaluate(() => { const R = S().area.roomState; sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.5, { jump: true }); sim(1.2); return { won: R.won }; });
+    check('37-1 hall: a full jump under the bar: it measures the top of the jump: won, the cage opens', r.won, r);
+    await page.evaluate(() => freeze()); await shot('18-37-1-room-giant-won.png'); await page.evaluate(() => thaw());
+    r = await page.evaluate(() => { toDoor(); for (let k = 0; k < 20 && S().area.aid !== 'quarry'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.6); return { area: S().area.aid, x: Math.floor(P().cx / 32) }; });
+    check('37-1 hall: its door lets Brady out further along the tunnel floor (not where he came in)', r.area === 'quarry' && r.x > 170, r);
+    await page.evaluate(() => { play('37-1'); }); await pano('19-37-1-panorama.png', 0.25);
+  });
+};
+
+// ---------------- 37-2 Assembly Optional ----------------
+LEVELS.ascent = async (page, shot, run, pano) => {
+  await run('ascent', async () => {
+    await page.evaluate(() => { fresh(); play('37-2'); place(5, 18); sim(0.6); freeze(); });
+    await shot('20-37-2-start.png');
+    let r = await page.evaluate(() => { thaw(); const a = AP.go([11, 19]); sim(0.2); const pre = tileT(16, 17); throwN(1, 0.6); return { ok: a.ok, pre, post: tileT(16, 17), notch: ents('BoneVert').find(e => e.s.pivot[0] === 14).notch }; });
+    check('37-2: at the crank, one THROW turns the vertebra a notch: the rib lies flat over the scree', r.ok && r.pre === 'EMPTY' && r.post === 'SEMI' && r.notch === 1, r);
+    await page.evaluate(() => freeze()); await shot('21-37-2-first-bridge.png'); await page.evaluate(() => thaw());
+    r = await page.evaluate(() => AP.route([[14, 17], [20, 17], [27, 17], [38, 17]]));
+    check('37-2: played: onto the vertebra, along the rib bridge (P1 over it), to the foot of the replica ribs', r.ok, r);
+    r = await page.evaluate(() => { const a = climbTo(38, 9); const p = P(); sim(0.5, { up: true, right: true }); sim(0.8, { right: true }); return { a, row: p.groundTy, x: Math.floor(p.cx / 32), grip: !!p.boneGrip }; });
+    check('37-2: climbed: push up into the ribs to grip, climb to the top and step off onto the cliff', r.row === 9 && r.x >= 41 && !r.grip, r);
+    r = await page.evaluate(() => { const a = AP.go([55, 9]); throwN(3, 0.6); const v = ents('BoneVert').find(e => e.s.pivot[0] === 58); return { ok: a.ok, notch: v.notch, bridge: tileT(62, 7) }; });
+    check('37-2: the second vertebra starts upside down: three notches round to bridge', r.ok && r.notch === 1 && r.bridge === 'SEMI', r);
+    await page.evaluate(() => freeze()); await shot('22-37-2-three-notches.png'); await page.evaluate(() => thaw());
+    r = await page.evaluate(() => AP.route([[58, 7], [64, 7], [70, 7], [88, 7], [96, 19]]));
+    check('37-2: played: across under the rook, along the high cliff, down to the floor at the tall rib cage', r.ok, r);
+    // the tall cage: a critter on each face; cross at the collars to get round them
+    r = await page.evaluate(() => {
+      const p = P(); place(98, 18); sim(0.3); const out = {};
+      out.a = climbTo(99, 12); out.c1 = cross();
+      // on the far face, a near-face critter passing Brady does not touch him
+      const near = ents('BoneClimber').find(e => e.face === 0 && Math.abs(e.cx - p.cx) < 80); out.nearIgnored = near ? near.collidePlayer(p) === null : 'none';
+      out.b = climbTo(102, 9); out.c2 = cross(); out.c = climbTo(103, 5);
+      sim(0.5, { up: true, right: true }); sim(0.8, { right: true });
+      out.row = p.groundTy; out.x = Math.floor(p.cx / 32); return out;
+    });
+    check('37-2: climbed the tall cage: across to the far face at one collar, back at the other, up onto the shelf', r.c1.to === 1 && r.c2.to === 0 && r.row === 7 && r.x >= 104, r);
+    check('37-2: on the far face Brady and a near-face critter pass each other', r.nearIgnored === true, r.nearIgnored);
+    await page.evaluate(() => { place(99, 12); sim(0.1, { up: true }); sim(0.2); sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.35); freeze(); }); await shot('23-37-2-far-face.png'); await page.evaluate(() => { thaw(); const p = P(); p.boneGrip = null; p.boneFace = 0; });
+    r = await page.evaluate(() => { play('37-2'); place(106, 6); sim(0.3); const v = ents('BoneVert').find(e => e.s.pivot[0] === 113), stub = tileT(114, 6); const a = AP.go([110, 7]); throwN(3, 0.6); return { ok: a.ok, stub0: stub, notch: v.notch, bridge: tileT(120, 6) }; });
+    check('37-2: the right-angled pair: the short rib lies flat first (a stub over the drop); three turns lay the long one', r.ok && r.stub0 === 'SEMI' && r.notch === 1 && r.bridge === 'SEMI', r);
+    r = await page.evaluate(() => AP.route([[113, 6], [119, 6], [126, 6], [148, 6], [154, 19]]));
+    check('37-2: played: over the long rib, along the shelf, down to the floor', r.ok, r);
+    // the gift shop: the crack at the foot of the shelf (whiskers), walk into the wall
+    await page.evaluate(() => { place(153, 18); sim(0.4); freeze(); }); await shot('24-37-2-tell-crack.png');
+    r = await page.evaluate(() => { thaw(); const a = AP.go([147, 19]); sim(0.2); for (let k = 0; k < 20 && S().area.aid !== 'shop'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.4); return { ok: a.ok, area: S().area.aid }; });
+    check('37-2: walk into the shelf\'s face at the crack: a hidden pocket, a door into the gift shop', r.area === 'shop', r);
+    await page.evaluate(() => { sim(0.6); freeze(); }); await shot('25-37-2-room-queue.png');
+    r = await page.evaluate(() => { thaw(); place(5, 6); sim(2); const R = S().area.roomState; AP.go([6, 7]); throwN(1); const a = R.won; AP.go([13, 7]); throwN(1); return { counter: a, front: R.won }; });
+    check('37-2 shop: THROW at the closed counter or in front of a cut-out: nothing (try again)', !r.counter && !r.front, r);
+    r = await page.evaluate(() => { const R = S().area.roomState; AP.go([15, 7]); throwN(1); sim(0.6); return { won: R.won }; });
+    check('37-2 shop: walk behind the last cardboard skeleton and lift its coat: the open hatch, the cage opens', r.won, r);
+    await page.evaluate(() => freeze()); await shot('26-37-2-room-queue-won.png'); await page.evaluate(() => thaw());
+    r = await page.evaluate(() => { toDoor(); for (let k = 0; k < 20 && S().area.aid !== 'ascent'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.6); return { area: S().area.aid, x: Math.floor(P().cx / 32), row: P().groundTy }; });
+    check('37-2 shop: its door lets Brady out on a bonus ledge over the floor (not the crack)', r.area === 'ascent' && r.x >= 156 && r.row === 12, r);
+    // the twist: one vertebra, two unequal ribs
+    r = await page.evaluate(() => {
+      play('37-2'); place(160, 18); sim(0.3); const v = ents('BoneVert').find(e => e.s.pivot[0] === 173);
+      const a = AP.go([164, 19]); throwN(1, 0.6); const n1 = v.notch, left = tileT(170, 17), right = tileT(182, 17);
+      const b = AP.route([[169, 17], [173, 17]]); const stuck = tileT(182, 17) === 'EMPTY' && tileT(176, 17) === 'SEMI';
+      const c = AP.route([[168, 17], [164, 19]]); throwN(2, 0.6);
+      return { a: a.ok, n1, left, right, b: b.ok, stuck, c: c.ok, n2: v.notch, L: tileT(170, 17), R: tileT(180, 17) };
+    });
+    check('37-2: the twist: the first turn lays the long rib over the first pit, but the short one stops short of the far side', r.n1 === 3 && r.left === 'SEMI' && r.right !== 'SEMI' && r.stuck, r);
+    check('37-2: back at the crank, two more turns: both tips on solid ground', r.n2 === 1 && r.L === 'SEMI' && r.R === 'SEMI', r);
+    await page.evaluate(() => freeze()); await shot('27-37-2-two-ribs.png'); await page.evaluate(() => thaw());
+    r = await page.evaluate(() => AP.route([[169, 17], [173, 17], [180, 17], [190, 17], [200, 17]]));
+    await page.evaluate(() => { place(175, 16); sim(0.3); freeze(); }); await shot('27b-37-2-under-the-overhang.png'); await page.evaluate(() => { thaw(); place(200, 16); sim(0.3); });
+    check('37-2: played: across both ribs to the last cage', r.ok, r);
+    r = await page.evaluate(() => {
+      const p = P(); const out = {};
+      out.a = climbTo(200, 11); out.c1 = cross(); out.b = climbTo(204, 7); out.c2 = cross(); out.c = climbTo(205, 5);
+      sim(0.5, { up: true, right: true }); sim(0.8, { right: true }); out.row = p.groundTy;
+      const g = AP.route([[215, 5]]); sim(3, { right: true }); return Object.assign(out, { g: g.ok, state: S().state });
+    });
+    check('37-2: climbed the last cage (critters on both faces, two collars) and reached the gate', r.row === 5 && r.state !== 'play', r);
+    await page.evaluate(() => { play('37-2'); }); await pano('29-37-2-panorama.png', 0.25);
+  });
+};
+
+// ---------------- 37-3 Make an Impression ----------------
+LEVELS.clay = async (page, shot, run, pano) => {
+  await run('clay', async () => {
+    await page.evaluate(() => { fresh(); play('37-3'); place(5, 18); sim(0.6); freeze(); });
+    await shot('30-37-3-start.png');
+    let r = await page.evaluate(() => { thaw(); const a = AP.go([14, 19]); const w = pressCast(true); return { ok: a.ok, w, tile: tileT(18, 16) }; });
+    check('37-3: crouching under the press makes a low cast: it does not fit the tall outline (a miss, try again)', r.ok && !r.w.done && r.w.bad === 'low' && r.tile === 'EMPTY', r);
+    await page.evaluate(() => { const pr = ents('BonePress')[0]; for (let k = 0; k < 600 && pr.st !== 'tell'; k++) sim(1 / 120); sim(0.5); freeze(); }); await shot('31-37-3-press-tell.png'); await page.evaluate(() => thaw());
+    r = await page.evaluate(() => { const w = pressCast(false); return { w, tile: tileT(18, 16) }; });
+    check('37-3: standing under the press: a tall cast, it fits the outline and makes a step', r.w.done && r.tile === 'HARD', r);
+    await page.evaluate(() => freeze()); await shot('32-37-3-tall-cast.png'); await page.evaluate(() => thaw());
+    r = await page.evaluate(() => AP.route([[18, 16], [22, 13], [44, 13], [51, 19]]));
+    check('37-3: played: up the cast onto the cliff (P1), down to the second press', r.ok, r);
+    r = await page.evaluate(() => { const w = pressCast(true); const a = AP.route([[59, 19], [66, 19]]); return { w, tile: tileT(58, 19), ok: a.ok }; });
+    check('37-3: crouch under the press: a low, broad slab fills the pit under the low shelf; across it', r.w.done && r.tile === 'HARD' && r.ok, r);
+    await page.evaluate(() => { place(57, 18); sim(0.3); freeze(); }); await shot('33-37-3-low-slab.png'); await page.evaluate(() => thaw());
+    r = await page.evaluate(() => { const a = AP.route([[76, 19], [86, 19]]); const w = pressCast(false); const b = AP.route([[90, 16], [95, 13]]); return { a: a.ok, w, b: b.ok }; });
+    check('37-3: played: past the brush and the newt, a tall cast under the rook, up onto the high bench', r.a && r.w.done && r.b, r);
+    // the cast room: whiskers in the floor beside a hollow patch; crouch on it and it gives way
+    await page.evaluate(() => { place(107, 12); sim(0.4); freeze(); }); await shot('34-37-3-tell-floor.png');
+    r = await page.evaluate(() => { thaw(); const a = AP.go([110, 13]); sim(0.6, { down: true }); sim(1.2); const row = P().groundTy; for (let k = 0; k < 4 && Math.abs(P().cx - (112 * 32 + 16)) > 10; k++) AP.exec({ walkTo: 112 * 32 + 16, dir: 0 }, 2); for (let k = 0; k < 20 && S().area.aid !== 'cast'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.5); return { ok: a.ok, row, area: S().area.aid }; });
+    check('37-3: crouch on the hollow patch: the floor gives way, a shaft down to the cast room\'s door', r.area === 'cast', r);
+    await page.evaluate(() => { sim(0.5); freeze(); }); await shot('35-37-3-room-out-of-order.png');
+    r = await page.evaluate(() => { thaw(); place(5, 6); sim(2.5); const R = S().area.roomState; AP.go([13, 7]); throwN(1); return { won: R.won }; });
+    check('37-3 cast room: THROW at the coin slot: OUT OF ORDER (nothing lost)', !r.won, r);
+    r = await page.evaluate(() => { const R = S().area.roomState; AP.go([16, 7]); sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.3, { jump: true }); sim(1); return { won: R.won }; });
+    check('37-3 cast room: a bump from below swings the blank placard up: the real slot, the prize', r.won, r);
+    await page.evaluate(() => freeze()); await shot('36-37-3-room-out-of-order-won.png'); await page.evaluate(() => thaw());
+    r = await page.evaluate(() => { toDoor(); for (let k = 0; k < 20 && S().area.aid !== 'clay'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.6); return { area: S().area.aid, x: Math.floor(P().cx / 32), row: P().groundTy }; });
+    check('37-3 cast room: its door lets Brady out down on the floor past the bench (a chute)', r.area === 'clay' && r.x >= 122 && r.row === 19, r);
+    // the twist: a low slab under a long low shelf, then a tall one straight after
+    r = await page.evaluate(() => { const a = AP.go([131, 19]); const w = pressCast(true); const b = AP.route([[142, 19], [152, 19], [160, 19], [168, 19]]); return { a: a.ok, w, b: b.ok, tile: tileT(145, 19) }; });
+    check('37-3: the twist: bent knees: a long low slab slides under the long shelf over the pit; across', r.w.done && r.b && r.tile === 'HARD', r);
+    await page.evaluate(() => { place(140, 18); sim(0.3); freeze(); }); await shot('37-37-3-under-the-shelf.png'); await page.evaluate(() => { thaw(); place(168, 18); sim(0.3); });
+    r = await page.evaluate(() => { const w = pressCast(false); const a = AP.route([[172, 16], [176, 13], [192, 13]]); if (!a.ok) return { w, a }; sim(3, { right: true }); return { w, state: S().state }; });
+    check('37-3: then stand tall for the last cast, up the wall to the gate', r.w.done && r.state && r.state !== 'play', r);
+    await page.evaluate(() => { play('37-3'); }); await pano('39-37-3-panorama.png', 0.25);
+  });
+};
+
+// ---------------- 37-4 Clean Break ----------------
+LEVELS.cut = async (page, shot, run, pano) => {
+  await run('cut', async () => {
+    await page.evaluate(() => { fresh(); play('37-4'); place(5, 18); sim(0.6); freeze(); });
+    await shot('40-37-4-start.png');
+    let r = await page.evaluate(() => { thaw(); const a = AP.go([11, 19]); const f = chiselTo(14); return { ok: a.ok, f, block: tileT(12, 14) }; });
+    check('37-4: let go too early: CRUNCH, nothing splits (try again)', r.ok && !r.f.done && r.f.fail && r.block === 'HARD', r);
+    await page.evaluate(() => { const c = ents('BoneChisel').find(e => e.s.mark[0] === 11); for (let k = 0; k < 60; k++) sim(1 / 120, { action: true }); freeze(); }); await shot('41-37-4-chisel-on-the-seam.png'); await page.evaluate(() => { thaw(); sim(0.6); });
+    r = await page.evaluate(() => { const f = chiselTo(48); return { f, top: tileT(12, 14), stump: tileT(12, 17) }; });
+    check('37-4: hold THROW, let go at the fork: a clean break, the top half falls away, the stump is a hop', r.f.done && r.top === 'EMPTY' && r.stump === 'HARD', r);
+    await page.evaluate(() => { sim(0.4); freeze(); }); await shot('42-37-4-clean-break.png'); await page.evaluate(() => thaw());
+    r = await page.evaluate(() => { const a = AP.route([[13, 17], [20, 19], [30, 19]]); const f = chiselTo(128); const b = AP.route([[31, 17], [33, 15], [37, 13], [55, 13], [62, 19]]); return { a: a.ok, f, b: b.ok, b2: b }; });
+    check('37-4: played: over the stump (P1), the tall slab\'s stepped seam leaves a staircase up the cliff, along it, down', r.a && r.f.done && r.b, r);
+    // the tar pool: the cracked plug at the foot of the cliff (no mark: the whiskers and the seam are the tell)
+    await page.evaluate(() => { place(63, 18); sim(0.4); freeze(); }); await shot('43-37-4-tell-plug.png');
+    r = await page.evaluate(() => { thaw(); const a = AP.go([61, 19]); const f = chiselTo(32); const b = AP.go([57, 19]); for (let k = 0; k < 20 && S().area.aid !== 'tar'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.5); return { a: a.ok, f, b: b.ok, area: S().area.aid }; });
+    check('37-4: chisel the cracked plug at the foot of the cliff: a tunnel, a door into the tar pool', r.f.done && r.area === 'tar', r);
+    await page.evaluate(() => { sim(0.5); freeze(); }); await shot('44-37-4-room-no-fishing.png');
+    r = await page.evaluate(() => { thaw(); place(5, 6); sim(2.5); const R = S().area.roomState; const p = P(); place(11, 6); sim(0.6); const backX = Math.floor(p.cx / 32); return { won: R.won, backX }; });
+    check('37-4 tar pool: step into the tar: SPLOSH, the fish spits Brady back to the dry end (nothing lost)', !r.won && r.backX <= 5, r);
+    r = await page.evaluate(() => { const R = S().area.roomState; AP.go([7, 7]); sim(1 / 120, { jump: true, jumpPressed: true, right: true }); sim(0.28, { right: true }); sim(0.4); sim(2.5); return { won: R.won, x: Math.floor(P().cx / 32) }; });
+    check('37-4 tar pool: jump on the float from the dry end: the fish reels Brady in to the island: the prize', r.won && r.x >= 14, r);
+    await page.evaluate(() => freeze()); await shot('45-37-4-room-no-fishing-won.png'); await page.evaluate(() => thaw());
+        r = await page.evaluate(() => { const R = S().area.roomState; toDoor(); for (let k = 0; k < 20 && S().area.aid !== 'cut'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.6); return { area: S().area.aid, x: Math.floor(P().cx / 32) }; });
+    check('37-4 tar pool: its door takes Brady back out by the plug', r.area === 'cut', r);
+    r = await page.evaluate(() => {
+      play('37-4'); place(66, 18); sim(0.3); const p = P(), out = {};
+      out.a = climbTo(67, 12); out.c1 = cross(); out.b = climbTo(70, 9); out.c2 = cross(); out.c = climbTo(71, 6);
+      sim(0.5, { up: true, right: true }); sim(0.8, { right: true }); out.row = p.groundTy; return out;
+    });
+    check('37-4: climbed the cage past three critters on two faces onto the shelf', r.row === 7, r);
+    r = await page.evaluate(() => { const a = AP.route([[90, 7], [103, 7]]); const f = chiselTo(32); const b = AP.route([[106, 7], [112, 7], [124, 19], [129, 19]]); return { a: a.ok, f, b: b.ok, wall: tileT(104, 4) }; });
+    check('37-4: the replica wall standing on the bone bridge: cut along its foot, it falls into the pit; across', r.f.done && r.wall === 'EMPTY' && r.b, r);
+    // the twist: the obvious fork is past the joint (it takes the ankle); the safe seam ends just before it
+    r = await page.evaluate(() => { const f1 = chiselTo(176); const f2 = chiselTo(112); return { f1, f2, ankle: tileT(134, 17), rest: tileT(130, 17) }; });
+    check('37-4: the twist: let go at the big fork: CRUNCH, that took the ankle; let go at the tick before the joint: the ankle stays as a step', !r.f1.done && r.f2.done && r.ankle === 'HARD' && r.rest === 'EMPTY', r);
+    await page.evaluate(() => { sim(0.4); freeze(); }); await shot('46-37-4-the-ankle.png'); await page.evaluate(() => thaw());
+    r = await page.evaluate(() => { const a = AP.route([[134, 17], [138, 14], [148, 14], [156, 14]]); if (!a.ok) return a; sim(3, { right: true }); return { ok: true, state: S().state }; });
+    check('37-4: played: up the ankle onto the last cliff, over the pit (P3), to the gate', r.ok && r.state !== 'play', r);
+    await page.evaluate(() => { play('37-4'); }); await pano('49-37-4-panorama.png', 0.25);
+  });
+};
+
+// ---------------- 37-5 Some Reassembly Required (the lead-in; the fight is tools/boss_tests/bone.js) ----------------
+LEVELS.dig = async (page, shot, run, pano) => {
+  await run('dig', async () => {
+    await page.evaluate(() => { fresh(); play('37-5'); place(5, 18); sim(0.6); freeze(); });
+    await shot('50-37-5-start.png');
+    let r = await page.evaluate(() => { thaw(); const a = AP.go([13, 19]); throwN(1, 1.2); const gate = ents('BoneLimbGate').find(e => e.s.gate[0] === 22); return { ok: a.ok, done: gate.done, wall: tileT(22, 16) }; });
+    check('37-5: THROW the paddle at the empty hip: it does not suit it and comes back', r.ok && !r.done && r.wall === 'HARD', r);
+    r = await page.evaluate(() => { const a = AP.go([17, 19]); throwN(1, 0.5); const gate = ents('BoneLimbGate').find(e => e.s.gate[0] === 22); return { ok: a.ok, done: gate.done }; });
+    await page.evaluate(() => freeze()); await shot('51-37-5-limb-clicks.png'); await page.evaluate(() => { thaw(); sim(1); });
+    r = Object.assign(r, await page.evaluate(() => ({ wall: tileT(22, 16), done: ents('BoneLimbGate').find(e => e.s.gate[0] === 22).done })));
+    check('37-5: THROW the heel at the empty hip: it clicks in, the skeleton gets up out of the way', r.done && r.wall === 'EMPTY', r);
+    r = await page.evaluate(() => { const a = AP.route([[26, 19], [41, 19]]); throwN(1, 1.2); const gate = ents('BoneLimbGate').find(e => e.s.gate[0] === 46); return { ok: a.ok, done: gate.done, wall: tileT(46, 16) }; });
+    check('37-5: the second skeleton: the paddle suits its empty shoulder (the tail and the heel do not)', r.ok && r.done && r.wall === 'EMPTY', r);
+    // the specimen store: up the rib cage on the trench wall to the ledge with the whiskers
+    await page.evaluate(() => { place(52, 18); sim(0.4); freeze(); }); await shot('52-37-5-tell-ledge.png');
+    r = await page.evaluate(() => { thaw(); const a = AP.go([54, 19]); const c = climbTo(57, 3); sim(0.4, { up: true, right: true }); sim(0.6, { right: true }); const b = AP.go([64, 4]); for (let k = 0; k < 20 && S().area.aid !== 'store'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.5); return { a: a.ok, c, b: b.ok, area: S().area.aid }; });
+    check('37-5: up the rib cage on the trench wall to the whiskers\' ledge: a hatch into the specimen store', r.area === 'store', r);
+    await page.evaluate(() => { sim(0.5); freeze(); }); await shot('53-37-5-room-empty-jar.png');
+    r = await page.evaluate(() => { thaw(); place(17, 6); sim(2.2); const R = S().area.roomState, odd = S().area.roomKit.data.odd, xs = [9, 12, 15]; AP.go([xs[(odd + 1) % 3], 7]); throwN(1, 1.6); return { won: R.won, odd }; });
+    check('37-5 store: tip a jar without the bump: clearly empty, a little dust (try again)', !r.won, r);
+    r = await page.evaluate(() => { const R = S().area.roomState, xs = [9, 12, 15], odd = S().area.roomKit.data.odd; AP.go([xs[odd] - 1, 7]); sim(1 / 120, { action: true, actionPressed: true }); const D0 = R.drop; let k = 0; for (; k < 240 && R.drop && !R.won; k++) { const D = R.drop, p = P(); sim(1 / 120, { left: D.x < p.cx - 8, right: D.x > p.cx + 8 }); } sim(0.3); return { fell: !!D0, won: R.won }; });
+    check('37-5 store: tip the jar with the bump under its label: something falls out; run under it and catch it: the cage opens', r.fell && r.won, r);
+    await page.evaluate(() => freeze()); await shot('54-37-5-room-empty-jar-won.png'); await page.evaluate(() => thaw());
+    r = await page.evaluate(() => { toDoor(); for (let k = 0; k < 20 && S().area.aid !== 'dig'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.6); return { area: S().area.aid, x: Math.floor(P().cx / 32), row: P().groundTy }; });
+    check('37-5 store: its hatch lets Brady down onto the trench floor further on (before the boss)', r.area === 'dig' && r.x >= 66 && r.row === 19, r);
+    r = await page.evaluate(() => { const a = AP.route([[76, 19], [88, 19]]); for (let k = 0; k < 20 && S().area.aid !== 'pit'; k++) sim(0.1, { up: true, upPressed: true }); sim(1); return { ok: a.ok, area: S().area.aid }; });
+    check('37-5: over the scree pit (P3) to the hatch down into the dig: the boss', r.ok && r.area === 'pit', r);
+    await page.evaluate(() => { sim(2.5); freeze(); }); await shot('55-37-5-boss-arena.png'); await page.evaluate(() => thaw());
+    await page.evaluate(() => { play('37-5'); }); await pano('59-37-5-panorama.png', 0.3);
+  });
+};
+// ---------------- the land's map and the route-map pin ----------------
+const openBone = `(() => { fresh(); const B = window.BRADY, T = window.BRADY_TOUR; B.Save.data.seenEncoreIntro = true; const Tp = T.TourProgress, D = Tp.data(); D.seen.ec = true; try { Tp.exit('2-1', 'bone'); Tp.exit('37-1', 'main'); Tp.exit('37-2', 'main'); } catch (e) {} for (const id of ['37-1', '37-2']) B.Save.data.done[id] = true; D.pending = []; D.seen.bone = true; })()`;
+LEVELS.map = async (page, shot, run) => {
+  await run('map', async () => {
+    const r = await page.evaluate(o => { eval(o); window.BRADY.goToMap('world', 37, '37-2'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } const s = S(); return { mode: s.mode, cc: s.ow && s.ow.cc }; }, openBone);
+    check('the quarry has its own walkable map', r.cc === 'bone', r);
+    await page.evaluate(() => freeze()); await shot('70-bone-overworld-map.png');
+    const r2 = await page.evaluate(() => { thaw(); const s = S(); if (s.openRoute) s.openRoute({ dest: 'bone' }); for (let k = 0; k < 30; k++) sim(0.25); s.dest = 'bone'; sim(0.8); return { mode: s.mode }; });
+    await page.evaluate(() => freeze()); await shot('71-route-map-bone-pin.png');
+    check('the route map opens on the quarry\'s pin', !!r2.mode, r2);
+  });
+};
+
+// ---------------- bot: one honest run of each stage, enemies on, no invulnerability, the lives a level gives ----------------
+// Steps: [x, row] walk/hop there; { j: [x, row] } land exactly on that tile; { t: n } THROW n times; { press: 'tall'|'low' };
+// { chisel: d }; { climb: [[x, y], 'cross', ..., 'out'] }; 'finish'. Segments start at checkpoints: after a death the
+// run picks up at the segment of the checkpoint Brady comes back at.
+const BOT = {
+  '37-1': [[0, [{ bump: [13, 19] }, [21, 19], { j: [25, 19] }, { j: [22, 19] }, [29, 17], [31, 15], [40, 13], [54, 13], [62, 19]]],
+    [60, [[72, 19], [80, 19], { j: [88, 19] }, { j: [96, 19] }, { j: [92, 19] }, { j: [84, 19] }, [97, 17], [99, 15], [101, 13], [103, 11], [108, 9]]],
+    [110, [[128, 9], [134, 21]]], [136, [[146, 21], [153, 21], [155, 20], [166, 21], [176, 21]]],
+    [176, [[186, 21], { toes: 1 }, [194, 17], [197, 15], [200, 13], [202, 11], [212, 9], 'finish']]],
+  '37-2': [[0, [{ bump: [9, 19] }, [11, 19], { t: 1 }, [14, 17], [20, 17], [27, 17], [38, 17], { climb: [[38, 9], 'outR'] }]],
+    [44, [[55, 9], { t: 3 }, [58, 7], [64, 7], [70, 7], [88, 7], [96, 19]]],
+    [93, [[98, 19], { climb: [[99, 12], 'cross', [102, 9], 'cross', [103, 5], 'outR'] }, [110, 7], { t: 3 }, [113, 6], [119, 6], [126, 6], [148, 6], [154, 19]]],
+    [155, [[164, 19], { t: 3 }, [169, 17], [173, 17], [180, 17], [190, 17], [200, 17], { climb: [[200, 11], 'cross', [204, 7], 'cross', [205, 5], 'outR'] }, [215, 5], 'finish']], [210, [[215, 5], 'finish']]],
+  '37-3': [[0, [{ bump: [9, 19] }, [14, 19], { press: 'tall' }, [18, 16], [22, 13], [44, 13], [49, 19]]],
+    [48, [[51, 19], { press: 'low' }, [59, 19], [66, 19], [76, 19], [86, 19], { press: 'tall' }, [90, 16], [95, 13]]],
+    [96, [[112, 13], [124, 19]]], [127, [[131, 19], { press: 'low' }, [142, 19], [152, 19], [158, 19]]],
+    [156, [[168, 19], { press: 'tall' }, [172, 16], [176, 13], [192, 13], 'finish']]],
+  '37-4': [[0, [{ bump: [9, 19] }, [11, 19], { chisel: 48 }, [13, 17], [20, 19], [30, 19], { chisel: 128 }, [31, 17], [33, 15], [37, 13]]],
+    [38, [[55, 13], [62, 19]]], [64, [[66, 19], { climb: [[67, 12], 'cross', [70, 9], 'cross', [71, 6], 'outR'] }, [90, 7], [103, 7], { chisel: 32 }, [106, 7], [112, 7]]],
+    [112, [[124, 19], [129, 19], { chisel: 112 }, [134, 17], [138, 14], [148, 14], [156, 14], 'finish']]],
+  '37-5': [[0, [{ bump: [9, 19] }, [17, 19], { t: 1 }, [27, 19], [31, 19]]], [32, [{ bump: [36, 19] }, [41, 19], { t: 1 }, [50, 19], [76, 19], [88, 19], 'boss']]]
+};
+LEVELS.bot = async (page, shot, run) => {
+  if (!want.includes('bot')) return;
+  const ids = Object.keys(BOT).filter(id => !want.some(w => /^37-/.test(w)) || want.includes(id));
+  for (const id of ids) await run('bot', async () => {
+    const r = await page.evaluate(([id, segs]) => {
+      fresh(); const B = window.BRADY; B.Save.data.lives = 5;
+      const [w, i] = id.split('-').map(Number); B.Game.setScene(new B.Play(B.getLevel(w, i), {})); sim(1.6);
+      AP.careful = true; const deaths = [], lives0 = B.Save.data.lives; let hurts = 0, lastPow = P().power;
+      const alive = () => { const g = S(), p = P(); return p && !p.dead && g.state === 'play'; };
+      const settle = () => { for (let k = 0; k < 120 * 8 && !(S().state === 'play' && P() && !P().dead && S().fade.a < 0.05); k++) sim(1 / 120); };
+      const doStep = st => {
+        if (st === 'finish') { sim(3, { right: true }); return S().state !== 'play'; }
+        if (st === 'boss') return bossFight();
+        if (Array.isArray(st)) { window.__lastT = st; for (let k = 0; k < 8; k++) { if (k === 4) AP.careful = false; const r = AP.go(st); AP.careful = true; if (r.ok) return true; if (!alive()) return false; sim(0.5); } return false; }
+        if (st.j) { for (let k = 0; k < 8; k++) { const r = AP.go(st.j, { jump: true }); if (r.ok && tileOf()[0] === st.j[0]) return true; if (!alive()) return false; sim(0.4); } return false; }
+        if (st.bump) { AP.go(st.bump); const p = P(); sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.5, { jump: true }); sim(0.4); for (let q = 0; q < 240; q++) { const it = S().entities.find(e => !e.remove && e.constructor.name !== 'BonePill' && (e.item || e.isItem || /Item|Power|Mushroom/.test(e.constructor.name))); if (!it) break; sim(1 / 60, { left: it.cx < p.cx - 6, right: it.cx > p.cx + 6 }); } return alive(); }
+        if (st.toes) { const tr = ents('BoneTrack').find(e => e.mode === 'toes'); for (let q = 0; q < 3 && !tr.done; q++) { AP.route([[191, 19], [194, 17], [197, 15], [200, 13]]); for (const [x, y] of [[197, 15], [194, 17], [191, 19]]) AP.go([x, y], { jump: true }); sim(0.5); } return tr.done && alive(); }
+        if (st.t) { throwN(st.t, 0.6); return alive(); }
+        if (st.press) { const tr = window.__lastT; for (let q = 0; q < 3; q++) { if (q) AP.go(tr); const r = pressCast(st.press === 'low'); if (r.done || !alive()) break; } return alive(); }
+        if (st.chisel) { chiselTo(st.chisel); return alive(); }
+        if (st.climb) { for (const c of st.climb) { if (c === 'cross') cross(); else if (c === 'outR') { sim(0.5, { up: true, right: true }); sim(0.8, { right: true }); } else { const r = climbTo(c[0], c[1]); if (!r.ok) return false; } if (!alive()) return false; } return true; }
+        return true;
+      };
+      function bossFight() {
+        for (let k = 0; k < 20 && S().area.aid !== 'pit'; k++) sim(0.1, { up: true, upPressed: true });
+        if (S().area.aid !== 'pit') { const d = S().entities.find(e => e.constructor.name === 'Portal' && e.target && e.target.area !== S().area.idx && e.cx > 80 * 32); if (d) { AP.go([Math.floor(d.cx / 32), 19]); for (let k = 0; k < 20 && S().area.aid !== 'pit'; k++) sim(0.1, { up: true, upPressed: true }); } }
+        if (S().area.aid !== 'pit') return false;
+        sim(1); let pressedAct = null;
+        for (let f = 0; f < 60 * 150; f++) {
+          const g = S(), b = g.entities.find(e => e.boss && !e.remove), p = P();
+          if (!b || b.state === 'dying') { window.__why = { bossFrames: f, hurtsInFight: hurts }; sim(3); for (let q = 0; q < 12 && S().state === 'play'; q++) sim(0.5, { right: true }); return true; }
+          if (!alive()) return false;
+          const A = b.act, K = window.BRADY_TOUR.Tour.boneKit.animalBrain, lo = b.arenaX0 + 20, hi = b.arenaX1 - 20;
+          let tx = null, act = false, jump = false;
+          const away = (x, d) => { const l = x - d, r = x + d; return Math.abs(p.cx - l) < Math.abs(p.cx - r) ? (l > lo ? l : r) : (r < hi ? r : l); };
+          if (A === 'paddleDown') { tx = K.shoulder(b).x; act = Math.abs(p.cx - tx) < 12 && p.onGround; }
+          else if ((A === 'heelDown' || A === 'curlDown') && b.loose) { tx = b.loose.x; act = Math.abs(p.cx - tx) < 12 && p.onGround; }
+          else if (A === 'wind' || A === 'slap') tx = away(b.tx, 110);
+          else if (A === 'kick' || A === 'hop') tx = Math.abs(p.cx - b.tx) < b.w / 2 + 40 ? away(b.tx, b.w / 2 + 70) : p.cx;
+          else if (A === 'curl' || A === 'sweep') tx = away(b.cx, b.w / 2 + 130);
+          else tx = away(b.cx, b.w / 2 + 110);
+          tx = Math.max(lo, Math.min(hi, tx));
+          for (const e of g.entities) if (e.constructor.name === 'TourShot' && !e.remove && Math.abs(e.cy - p.cy) < 50) { const d = e.cx - p.cx; if (Math.abs(d) < 110 && Math.sign(d) === -Math.sign(e.vx || 1) && p.onGround) jump = true; }
+          if (!act && (A === 'trot' || A === 'recover') && Math.abs(b.cx - p.cx) < b.w / 2 + 40 && p.onGround) { jump = true; tx = b.cx + (b.cx > p.cx ? 1 : -1) * 160; }
+          window.__bossAct = A;
+          if (act && pressedAct === b.goN) act = false;
+          const inp = { left: !act && tx < p.cx - 8, right: !act && tx > p.cx + 8 };
+          if (jump && p.onGround) { inp.jump = true; inp.jumpPressed = true; window.__hold = 0.3; }
+          else if (window.__hold > 0) { inp.jump = true; window.__hold -= 1 / 60; }
+          if (act) { inp.action = true; inp.actionPressed = true; pressedAct = b.goN; }
+          sim(1 / 60, inp);
+          if (P().power < lastPow) { hurts++; } lastPow = P().power;
+        }
+        return false;
+      }
+      settle(); for (let q = 0; q < 240 && S().state !== 'play'; q++) sim(1 / 60); lastPow = P().power;
+      const t0 = Date.now(); let si = 0, k = 0, tries = {};
+      while (si < segs.length && Date.now() - t0 < 240000) {
+        const steps = segs[si][1]; let ok = true;
+        const won = () => ['clear', 'tally', 'results'].indexOf(S().state) >= 0;
+        for (; k < steps.length; k++) { if (!doStep(steps[k]) || (!alive() && !won())) { ok = false; break; } if (P().power < lastPow) hurts++; lastPow = P().power; if (won()) break; }
+        if (ok) { if (won()) { si = segs.length; break; } si++; k = 0; continue; }
+        if (alive()) { deaths.push({ stuck: tileOf(), seg: si, step: k }); break; }
+        deaths.push({ at: Math.floor(P().cx / 32), seg: si, step: k, boss: window.__bossAct || undefined }); window.__bossAct = null;
+        sim(3); settle(); lastPow = P() ? P().power : 0;
+        if (B.Save.data.lives <= 0 || !(S() instanceof B.Play)) break;
+        const x = Math.floor(P().cx / 32); si = 0; for (let q = 0; q < segs.length; q++) if (segs[q][0] <= x + 2) si = q; k = 0;
+        tries[si] = (tries[si] || 0) + 1; if (tries[si] > 3) break;
+      }
+      const g = S(); return { why: window.__why, id, done: ['clear', 'tally', 'results'].indexOf(g && g.state) >= 0, state: g && g.state, deaths, hurts, lives: B.Save.data.lives, sec: Math.round((Date.now() - t0) / 1000) };
+    }, [id, BOT[id]]);
+    console.log('BOT ' + JSON.stringify(r));
+    check(`bot ${id}: an ordinary run (enemies on, damage on) reaches the end`, r.done, r);
+  });
+};
+
+(async () => {
+  await session({ width: 844, height: 390 }, async (page, shot, run, pano) => {
+    for (const k of Object.keys(LEVELS).filter(k => k !== 'entry' && k !== 'map' && k !== 'bot').concat(['entry', 'map', 'bot'])) await LEVELS[k](page, shot, run, pano);
+  });
+  if (!want.length || want.includes('portrait')) await session({ width: 390, height: 844 }, async (page, shot, run) => {
+    await run('portrait', async () => {
+      await page.evaluate(() => { fresh(); play('37-1'); place(20, 18); sim(0.4); freeze(); }); await shot('90-portrait-37-1.png');
+      await page.evaluate(() => { thaw(); play('37-5'); toArea('pit', 6, 15); sim(3); freeze(); }); await shot('91-portrait-37-5-boss.png');
+      await page.evaluate(o => { thaw(); eval(o); window.BRADY.goToMap('world', 37, '37-2'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } freeze(); }, openBone); await shot('92-portrait-bone-map.png');
+    });
+  });
+  console.log(failures ? `${failures} BONE CHECK(S) FAILED` : 'ALL BONE CHECKS PASSED');
+  process.exit(failures ? 1 : 0);
+})();

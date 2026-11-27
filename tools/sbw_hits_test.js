@@ -277,7 +277,10 @@ const BOSS_SAFE = {
   lost_hydra: ['exit'],                                        // 29_tour_lost.js: folding itself up, all paired
   // Australia (16): the Drop Bear is up in the crown, out of reach, while he lurks and takes aim (29_tour_au_kit.js touch())
   au_dropbear: ['lurk', 'aim'],
-  ke_kiboko: ['swim', 'dive', 'rise']                          // 29_tour_ke_boss.js: under the water (only her eyes show)
+  ke_kiboko: ['swim', 'dive', 'rise'],                         // 29_tour_ke_boss.js: under the water (only her eyes show)
+  // The Spare Bone Quarry (37): a bone lies loose to be seated (paddleDown, heelDown, curlDown), it shudders after one
+  // is seated (seated, recover), it sits down at the end (sit): 29_tour_y_bone_c_boss.js touch()
+  bone_animal: ['paddleDown', 'heelDown', 'curlDown', 'seated', 'recover', 'sit']
 };
 const ENEMY_SAFE_TOKENS = ['wait', 'sleep', 'under', 'hide', 'stunned', 'stun', 'friendly', 'friendT', 'harmless', 'perch', 'disguise', 'fade', 'gone', 'dead', 'snatch', 'flee', 'grab'];
 const ENEMY_SAFE_TYPES = {
