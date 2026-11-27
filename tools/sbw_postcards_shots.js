@@ -77,7 +77,7 @@ async function session(viewport, tag) {
   // 7. Brady in a level with the perks on
   await page.evaluate(() => { fresh(); const BP = window.BRADY_POSTCARDS; for (const cc of Object.keys(T.Tour.countries)) full(land(cc)); BP.sync(); BP.data().off.gold = true; BP.data().off.gift = true; BP.data().off.magnet = true; BP.data().pending.length = 0; const g = play('1-1'); sim(0.7, { right: true }); g.player.invuln = 0; });
   await snap('brady', 30);
-  await page.evaluate(() => { const BP = window.BRADY_POSTCARDS; delete BP.data().off.gold; S().player.invuln = 0.0001; sim(0.25, { left: true }); S().player.invuln = 0; }); await snap('brady-gold', 30);
+  await page.evaluate(() => { const BP = window.BRADY_POSTCARDS; delete BP.data().off.gold; S().player.setPower(1); S().player.invuln = 0.0001; sim(0.6); sim(0.25, { left: true }); S().player.invuln = 0; }); await snap('brady-gold', 30);
   await browser.close();
   return errors;
 }

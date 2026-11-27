@@ -383,10 +383,10 @@ const PerkFx = {
   // the cape, behind Brady (local frame: +x is behind him, y down from the shoulders)
   cape(ctx, p, t, gold) {
     const D = p.small ? BRADY_DIM.small : BRADY_DIM.big, S = ART_SCALE.brady, feet = p.y + p.h;
-    const shY = feet - D.shoulder * S + (p.small ? 3 : 4), len = (D.shoulder - D.hip * (p.small ? 0.1 : 0.25)) * S;
+    const shY = feet - D.shoulder * S + (p.small ? 2 : 4), len = D.shoulder * S * (p.small ? 1.05 : 0.92);
     const spd = clamp(Math.abs(p.vx) / (6 * TS), 0, 1), air = p.onGround ? 0 : 1;
-    const lean = 0.42 + spd * 0.6 + air * 0.3 + Math.sin(t * 3) * 0.05, wv = Math.sin(t * 14) * (1 + spd * 2);
-    const hw = (p.small ? 5.5 : 7.5), bw = (p.small ? 9 : 14);
+    const lean = 0.62 + spd * 0.5 + air * 0.25 + Math.sin(t * 3) * 0.05, wv = Math.sin(t * 14) * (1 + spd * 2);
+    const hw = (p.small ? 6 : 8), bw = (p.small ? 11 : 15);
     ctx.save(); ctx.translate(p.cx - p.facing * 2, shY); ctx.scale(-p.facing, 1);
     const bx = Math.sin(lean) * len, by = Math.cos(lean) * len, nx = Math.cos(lean), ny = -Math.sin(lean);
     ctx.beginPath(); ctx.moveTo(-hw * 0.6, 0); ctx.lineTo(hw, 0);
