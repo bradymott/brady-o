@@ -111,15 +111,12 @@ const washOf = p => p.wash || (p.wash = { grip: null, face: 0, crossT: 0, cool: 
       ctx.save(); ctx.translate(this.cx, this.cy); ctx.scale(sx, 1); ctx.translate(-this.cx, -this.cy); dr0.call(this, ctx, t); ctx.restore();
       return;
     }
-    dr0.call(this, ctx, t);
+    // on the far face the cloth passes in front of him: he shows through the checks (his bun and glasses still read),
+    // and any near-face critter is in front of him too
+    if (W.face === 1) { ctx.save(); ctx.globalAlpha = 0.58; dr0.call(this, ctx, t); ctx.restore(); }
+    else dr0.call(this, ctx, t);
     if (W.face === 1) {
-      // on the far face: the cloth passes in front of him (a veil of the checks over his body; his bun and glasses
-      // still read through it), and any near-face critter is in front of him too
-      const z = W.grip, x = this.x - 22, y = this.y - 26, w = this.w + 44, h = this.h + 30;
-      ctx.save(); ctx.beginPath(); ctx.rect(Math.max(x, z.x), Math.max(y, z.y), Math.min(x + w, z.x + z.w) - Math.max(x, z.x), Math.min(y + h, z.y + z.h) - Math.max(y, z.y)); ctx.clip();
-      ctx.globalAlpha = 0.42; WA.gingham(ctx, z.x, z.y, z.w, z.h, 12, 0.55, '#efe4cc'); ctx.globalAlpha = 1;
-      // the holes stay holes
-      ctx.restore();
+      const x = this.x - 22, y = this.y - 26, w = this.w + 44, h = this.h + 30;
       for (const e of this.g.entities) if (e.isWashCrawler && e.face === 0 && !e.remove && overlap(e, { x, y, w, h })) e.draw(ctx);
     }
   };
@@ -133,21 +130,31 @@ class WashNet extends Ent {
   }
   update(dt) { this.t += dt; }
   touchPlayer() {}
-  // the cloth, painted once (cream with navy checks, a knotted cream rope frame, the torn squares cut out)
+  // the cloth, painted once in world coordinates (cream with navy checks sewn in panels, a knotted cream rope frame,
+  // the torn squares cut out)
   paintCloth(c, x, y, w, h) {
     c.save();
     c.beginPath(); c.rect(x, y, w, h);
-    for (const [hx, hy] of this.holes) { const cx = hx * TS + TS / 2 - this.x + x, cy = hy * TS + TS / 2 - this.y + y; this.tornPath(c, cx, cy, hx * 7 + hy); }
+    for (const [hx, hy] of this.holes) this.tornPath(c, hx * TS + TS / 2, hy * TS + TS / 2, hx * 7 + hy);
     c.clip('evenodd');
-    c.globalAlpha = 0.86; WA.gingham(c, x, y, w, h, 12, 0.5, '#f2e8d0'); c.globalAlpha = 1;
+    // panels about six squares wide, each a slightly different cream, the checks lined up across the whole net
+    const PW = 6 * TS;
+    for (let px = x, k = 0; px < x + w; px += PW, k++) {
+      c.globalAlpha = 0.84; WA.gingham(c, px, y, Math.min(PW, x + w - px), h, 12, k % 2 ? 0.44 : 0.52, k % 2 ? '#ece0c4' : '#f4ead2');
+    }
+    c.globalAlpha = 1;
+    // the seams between the panels: a stitched line
+    c.lineWidth = 1.6;
+    for (let px = x + PW; px < x + w - 8; px += PW) { c.strokeStyle = 'rgba(26,20,38,0.45)'; c.beginPath(); c.moveTo(px, y); c.lineTo(px, y + h); c.stroke(); c.strokeStyle = '#fff4dc'; c.setLineDash([4, 4]); c.beginPath(); c.moveTo(px + 3, y); c.lineTo(px + 3, y + h); c.stroke(); c.setLineDash([]); }
     // soft folds
     c.strokeStyle = 'rgba(140,120,90,0.18)'; c.lineWidth = 2; for (let xx = x + 40; xx < x + w; xx += 70) { c.beginPath(); c.moveTo(xx, y); c.quadraticCurveTo(xx + 10, y + h / 2, xx - 6, y + h); c.stroke(); }
     c.restore();
-    // the torn edges: a frayed cream rim and a dark gap
+    // the torn edges: a dark gap, a frayed cream rim
     for (const [hx, hy] of this.holes) {
-      const cx = hx * TS + TS / 2 - this.x + x, cy = hy * TS + TS / 2 - this.y + y;
-      c.save(); c.strokeStyle = INK; c.lineWidth = 2; this.tornPath(c, cx, cy, hx * 7 + hy); c.stroke();
-      c.strokeStyle = '#fff8ea'; c.lineWidth = 1.2; c.beginPath(); for (let k = 0; k < 10; k++) { const a = k / 10 * TAU, r = 17; c.moveTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); c.lineTo(cx + Math.cos(a) * (r + 4), cy + Math.sin(a) * (r + 4)); } c.stroke();
+      const cx = hx * TS + TS / 2, cy = hy * TS + TS / 2;
+      c.save(); c.beginPath(); this.tornPath(c, cx, cy, hx * 7 + hy); c.strokeStyle = 'rgba(30,20,40,0.35)'; c.lineWidth = 7; c.stroke();
+      c.strokeStyle = INK; c.lineWidth = 2.2; c.stroke();
+      c.strokeStyle = '#fff8ea'; c.lineWidth = 1.4; c.beginPath(); for (let k = 0; k < 12; k++) { const a = k / 12 * TAU, r = 17; c.moveTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); c.lineTo(cx + Math.cos(a) * (r + 5), cy + Math.sin(a) * (r + 5)); } c.stroke();
       c.restore();
     }
     // the knotted cream rope frame
@@ -172,13 +179,16 @@ class WashNet extends Ent {
       WA.peg(ctx, x - 10, y - 18, 0.7, -0.3); WA.peg(ctx, x + w + 10, y - 18, 0.7, 0.3);
       ctx.restore();
     }
-    // the far-face critters, behind the cloth (one broad hatched silhouette each, their peg / hanger in colour)
-    for (const e of g.entities) if (e.isWashCrawler && e.face === 1 && e.nid === this.nid && !e.remove) e.drawFar(ctx);
     // the cloth (cached)
     if (typeof document !== 'undefined') {
-      if (!this.cache) { const c = document.createElement('canvas'); c.width = Math.ceil(w + 24); c.height = Math.ceil(h + 24); const cx2 = c.getContext('2d'); this.paintCloth(cx2, 12, 12, w, h); this.cache = c; }
+      if (!this.cache) { const c = document.createElement('canvas'); c.width = Math.ceil(w + 24); c.height = Math.ceil(h + 24); const cx2 = c.getContext('2d'); cx2.translate(12 - x, 12 - y); this.paintCloth(cx2, x, y, w, h); this.cache = c; }
       ctx.drawImage(this.cache, x - 12, y - 12);
     } else this.paintCloth(ctx, x, y, w, h);
+    // the far-face critters show through the cloth: one broad hatched silhouette each, their peg in colour
+    for (const e of g.entities) if (e.isWashCrawler && e.face === 1 && e.nid === this.nid && !e.remove && !e.dead) e.drawFar(ctx);
+    // the buttons sewn on the cloth (coins) stay in front of it
+    const A = g.area, cd = Tour.countries.wash && Tour.countries.wash.coin;
+    if (A && cd) for (let ty = Math.floor(y / TS); ty < Math.ceil((y + h) / TS); ty++) for (let tx = Math.floor(x / TS); tx < Math.ceil((x + w) / TS); tx++) if (A.tiles[ty * A.W + tx] === T.PICK) cd.draw(ctx, tx * TS + TS / 2, ty * TS + TS / 2 + Math.sin(t * 3 + tx) * 1.5);
     // the torn square Brady could squeeze through glows while he holds the net near it
     const p = g.player, W = p && p.wash;
     if (W && W.grip && W.grip.nid === this.nid && !(W.crossT > 0)) {
@@ -232,13 +242,14 @@ class WashCrawler extends Ent {
   }
   // behind the cloth: one broad hatched silhouette, the peg (beetle) in colour so it can be picked out
   drawFar(ctx) {
-    const x = this.cx, y = this.y + this.h;
+    const x = this.cx, y = this.y + this.h, t = this.t;
     ctx.save();
-    ctx.fillStyle = 'rgba(30,26,52,0.62)'; ctx.beginPath(); ctx.ellipse(x, y - 15, 19, 18, 0, 0, TAU); ctx.fill();
-    ctx.save(); ctx.beginPath(); ctx.ellipse(x, y - 15, 19, 18, 0, 0, TAU); ctx.clip();
-    ctx.strokeStyle = 'rgba(244,234,210,0.35)'; ctx.lineWidth = 2; for (let k = -40; k < 40; k += 6) { ctx.beginPath(); ctx.moveTo(x + k, y - 36); ctx.lineTo(x + k + 30, y + 4); ctx.stroke(); }
+    const body = () => { ctx.beginPath(); ctx.ellipse(x, y - 15, 18, 17, 0, 0, TAU); if (this.kind === 'moth') { ctx.moveTo(x - 6, y - 18); ctx.ellipse(x - 16, y - 20, 12, 7, -0.5 + Math.sin(t * 8) * 0.2, 0, TAU); ctx.moveTo(x + 26, y - 20); ctx.ellipse(x + 16, y - 20, 12, 7, 0.5 - Math.sin(t * 8) * 0.2, 0, TAU); } else { ctx.moveTo(x + 18, y - 30); ctx.ellipse(x + 12, y - 33, 6, 9, 0.5, 0, TAU); } };
+    ctx.fillStyle = 'rgba(28,24,52,0.5)'; body(); ctx.fill();
+    ctx.save(); body(); ctx.clip();
+    ctx.strokeStyle = 'rgba(28,24,52,0.55)'; ctx.lineWidth = 2; for (let k = -50; k < 50; k += 5) { ctx.beginPath(); ctx.moveTo(x + k, y - 40); ctx.lineTo(x + k + 34, y + 6); ctx.stroke(); }
     ctx.restore();
-    if (this.kind === 'beetle') WA.peg(ctx, x - 10, y - 8, 0.75, -1.1); else { ctx.fillStyle = '#ffffff'; for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(x + s * 4, y - 22, 2.4, 0, TAU); ctx.fill(); } }
+    if (this.kind === 'beetle') WA.peg(ctx, x - 12, y - 6, 0.8, -1.1); else { ctx.fillStyle = '#ffffff'; for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(x + s * 4, y - 22, 2.6, 0, TAU); ctx.fill(); } }
     ctx.restore();
   }
 }
