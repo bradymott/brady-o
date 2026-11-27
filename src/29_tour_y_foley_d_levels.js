@@ -406,13 +406,14 @@ if (typeof TOUR_OW_MAPS !== 'undefined') TOUR_OW_MAPS.foley = {
   pal: { sea: '#2a6a84', deep: '#14405a', land: '#f0d090', light: '#fff0c0', path: '#7a2236', beach: '#f6e0a8', cliff: '#7a2236', roof: '#2e6a80', wall: '#f6ecd6' },
   sea: 'waves', coast: 'foleyBoards', tufts: 'none', trail: 'dots', bridge: 'steps', meadow: false, woods: false, foam: true, birds: true,
   land: [[[120, 230], [260, 150], [520, 120], [760, 170], [980, 120], [1260, 150], [1420, 260], [1400, 420], [1260, 520], [1300, 640], [1100, 690], [820, 650], [560, 690], [330, 620], [180, 520], [100, 380]]],
-  nodes: { start: [220, 330, 's'], '29-1': [380, 250, 'n'], '29-2': [640, 220, 'n'], '29-3': [930, 230, 'n'], '29-4': [1220, 300, 'e'], '29-5': [1080, 520, 's'], '29-6': [720, 560, 's'], port: [440, 560] },
-  paths: { 'start>29-1': [[290, 280]], '29-1>29-2': [[510, 220]], '29-2>29-3': [[790, 200]], '29-3>29-4': [[1100, 240]], '29-4>29-5': [[1200, 440]], '29-5>29-6': [[900, 560]], '29-6>port': [[580, 580]] },
+  // (the boardwalk winds in round the beach like a coiled cable, Mr. Thunder's stage near the middle, the port at its heart)
+  nodes: { start: [340, 590, 's'], '29-1': [260, 300, 'n'], '29-2': [700, 180, 'n'], '29-3': [1240, 220, 'n'], '29-4': [1240, 500, 'e'], '29-5': [900, 620, 's'], '29-6': [620, 440, 'w'], port: [900, 400] },
+  paths: { 'start>29-1': [[270, 450]], '29-1>29-2': [[440, 200]], '29-2>29-3': [[980, 170]], '29-3>29-4': [[1300, 360]], '29-4>29-5': [[1080, 600]], '29-5>29-6': [[720, 560]], '29-6>port': [[760, 400]] },
   feat: [
-    ['sprite', 'foleyTinSprite', 1300, 420, 30], ['sprite', 'foleyShellSprite', 300, 450, 22], ['sprite', 'foleyCoconutSprite', 820, 330, 24],
-    ['sprite', 'foleyTrumpetSprite', 1330, 220, 26], ['sprite', 'foleyShellSprite', 1000, 620, 18]
+    ['sprite', 'foleyTinSprite', 1100, 430, 30], ['sprite', 'foleyShellSprite', 450, 560, 22], ['sprite', 'foleyCoconutSprite', 520, 310, 24],
+    ['sprite', 'foleyTrumpetSprite', 1060, 280, 26], ['sprite', 'foleyShellSprite', 820, 300, 18]
   ],
   flora: ['palm'], density: 0.2,
-  live: [['blink', 720, 520, '#f6ecd6'], ['blink', 1220, 260, '#ffd84a']]
+  live: [['blink', 600, 620, '#f6ecd6'], ['blink', 1010, 520, '#ffd84a']]
 };
 })();
