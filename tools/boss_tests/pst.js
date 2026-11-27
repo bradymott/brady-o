@@ -22,8 +22,8 @@ module.exports = async ({ page, check, shot }) => {
       if (st.slotIn === k) return true;
       // stand behind it, then walk it along
       p.x = st.x - p.w - 6; p.y = st.y + st.h - p.h; p.vx = 0; p.vy = 0; sim(0.2);
-      const log = [[Math.round(p.cx), Math.round(st.cx)]]; for (let q = 0; q < 900 && st.slotIn !== k; q++) { sim(1 / 120, { right: true }); if (q % 30 === 0) log.push([Math.round(p.cx), Math.round(p.y), Math.round(st.cx), st.slotIn]); if (st.cx > sx + 20) break; } window.__log = log;
-      sim(0.3); window.__push = { log: window.__log, slotIn: st.slotIn, cx: Math.round(st.cx), sx, px: Math.round(P().cx), lock: st.lockT, left: st.leftT }; return st.slotIn === k;
+      for (let q = 0; q < 900 && st.slotIn !== k; q++) { sim(1 / 120, { right: true }); if (st.cx > sx + 20) break; }
+      sim(0.3); window.__push = { slotIn: st.slotIn, cx: Math.round(st.cx), sx, px: Math.round(P().cx), lock: st.lockT, left: st.leftT }; return st.slotIn === k;
     };
   });
   // a stomp on it just bounces
