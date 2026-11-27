@@ -1,5 +1,7 @@
 # Super Brady-O World: relay for the road to 200 (27 Nov 2026)
 
+> **DONE.** All twelve hidden lands are built and live: 200 levels. What was built, where each entrance is and what is left open is in `SBW_RELAY.md` under "THE ROAD TO 200". The rest of this file is the brief as it was given.
+
 *Brady pastes this into a fresh chat. It is written for the next Claude.*
 
 ## Who you are working for
