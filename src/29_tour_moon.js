@@ -415,7 +415,7 @@ const decorLights = { moonLamp: [90, '#fff4c8', -56] };
 {
   const dr0 = DoorArt.draw;
   DoorArt.draw = function (ctx, x, y, look, t, near) {
-    if (look === 'moonAirlock' || look === 'moonHatch') {
+    if (look === 'moonAirlock' || look === 'moonHatch' || look === 'moonHatchQuiet') {
       ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
       ctx.fillStyle = '#5a6276'; rr(ctx, x - 24, y - 66, 48, 66, 12); ctx.fill(); ctx.stroke();
       ctx.fillStyle = '#c8d0dc'; rr(ctx, x - 18, y - 60, 36, 60, 9); ctx.fill(); ctx.stroke();
@@ -424,7 +424,7 @@ const decorLights = { moonLamp: [90, '#fff4c8', -56] };
       ctx.fillStyle = '#05061a'; ctx.beginPath(); ctx.arc(x, y - 40, 7, 0, TAU); ctx.fill(); ctx.stroke();
       ctx.fillStyle = '#ffd84a'; for (let k = 0; k < 4; k++) ctx.fillRect(x - 16 + k * 9, y - 6, 5, 4);
       // the blinking light over it (the tell)
-      const on = Math.sin(t * 5) > 0; ctx.fillStyle = on ? (look === 'moonHatch' ? '#7affd8' : '#ff5a5a') : '#5a2a2a'; ctx.beginPath(); ctx.arc(x, y - 72, 5, 0, TAU); ctx.fill(); ctx.stroke();
+      const on = look !== 'moonHatchQuiet' && Math.sin(t * 5) > 0; if (look === 'moonHatchQuiet') { ctx.restore(); return; } ctx.fillStyle = on ? (look === 'moonHatch' ? '#7affd8' : '#ff5a5a') : '#5a2a2a'; ctx.beginPath(); ctx.arc(x, y - 72, 5, 0, TAU); ctx.fill(); ctx.stroke();
       if (on) { ctx.fillStyle = look === 'moonHatch' ? 'rgba(122,255,216,0.25)' : 'rgba(255,90,90,0.25)'; ctx.beginPath(); ctx.arc(x, y - 72, 14, 0, TAU); ctx.fill(); }
       ctx.restore(); return;
     }

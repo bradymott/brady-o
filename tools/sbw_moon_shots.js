@@ -141,9 +141,9 @@ async function session(viewport, fn) {
           if (AP.bad && AP.bad(b, A, t)) return null;
           if (!b.onGround) air = true;
           if (prog.walkTo != null) { if (b.onGround && !air && Math.abs(b.x + b.w / 2 - prog.walkTo) <= 8 && Math.abs(b.vx) < 4) return { tx: Math.floor((b.x + b.w / 2) / 32), ty: b.groundTy, t, flipped: !!b.flipped }; continue; }
-          if (b.onGround && (air || (prog.noJump && prog.air !== 'stopgo') || prog.stand) && landT == null && t > 0.05) landT = t;
+          if (b.onGround && (air || (prog.noJump && prog.air !== 'stopgo') || prog.stand) && landT == null && t > 0.05) { landT = t; prog._landTx = Math.floor((b.x + b.w / 2) / 32); prog._landTy = b.groundTy; }
           if (prog.driftPlan && !air && t > 0.6) return null;
-          if (landT != null && Math.abs(b.vx) < 4 && b.onGround) return { tx: Math.floor((b.x + b.w / 2) / 32), ty: b.groundTy, t, flipped: !!b.flipped };
+          if (landT != null && Math.abs(b.vx) < 4 && b.onGround) return { tx: Math.floor((b.x + b.w / 2) / 32), ty: b.groundTy, t, flipped: !!b.flipped, landTx: prog._landTx, landTy: prog._landTy };
         }
         return null;
       },
@@ -161,11 +161,12 @@ async function session(viewport, fn) {
         const p = P(), from = [Math.floor(p.cx / 32), p.groundTy];
         let best = null;
         for (const prog of AP.progs(target, from)) {
+          if (o.jump && (prog.walkTo != null || prog.noJump || prog.drop)) continue;
           if (prog.run == null) prog.run = 0;
           const r = AP.trial(prog, o.maxT);
           if (!r) continue;
           const okY = r.ty === target[1] && (!!target[2] === r.flipped);
-          if (!okY || !AP.samePlate(r.tx, target, o.tol)) continue;
+          if (!okY || (o.jump ? (r.landTx !== target[0] || r.landTy !== target[1]) : !AP.samePlate(r.tx, target, o.tol))) continue;
           const score = r.t + Math.abs(r.tx - target[0]) * 0.3;
           if (!best || score < best.score) best = { prog, score, r };
         }
@@ -203,6 +204,7 @@ async function session(viewport, fn) {
           const r = AP.exec(pl.prog, o.maxT);
           if (r.dead) return { ok: false, why: 'died', r, prog: pl.prog, target };
           if (r.exit) return { ok: true, r, exit: r.exit };
+          if (o.jump) return { ok: true, r, prog: pl.prog };
           if (o.area && r.area !== o.area) return { ok: false, why: 'area', r };
           if (r.ty === target[1] && Math.abs(r.tx - target[0]) <= (o.tol != null ? o.tol : 1)) return { ok: true, r, prog: pl.prog };
           if (r.ty === target[1] && AP.samePlate(r.tx, target)) { AP.exec({ walkTo: target[0] * 32 + 16, dir: 0 }, 4); const t2 = tileOf(); if (Math.abs(t2[0] - target[0]) <= (o.tol || 0)) return { ok: true, r, prog: pl.prog }; }
@@ -221,6 +223,7 @@ async function session(viewport, fn) {
       }
     };
     // a whole area as one picture: the camera steps across it, each view is drawn without the HUD and copied in
+    AP.boots = () => { sim(1 / 120, { action: true, actionPressed: true }); sim(1.6); return window.BRADY_MOON.kit.magBoots(S()); };
     window.panorama = (k) => {
       const g = S(), G = window.BRADY.Game, A = g.area, VW = G.viewW, VH = G.viewH, Sc = G.S, gx = G.gameRect.x * G.dpr, gy = G.gameRect.y * G.dpr;
       k = k || 0.5;
@@ -250,11 +253,11 @@ const LEVELS = {};
 // ---------------- 18-1 One Small Hop ----------------
 LEVELS.hop = async (page, shot, run, pano) => {
   await run('hop', async () => {
-    await page.evaluate(() => { fresh(); play('18-1'); place(4, 20); sim(0.4); freeze(); });
+    await page.evaluate(() => { fresh(); play('18-1'); place(4, 26); sim(0.4); freeze(); });
     await shot('10-18-1-start.png');
     // the low gravity: a held jump from standing goes very high and hangs; a tap is a short hop
     const r = await page.evaluate(() => {
-      thaw(); place(4, 20); sim(0.3); const p = P(), y0 = p.y; let top = y0, t = 0;
+      thaw(); place(4, 26); sim(0.3); const p = P(), y0 = p.y; let top = y0, t = 0;
       sim(1 / 120, { jump: true, jumpPressed: true }); while (!p.onGround && t < 4) { sim(1 / 120, { jump: true }); top = Math.min(top, p.y); t += 1 / 120; }
       const high = (y0 - top) / 32, hang = t;
       sim(0.3); const y1 = p.y; let top2 = y1; sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.08, { jump: true }); for (let k = 0; k < 120 && !p.onGround; k++) { sim(1 / 120); top2 = Math.min(top2, p.y); }
@@ -262,35 +265,35 @@ LEVELS.hop = async (page, shot, run, pano) => {
     });
     check('18-1: low gravity: a held jump rises over 7 tiles and hangs over 1.3 s; a tap is a hop under 2.5 tiles', r.high > 7 && r.hang > 1.3 && r.hop < 2.5 && r.g < 1, r);
     // the spike tunnel: a full jump under the overhang hits the spikes
-    const r2 = await page.evaluate(() => { const p = P(); place(34, 20); sim(0.3); p.invuln = 0; const h0 = p.power; sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.6, { jump: true }); const hurt = p.invuln > 0 || p.power !== h0 || !!p.dead; p.invuln = 999; sim(1); return { hurt, h0, power: p.power }; });
+    const r2 = await page.evaluate(() => { const p = P(); place(34, 26); sim(0.3); p.invuln = 0; const h0 = p.power; sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.6, { jump: true }); const hurt = p.invuln > 0 || p.power !== h0 || !!p.dead; p.invuln = 999; sim(1); return { hurt, h0, power: p.power }; });
     check('18-1: a full jump in the spike tunnel hits the ceiling spikes', r2.hurt, r2);
     // the main route, hop by hop with real inputs: the dip, the rim wall, the tunnel (tap hops over the boulder),
     // the first geyser up to P1's shelf, the craters, the cracked boulder, the slab, the big crater's geyser up the cliff
-    await page.evaluate(() => { play('18-1'); place(3, 20); sim(0.2); });
-    const legA = await page.evaluate(() => AP.route([[11, 21], [19, 21], [25, 16], [29, 21], [36, 21], [41, 21], [50, 21], [55, 21], [62, 8]]));
+    await page.evaluate(() => { play('18-1'); place(3, 26); sim(0.2); });
+    const legA = await page.evaluate(() => AP.route([[11, 27], [19, 27], [25, 22], [29, 27], [36, 27], [41, 27], [50, 27], [55, 27], [62, 14]]));
     check('18-1: played: the hop over the dip, the rim wall, tap-hops through the spike tunnel, the first geyser up to P1', legA.ok, legA);
     await page.evaluate(() => freeze()); await shot('11-18-1-geyser-shelf.png'); await page.evaluate(() => thaw());
     const gold1 = await page.evaluate(() => S().goldGot ? S().goldGot.slice() : (S().gold || null));
-    const legB = await page.evaluate(() => AP.route([[63, 21], [72, 19], [85, 21], [100, 21], [108, 21], [115, 21], [122, 16], [130, 21], [136, 21]]));
+    const legB = await page.evaluate(() => AP.route([[63, 27], [72, 25], [85, 27], [100, 27], [108, 27], [115, 27], [122, 22], [130, 27], [136, 27]]));
     check('18-1: played: the deadly craters, the island, the stagehand, the slab over the wide crater', legB.ok, legB);
     await page.evaluate(() => { const g = S(); g.camY = g.camTargetY(true); freeze(); }); await shot('12-18-1-crater-field.png'); await page.evaluate(() => thaw());
-    const legC = await page.evaluate(() => AP.route([[131, 21], [149, 12]], { maxT: 7 }));
+    const legC = await page.evaluate(() => AP.route([[131, 27], [149, 18]], { maxT: 7 }));
     check('18-1: played: dropped into the big crater, the steady geyser carries Brady up and he steers onto the cliff', legC.ok, legC);
     await page.evaluate(() => freeze()); await shot('13-18-1-big-geyser-cliff.png'); await page.evaluate(() => thaw());
-    const legD = await page.evaluate(() => AP.route([[155, 21], [161, 21], [172, 21], [180, 21], [184, 21], [202, 12], [214, 16], [219, 14], [222, 14]], { maxT: 7 }));
+    const legD = await page.evaluate(() => AP.route([[155, 27], [161, 27], [171, 27], [180, 27], [184, 27], [202, 18], [214, 22], [219, 20], [222, 20]], { maxT: 7 }));
     check('18-1: played: the spike overhangs over the craters (run, medium jump), the golf balls, the geyser under spikes, the last crater', legD.ok, legD);
     await page.evaluate(() => freeze()); await shot('14-18-1-telescope-rim.png'); await page.evaluate(() => thaw());
-    const legE = await page.evaluate(() => { const r = AP.route([[230, 21], [240, 21]]); if (!r.ok) return r; sim(2, { right: true }); return { ok: true, state: S().state, key: S().exitKey }; });
+    const legE = await page.evaluate(() => { const r = AP.route([[230, 27], [240, 27]]); if (!r.ok) return r; sim(2, { right: true }); return { ok: true, state: S().state, key: S().exitKey }; });
     check('18-1: played to the gate: the main exit', legE.ok && (legE.state === 'clear' || legE.state === 'tally' || legE.state === 'results'), legE);
     // the star gate: from the last rim, into the narrow chasm; its faint vent blows Brady up to the star rock
-    const sec = await page.evaluate(() => { play('18-1'); place(222, 13); sim(0.3); const r = AP.route([[231, 7]], { maxT: 8 }); if (!r.ok) return r; sim(0.2); freeze(); return { ok: true }; });
+    const sec = await page.evaluate(() => { play('18-1'); place(222, 19); sim(0.3); const r = AP.route([[231, 13]], { maxT: 8 }); if (!r.ok) return r; sim(0.2); freeze(); return { ok: true }; });
     check('18-1: played: the faint vent in the chasm lifts Brady to the star rock (the secret exit)', sec.ok, sec);
     await shot('15-18-1-star-gate.png');
     const sec2 = await page.evaluate(() => { thaw(); sim(1.5, { right: true }); sim(1.5, { left: true }); return { state: S().state, key: S().exitKey }; });
     check('18-1: the star gate is the secret exit', sec2.state !== 'play' && sec2.key === 'secret', sec2);
     // the pulsing geyser: it rumbles (zone off) before it blows
     const pg = await page.evaluate(() => {
-      play('18-1'); place(108, 20); sim(0.3);
+      play('18-1'); place(108, 26); sim(0.3);
       const gz = ents('MoonGeyser').find(e => !e.steady), z = gz.zone(); const seen = {};
       for (let k = 0; k < 120 * 6; k++) { sim(1 / 120); const c = gz.cycle(); seen[c] = seen[c] || { off: z.off }; }
       return { warnOff: seen.warn && seen.warn.off, blowOn: seen.blow && !seen.blow.off, restOff: seen.rest && seen.rest.off };
@@ -299,16 +302,39 @@ LEVELS.hop = async (page, shot, run, pano) => {
     await page.evaluate(() => { const gz = ents('MoonGeyser').find(e => !e.steady); for (let k = 0; k < 600 && gz.cycle() !== 'warn'; k++) sim(1 / 120); sim(0.5); freeze(); }); await shot('16-18-1-geyser-tell.png');
     // the golf rain: the ring warns before the ball lands
     const gr = await page.evaluate(() => {
-      thaw(); place(180, 20); sim(0.2); const gz = ents('MoonGolfRain').sort((a, b) => Math.abs(a.cx - P().cx) - Math.abs(b.cx - P().cx))[0]; let warnAt = null, ballAt = null; const n0 = S().entities.length;
+      thaw(); place(180, 26); sim(0.2); const gz = ents('MoonGolfRain').sort((a, b) => Math.abs(a.cx - P().cx) - Math.abs(b.cx - P().cx))[0]; let warnAt = null, ballAt = null; const n0 = S().entities.length;
       for (let k = 0; k < 120 * 4; k++) { sim(1 / 120); const k2 = gz.phaseK(); if (warnAt == null && k2 > gz.period - gz.WARN) warnAt = S().t; const ball = S().entities.find(e => e.constructor.name === 'TourShot' && Math.abs(e.cx - gz.cx) < 20 && e.y + e.h > gz.y - 4); if (ball && warnAt != null && ballAt == null) ballAt = S().t; }
       return { lead: warnAt != null && ballAt != null ? +(ballAt - warnAt).toFixed(2) : null, warnAt, shots: S().entities.filter(e => e.constructor.name === 'TourShot').length, n: gz.n, on: S().onScreen(gz, 200) };
     });
     check('18-1: golf balls: the target ring shows at least 0.5 s before the ball comes down', gr.lead != null && gr.lead >= 0.5, gr);
     await page.evaluate(() => { const gz = ents('MoonGolfRain').sort((a, b) => Math.abs(a.cx - P().cx) - Math.abs(b.cx - P().cx))[0]; for (let k = 0; k < 600 && !(gz.phaseK() > gz.period - 0.5); k++) sim(1 / 120); freeze(); }); await shot('17-18-1-golf-rain.png');
-    // the practice green behind the cracked boulder
-    const gn = await page.evaluate(() => { thaw(); play('18-1'); place(90, 20); sim(0.2); const r = AP.go([97, 21], { tol: 0 }); for (let k = 0; k < 20 && S().area.aid !== 'green'; k++) sim(0.1, { up: true, upPressed: true }); sim(1); return { area: S().area.aid, r: r.ok }; });
-    check('18-1: walking into the cracked boulder leads to the practice green', gn.area === 'green', gn);
-    await page.evaluate(() => { sim(1); place(10, 11); sim(0.3); freeze(); }); await shot('18-18-1-practice-green.png');
+    // THE RUN ABOVE: a faint dust vent rises into a gap in the big overhang (the tell); ride it up, run along the top
+    // and the rafters over the golf balls to the quiet hatch of Piwi's practice green
+    await page.evaluate(() => { thaw(); play('18-1'); place(170, 26); sim(0.5); freeze(); }); await shot('19-18-1-tell-vent-in-the-gap.png');
+    const up = await page.evaluate(() => { thaw(); play('18-1'); place(170, 26); sim(0.3); return AP.route([[171, 27], [169, 8], [181, 8], [186, 9], [194, 9], [204, 9]], { maxT: 8 }); });
+    check('18-1: played: up the vent through the gap in the overhang, along the run above and the rafters to the hatch', up.ok, up);
+    await page.evaluate(() => { sim(0.2); freeze(); }); await shot('20-18-1-the-run-above.png');
+    const gn = await page.evaluate(() => { thaw(); for (let k = 0; k < 20 && S().area.aid !== 'green'; k++) sim(0.1, { up: true, upPressed: true }); sim(1.2); return { area: S().area.aid, kind: S().area.roomType }; });
+    check('18-1: the hatch at the end of the run leads into Piwi\'s practice green (a putting game)', gn.area === 'green' && gn.kind === 'moonPutt', gn);
+    await page.evaluate(() => { place(6, 11); sim(0.3); freeze(); }); await shot('21-18-1-practice-green.png');
+    // lose once: three kicks the wrong way, the ball goes back to the tee
+    const pf = await page.evaluate(() => {
+      thaw(); const G = ents('MoonGame')[0], S0 = G.st;
+      for (let k = 0; k < 3; k++) { const b = S0.ball; place(Math.floor((b.x + 8) / 32) + 3, 11); sim(0.3); AP.exec({ walkTo: b.x - 40, dir: 0 }, 3); sim(2.5); }
+      sim(1.5); return { kicks: S0.kicks, home: Math.round(S0.ball.x / 32), won: G.won };
+    });
+    check('18-1 green: three kicks that miss: the ball goes back to the tee (lose)', !pf.won && pf.kicks === 0 && pf.home === 8, pf);
+    // win: two walking kicks, the second drops it in as it crosses the cup slowly enough
+    const pw = await page.evaluate(() => {
+      const G = ents('MoonGame')[0], S0 = G.st;
+      for (let k = 0; k < 3 && !G.won; k++) { const b = S0.ball; place(Math.max(2, Math.floor((b.x + 8) / 32) - 2), 11); sim(0.3); AP.exec({ walkTo: b.x + 60, dir: 0 }, 3); for (let q = 0; q < 40 && Math.abs(S0.ball.vx) > 2; q++) sim(0.1); sim(0.5); }
+      const won = G.won; place(23, 11); sim(0.2); AP.exec({ walkTo: 27 * 32 + 16, dir: 0 }, 3); sim(0.2); sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.5, { jump: true }); sim(1);
+      return { won, kicks: S0.kicks, lock: S().keys.has('moon:green'), lives: window.BRADY.Save.data.lives };
+    });
+    check('18-1 green: two kicks along the green: HOLE IN 2, the alcove lock opens (win)', pw.won && pw.lock, pw);
+    await page.evaluate(() => freeze()); await shot('22-18-1-green-won.png');
+    const ex = await page.evaluate(() => { thaw(); place(4, 11); sim(0.2); for (let k = 0; k < 20 && S().area.aid === 'green'; k++) sim(0.1, { up: true, upPressed: true }); sim(1.2); return { area: S().area.aid, at: tileOf() }; });
+    check('18-1 green: its way out is a different hatch: down onto the cliff past the geyser crater', ex.area === 'surface' && Math.abs(ex.at[0] - 202) <= 2 && ex.at[1] === 18, ex);
     await page.evaluate(() => { thaw(); play('18-1'); }); await pano('pano-18-1-surface.png');
     await page.evaluate(() => toArea('green')); await pano('pano-18-1-green.png');
   });
@@ -348,9 +374,7 @@ LEVELS.buggy = async (page, shot, run, pano) => {
     // a mid-air shot
     await page.evaluate(() => { play('18-3'); place(76, 19); sim(0.2); sim(1.0, { right: true }); sim(1 / 120, { right: true, jump: true, jumpPressed: true }); sim(0.45, { jump: true }); freeze(); });
     await shot('33-18-3-airborne.png');
-    const sec = await page.evaluate(() => { thaw(); play('18-3'); place(136, 19); sim(0.2); AP.go([142, 20]); for (let k = 0; k < 20 && S().area.aid !== 'depot'; k++) sim(0.1, { up: true, upPressed: true }); sim(1); return { area: S().area.aid }; });
-    check('18-3: the blinking garage door leads to the rover depot', sec.area === 'depot', sec);
-    await page.evaluate(() => { place(10, 11); sim(0.3); freeze(); }); await shot('34-18-3-depot.png');
+    await page.evaluate(() => thaw());   // (the rover depot, now up on the tall boulder: LEVELS.secrets)
     await page.evaluate(() => { thaw(); play('18-3'); }); await pano('pano-18-3-buggy.png');
   });
 };
@@ -445,12 +469,87 @@ LEVELS.walk = async (page, shot, run, pano) => {
   });
 };
 
+// ---------------- the secret rooms of 18-2..18-6: each entrance found with real inputs (the tell first), each
+// game lost once and won once, the prize alcove opened, each way out used ----------------
+LEVELS.secrets = async (page, shot, run) => {
+  const into = aid => page.evaluate(aid => { for (let k = 0; k < 20 && S().area.aid !== aid; k++) sim(0.1, { up: true, upPressed: true }); sim(1.2); return { area: S().area.aid, kind: S().area.roomType }; }, aid);
+  const prize = () => page.evaluate(() => { const G = ents('MoonGame')[0]; place(23, 11); sim(0.2); AP.exec({ walkTo: 27 * 32 + 16, dir: 0 }, 3); const inside = Math.floor(P().cx / 32) >= 26; sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.5, { jump: true }); sim(0.8); return { inside, lock: !G || S().keys.has(G.lockId) }; });
+  const leave = () => page.evaluate(() => { place(4, 11); sim(0.2); const a0 = S().area.aid; for (let k = 0; k < 20 && S().area.aid === a0; k++) sim(0.1, { up: true, upPressed: true }); sim(1.2); return { area: S().area.aid, at: tileOf() }; });
+  await run('sec-walk', async () => {
+    await page.evaluate(() => { fresh(); play('18-2'); place(110, 4); sim(0.4); freeze(); }); await shot('25-18-2-tell-coins-up-to-the-hatch.png');
+    const r = await page.evaluate(() => { thaw(); play('18-2'); place(110, 4); sim(0.3); const a = AP.route([[112, 5], [116, 3]], { maxT: 7 }); const b = AP.go([118, 3], { tol: 0 }); return { ok: a.ok && b.ok }; });
+    const e = await into('locker');
+    check('18-2: played: puffs up past the coin trail to the quiet hatch under the hull: the pressure panel', r.ok && e.area === 'locker' && e.kind === 'moonLights', [r, e]);
+    const g = await page.evaluate(() => { const G = ents('MoonGame')[0], S0 = G.st; AP.go([5, 12]); AP.go([8, 12], { jump: true }); const after1 = S0.on.slice(), won1 = G.won; AP.go([9, 12]); AP.go([8, 12], { jump: true }); AP.go([11, 12], { jump: true }); AP.go([14, 12], { jump: true }); sim(0.3); return { after1, won1, won: G.won, on: S0.on }; });
+    check('18-2 locker: a wrong lamp leaves it unsolved (lose); undo it, then lamps 2 and 3: ALL LIT (win)', !g.won1 && g.won && g.on.every(Boolean), g);
+    await page.evaluate(() => freeze()); await shot('26-18-2-pressure-panel-won.png'); await page.evaluate(() => thaw());
+    const pz = await prize(); check('18-2 locker: the alcove lock opens on the win', pz.inside && pz.lock, pz);
+    const ex = await leave(); check('18-2 locker: out through another hatch, onto the checkpoint plate below', ex.area === 'walk' && ex.at[1] === 15 && Math.abs(ex.at[0] - 128) <= 2, ex);
+  });
+  await run('sec-buggy', async () => {
+    await page.evaluate(roverHook);
+    await page.evaluate(() => { fresh(); play('18-3'); place(160, 19); sim(0.4); freeze(); }); await shot('35-18-3-tell-dust-on-the-boulder.png');
+    const r = await page.evaluate(() => { thaw(); play('18-3'); place(158, 19); sim(0.3); return AP.go([166, 17], { tol: 0 }); });
+    const e = await into('depot');
+    check('18-3: played: the buggy hops onto the tall boulder where dust puffs; the hatch on top: the spare-wheel rack', r.ok && e.area === 'depot' && e.kind === 'moonOdd', [r, e]);
+    const g = await page.evaluate(() => { const G = ents('MoonGame')[0], S0 = G.st, pads = G.pads; AP.go([5, 12]); const wrong = (S0.odd + 1) % pads.length; AP.go(pads[wrong], { jump: true }); const sh = S0.shuffles, won1 = G.won; for (let k = 0; k < 3 && !G.won; k++) { AP.go([5, 12]); AP.go(pads[S0.odd], { jump: true }); } return { won1, sh, won: G.won }; });
+    check('18-3 depot: a wrong wheel shuffles the rack (lose); the odd wheel wins', !g.won1 && g.sh === 1 && g.won, g);
+    await page.evaluate(() => freeze()); await shot('36-18-3-wheel-rack-won.png'); await page.evaluate(() => thaw());
+    const pz = await prize(); check('18-3 depot: the alcove lock opens on the win', pz.inside && pz.lock, pz);
+    const ex = await leave(); check('18-3 depot: out through the lift onto the mesa (past the geyser crater)', ex.area === 'buggy' && ex.at[1] === 16 && Math.abs(ex.at[0] - 186) <= 2, ex);
+  });
+  await run('sec-base', async () => {
+    await page.evaluate(() => { fresh(); play('18-4'); place(118, 19); sim(0.4); freeze(); }); await shot('45-18-4-tell-coins-by-the-ledge.png');
+    const r = await page.evaluate(() => { thaw(); play('18-4'); place(111, 10); sim(0.3); AP.boots(); const a = AP.route([[112, 2, 1], [124, 2, 1]], { tol: 1 }); AP.boots(); const b = AP.go([124, 9], { tol: 0 }); return { ok: a.ok && b.ok }; });
+    const e = await into('store');
+    check('18-4: played: along the magnet ceiling, boots off over the ledge only the ceiling reaches: the fuse cupboard', r.ok && e.area === 'store' && e.kind === 'moonFuses', [r, e]);
+    const g = await page.evaluate(() => {
+      const G = ents('MoonGame')[0], S0 = G.st; AP.go([8, 12]); const started = S0.running; AP.go([4, 12]); sim(21); const reset = !S0.running && S0.got.length === 0, won1 = G.won;
+      AP.go([8, 12]); AP.go([12, 12]); AP.go([21, 12]); AP.go([15, 12]); AP.boots(); AP.go([12, 0, 1], { tol: 0 }); AP.go([17, 0, 1], { tol: 0 }); sim(0.2);
+      const won = G.won; AP.boots(); return { started, reset, won1, won, got: S0.got.length, left: +S0.left.toFixed(1) };
+    });
+    check('18-4 store: one fuse starts the clock; too slow and they all go back (lose); two on the floor and two on the magnet ceiling in time (win)', g.started && g.reset && !g.won1 && g.won, g);
+    await page.evaluate(() => freeze()); await shot('46-18-4-fuse-cupboard-won.png'); await page.evaluate(() => thaw());
+    const pz = await prize(); check('18-4 store: the alcove lock opens on the win', pz.inside && pz.lock, pz);
+    const ex = await leave(); check('18-4 store: out through another hatch onto the ledge past the air vent', ex.area === 'base' && Math.abs(ex.at[0] - 148) <= 2 && ex.at[1] === 10, ex);
+  });
+  await run('sec-lair', async () => {
+    await page.evaluate(() => { fresh(); play('18-5'); place(34, 15); sim(0.4); freeze(); }); await shot('52-18-5-tell-loose-panel.png');
+    const r = await page.evaluate(() => { thaw(); play('18-5'); place(33, 15); sim(0.3); AP.exec({ walkTo: 40 * 32 + 16, dir: 0 }, 3); for (let k = 0; k < 20 && S().area.aid !== 'dressing'; k++) sim(0.1, { right: true, up: true, upPressed: true }); sim(1.2); return { area: S().area.aid, kind: S().area.roomType }; });
+    check('18-5: walking into the loose panel in the wings: the headliner\'s hatboxes (a shell game)', r.area === 'dressing' && r.kind === 'shell', r);
+    const g = await page.evaluate(() => {
+      const A = S().area, D = A.roomKit.data; const R = () => A.roomState; for (let k = 0; k < 120 * 20 && !(R() && R().phase === 'pick'); k++) sim(1 / 120);
+      const stomp = c => { const tx = Math.floor(c.x / 32); AP.go([tx, D.row + 1], { jump: true, maxT: 4 }); sim(0.2); };
+      const wrong = R().cups.find(c => c.k !== R().prizeCup); stomp(wrong); const lost = R().phase === 'reveal' && !R().won;
+      for (let k = 0; k < 120 * 30 && !(R().phase === 'pick'); k++) sim(1 / 120);
+      stomp(R().cups.find(c => c.k === R().prizeCup)); return { lost, won: !!R().won };
+    });
+    check('18-5 dressing: the wrong hatbox is a raspberry (lose); the one with the bell wins', g.lost && g.won, g);
+    await page.evaluate(() => freeze()); await shot('53-18-5-hatboxes-won.png'); await page.evaluate(() => thaw());
+  });
+  await run('sec-stars', async () => {
+    await page.evaluate(() => { fresh(); play('18-6'); place(129, 6); sim(0.4); freeze(); }); await shot('64-18-6-tell-loose-panel.png');
+    const r = await page.evaluate(() => { thaw(); play('18-6'); place(126, 6); sim(0.2); AP.go([131, 7]); for (let k = 0; k < 20 && S().area.aid !== 'scope'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.8); return { area: S().area.aid, kind: S().area.roomType }; });
+    check('18-6: the loose panel on the plateau: the observatory (a star echo)', r.area === 'scope' && r.kind === 'moonEcho', r);
+    const g = await page.evaluate(() => {
+      const G = ents('MoonGame')[0], S0 = G.st, pads = G.pads; for (let k = 0; k < 600 && S0.show > 0; k++) sim(1 / 120);
+      AP.go(pads[S0.order[1]], { jump: true }); const lost = S0.show > 0 && !G.won; for (let k = 0; k < 900 && S0.show > 0; k++) sim(1 / 120);
+      const steps = [];
+      for (const i of S0.order) { let ok = false; for (const side of [-2, 2, -1, 1]) { AP.go([pads[i][0] + side, 12]); const n0 = S0.next; const r = AP.go(pads[i], { jump: true }); sim(0.1); if (S0.next > n0 || G.won) { ok = true; break; } if (S0.show > 0) for (let k = 0; k < 900 && S0.show > 0; k++) sim(1 / 120); } steps.push(ok); }
+      return { lost, won: G.won, steps };
+    });
+    check('18-6 scope: a star out of order: watch again (lose); the order the telescope showed (win)', g.lost && g.won, g);
+    await page.evaluate(() => freeze()); await shot('65-18-6-observatory-won.png'); await page.evaluate(() => thaw());
+    const pz = await prize(); check('18-6 scope: the alcove lock opens on the win', pz.inside && pz.lock, pz);
+  });
+};
+
 // ---------------- the full runs: each level start to finish, enemies on, no invulnerability ----------------
 // (only on request: node tools/sbw_moon_shots.js <dir> bot). Each route is a list of standing tiles (and button
 // steps); {r: [x, row]} marks a checkpoint's restart spot. On a death the bot waits for the respawn, goes back to the
 // last restart spot at or behind it and carries on. Deaths are counted with where they happened.
 const BOT = {
-  '18-1': [{ r: [3, 21] }, [11, 21], [19, 21], [25, 16], [29, 21], [36, 21], [41, 21], { r: [48, 21] }, [50, 21], [55, 21], [62, 8], [63, 21], [72, 19], { r: [85, 21] }, [100, 21], [108, 21], [115, 21], [122, 16], [130, 21], [136, 21], [131, 21], [149, 12], { r: [157, 21] }, [161, 21], [172, 21], { r: [181, 21] }, [184, 21], [202, 12], [214, 16], [219, 14], { r: [223, 14] }, [230, 21], [243, 21]],
+  '18-1': [{ r: [3, 27] }, [11, 27], [19, 27], [25, 22], [29, 27], [36, 27], [41, 27], { r: [48, 27] }, [50, 27], [55, 27], [62, 14], [63, 27], [72, 25], { r: [85, 27] }, [100, 27], [108, 27], [115, 27], [122, 22], [130, 27], [136, 27], [131, 27], [149, 18], { r: [157, 27] }, [161, 27], [171, 27], { r: [181, 27] }, [184, 27], [202, 18], [214, 22], [219, 20], { r: [223, 20] }, [230, 27], [243, 27]],
   '18-2': [{ r: [3, 22] }, [18, 22], [21, 22], [32, 16], [30, 16], [43, 20], [42, 20], { r: [74, 19] }, [84, 19], [92, 15], [94, 15], [101, 10], [103, 10], [110, 5], [108, 5], { r: [124, 15] }, [129, 15], [143, 8], [146, 8], { r: [152, 13] }, [158, 13], [166, 13], { r: [205, 16] }, [214, 16]],
   '18-3': [{ r: [3, 20] }, [28, 20], [37, 20], [42, 20], [47, 20], [54, 20], { r: [64, 20] }, [72, 20], { r: [99, 20] }, [110, 20], [122, 20], [131, 20], { r: [148, 20] }, [150, 20], [158, 20], [190, 16], { r: [204, 20] }, [205, 20], [222, 20], [229, 20], [235, 20], { r: [246, 20] }, [246, 20], [258, 20], [270, 20], [292, 20]],
   '18-4': [{ r: [3, 20] }, [16, 20], 'B1', [22, 2, 1], 'B0', [27, 20], 'B1', [42, 2, 1], 'B0', [53, 20], 'B1', [72, 2, 1], [75, 20], 'B0', { r: [82, 20] }, [85, 20], [97, 20], 'B1', [104, 2, 1], 'B0', [109, 11], 'B1', [112, 2, 1], [124, 2, 1], 'B0', [124, 9], [128, 20], { r: [132, 20] }, [134, 20], [148, 10], [166, 20], { r: [169, 20] }, [172, 20], 'DOOR',
