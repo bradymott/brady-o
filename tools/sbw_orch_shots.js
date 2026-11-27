@@ -420,7 +420,9 @@ const BOT_PAGE = () => {
   T.cross = () => { const f0 = p().orchTr.face; if (!T.f({ jump: true, jumpPressed: true })) return false; T.wait(0.45); return p().orchTr && p().orchTr.face !== f0; };
   T.letGo = dir => T.hop(dir, false, 0.5);
   T.ride = (dir, row) => { for (let k = 0; k < 120 * 10; k++) { const q = p(); if (Math.floor((q.y + q.h - 1) / 32) === row && q.onGround) return true; if (!T.f({ [dir]: true })) return false; } return 'stuck'; };
-  T.graft = () => { const gs = S().entities.filter(e => e.constructor.name === 'OrchGraft' && !e.done).sort((a, b) => Math.abs(a.cx - p().cx) - Math.abs(b.cx - p().cx)); const gf = gs[0]; if (!gf) return true; for (let k = 0; k < 120 * 10 && !gf.done; k++) { if (!T.f(gf.lined() && Math.abs(gf.far() - gf.near()) < 4 ? { action: true, actionPressed: true } : {})) return false; } return gf.done || 'stuck'; };
+  T.graft = () => { const gs = S().entities.filter(e => e.constructor.name === 'OrchGraft' && !e.done).sort((a, b) => Math.abs(a.cx - p().cx) - Math.abs(b.cx - p().cx)); const gf = gs[0]; if (!gf) return true; for (let k = 0; k < 120 * 10 && !gf.done; k++) { if (!T.f(gf.lined() && Math.abs(gf.far() - gf.near()) < 6 && p().onGround ? { action: true, actionPressed: true } : {})) return false; } return gf.done || 'stuck'; };
+  // a careful last step onto a mark: short taps of the stick until Brady's centre is within 6 px of x
+  T.to = x => { if (T.walk(x, { noHop: true }) === false) return false; for (let k = 0; k < 80; k++) { for (let j = 0; j < 60 && Math.abs(p().vx) > 4; j++) if (!T.f({})) return false; if (Math.abs(p().cx - x) <= 6) return true; const d = p().cx < x; for (let j = 0; j < 2; j++) if (!T.f({ right: d, left: !d })) return false; } return true; };
   T.push = dir => { for (let k = 0; k < 0.6 * 120; k++) if (!T.f({ right: dir > 0, left: dir < 0 })) return false; return true; };
   T.press = k => T.f({ [k]: true, [k + 'Pressed']: true });
   T.door = () => { if (!T.f({ up: true, upPressed: true })) return false; for (let k = 0; k < 600 && (S().fade.a > 0.05 || p().state !== 'play'); k++) sim(1 / 120); T.scene = S(); return true; };
@@ -443,7 +445,7 @@ const BOT_PAGE = () => {
       k++;
     }
     for (let n = 0; n < 120 * 6 && !T.finished(); n++) sim(1 / 120);
-    return { id, finished: T.finished(), deaths: T.deaths.filter(d => d.id === id), fails, trace: T.trace.slice(0, 60) };
+    return { id, finished: T.finished(), deaths: T.deaths.filter(d => d.id === id), fails, trace: T.trace.slice(-80) };
   };
 };
 const BOT_ROUTES = {
@@ -457,12 +459,12 @@ const BOT_ROUTES = {
     ['walk', 150 * 32], ['walk', 160 * 32 + 16, { noHop: true }], ['press', 'action'], ['wait', 3.6], ['walk', 169 * 32 + 16, { noHop: true }], ['hopTo', 171, 0.45], ['walk', 178 * 32], 'cp', ['gate']],
   '28-3': [['walk', 15 * 32 + 16, { noHop: true }], ['press', 'action'], ['wait', 0.5], ['hopTo', 15, 0.45], ['press', 'action'], ['wait', 0.5], ['hopTo', 15, 0.45], ['walk', 30 * 32], 'cp',
     ['walk', 59 * 32 + 16], ['press', 'action'], ['wait', 0.5], ['hopTo', 59, 0.45], ['press', 'action'], ['wait', 0.5], ['hopTo', 59, 0.45], ['press', 'action'], ['wait', 0.5], ['hopTo', 59, 0.45], ['walk', 70 * 32], 'cp',
-    ['walk', 112 * 32], 'cp', ['walk', 139 * 32 + 16], ['press', 'action'], ['wait', 0.5], ['hopTo', 139, 0.45], ['press', 'action'], ['wait', 0.5], ['hopTo', 139, 0.45], ['hopTo', 139, 0.45], ['press', 'action'], ['wait', 0.5], ['hopTo', 139, 0.45], ['walk', 148 * 32], 'cp', ['gate']],
+    ['walk', 112 * 32], 'cp', ['walk', 139 * 32 + 16], ['press', 'action'], ['wait', 0.5], ['hopTo', 139, 0.45], ['press', 'action'], ['wait', 0.5], ['hopTo', 139, 0.45], ['hopTo', 139, 0.45], ['press', 'action'], ['wait', 0.5], ['hopTo', 139, 0.45], ['walk', 148 * 32], 'cp', ['walk', 192 * 32], ['gate']],
   '28-4': [['walk', 22 * 32 + 16, { noHop: true }], ['ride', 'left', 17], ['walk', 29 * 32], 'cp', ['walk', 47 * 32 + 16, { noHop: true }], ['ride', 'right', 24], ['walk', 53 * 32], 'cp',
     ['walk', 71 * 32 + 16], ['ride', 'right', 14], ['walk', 77 * 32, { noHop: true }], 'cp', ['walk', 99 * 32], ['walk', 102 * 32 + 16, { noHop: true }], ['ride', 'left', 20], ['ride', 'right', 26], ['walk', 108 * 32], 'cp',
     ['walk', 132 * 32 + 16, { noHop: true }], ['ride', 'right', 19], ['ride', 'left', 13], ['walk', 139 * 32, { noHop: true }], 'cp', ['walk', 166 * 32], ['walk', 170 * 32 + 16, { noHop: true }], ['ride', 'left', 18], ['ride', 'right', 24], ['walk', 176 * 32], 'cp', ['gate']],
-  '28-5': [['walk', 24 * 32 + 16, { noHop: true }], ['graft'], ['walk', 41 * 32], 'cp', ['walk', 70 * 32 + 16], ['graft'], ['walk', 85 * 32], 'cp', ['walk', 112 * 32 + 16], ['graft'], ['walk', 127 * 32], 'cp',
-    ['walk', 150 * 32 + 16], ['graft'], ['walk', 167 * 32], 'cp', ['gate']],
+  '28-5': [['to', 23 * 32 + 16], ['graft'], ['walk', 41 * 32], 'cp', ['walk', 67 * 32], ['to', 69 * 32 + 16], ['graft'], ['walk', 85 * 32], 'cp', ['walk', 107 * 32], ['to', 111 * 32 + 16], ['graft'], ['walk', 127 * 32], 'cp',
+    ['to', 149 * 32 + 16], ['graft'], ['walk', 167 * 32], 'cp', ['walk', 196 * 32], ['gate']],
   '28-6': [['walk', 14 * 32 + 16, { noHop: true }], ['press', 'action'], ['wait', 1.3], ['walk', 28 * 32 + 16, { noHop: true }], ['press', 'action'], ['wait', 1.3], ['walk', 37 * 32 + 16, { noHop: true }], ['press', 'action'], ['wait', 0.6],
     ['walk', 34 * 32 + 16, { noHop: true }], ['press', 'action'], ['wait', 2], ['walk', 59 * 32], 'cp', ['walk', 78 * 32 + 16], ['door'], ['bossFight'], ['gate']],
 //ROUTES

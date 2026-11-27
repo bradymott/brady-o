@@ -243,9 +243,10 @@ class OrchGraft extends OrchMark {
     this.nx = s.nx; this.ny2 = s.ny2; this.ph = s.phase || 0; hideTiles(g, this.arch);
   }
   live() { return !this.done; }
+  orchTouch(p) { return !this.done && onMark(p, this.tx, this.fy, 1.3); }
   // the far cut's height offset now (px), and the near cut's (its sag while Brady stands on it)
   far() { return Math.sin((this.t + this.ph) / this.per * TAU) * this.amp; }
-  near() { const p = this.g.player; return this.sag && p && onMark(p, this.tx, this.fy, 1.2) ? this.sag : 0; }
+  near() { const p = this.g.player; return this.sag && p && onMark(p, this.tx, this.fy, 1.3) ? this.sag : 0; }
   lined() { return Math.abs(this.far() - this.near()) < 7; }
   act(p) {
     if (this.done) return;
@@ -388,7 +389,8 @@ Object.assign(Tour.pieces, {
   'orch.graft'(st, o) {
     const B = st.B, x = st.x, y = st.gy - 1, d = o.dir || 1, gap = o.gap || 5, arch = [];
     for (let q = 1; q <= gap; q++) { arch.push([x + d * q, y + 1]); B.set(x + d * q, y + 1, T.SEMI); }
-    B.spawn('orchGraft', x, y, { arch, nx: x + 0.5 + d * 0.5, ny2: y + 1, fx: x + 0.5 + d * (gap + 0.5), fy2: y + 1, sag: o.sag || 0, amp: o.amp || 18, period: o.period || 2.6, phase: o.phase || 0 });
+    // the mark is a step back from the cut's tip (nobody has to stand on the very edge)
+    B.spawn('orchGraft', x - d, y, { arch, nx: x + 0.5 + d * 0.5, ny2: y + 1, fx: x + 0.5 + d * (gap + 0.5), fy2: y + 1, sag: o.sag || 0, amp: o.amp || 18, period: o.period || 2.6, phase: o.phase || 0 });
     return st.x;
   },
   // a loaded branch over the letter (its pluck mark); { basket: the basket's column, lean, lx: the persuade mark's col
