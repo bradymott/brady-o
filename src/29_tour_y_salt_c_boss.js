@@ -27,8 +27,6 @@ const BAND = [0.85, 1.15], SHOE = 0.4;
 
 Tour.pieces['salt.arena_kitchen'] = function (st, o) {
   const B = st.B, { x0, w, GY } = o;
-  // his stool behind the pot: a block he stands on (out of Brady's way)
-  for (let q = STOOL; q < STOOL + 3; q++) B.set(x0 + q, GY - 1, T.HARD);
 };
 
 const brain = {
@@ -148,6 +146,8 @@ TourHooks.on('afterEntities', (play, ctx) => {
   const b = play.boss; if (!b || b.style !== 'salt_pinch' || b.remove || !b.crystals) return;
   const fy = b.floorY, t = play.t, on = brain.on(b), ph = b.phase || 1;
   ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2.4;
+  // his stool (drawn: Brady can walk past it to the gate)
+  ctx.fillStyle = SA.COBALT_D; ctx.fillRect(b.homeX - 1.4 * TS, fy - TS, 2.8 * TS, TS); ctx.strokeRect(b.homeX - 1.4 * TS, fy - TS, 2.8 * TS, TS);
   // the pot (steaming) between the spoon and the chef
   ctx.fillStyle = SA.CHAR; rr(ctx, b.potX - 34, fy - 52, 68, 52, 8); ctx.fill(); ctx.stroke();
   ctx.fillStyle = '#e8a050'; ctx.fillRect(b.potX - 28, fy - 50, 56, 8);

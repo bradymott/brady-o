@@ -84,11 +84,11 @@ const seaRows = (() => {
   const W = 200, H = 22, Gr = grid(W, H, '.');
   ground(Gr, 0, 19, 18); put(Gr, 3, 17, '@'); put(Gr, 6, 17, 'k'); put(Gr, 10, 14, '?'); put(Gr, 17, 17, '1'); pit(Gr, 20, 28); put(Gr, 20, 18, 'N');
   ground(Gr, 29, 43, 18); put(Gr, 32, 17, 'c'); put(Gr, 36, 13, '*'); put(Gr, 33, 15, 'o.o.o'); put(Gr, 38, 17, 'r'); put(Gr, 41, 17, '2'); pit(Gr, 44, 53); put(Gr, 44, 18, 'd');
-  ground(Gr, 54, 92, 18); put(Gr, 57, 17, 'K'); put(Gr, 70, 14, '?'); put(Gr, 74, 17, 'j');
+  ground(Gr, 54, 92, 18); put(Gr, 54, 17, 'K'); put(Gr, 73, 14, '?'); put(Gr, 76, 17, 'j');
   // the cellar block with its painted-glass left face (B42 inside)
-  fillG(Gr, 62, 15, 67, 17, 'H'); fillG(Gr, 63, 16, 66, 17, '.'); fillG(Gr, 62, 16, 62, 17, 'F'); put(Gr, 65, 17, 'A'); put(Gr, 64, 14, 'u');
+  put(Gr, 58, 15, '--'); fillG(Gr, 61, 14, 69, 14, 'H'); fillG(Gr, 64, 11, 69, 13, 'H'); fillG(Gr, 65, 12, 68, 13, '.'); fillG(Gr, 64, 12, 64, 13, 'F'); put(Gr, 67, 13, 'A'); put(Gr, 66, 10, 'u');
   put(Gr, 80, 17, 'x'); put(Gr, 84, 17, 'c'); put(Gr, 88, 17, 'a'); put(Gr, 86, 14, 'f');
-  put(Gr, 91, 17, '3'); put(Gr, 89, 17, 'l'); pit(Gr, 94, 105); put(Gr, 94, 18, 'e');
+  put(Gr, 91, 17, '3'); put(Gr, 78, 17, 'l'); pit(Gr, 94, 105); put(Gr, 94, 18, 'e');
   ground(Gr, 106, 150, 18); put(Gr, 110, 17, 'r'); put(Gr, 114, 16, '-'); put(Gr, 117, 13, '--'); put(Gr, 120, 10, '--'); put(Gr, 121, 8, 'P'); put(Gr, 125, 14, '?'); put(Gr, 128, 17, 'j');
   put(Gr, 136, 17, 'c'); put(Gr, 140, 17, 'Z'); put(Gr, 144, 14, 'f');
   put(Gr, 148, 17, '4'); pit(Gr, 151, 163); put(Gr, 151, 18, 'M'); put(Gr, 157, 13, 'R');
@@ -128,17 +128,17 @@ const L2 = { n: 2, name: 'Grain Elevator', mapLabel: 'Grain Elevator', arch: 'br
 // overhead stops the bridge, so it grows down from the tip and on, lower; the brine rises in the trough below
 const caveRows = (() => {
   const W = 200, H = 22, Gr = grid(W, H, '.');
-  ground(Gr, 0, 19, 18); put(Gr, 3, 17, '@'); put(Gr, 6, 17, 'k'); put(Gr, 10, 14, '?'); put(Gr, 19, 17, '1'); pit(Gr, 20, 28);
+  ground(Gr, 0, 19, 18); put(Gr, 3, 17, '@'); put(Gr, 6, 17, 'k'); put(Gr, 10, 14, '?'); put(Gr, 18, 17, '1'); pit(Gr, 20, 28);
   ground(Gr, 29, 52, 18); put(Gr, 30, 17, 'c'); put(Gr, 34, 13, '*'); put(Gr, 31, 15, 'o.o.o'); put(Gr, 40, 17, 'r'); put(Gr, 46, 17, 'K');
   // ② the elevator crystal up to the shelf (row 12), the shelf, a pillar crystal bridging down the far side
-  put(Gr, 50, 17, '2'); ground(Gr, 51, 64, 12); put(Gr, 56, 11, 'f'); put(Gr, 58, 8, '?'); put(Gr, 64, 11, '3'); pit(Gr, 65, 73); ground(Gr, 74, 96, 12);
+  put(Gr, 50, 17, '2'); ground(Gr, 51, 64, 12); put(Gr, 56, 11, 'f'); put(Gr, 58, 8, '?'); put(Gr, 63, 11, '3'); pit(Gr, 65, 73); ground(Gr, 74, 96, 12);
   put(Gr, 78, 11, 'j'); put(Gr, 81, 11, 'c');
   // ③ the optional elevator to the high sill (B43)
   put(Gr, 88, 11, '4'); fillG(Gr, 89, 5, 94, 5, 'H'); put(Gr, 92, 4, 'A'); put(Gr, 94, 4, 'u'); put(Gr, 90, 3, 'o.o');
   put(Gr, 96, 11, '.'); ground(Gr, 97, 140, 18); put(Gr, 99, 17, 'a'); put(Gr, 104, 17, 'l'); put(Gr, 110, 14, '?'); put(Gr, 114, 17, 'r'); put(Gr, 120, 17, 'c');
   put(Gr, 126, 16, '--'); put(Gr, 129, 14, '--'); put(Gr, 132, 11, '--'); put(Gr, 133, 9, 'P'); put(Gr, 136, 17, 'Z'); put(Gr, 138, 15, '---');
   // ④ the corner: the cliff (row 13) from 141, the stem at its edge, the beam overhead past the tip, the trough below
-  ground(Gr, 141, 150, 13); put(Gr, 144, 12, 'j'); put(Gr, 150, 12, '5'); fillG(Gr, 155, 8, 163, 12, 'H'); pit(Gr, 151, 160); put(Gr, 157, 13, 'R');
+  ground(Gr, 141, 150, 13); put(Gr, 144, 12, 'j'); put(Gr, 149, 12, '5'); fillG(Gr, 155, 8, 163, 12, 'H'); pit(Gr, 151, 160); put(Gr, 157, 13, 'R');
   ground(Gr, 161, W - 1, 16); put(Gr, 166, 15, 'o.o.o'); put(Gr, 172, 15, 'r'); put(Gr, 178, 15, 'c'); put(Gr, 184, 15, 'x'); put(Gr, 190, 15, 'G');
   fillG(Gr, W - 1, 0, W - 1, 15, 'H');
   return rowsOf(Gr);
@@ -148,11 +148,11 @@ const CAVE = Object.assign({}, ENEMY, {
   K: SIGN('SOME CRYSTALS GROW UP. A CUBE GROWING UNDER YOU LIFTS YOU WITH IT'),
   Z: SIGN('THE LAST ONE TURNS A CORNER UNDER THE BEAM. THE BRINE RISES ONCE IT STARTS: KEEP GROWING'),
   x: ['decor', 'saltCellarProp'],
-  '1': ['piece', 'salt.crystal', { id: 'c1', h: 1, plan: [[1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0]] }],
+  '1': ['piece', 'salt.crystal', { id: 'c1', h: 1, plan: [[1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0], [10, 0]] }],
   '2': ['piece', 'salt.crystal', { id: 'c2', h: 1, plan: [[0, -1], [0, -2], [0, -3], [0, -4], [0, -5]] }],
-  '3': ['piece', 'salt.crystal', { id: 'c3', h: 1, plan: [[1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0]] }],
+  '3': ['piece', 'salt.crystal', { id: 'c3', h: 1, plan: [[1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0], [10, 0]] }],
   '4': ['piece', 'salt.crystal', { id: 'c4', h: 1, plan: [[0, -1], [0, -2], [0, -3], [0, -4], [0, -5], [0, -6]] }],
-  '5': ['piece', 'salt.crystal', { id: 'c5', h: 1, plan: [[1, 0], [2, 0], [3, 0], [3, 1], [3, 2], [3, 3], [4, 3], [5, 3], [6, 3], [7, 3], [8, 3], [9, 3], [10, 3]], brine: { dx0: 1, dx1: 10, dy: 4, time: 16 } }],
+  '5': ['piece', 'salt.crystal', { id: 'c5', h: 1, plan: [[1, 0], [2, 0], [3, 0], [4, 0], [4, 1], [4, 2], [4, 3], [5, 3], [6, 3], [7, 3], [8, 3], [9, 3], [10, 3], [11, 3]], brine: { dx0: 2, dx1: 11, dy: 4, time: 16 } }],
   A: DOOR('mitts@in'), u: GRAIN(), a: ['anchor', 'mittsOut']
 });
 stamps.saltCave = { floor: 18, rows: caveRows, legend: CAVE, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power', 'power'] };
@@ -180,14 +180,14 @@ const capRows = (() => {
   const chamber = (x0, x1) => { fillG(Gr, x0, 15, x1, 16, '.'); fillG(Gr, x0, 14, x1, 14, 'H'); };
   put(Gr, 3, 13, '@'); put(Gr, 6, 13, 'k'); put(Gr, 9, 10, '?');
   chamber(15, 28); put(Gr, 16, 13, '1'); put(Gr, 28, 13, 'U');
-  put(Gr, 32, 13, 'c'); put(Gr, 36, 9, '*'); put(Gr, 34, 11, 'o.o.o'); put(Gr, 42, 13, 'r'); put(Gr, 46, 13, 'K');
-  fillG(Gr, 50, 11, 55, 13, 'H'); fillG(Gr, 51, 12, 54, 13, '.'); fillG(Gr, 50, 12, 50, 13, 'F'); put(Gr, 53, 13, 'A'); put(Gr, 52, 10, 'u');
+  put(Gr, 32, 13, 'c'); put(Gr, 36, 9, '*'); put(Gr, 34, 11, 'o.o.o'); put(Gr, 40, 13, 'r'); put(Gr, 44, 13, 'K');
+  put(Gr, 46, 11, '--'); fillG(Gr, 49, 10, 57, 10, 'H'); fillG(Gr, 52, 7, 57, 9, 'H'); fillG(Gr, 53, 8, 56, 9, '.'); fillG(Gr, 52, 8, 52, 9, 'F'); put(Gr, 55, 9, 'A'); put(Gr, 54, 6, 'u');
   chamber(59, 74); put(Gr, 60, 13, '2'); put(Gr, 74, 13, 'V');
   put(Gr, 78, 13, 'c'); put(Gr, 82, 13, 'a'); put(Gr, 88, 13, 'l'); put(Gr, 92, 10, '?'); put(Gr, 94, 12, '--'); put(Gr, 97, 9, '--'); put(Gr, 98, 7, 'P');
   chamber(101, 116); put(Gr, 102, 13, '3'); put(Gr, 116, 13, 'E'); put(Gr, 108, 13, 'r'); put(Gr, 110, 7, 'f');
   put(Gr, 120, 13, 'c'); put(Gr, 124, 13, 'Z'); put(Gr, 126, 10, '?');
   chamber(129, 144); put(Gr, 130, 13, '4'); put(Gr, 144, 13, 'Y'); put(Gr, 136, 9, 'R');
-  put(Gr, 150, 13, 'j'); put(Gr, 156, 11, 'o.o.o'); put(Gr, 162, 13, 'r'); put(Gr, 168, 13, 'x'); put(Gr, 180, 13, 'G');
+  put(Gr, 152, 13, 'r'); put(Gr, 156, 11, 'o.o.o'); put(Gr, 166, 13, 'r'); put(Gr, 168, 13, 'x'); put(Gr, 180, 13, 'G');
   fillG(Gr, W - 1, 0, W - 1, 13, 'H');
   return rowsOf(Gr);
 })();

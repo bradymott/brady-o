@@ -395,9 +395,9 @@ const BOT_SALT = () => {
   };
 };
 const BOT_ROUTES = {
-  '34-1': [['scuff', 16, 'n1'], ['walk', 31 * 32], 'cp', ['walk', 52 * 32], ['scuff', 69, 'n2'], ['walk', 91 * 32], ['walk', 101 * 32], 'cp', ['scuff', 118, 'n3'], ['scuff', 118, 'n4'], ['walk', 152 * 32], 'cp', ['gate']],
+  '34-1': [['scuff', 16, 'n1'], ['walk', 31 * 32], 'cp', ['walk', 52 * 32], ['scuff', 69, 'n2'], ['walk', 91 * 32], ['walk', 101 * 32], 'cp', ['scuff', 118, 'n3'], ['scuff', 118, 'n4'], ['walk', 152 * 32], 'cp', ['walk', 186 * 32], ['gate']],
   '34-2': [['spoon', 17, 'b1'], ['ride', 'b1'], ['walk', 33 * 32], 'cp', ['spoon', 41, 'b2'], ['ride', 'b2'], ['walk', 84 * 32], 'cp', ['spoon', 91, 'b3'], ['ride', 'b3'], ['walk', 136 * 32], 'cp', ['spoon', 148, 'b4'], ['ride', 'b4'], ['walk', 178 * 32], ['gate']],
-  '34-3': [['grow', 19, 'c1'], ['walk', 30 * 32], 'cp', ['grow', 50, 'c2'], ['walk', 63 * 32], ['grow', 64, 'c3'], ['walk', 81 * 32], 'cp', ['walk', 99 * 32], ['walk', 120 * 32], 'cp', ['walk', 145 * 32], ['grow', 150, 'c5'], ['walk', 158 * 32, { noHop: true }], ['walk', 178 * 32], ['gate']],
+  '34-3': [['to', 17], ['hopTo', 19, 0.45], ['grow', 19, 'c1'], ['walk', 30 * 32], 'cp', ['to', 48], ['hopTo', 50, 0.45], ['grow', 50, 'c2'], ['walk', 62 * 32], ['hopTo', 64, 0.45], ['grow', 64, 'c3'], ['walk', 81 * 32], 'cp', ['walk', 99 * 32], ['walk', 120 * 32], 'cp', ['walk', 145 * 32], ['to', 148], ['hopTo', 150, 0.45], ['grow', 150, 'c5'], ['walk', 158 * 32, { noHop: true }], ['walk', 178 * 32], ['gate']],
   '34-4': [['plug', 18 * 32 + 16, 'gate1'], ['walk', 32 * 32], 'cp', ['plug', 62 * 32 + 16, 'gate2'], ['walk', 78 * 32], 'cp', ['plug', 110 * 32 + 16, 'gate3'], ['walk', 120 * 32], 'cp', ['plug', 134 * 32, 'gate4'], ['walk', 150 * 32], ['gate']],
   '34-5': [['weigh', 13, 'w1', 0.95], ['walk', 24 * 32], 'cp', ['weigh', 48, 'w2', 1.38], ['walk', 76 * 32 + 16, { noHop: true }], ['door'], ['bossFight'], ['gate']]
 };
