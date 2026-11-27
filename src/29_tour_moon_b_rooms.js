@@ -19,7 +19,7 @@
 const MK = Tour.moonKit, INK = MK.INK, MoonArt = MK.MoonArt;
 for (const k of ['moonPutt', 'moonLights', 'moonOdd', 'moonFuses', 'moonEcho']) { TourHooks.room(k, {}); if (TourHooks.ROOM_TYPES.indexOf(k) < 0) TourHooks.ROOM_TYPES.push(k); }
 const RULES = {
-  moonPutt: ['PIWI\'S PRACTICE GREEN', 'KICK THE BALL INTO THE CUP IN 3 KICKS. TOO HARD AND IT SKIPS OVER!'],
+  moonPutt: ['PIWI\'S PRACTICE GREEN', 'KICK THE BALL INTO THE CUP IN 3 KICKS. TOO HARD AND IT SKIPS OVER; OFF THE GREEN IS OUT!'],
   moonLights: ['THE PRESSURE PANEL', 'JUMP ONTO A LAMP: IT AND ITS NEIGHBOURS SWITCH. LIGHT ALL FOUR!'],
   moonOdd: ['THE SPARE-WHEEL RACK', 'JUMP ONTO THE ONE WHEEL THAT IS NOT LIKE THE OTHERS'],
   moonFuses: ['THE FUSE CUPBOARD', 'GRAB ALL 4 SPARE FUSES BEFORE THE CLOCK RUNS OUT (TWO ARE ON THE CEILING)'],
@@ -50,6 +50,8 @@ class MoonGame extends Ent {
   fail(text) { const g = this.g, p = g.player; TourKit.sfx('fizz', 'bump', { vol: 0.5, pitch: 0.6 }); if (p) g.parts.text(p.cx, p.y - 20, text, '#ff9a9a'); }
   update(dt) {
     this.t += dt; const g = this.g, p = g.player, S = this.st;
+    // (the controller's box follows the view, so its pads, lamps, wheels, fuses and ball are always drawn)
+    this.x = g.camX; this.y = g.camY; this.w = Game.viewW; this.h = Game.viewH;
     if (!this.told && p) { this.told = true; const R = RULES[this.kind]; g.bannerText = R[0]; g.bannerT = 1.8; g.toast && g.toast(R[1]); }
     if (this.won || !p || p.dead) { if (this.kind === 'moonPutt') this.ballStep(dt); return; }
     const landed = p.onGround && !this.wasG; this.wasG = p.onGround;
@@ -90,6 +92,7 @@ class MoonGame extends Ent {
     // over the cup, slow enough: it drops in
     const cx = b.x + b.w / 2;
     if (b.onGround && Math.abs(cx - (cup[0] * TS + TS / 2)) < 10 && Math.abs(b.vx) < 5 * TS) { S.sunk = true; b.vx = 0; b.y = cup[1] * TS + 4; Sound.play('coin', { vol: 0.7 }); this.winGame('HOLE IN ' + S.kicks + '!'); return; }
+    if (!this.won && b.y > (cup[1] + 1) * TS) { this.fail('OUT OF BOUNDS! BACK TO THE TEE'); this.ballHome(); return; }
     if (!this.won && b.onGround && Math.abs(b.vx) < 4 && S.kicks >= 3) { S.rest += dt; if (S.rest > 0.8) { this.fail('3 KICKS! BACK TO THE TEE'); this.ballHome(); } } else S.rest = 0;
   }
   touchPlayer() {}
@@ -126,7 +129,8 @@ class MoonGame extends Ent {
 }
 // a line of text at the top of the view (the room's counter)
 function RoomText(g, ctx, str) {
-  const x = g.camX + Game.viewW / 2, y = g.camY + 70;
+  if (g.bannerT > 0) return;   // the room's title shows first; then the counter in its own spot under the rule's toast
+  const x = g.camX + Game.viewW / 2, y = g.camY + Math.max(118, Game.viewH * 0.3);
   ctx.save(); ctx.font = '14px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   const w = ctx.measureText(str).width + 24; ctx.fillStyle = 'rgba(14,8,26,0.75)'; rr(ctx, x - w / 2, y - 13, w, 26, 13); ctx.fill();
   ctx.fillStyle = '#ffd84a'; ctx.fillText(str, x, y + 1); ctx.restore();
@@ -143,5 +147,45 @@ Tour.pieces['moon.game'] = function (st, o) {
   B.vkey(lock, tiles, 'all');
   return st.x;
 };
-Tour.moonKit.MoonGame = MoonGame; Tour.moonKit.ROOM_RULES = RULES;
+/* ---------- the rooms' shape: the game sits on a raised stage in the middle band of the screen (never along the
+   floor under the thumbs), the prize alcove at the same height, the camera fixed on that band ----------
+   roomRows({ ceiling, mark }) -> 30 x 14 rows: '@' and 'D' on the low floor at the left (row 12), the stage x6-22 with
+   its top on row 6, the alcove x25-28 beside it. */
+function roomRows(o) {
+  o = o || {};
+  const W = 30, H = 14, G = Array.from({ length: H }, () => Array(W).fill('#'));
+  const fill = (x0, y0, x1, y1, ch) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) G[y][x] = ch; };
+  fill(1, 1, 28, 11, '.');
+  // the stage (top row 6) and the alcove beside it (floor row 6, two rows high, its lock 'Y' at x24, the prize '?'
+  // in its roof): all in the middle band of a phone screen, clear of the stick and the buttons
+  fill(6, 6, 22, 11, '#'); fill(23, 6, 28, 11, '#'); fill(24, 1, 28, 3, '#'); fill(23, 1, 23, 3, '#');
+  G[11][2] = '@'; G[11][4] = 'D'; G[11][3] = 'k';
+  G[4][24] = 'Y'; G[5][24] = 'Y'; G[3][26] = '?';
+  if (o.ceiling) fill(6, 1, 22, 2, '#');
+  if (o.mark) for (const [x, y, ch] of o.mark) G[y][x] = ch;
+  return G.map(r => r.join(''));
+}
+// the camera in a game room: fixed on the stage's band (rows 1-13 on a phone in landscape)
+{
+  const ct0 = Play.prototype.camTargetY;
+  Play.prototype.camTargetY = function (snap) { const A = this.area; if (A && A.moon && A.moon.room) return clamp(TS, 0, Math.max(0, A.H * TS - Game.viewH)); return ct0.call(this, snap); };
+}
+// the prize alcove's lock on the moon: a steel safe hatch with a round dial (not a wooden door)
+if (typeof GimmickArt !== 'undefined' && GimmickArt.lock) {
+  const lk0 = GimmickArt.lock;
+  GimmickArt.lock = function (ctx, e, t) {
+    if (!(e.g && e.g.area && e.g.area.moon)) return lk0.call(this, ctx, e, t);
+    const x = e.x + 6, y = e.y, w = TS, h = e.h, k = e.open ? clamp(1 - e.openT / 0.6, 0, 1) : 0;
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.translate(0, -k * h);
+    ctx.fillStyle = '#6a7286'; rr(ctx, x, y, w, h, 5); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#8a92a6'; rr(ctx, x + 3, y + 3, w - 6, h - 6, 4); ctx.fill();
+    ctx.fillStyle = '#ffd84a'; for (let yy = y + 6; yy < y + h - 4; yy += 14) { ctx.fillRect(x + 3, yy, 6, 6); }
+    const cx = x + w / 2 + 3, cy = y + h / 2;
+    ctx.fillStyle = '#c8d0dc'; ctx.beginPath(); ctx.arc(cx, cy, 9, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = '#e8424a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(t * 2) * 6, cy + Math.sin(t * 2) * 6); ctx.stroke();
+    ctx.fillStyle = e.g.keys.has(e.id) ? '#7affd8' : '#ff5a5a'; ctx.beginPath(); ctx.arc(x + w / 2 + 3, y + 8, 3, 0, TAU); ctx.fill();
+    ctx.restore();
+  };
+}
+Tour.moonKit.MoonGame = MoonGame; Tour.moonKit.ROOM_RULES = RULES; Tour.moonKit.roomRows = roomRows;
 })();
