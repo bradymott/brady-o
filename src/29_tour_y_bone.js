@@ -428,8 +428,8 @@ const decorLights = { boneLamp: [80, '#ffd88a', -57] };
 
 /* ---------------- the critters ---------------- */
 // SOCKET MOUSE: an orange mouse living in a hollow bone socket. It moves house every time a bigger joint comes free:
-// when Brady gets close it twitches its whiskers (the tell), then springs out on its tail in a high arc, lands, and
-// scurries off to the next socket (it lives in the hollow bone it carries along on its back... sort of).
+// when Brady gets close it twitches its whiskers (the tell), then springs out on its tail in a high arc AWAY from him
+// (it is moving house, not attacking: only its landing and its scurry can bump into him), and scurries to a new socket (it lives in the hollow bone it carries along on its back... sort of).
 const mouseArt = (ctx, e, x, y, m, t) => {
   ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, m === 'flat' ? 0.4 : 1); ctx.strokeStyle = INK; ctx.lineWidth = 1.7;
   const home = m === 'idle' || m === 'notice', air = m === 'hop';
@@ -520,17 +520,17 @@ const mouseThink = (e, dt) => {
   const p = e.g.player;
   e.st = (e.st || 0) + dt;
   if (!e.phase) e.phase = 'home';
-  if (e.phase === 'home') { e.vx = 0; e.mode = 'idle'; if (e.cool <= 0 && p && !p.dead && Math.abs(p.cx - e.cx) < 5 * TS && Math.abs(p.cy - e.cy) < 3 * TS) { e.phase = 'notice'; e.st = 0; e.dir = sign(p.cx - e.cx) || e.dir; TourKit.sfx('squeak', 'select', { vol: 0.35, pitch: 2.2 }); } }
-  else if (e.phase === 'notice') { e.vx = 0; e.mode = 'notice'; if (e.st > 0.6) { e.phase = 'spring'; e.st = 0; e.vy = -11 * TS; e.vx = e.dir * 3.2 * TS; e.onGround = false; e.g.burst(e.cx, e.y + e.h, 4, BONE, 'dust'); } }
+  if (e.phase === 'home') { e.vx = 0; e.mode = 'idle'; if (e.cool <= 0 && p && !p.dead && Math.abs(p.cx - e.cx) < 5 * TS && Math.abs(p.cy - e.cy) < 3 * TS) { e.phase = 'notice'; e.st = 0; e.dir = -(sign(p.cx - e.cx) || e.dir); TourKit.sfx('squeak', 'select', { vol: 0.35, pitch: 2.2 }); } }
+  else if (e.phase === 'notice') { e.vx = 0; e.mode = 'notice'; if (e.st > 0.6) { e.phase = 'spring'; e.st = 0; e.vy = -10 * TS; e.vx = e.dir * 2.4 * TS; e.onGround = false; e.g.burst(e.cx, e.y + e.h, 4, BONE, 'dust'); } }
   else if (e.phase === 'spring') { e.mode = 'hop'; if (e.onGround && e.st > 0.15) { e.phase = 'scurry'; e.st = 0; e.vx = e.dir * e.speed; } }
   else { e.mode = 'walk'; if (!e.vx) e.vx = e.dir * e.speed; if (e.st > 2.6 && e.onGround) { e.phase = 'home'; e.st = 0; e.cool = 1.6; Tour.boneKit.pill(e.g, e.cx, e.y - 8, 'NEW HOUSE!', '#ffd88a'); } }
 };
 const enemies = {
-  boneMouse: { cls: TourEnemy.make({ w: 22, h: 22, speed: 1.6, edgeTurn: true, art: mouseArt, burst: '#f2a03a', think: mouseThink }), place: 'walk' },
+  boneMouse: { cls: TourEnemy.make({ w: 22, h: 22, speed: 1.6, edgeTurn: true, art: mouseArt, burst: '#f2a03a', think: mouseThink, init: e => { const tp0 = e.touchPlayer; e.touchPlayer = p => { if (e.phase === 'home' || !e.phase) return; return tp0.call(e, p); }; } }), place: 'walk' },
   boneNewt: { cls: TourEnemy.make({ w: 28, h: 16, speed: 0.9, hp: 2, edgeTurn: true, art: newtArt, burst: '#3e8a6a',
     think: (e, dt) => { if (e.tailless > 0) { e.tailless -= dt; e.vx = 0; e.mode = 'idle'; if (e.tailless <= 0) { e.speed = 1.5 * TS; e.vx = e.dir * e.speed; Tour.boneKit.pill(e.g, e.cx, e.y - 10, 'THAT ONE.', '#c8f0d8'); } return; } e.mode = 'walk'; if (!e.vx) e.vx = e.dir * e.speed; },
     onHurt: e => { e.tailless = 0.9; e.g.spawn(new BoneTail(e.g, { x: e.cx - e.dir * 14, y: e.y + e.h, dir: -e.dir })); Tour.boneKit.pill(e.g, e.cx, e.y - 12, 'MY TAIL!', '#c8f0d8'); } }), place: 'walk' },
-  boneBrush: { cls: TourEnemy.make({ w: 24, h: 40, speed: 0.8, behavior: 'charge', range: 7, chargeSpeed: 5.2, windup: 0.6, edgeTurn: true, art: brushArt, burst: '#f06a2a',
+  boneBrush: { cls: TourEnemy.make({ w: 24, h: 40, speed: 0.8, behavior: 'charge', range: 7, chargeSpeed: 4.2, windup: 0.8, chargeT: 1.1, edgeTurn: true, art: brushArt, burst: '#f06a2a',
     onNotice: e => { Tour.boneKit.pill(e.g, e.cx, e.y - 12, 'SWEEP SWEEP!', '#ffd88a'); e.g.burst(e.cx, e.y + e.h, 6, '#e8c898', 'dust'); TourKit.sfx('brush', 'select', { vol: 0.35, pitch: 0.7 }); } }), place: 'walk' },
   boneRook: { cls: TourFlyer.make({ w: 30, h: 20, range: 3, speed: 0.7, swoop: true, art: rookArt, burst: '#2e6a5a',
     onSwoop: e => { if (e.g.onScreen(e)) Tour.boneKit.pill(e.g, e.cx, e.y - 10, 'CAW!', '#c8f0d8'); } }), place: 'fly' }

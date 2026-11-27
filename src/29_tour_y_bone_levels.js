@@ -32,12 +32,12 @@ const walkRows = (() => {
   put(Gr, 16, 18, '1'); put(Gr, 19, 16, 'o.o.o.o');
   ground(Gr, 33, 56, 13); put(Gr, 38, 10, '*'); put(Gr, 40, 11, 'o.o.o'); put(Gr, 46, 12, 'e'); put(Gr, 35, 12, 'l'); put(Gr, 52, 12, 'r');
   // ② the test
-  ground(Gr, 57, 74, 19); put(Gr, 60, 18, 'c'); put(Gr, 66, 18, 'w'); put(Gr, 70, 18, 'r');
+  ground(Gr, 57, 74, 19); put(Gr, 60, 18, 'c'); put(Gr, 64, 18, 'w'); put(Gr, 72, 18, 'r');
   pit(Gr, 75, 77); put(Gr, 74, 15, 'o.o.o');
-  ground(Gr, 78, 104, 19); put(Gr, 79, 18, 'N'); put(Gr, 81, 18, '2'); put(Gr, 89, 18, 'u'); put(Gr, 91, 12, 'M');
+  ground(Gr, 78, 104, 19); put(Gr, 79, 18, 'N'); put(Gr, 81, 18, '2'); put(Gr, 70, 18, 'u'); put(Gr, 91, 12, 'M');
   ground(Gr, 105, 130, 9); put(Gr, 110, 8, 'c'); put(Gr, 112, 5, '?'); put(Gr, 116, 7, 'o.o.o.o'); put(Gr, 122, 8, 'e'); put(Gr, 127, 8, 'l');
   // ③ the low floor: the tunnel under a thin strata ceiling, with walls up from its ends (the run on top is a secret)
-  ground(Gr, 131, W - 1, 21); put(Gr, 136, 20, 'c'); put(Gr, 133, 20, 'w');
+  ground(Gr, 131, W - 1, 21); put(Gr, 136, 20, 'c'); put(Gr, 125, 8, 'w');
   fillG(Gr, 141, 17, 169, 17, 'H'); fillG(Gr, 140, 9, 140, 17, 'H'); fillG(Gr, 170, 9, 170, 17, 'H');
   fillG(Gr, 154, 17, 155, 17, '.'); fillG(Gr, 154, 20, 155, 20, 'H'); put(Gr, 153, 18, 'x');
   put(Gr, 144, 19, 'o.o.o'); put(Gr, 160, 19, 'o.o.o.o');
@@ -90,11 +90,11 @@ const ascentRows = (() => {
   ground(Gr, 0, 13, 19); put(Gr, 3, 18, '@'); put(Gr, 6, 18, 'n'); put(Gr, 9, 15, '?'); put(Gr, 11, 18, '1');
   ground(Gr, 14, 14, 17); put(Gr, 18, 14, 'o.o.o'); put(Gr, 19, 12, '*');
   ground(Gr, 24, 40, 17); put(Gr, 27, 16, 'r'); put(Gr, 33, 16, 'N'); put(Gr, 36, 16, 'i');
-  ground(Gr, 41, 58, 9); ground(Gr, 58, 58, 7); put(Gr, 44, 8, 'c'); put(Gr, 50, 8, 'e'); put(Gr, 55, 8, '2'); put(Gr, 64, 3, 'M');
+  ground(Gr, 41, 58, 9); ground(Gr, 58, 58, 7); put(Gr, 44, 8, 'c'); put(Gr, 50, 8, 'e'); put(Gr, 55, 8, '2'); put(Gr, 80, 2, 'M');
   // ② the test
   ground(Gr, 68, 90, 7); put(Gr, 72, 3, '?'); put(Gr, 78, 6, 'w'); put(Gr, 86, 6, 'l');
   ground(Gr, 91, 103, 19); put(Gr, 93, 18, 'c'); put(Gr, 96, 18, 'j'); put(Gr, 97, 18, 'K'); put(Gr, 95, 18, 'Z'); put(Gr, 92, 18, 'O');
-  ground(Gr, 104, 113, 7); ground(Gr, 113, 113, 6); put(Gr, 106, 6, 'e'); put(Gr, 110, 6, '3');
+  ground(Gr, 104, 113, 7); ground(Gr, 113, 113, 6); put(Gr, 110, 6, '3');
   ground(Gr, 123, 150, 6); put(Gr, 128, 5, 'w'); put(Gr, 134, 5, 'o.o.o'); put(Gr, 142, 5, 'l');
   // the gift shop: a crack in the shelf's face at floor level, whiskers twitching out of it
   fillG(Gr, 146, 17, 149, 18, '.'); fillG(Gr, 150, 17, 150, 18, 'F'); put(Gr, 147, 18, 'D'); put(Gr, 151, 17, 'x');
@@ -199,7 +199,7 @@ const cutRows = (() => {
   ground(Gr, 72, 100, 7); put(Gr, 80, 6, 'w'); put(Gr, 86, 3, 'A'); put(Gr, 90, 3, 'M'); put(Gr, 95, 6, 'N'); put(Gr, 99, 6, '3');
   pit(Gr, 101, 108); ground(Gr, 109, 118, 7); put(Gr, 112, 6, 'c'); put(Gr, 116, 6, 'r');
   ground(Gr, 119, 135, 19); put(Gr, 122, 18, 'w'); put(Gr, 126, 18, 'k'); put(Gr, 128, 18, '4');
-  ground(Gr, 136, W - 1, 14); put(Gr, 142, 13, 'r'); pit(Gr, 150, 153); put(Gr, 151, 10, 'R'); put(Gr, 147, 8, 'M'); put(Gr, 158, 13, 'e'); put(Gr, 165, 13, 'G'); fillG(Gr, W - 1, 0, W - 1, 13, '#');
+  ground(Gr, 136, W - 1, 14); put(Gr, 142, 13, 'r'); pit(Gr, 150, 153); put(Gr, 151, 10, 'R'); put(Gr, 147, 8, 'M'); put(Gr, 143, 13, 'e'); put(Gr, 165, 13, 'G'); fillG(Gr, W - 1, 0, W - 1, 13, '#');
   return rowsOf(Gr);
 })();
 const P_ = (x, y) => [x * TS, y * TS];

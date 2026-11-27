@@ -6,8 +6,8 @@
    1 THE PADDLE   a broad paddle stuck on its head spins faster and faster (the tell, 1 s; a shadow where it will
                   land, in front of it), then SLAPS down. It lies there a moment: stand under the empty SHOULDER
                   socket (the dashed ring on its side, away from the slap) and THROW to seat it there.
-   2 THE HEEL     one enormous heel kicks up dust (the tell; a footprint marks where it will come down), then a
-                  headfirst HOP: a ripple of dust runs both ways along the floor (jump it). The heel pops off as it
+   2 THE HEEL     one enormous heel kicks up dust (the tell; a footprint marks where it will come down, just short
+                  of Brady), then a headfirst HOP: a ripple of dust runs both ways along the floor (jump it). The heel pops off as it
                   lands: touch it and THROW to send it back to the empty HIP.
    3 THE NECK     its "neck" (a tail really) curls under (the tell; a ring on the floor shows how far it reaches),
                   then it SITS and SWEEPS: stand clear (or jump the curl). The curl is left lying at its back: touch
@@ -61,7 +61,8 @@ const brain = {
     if (b.act === 'walk') b.go('trot');
     if (b.act === 'trot') {
       b.face(); b.walk(ph >= 3 ? 1.5 : 1.2); this.ground(b, dt);
-      if (b.at > (ph >= 3 ? 0.9 : 1.3)) b.go(ph === 1 ? 'wind' : ph === 2 ? 'kick' : 'curl');
+      // it never herds Brady into a corner: close up (or after a short walk) it starts its next trick, with its tell
+      if (b.at > (ph >= 3 ? 0.9 : 1.3) || (p && Math.abs(p.cx - b.cx) < b.w / 2 + 48 && b.at > 0.2)) b.go(ph === 1 ? 'wind' : ph === 2 ? 'kick' : 'curl');
     } else if (b.act === 'recover') {
       b.vx = 0; this.ground(b, dt); if (b.at > 1.1) b.go('trot');
     } else if (b.act === 'wind') {
@@ -80,7 +81,7 @@ const brain = {
     } else if (b.act === 'kick') {
       // phase 2's tell: the big heel scrapes, dust flies; a footprint where it will come down (under Brady)
       b.vx = 0; this.ground(b, dt);
-      if (b.first) { b.face(); b.tx = clamp(p ? p.cx : b.cx, b.arenaX0 + b.w / 2 + 8, b.arenaX1 - b.w / 2 - 8); b.sx = b.cx; say(b, 'STAMP STAMP!'); }
+      if (b.first) { b.face(); const pc = p ? p.cx : b.cx, d = sign(pc - b.cx) || b.dir; b.tx = clamp(pc - d * (b.w / 2 + 64), b.arenaX0 + b.w / 2 + 8, b.arenaX1 - b.w / 2 - 8); b.sx = b.cx; say(b, 'STAMP STAMP!'); }
       if (Math.random() < 0.4) g.burst(b.cx - b.dir * 30, b.floorY, 1, '#e8c898', 'dust');
       if (b.at > 0.9) { b.go('hop'); Sound.play('spring', { pitch: 0.6, vol: 0.6 }); }
     } else if (b.act === 'hop') {
@@ -89,7 +90,7 @@ const brain = {
       b.x = lerp(b.sx, b.tx, k) - b.w / 2; b.y = top - Math.sin(k * Math.PI) * 5 * TS;
       if (k >= 1) {
         b.y = top; g.shake(8); Sound.play('stomp', { pitch: 0.45 }); g.burst(b.cx, b.floorY, 18, '#e8c898', 'dust');
-        for (const d of [-1, 1]) tourFire(g, b.cx + d * (b.w / 2 + 6), b.floorY - 12, { vx: d * 5.2 * TS, w: 26, h: 22, ground: true, life: 2.2, col: '#f0dcb4', art: waveArt });
+        for (const d of [-1, 1]) tourFire(g, b.cx + d * (b.w / 2 + 6), b.floorY - 10, { vx: d * 4.4 * TS, w: 26, h: 18, ground: true, life: 2.2, col: '#f0dcb4', art: waveArt });
         // the heel pops off and lands a little behind it
         b.loose = { x: clamp(b.cx - b.dir * (b.w / 2 + 40), b.arenaX0 + 20, b.arenaX1 - 20), kind: 'heel' };
         b.go('heelDown');
