@@ -433,7 +433,7 @@ async function session(viewport, fn) {
       check('14-6 secret: dropping into the pit with the bean sacks (no coffee) lands in the bean store', r.area === 'retro' && !r.dead, r);
       await entryShots('94', '14-6-bean-store', true);
       r = await ev(() => {
-        const K = kit(), Rm = room(); place(10, 10); until(4, () => ({}), () => Rm.phase === 'run');
+        const K = kit(), Rm = room(); place(6, 10); until(4, () => ({}), () => Rm.phase === 'run');
         until(K.data.t + 4, () => ({}), () => Rm.phase === 'rest'); const failed = Rm.phase === 'rest' && !Rm.won;
         until(4, () => ({}), () => Rm.phase === 'run');
         for (const tk of K.data.tokens) { const e = S().entities.find(q => q.id === tk.id && !q.remove); if (e) { place(tk.tx, tk.ty); sim(0.1); } }
