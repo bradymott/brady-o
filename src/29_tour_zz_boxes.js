@@ -563,6 +563,22 @@ const BoxArt = (() => {
       // the shell clasp: on the front at the lid's edge; hit, it flips up and over
       rot(c, 16, 14, -flip * 2.4, () => { c.beginPath(); c.moveTo(16 - 4, 16); for (let k = 0; k <= 6; k++) { const a = PI + k * PI / 6, r = k % 2 ? 6 : 5.4; c.lineTo(16 + Math.cos(a) * r, 16 + Math.sin(a) * r); } c.lineTo(16 + 4, 16); c.closePath(); fs(c, Ap, 1.1); L(c, [[16, 15.6], [13, 11.5]], Ap2, 0.8); L(c, [[16, 15.6], [19, 11.5]], Ap2, 0.8); });
     } }
+    ,
+    // ---- The Table Salt Sea (34, hidden land): a cobalt glass salt cellar heaped with salt under a tangerine cork lid
+    //      with a charcoal handle; the hit pops the cork up and it tips off to lean against the side; empty: a bare
+    //      cobalt box, the cork leaning on it ----
+    salt: { name: 'The Table Salt Sea', draw(c, p) {
+      const Cb = '#2f55c8', Cd = '#1c3586', Cl = '#5a82e8', Ck = '#f08a2a', Ckd = '#c0601a', Wh = '#f6f9ff', Ch = '#34343e';
+      const q = io(seg(p, 0.05, 0.75)), salt = 1 - seg(p, 0.3, 0.9);
+      // the glass cellar (see-through front: the salt heap inside, falling away as the prize goes)
+      R(c, 4, 12, 24, 18, 3, Cb);
+      c.fillStyle = Cd; c.fillRect(6, 14, 20, 14);
+      if (salt > 0.02) { c.fillStyle = Wh; c.beginPath(); c.moveTo(6, 28); c.lineTo(6, 28 - 11 * salt); c.quadraticCurveTo(16, 28 - 15 * salt, 26, 28 - 11 * salt); c.lineTo(26, 28); c.closePath(); c.fill(); }
+      c.fillStyle = Cl; c.fillRect(7, 15, 2.4, 11);
+      // the cork lid with its handle: seated, popped up, then tipped off to lean on the right side
+      const lx = 16 + 12 * q, ly = 12 - 9 * Math.sin(q * PI) + 4 * q, a = q * 1.25;
+      rot(c, lx, ly, a, () => { R(c, lx - 13, ly - 6, 26, 7, 2.5, Ck); c.fillStyle = Ckd; for (const [dx, dy] of [[-8, -3], [-2, -2], [5, -4], [9, -2]]) { c.beginPath(); c.arc(lx + dx, ly + dy, 0.9, 0, TAU); c.fill(); } R(c, lx - 4, ly - 11, 8, 5, 1.5, Ch); });
+    } }
   };
 
   // ---- painting the states ----

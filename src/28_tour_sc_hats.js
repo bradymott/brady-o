@@ -283,7 +283,10 @@ TourHats.NOT = new Set([].concat(
   'foleyProp foleyFlock foleyPanel foleyBank foleyScreen foleyNet foleyNetCrab foleyTrumpet foleyEar foleyPlatter foleyDesk foleyClapGate foleyMachine foleyMic foleyRoomMark foleyBossMic foleyBossMachine foleyRiser foleyFlap'.split(' '),
   // Below the Cheap Seats (33): scaffolds, their critters, the mirror crab, the bolt board, the tell, flats, seats, the
   // house, backdrops, curtains, follow-spots, the encore's actor, paddles and baskets, room marks, the Festival stand
-  'seatsScaffold seatsCrawler seatsMirrorCrab seatsBoltBoard seatsTell seatsFlat seatsSeat seatsHouse seatsBackdrop seatsCurtainLock seatsSpot seatsActor seatsLeadPaddle seatsLeadBasket seatsLeadCurtain seatsPaddleMark seatsRoomMark seatsFestStand'.split(' ')
+  'seatsScaffold seatsCrawler seatsMirrorCrab seatsBoltBoard seatsTell seatsFlat seatsSeat seatsHouse seatsBackdrop seatsCurtainLock seatsSpot seatsActor seatsLeadPaddle seatsLeadBasket seatsLeadCurtain seatsPaddleMark seatsRoomMark seatsFestStand'.split(' '),
+  // The Table Salt Sea (34): notches, heaps, basins, spoons, crystals, the cap, cellar gates, the grain tell, weighing
+  // spoons, room marks, the saucer in 5-3
+  'saltNotch saltHeap saltBasin saltSpoon saltCrystal saltCap saltCellarGate saltGrain saltWeigh saltRoomMark saltMaSaucer'.split(' ')
 ));
 
 /* ---------- the animals: [fx, fxFlip, fy, size] (see the header) ---------- */
@@ -360,7 +363,9 @@ Object.assign(TourHats.HEADS, {
   // Foley Beach (hidden land A4): the clapper clam, the hiss kettle, the rubbersole ray, the boom crab
   foleyClam: [0.1, 0.1, -0.95, 0], foleyKettle: [0.0, 0.0, -1.25, 0], foleyRay: [0.25, 0.25, -1.15, 0], foleyCrab: [0.05, 0.05, -1.05, 0],
   // Below the Cheap Seats (33): the bolt crab, the seat shrew, the cable hen, the sandbag stoat
-  seatsCrab: [0.42, 0.42, -1.55, 0], seatsShrew: [0.55, 0.55, -1.2, 0], seatsHen: [0.4, 0.4, -1.4, 0], seatsStoat: [0.45, 0.45, -1.45, 0]
+  seatsCrab: [0.42, 0.42, -1.55, 0], seatsShrew: [0.55, 0.55, -1.2, 0], seatsHen: [0.4, 0.4, -1.4, 0], seatsStoat: [0.45, 0.45, -1.45, 0],
+  // The Table Salt Sea (34): the grain wren, the brine shrimp, the cork weevil, the salt lick
+  saltWren: [0.3, 0.3, -1.3, 0], saltShrimp: [0.4, 0.4, -1.1, 0], saltWeevil: [0.4, 0.4, -1.15, 0], saltLick: [0.05, 0.05, -1.25, 0],
 
 });
 

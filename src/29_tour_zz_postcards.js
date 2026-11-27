@@ -67,7 +67,9 @@ const NOTES = {
   umb: 'Every card from the repair district! I sent you a spare rib in a paper sleeve. Not for the umbrella, darling: for the next time you open one indoors and swear it was already like that.',
   gal: 'Every postcard from the gallery! I hung the worst Piwi portrait in the hall so the coats have something to laugh at. Mind the hook, darling: it is where your hat used to go.',   // The Unflattering Gallery (hidden land A5)
   foley: 'Every card from Foley Beach! I packed two coconut halves so you can do the horse in the kitchen. Do it quietly, darling, the neighbours think we keep one.',   // Foley Beach (hidden land A4)
-  seats: 'Every card from under the cheap seats! I have put a folding chair facing the wall in the hall so you feel at home. Twice I sat on it the right way round. Both times, darling, it folded me up.'   // Below the Cheap Seats (33)
+  seats: 'Every card from under the cheap seats! I have put a folding chair facing the wall in the hall so you feel at home. Twice I sat on it the right way round. Both times, darling, it folded me up.',   // Below the Cheap Seats (33)
+  // The Table Salt Sea (34, hidden land A9)
+  salt: 'Every card from the salt sea! I have stopped trusting our shaker. It says "just a pinch" and it has said that since our wedding. I weighed it. Brady, it is a lot more than a pinch.',
 };
 const noteOf = C => (NOTES[C.id] || ('Every postcard from ' + C.name + '! I keep them all in a shoebox.')) + ' ♥ C';
 

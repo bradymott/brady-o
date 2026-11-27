@@ -1,0 +1,276 @@
+/* ============================================================
+   THE TABLE SALT SEA: the stages (world 34) and the land's map. Five stages, each a new kind of play, taught where a
+   slip costs nothing, tested, then twisted; the last one is the boss.
+   34-1 ANGLE OF REPOSE (repose), 34-2 GRAIN ELEVATOR (brinefloat), 34-3 CRYSTAL HABIT (cubegrow), 34-4 THE SHAKER TEST
+   (shakercap), 34-5 SEASON TO TASTE (lair: A Pinch, the cork who considers himself a chef). Each stage's one secret
+   room is behind the land's one tell: a single cobalt grain of salt that twinkles (the only blue grain in the land).
+   ============================================================ */
+(function () {
+const C = Tour.countries.salt;
+if (!C) return;
+const grid = (W, H, ch) => Array.from({ length: H }, () => Array(W).fill(ch));
+const put = (Gr, x, y, str) => { for (let k = 0; k < str.length; k++) if (x + k >= 0 && x + k < Gr[0].length) Gr[y][x + k] = str[k]; };
+const fillG = (Gr, x0, y0, x1, y1, ch) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) Gr[y][x] = ch; };
+const ground = (Gr, x0, x1, top, ch) => fillG(Gr, x0, top, x1, Gr.length - 1, ch || '#');
+const pit = (Gr, x0, x1) => fillG(Gr, x0, 0, x1, Gr.length - 1, '.');
+const rowsOf = Gr => Gr.map(r => r.join(''));
+const stamps = {};
+const SIGN = text => ['spawn', 'sign', { text }];
+const GRAIN = o => ['piece', 'salt.grain', o || {}];
+const ENEMY = { r: ['enemy', 'saltShrimp'], f: ['enemy', 'saltWren'], j: ['enemy', 'saltWeevil'], l: ['enemy', 'saltLick'] };
+// a secret room's stand-in stamp (the room kind builds its own place from it): its door out, its prize
+const roomStamp = (out, look, items) => ({ floor: 12, rows: [
+  '############################', '#..........................#', '#..........................#', '#..........................#',
+  '#..........................#', '#..........................#', '#..........................#', '#..........................#',
+  '#..........................#', '#..........................#', '#..........................#', '#.@..D..................?..#',
+  '############################', '############################'], items: items || ['oneup'], doors: [{ to: out, look: look || 'saltHatch' }] });
+const DOOR = (to, look) => ['spawn', 'portal', { kind: 'door', look: look || 'saltCellar', targetRef: to }];
+
+/* ---------------- 34-1 Angle of Repose ---------------- */
+// the tread's top is row 18. ① the teach: a heap by a notch (nothing else about); ② crystal stair-steps up to a high
+// plateau with a heap and a notch in it; above the plateau a climb of ledges to a high cellar door (the cobalt grain on
+// its sill: room B41); ③ the last heap with two notches (stop at the first one's FULL line), the end
+const flatRows = (() => {
+  const W = 200, H = 22, Gr = grid(W, H, '.');
+  ground(Gr, 0, 20, 18); put(Gr, 3, 17, '@'); put(Gr, 6, 17, 'k'); put(Gr, 10, 14, '?'); put(Gr, 16, 17, '1'); put(Gr, 21, 18, 'n');
+  ground(Gr, 30, 52, 18); put(Gr, 31, 17, 'c'); put(Gr, 34, 13, '*'); put(Gr, 31, 15, 'o.o.o'); put(Gr, 44, 17, 'r'); put(Gr, 38, 17, 'x');
+  // crystal stair-steps up to the plateau (row 13)
+  put(Gr, 48, 16, '--'); put(Gr, 51, 14, '--'); ground(Gr, 53, 74, 13); ground(Gr, 84, 92, 13);
+  put(Gr, 60, 9, '?'); put(Gr, 58, 12, 'f'); put(Gr, 69, 12, '2'); put(Gr, 75, 13, 'm'); put(Gr, 87, 12, 'r');
+  // the climb to the high door (B41) from the plateau's left end
+  put(Gr, 55, 10, '--'); put(Gr, 58, 7, '--'); fillG(Gr, 61, 4, 66, 4, 'H'); put(Gr, 63, 3, 'A'); put(Gr, 65, 3, 'u'); put(Gr, 61, 2, 'o.o');
+  put(Gr, 86, 9, 'o.o.o');
+  // down to the tread, ③
+  put(Gr, 92, 12, '.'); ground(Gr, 93, 120, 18); put(Gr, 94, 16, '-'); put(Gr, 100, 17, 'c'); put(Gr, 104, 17, 'a'); put(Gr, 108, 17, 'j'); put(Gr, 112, 14, '?');
+  put(Gr, 118, 17, '3'); put(Gr, 123, 18, 'p'); ground(Gr, 129, 133, 18); put(Gr, 134, 18, 'q'); ground(Gr, 143, W - 1, 18);
+  put(Gr, 115, 17, 'K'); put(Gr, 138, 13, 'R'); put(Gr, 130, 15, 'o.o');
+  put(Gr, 146, 17, 'l'); put(Gr, 152, 17, 'c'); put(Gr, 158, 16, 'HH'); put(Gr, 158, 15, 'HH'); put(Gr, 161, 13, '--'); put(Gr, 164, 10, '--'); put(Gr, 165, 8, 'P');
+  put(Gr, 170, 17, 'r'); put(Gr, 176, 17, 'j'); put(Gr, 172, 14, 'o.o.o'); put(Gr, 182, 17, 'x'); put(Gr, 190, 17, 'G');
+  fillG(Gr, W - 1, 0, W - 1, 17, 'H');
+  // the notches' pits (the pieces lay their hidden floors)
+  pit(Gr, 21, 29); fillG(Gr, 75, 13, 83, H - 1, '.'); pit(Gr, 123, 128); pit(Gr, 134, 142);
+  put(Gr, 21, 18, 'n'); put(Gr, 75, 13, 'm'); put(Gr, 123, 18, 'p'); put(Gr, 134, 18, 'q');
+  return rowsOf(Gr);
+})();
+const FLAT = Object.assign({}, ENEMY, {
+  k: SIGN('A SALT HEAP! STAND ON ITS GOLD RING AND HOLD RUN: THE TOP LAYER SLIDES DOWN INTO THE NOTCH'),
+  K: SIGN('THIS HEAP FEEDS TWO NOTCHES. LET GO OF RUN WHEN THE FIRST ONE IS FULL, THEN SCUFF AGAIN'),
+  x: ['decor', 'saltCellarProp'],
+  '1': ['piece', 'salt.heap', { notches: ['n1'], cap: 1.6 }], n: ['piece', 'salt.notch', { w: 9, id: 'n1' }],
+  '2': ['piece', 'salt.heap', { notches: ['n2'], cap: 1.6 }], m: ['piece', 'salt.notch', { w: 9, id: 'n2' }],
+  '3': ['piece', 'salt.heap', { notches: ['n3', 'n4'], cap: 2.6 }], p: ['piece', 'salt.notch', { w: 6, id: 'n3' }], q: ['piece', 'salt.notch', { w: 9, id: 'n4' }],
+  A: DOOR('kettle@in'), u: GRAIN(), a: ['anchor', 'kettleOut']
+});
+stamps.saltFlat = { floor: 18, rows: flatRows, legend: FLAT, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power', 'power'] };
+stamps.saltKettle = roomStamp('flats@kettleOut', 'saltHatch');
+const L1 = { n: 1, name: 'Angle of Repose', mapLabel: 'Angle of Repose', arch: 'repose', theme: 'salt_flats',
+  gimmick: 'Salt heaps beside notches in the tread: hold RUN on a heap\'s gold ring to scuff its top layer downhill into the notch, until it is full to the line and sets hard. The last heap feeds two notches',
+  hint: 'Hold RUN on the ring. The last heap has only just enough: let go when the first notch reaches its FULL line, then scuff again. A blue grain twinkles on a high sill...',
+  postcard: 'Brady! I scuffed a heap of salt into a hole and walked across it. The heap looked a bit put out. It said it was resting at its natural angle. ♥ C',
+  enemies: [['saltShrimp', 3], ['saltWeevil', 2], ['saltWren', 1], ['saltLick', 1]],
+  mapCell: [0, 0], mapFrom: -1,
+  exits: { main: { to: '34-2' } },
+  areas: [
+    { id: 'flats', gen: 'room', theme: 'salt_flats', stamp: 'saltFlat', camera: 'free', bottomKill: true },
+    { id: 'kettle', gen: 'room', role: 'secret', theme: 'salt_room_kettle', stamp: 'saltKettle', room: 'saltKettle' }
+  ] };
+
+/* ---------------- 34-2 Grain Elevator ---------------- */
+// floors on row 18. ① the teach: a spoon by a basin that floats its cork with one dose; ② a basin that needs two
+// doses; a cobalt cellar block whose left face is only glass paint (the grain on top: room B42 inside); ③ a lick by
+// the spoon of a wide basin, a climb to a high postcard; ④ the last basin, with a low lip and a spoon under a shaker
+// that tips again by itself: board the half-floating cork before it does
+const seaRows = (() => {
+  const W = 200, H = 22, Gr = grid(W, H, '.');
+  ground(Gr, 0, 19, 18); put(Gr, 3, 17, '@'); put(Gr, 6, 17, 'k'); put(Gr, 10, 14, '?'); put(Gr, 17, 17, '1'); pit(Gr, 20, 28); put(Gr, 20, 18, 'N');
+  ground(Gr, 29, 43, 18); put(Gr, 32, 17, 'c'); put(Gr, 36, 13, '*'); put(Gr, 33, 15, 'o.o.o'); put(Gr, 38, 17, 'r'); put(Gr, 41, 17, '2'); pit(Gr, 44, 53); put(Gr, 44, 18, 'd');
+  ground(Gr, 54, 93, 18); put(Gr, 54, 17, 'K'); put(Gr, 73, 14, '?'); put(Gr, 76, 17, 'j');
+  // the cellar block with its painted-glass left face (B42 inside)
+  put(Gr, 58, 15, '--'); fillG(Gr, 61, 14, 69, 14, 'H'); fillG(Gr, 64, 11, 69, 13, 'H'); fillG(Gr, 65, 12, 68, 13, '.'); fillG(Gr, 64, 12, 64, 13, 'F'); put(Gr, 67, 13, 'A'); put(Gr, 66, 10, 'u');
+  put(Gr, 80, 17, 'x'); put(Gr, 84, 17, 'c'); put(Gr, 88, 17, 'a'); put(Gr, 124, 11, 'f');
+  put(Gr, 91, 17, '3'); put(Gr, 78, 17, 'r'); pit(Gr, 94, 105); put(Gr, 94, 18, 'e');
+  ground(Gr, 106, 150, 18); put(Gr, 116, 17, 'r'); put(Gr, 114, 16, '-'); put(Gr, 117, 13, '--'); put(Gr, 120, 10, '--'); put(Gr, 121, 8, 'P'); put(Gr, 125, 14, '?'); put(Gr, 128, 17, 'j');
+  put(Gr, 136, 17, 'c'); put(Gr, 140, 17, 'Z'); put(Gr, 130, 13, 'f');
+  put(Gr, 148, 17, '4'); pit(Gr, 151, 163); put(Gr, 151, 18, 'M'); put(Gr, 157, 13, 'R');
+  ground(Gr, 164, W - 1, 18); put(Gr, 168, 15, 'o.o.o'); put(Gr, 174, 17, 'r'); put(Gr, 180, 17, 'x'); put(Gr, 190, 17, 'G');
+  fillG(Gr, W - 1, 0, W - 1, 17, 'H');
+  return rowsOf(Gr);
+})();
+const SEA = Object.assign({}, ENEMY, {
+  k: SIGN('JUMP ON THE SALT SPOON: IT TIPS A DOSE INTO THE BRINE. THICK ENOUGH, THE CORK FLOATS UP: RIDE IT ACROSS'),
+  K: SIGN('THIS BRINE NEEDS TWO DOSES. WATCH THE GAUGE ON THE BASIN WALL'),
+  Z: SIGN('THE LAST SPOON REFILLS AND TIPS BY ITSELF. GET ON THE CORK BEFORE IT DOES, OR IT FLOATS OFF'),
+  x: ['decor', 'saltCellarProp'],
+  N: ['piece', 'salt.basin', { id: 'b1', w: 9, d: 4, need: 1 }], '1': ['piece', 'salt.spoon', { basin: 'b1' }],
+  d: ['piece', 'salt.basin', { id: 'b2', w: 10, d: 4, need: 2 }], '2': ['piece', 'salt.spoon', { basin: 'b2' }],
+  e: ['piece', 'salt.basin', { id: 'b3', w: 12, d: 4, need: 2 }], '3': ['piece', 'salt.spoon', { basin: 'b3' }],
+  M: ['piece', 'salt.basin', { id: 'b4', w: 13, d: 4, need: 1, lip: true }], '4': ['piece', 'salt.spoon', { basin: 'b4', auto: 3.4 }],
+  A: DOOR('lamps@in'), u: GRAIN(), a: ['anchor', 'lampsOut']
+});
+stamps.saltSea = { floor: 18, rows: seaRows, legend: SEA, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power'] };
+stamps.saltLamps = roomStamp('sea@lampsOut', 'saltHatch');
+const L2 = { n: 2, name: 'Grain Elevator', mapLabel: 'Grain Elevator', arch: 'brinefloat', theme: 'salt_sea',
+  gimmick: 'Basins of brine with a weighted cork asleep in a cradle at the bottom: jump on the salt spoon to tip a dose in, thicken the brine until the cork floats up, then ride it across. The last spoon refills itself',
+  hint: 'The gauge on the basin wall shows the doses: gold means it floats. On the last basin get on the half-floating cork before the spoon tips again. A blue grain sits on top of a glass block...',
+  postcard: 'Brady! I salted a pond until a cork came up for air, and then it gave me a lift. I tipped it nothing. It seemed to expect that. ♥ C',
+  enemies: [['saltShrimp', 3], ['saltWeevil', 2], ['saltWren', 2], ['saltLick', 1]],
+  mapCell: [1, 0], mapFrom: 0,
+  exits: { main: { to: '34-3' } },
+  areas: [
+    { id: 'sea', gen: 'room', theme: 'salt_sea', stamp: 'saltSea', camera: 'free', bottomKill: true },
+    { id: 'lamps', gen: 'room', role: 'secret', theme: 'salt_room_lamps', stamp: 'saltLamps', room: 'saltLamps' }
+  ] };
+
+/* ---------------- 34-3 Crystal Habit ---------------- */
+// floors on row 18. ① the teach: a little crystal at a cliff's edge grows a bridge across; ② a crystal that grows
+// straight up (an elevator: each cube lifts Brady) to a high shelf, a bridge from a crystal on a pillar; ③ an
+// optional crystal elevator to a high sill (the grain on it: room B43's cellar door); ④ the corner: a glass beam
+// overhead stops the bridge, so it grows down from the tip and on, lower; the brine rises in the trough below
+const caveRows = (() => {
+  const W = 200, H = 22, Gr = grid(W, H, '.');
+  ground(Gr, 0, 19, 18); put(Gr, 3, 17, '@'); put(Gr, 6, 17, 'k'); put(Gr, 10, 14, '?'); put(Gr, 18, 17, '1'); pit(Gr, 20, 28);
+  ground(Gr, 29, 52, 18); put(Gr, 30, 17, 'c'); put(Gr, 34, 13, '*'); put(Gr, 31, 15, 'o.o.o'); put(Gr, 40, 17, 'r'); put(Gr, 46, 17, 'K');
+  // ② the elevator crystal up to the shelf (row 12), the shelf, a pillar crystal bridging down the far side
+  put(Gr, 50, 17, '2'); ground(Gr, 51, 64, 12); put(Gr, 56, 11, 'f'); put(Gr, 58, 8, '?'); put(Gr, 63, 11, '3'); pit(Gr, 65, 73); ground(Gr, 74, 96, 12);
+  put(Gr, 78, 11, 'j'); put(Gr, 81, 11, 'c');
+  // ③ the optional elevator to the high sill (B43)
+  put(Gr, 88, 11, '4'); fillG(Gr, 89, 5, 94, 5, 'H'); put(Gr, 92, 4, 'A'); put(Gr, 94, 4, 'u'); put(Gr, 90, 3, 'o.o');
+  put(Gr, 96, 11, '.'); ground(Gr, 97, 140, 18); put(Gr, 99, 17, 'a'); put(Gr, 104, 17, 'l'); put(Gr, 110, 14, '?'); put(Gr, 114, 17, 'r'); put(Gr, 120, 17, 'c');
+  put(Gr, 126, 16, '--'); put(Gr, 129, 14, '--'); put(Gr, 132, 11, '--'); put(Gr, 133, 9, 'P'); put(Gr, 136, 17, 'Z'); put(Gr, 138, 15, '---');
+  // ④ the corner: the cliff (row 13) from 141, the stem at its edge, the beam overhead past the tip, the trough below
+  ground(Gr, 141, 150, 13); put(Gr, 144, 12, 'j'); put(Gr, 149, 12, '5'); fillG(Gr, 155, 8, 163, 12, 'H'); pit(Gr, 151, 160); put(Gr, 157, 13, 'R');
+  ground(Gr, 161, W - 1, 16); put(Gr, 166, 15, 'o.o.o'); put(Gr, 172, 15, 'r'); put(Gr, 178, 15, 'c'); put(Gr, 184, 15, 'x'); put(Gr, 190, 15, 'G');
+  fillG(Gr, W - 1, 0, W - 1, 15, 'H');
+  return rowsOf(Gr);
+})();
+const CAVE = Object.assign({}, ENEMY, {
+  k: SIGN('A SALT CRYSTAL! STAND ON IT AND HOLD THROW: A NEW CUBE GROWS WHERE THE DASHED SQUARE IS'),
+  K: SIGN('SOME CRYSTALS GROW UP. A CUBE GROWING UNDER YOU LIFTS YOU WITH IT'),
+  Z: SIGN('THE LAST ONE TURNS A CORNER UNDER THE BEAM. THE BRINE RISES ONCE IT STARTS: KEEP GROWING'),
+  x: ['decor', 'saltCellarProp'],
+  '1': ['piece', 'salt.crystal', { id: 'c1', h: 1, w: 2, plan: [[1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0], [10, 0]] }],
+  '2': ['piece', 'salt.crystal', { id: 'c2', h: 1, plan: [[0, -1], [0, -2], [0, -3], [0, -4], [0, -5]] }],
+  '3': ['piece', 'salt.crystal', { id: 'c3', h: 1, w: 2, plan: [[1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0], [10, 0]] }],
+  '4': ['piece', 'salt.crystal', { id: 'c4', h: 1, plan: [[0, -1], [0, -2], [0, -3], [0, -4], [0, -5], [0, -6]] }],
+  '5': ['piece', 'salt.crystal', { id: 'c5', h: 1, w: 2, plan: [[1, 0], [2, 0], [3, 0], [4, 0], [4, 1], [4, 2], [4, 3], [5, 3], [6, 3], [7, 3], [8, 3], [9, 3], [10, 3], [11, 3]], brine: { dx0: 2, dx1: 11, dy: 4, time: 16 } }],
+  A: DOOR('mitts@in'), u: GRAIN(), a: ['anchor', 'mittsOut']
+});
+stamps.saltCave = { floor: 18, rows: caveRows, legend: CAVE, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power', 'power'] };
+stamps.saltMitts = roomStamp('cave@mittsOut', 'saltHatch');
+const L3 = { n: 3, name: 'Crystal Habit', mapLabel: 'Crystal Habit', arch: 'cubegrow', theme: 'salt_cave',
+  gimmick: 'Salt crystals that grow while you hold THROW on them: a new cube comes out of the flat face, where the dashed square shows. Bridges, lifts, and late on a corner under a glass beam while the brine rises',
+  hint: 'Stand on any cube of a crystal and hold THROW. A cube growing under Brady lifts him. On the last one keep growing: the brine dissolves it if it reaches the stem. A blue grain sits on a high sill...',
+  postcard: 'Brady! I held a salt crystal until it grew me a staircase. Then it grew me a bit more staircase than I needed. Crystals are like that. ♥ C',
+  enemies: [['saltShrimp', 3], ['saltWeevil', 2], ['saltWren', 1], ['saltLick', 1]],
+  mapCell: [2, 0], mapFrom: 1,
+  exits: { main: { to: '34-4' } },
+  areas: [
+    { id: 'cave', gen: 'room', theme: 'salt_cave', stamp: 'saltCave', camera: 'free', bottomKill: true },
+    { id: 'mitts', gen: 'room', role: 'secret', theme: 'salt_room_mitts', stamp: 'saltMitts', room: 'saltMitts' }
+  ] };
+
+/* ---------------- 34-4 The Shaker Test ---------------- */
+// the floor is row 14 (Brady on 13). Inside the cap the floor is its charcoal disc, the holes at Brady's feet and a
+// chamber of bowls under it; a cellar gate at the end of each disc lifts when its gold bowl sinks. ① two holes: plug
+// the other one; ② three holes, half a pour will do; a glass block whose left face is only paint (the grain on top:
+// room B44); ③ the same with a critter on the disc; ④ the narrow bowl: stand astride the two neighbouring holes
+const capRows = (() => {
+  const W = 190, H = 22, Gr = grid(W, H, '.');
+  ground(Gr, 0, W - 1, 14);
+  const chamber = (x0, x1) => { fillG(Gr, x0, 15, x1, 16, '.'); fillG(Gr, x0, 14, x1, 14, 'H'); };
+  put(Gr, 3, 13, '@'); put(Gr, 6, 13, 'k'); put(Gr, 9, 10, '?');
+  chamber(15, 28); put(Gr, 16, 13, '1'); put(Gr, 28, 13, 'U');
+  put(Gr, 32, 13, 'c'); put(Gr, 36, 9, '*'); put(Gr, 34, 11, 'o.o.o'); put(Gr, 40, 13, 'r'); put(Gr, 44, 13, 'K');
+  put(Gr, 46, 11, '--'); fillG(Gr, 49, 10, 57, 10, 'H'); fillG(Gr, 52, 7, 57, 9, 'H'); fillG(Gr, 53, 8, 56, 9, '.'); fillG(Gr, 52, 8, 52, 9, 'F'); put(Gr, 55, 9, 'A'); put(Gr, 54, 6, 'u');
+  chamber(59, 74); put(Gr, 60, 13, '2'); put(Gr, 74, 13, 'V');
+  put(Gr, 78, 13, 'c'); put(Gr, 82, 13, 'a'); put(Gr, 88, 13, 'l'); put(Gr, 92, 10, '?'); put(Gr, 94, 12, '--'); put(Gr, 97, 9, '--'); put(Gr, 98, 7, 'P');
+  chamber(101, 116); put(Gr, 102, 13, '3'); put(Gr, 116, 13, 'E'); put(Gr, 108, 13, 'r'); put(Gr, 110, 7, 'f');
+  put(Gr, 120, 13, 'c'); put(Gr, 124, 13, 'Z'); put(Gr, 126, 10, '?');
+  chamber(129, 144); put(Gr, 130, 13, '4'); put(Gr, 144, 13, 'Y'); put(Gr, 136, 9, 'R');
+  put(Gr, 156, 11, 'o.o.o'); put(Gr, 166, 13, 'r'); put(Gr, 175, 13, 'r'); put(Gr, 168, 13, 'x'); put(Gr, 180, 13, 'G');
+  fillG(Gr, W - 1, 0, W - 1, 13, 'H');
+  return rowsOf(Gr);
+})();
+const CAP = Object.assign({}, ENEMY, {
+  k: SIGN('INSIDE THE SHAKER CAP! WHEN IT SHAKES IT POURS DOWN EVERY HOLE YOU ARE NOT STANDING ON. FILL THE GOLD BOWL'),
+  K: SIGN('HALF A POUR IS ENOUGH HERE: PLUG ONE OF THE OTHER HOLES'),
+  Z: SIGN('A NARROW BOWL NEEDS THE WHOLE POUR. TWO HOLES SIT SIDE BY SIDE: STAND ASTRIDE THEM'),
+  x: ['decor', 'saltCellarProp'],
+  '1': ['piece', 'salt.cap', { id: 'cap1', holes: [2, 8], gold: 1, need: 1, bowlDy: 4, span: [-1, 12], lock: 'gate1', plug: [2] }], U: ['piece', 'salt.gate', { id: 'gate1', h: 4 }],
+  '2': ['piece', 'salt.cap', { id: 'cap2', holes: [2, 7, 12], gold: 2, need: 0.5, bowlDy: 4, span: [-1, 14], lock: 'gate2', plug: [2, 7] }], V: ['piece', 'salt.gate', { id: 'gate2', h: 4 }],
+  '3': ['piece', 'salt.cap', { id: 'cap3', holes: [3, 8, 12], gold: 0, need: 0.5, bowlDy: 4, span: [-1, 14], lock: 'gate3', plug: [8, 12] }], E: ['piece', 'salt.gate', { id: 'gate3', h: 4 }],
+  '4': ['piece', 'salt.cap', { id: 'cap4', holes: [3, 4, 10], gold: 2, need: 1, bowlDy: 4, span: [-1, 14], lock: 'gate4', plug: [3, 4], narrow: true }], Y: ['piece', 'salt.gate', { id: 'gate4', h: 4 }],
+  A: DOOR('rattle@in'), u: GRAIN(), a: ['anchor', 'rattleOut']
+});
+stamps.saltCap = { floor: 14, rows: capRows, legend: CAP, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power', 'power'] };
+stamps.saltRattle = roomStamp('cap@rattleOut', 'saltHatch');
+const L4 = { n: 4, name: 'The Shaker Test', mapLabel: 'The Shaker Test', arch: 'shakercap', theme: 'salt_shaker',
+  gimmick: 'Inside the shaker\'s perforated cap: when it shakes it pours down every hole Brady isn\'t standing on, into the bowls below. Plug the right holes with a shoe so the gold bowl gets enough to sink and lift the gate',
+  hint: 'Watch the cap shake, then stand on a hole before it pours. The narrow bowl needs the whole pour: stand astride the two holes side by side. A blue grain sits on a glass block...',
+  postcard: 'Brady! I stood inside a salt shaker with one shoe on a hole and it poured exactly where I wanted. I have never been so in control of seasoning. ♥ C',
+  enemies: [['saltShrimp', 3], ['saltWeevil', 1], ['saltWren', 1], ['saltLick', 1]],
+  mapCell: [3, 0], mapFrom: 2,
+  exits: { main: { to: '34-5' } },
+  areas: [
+    { id: 'cap', gen: 'room', theme: 'salt_shaker', stamp: 'saltCap', camera: 'free', bottomKill: true },
+    { id: 'rattle', gen: 'room', role: 'secret', theme: 'salt_room_rattle', stamp: 'saltRattle', room: 'saltRattle' }
+  ] };
+
+/* ---------------- 34-5 Season to Taste (the boss) ---------------- */
+// A Pinch's kitchen counter, floor row 16 (Brady on 15): ① a weighing spoon and a pot lid across the way (stand on,
+// step off in the gold); ② shrimp, a climb of shelves to a high cellar door (the grain on its sill: room B45, which
+// lets out past the last spoon); ③ the last tasting: Brady's own weight counts (step off at the shoe); the kitchen door
+const tasteRows = (() => {
+  const W = 84, H = 20, Gr = grid(W, H, '#');
+  fillG(Gr, 1, 1, W - 2, 15, '.');
+  put(Gr, 3, 15, '@'); put(Gr, 6, 15, 'k'); put(Gr, 9, 12, '?'); put(Gr, 12, 15, '1'); put(Gr, 20, 15, 'U');
+  put(Gr, 24, 15, 'c'); put(Gr, 28, 11, '*'); put(Gr, 26, 13, 'o.o.o'); put(Gr, 32, 15, 'r');
+  put(Gr, 30, 12, '---'); put(Gr, 34, 9, '---'); fillG(Gr, 38, 6, 43, 6, 'H'); put(Gr, 40, 5, 'A'); put(Gr, 42, 5, 'u'); put(Gr, 38, 4, 'o.o'); put(Gr, 36, 7, 'R');
+  put(Gr, 44, 15, 'K'); put(Gr, 47, 15, '2'); put(Gr, 55, 15, 'V'); put(Gr, 58, 15, 'a'); put(Gr, 60, 12, '?'); put(Gr, 64, 12, '--'); put(Gr, 65, 9, 'P'); put(Gr, 68, 15, 'f');
+  put(Gr, 76, 15, 'E');
+  return rowsOf(Gr);
+})();
+const TASTE = Object.assign({}, ENEMY, {
+  k: SIGN('A WEIGHING SPOON! STAND ON IT WHILE THE SHAKER POURS. STEP OFF WHEN THE NEEDLE IS IN THE GOLD'),
+  K: SIGN('THE LAST TASTING: YOUR OWN WEIGHT COUNTS. STEP OFF WHEN THE NEEDLE REACHES THE SHOE'),
+  '1': ['piece', 'salt.weigh', { id: 'w1', w: 4, lock: 'pot1' }], U: ['piece', 'salt.gate', { id: 'pot1', h: 4 }],
+  '2': ['piece', 'salt.weigh', { id: 'w2', w: 4, lock: 'pot2', shoe: true }], V: ['piece', 'salt.gate', { id: 'pot2', h: 4 }],
+  A: DOOR('stand@in'), u: GRAIN(), a: ['anchor', 'standOut'],
+  E: DOOR('kitchen@in', 'saltCellar')
+});
+stamps.saltTaste = { floor: 16, rows: tasteRows, legend: TASTE, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power'] };
+stamps.saltStand = roomStamp('counter@standOut', 'saltHatch', ['star']);
+const L5 = { n: 5, name: 'Season to Taste', mapLabel: 'Season to Taste', arch: 'lair', theme: 'salt_kitchen', boss: 'salt_pinch',
+  gimmick: 'A Pinch, the cork who considers himself a chef, pours into his great weighing spoon. Brady\'s weight holds it level: step off when the needle is in the gold and a perfect pinch tips into the soup',
+  hint: 'He can\'t be stomped. One finger: a dusting. Two fingers: stay OFF for the coarse pour (jump the lumps), back on for the fine one. The rub: your weight counts, so step off at the shoe. Step out of the crystals\' shadows',
+  postcard: 'Brady! You seasoned the chef\'s soup to his satisfaction, which I gather has never happened. He gave the shaker the afternoon off. It went to the seaside. It is the seaside. ♥ C',
+  enemies: [['saltShrimp', 1], ['saltWren', 1]],
+  mapCell: [4, 0], mapFrom: 3,
+  exits: { main: { to: null } },
+  areas: [
+    { id: 'counter', gen: 'room', theme: 'salt_kitchen', stamp: 'saltTaste' },
+    { id: 'stand', gen: 'room', role: 'secret', theme: 'salt_room_stand', stamp: 'saltStand', room: 'saltStand' },
+    { id: 'kitchen', gen: 'arena', role: 'arena', layout: 'kitchen', arenaW: 24, H: 18, roof: false, theme: 'salt_kitchen' }
+  ] };
+
+Tour.amend('salt', { stamps, levels: [L1, L2, L3, L4, L5] });
+Tour.saltLevels = { grid, put, fillG, ground, pit, rowsOf, SIGN, GRAIN, ENEMY, roomStamp, DOOR, stamps };
+
+/* ---------------- the land's map: salt flats in a cobalt sea ---------------- */
+if (typeof TOUR_OW_MAPS !== 'undefined') TOUR_OW_MAPS.salt = {
+  labels: { '34-1': 'Angle of Repose', '34-2': 'Grain Elevator', '34-3': 'Crystal Habit', '34-4': 'The Shaker Test', '34-5': 'Season to Taste' },
+  w: 1520, h: 760,
+  pal: { sea: '#3a68c8', deep: '#2448a0', land: '#e8eef8', light: '#ffffff', path: '#f08a2a', beach: '#cfe0fa', cliff: '#1c3586', roof: '#f08a2a', wall: '#f6f9ff' },
+  sea: 'waves', coast: 'saltCrust', tufts: 'none', trail: 'sand', bridge: 'stone', meadow: false, woods: false, foam: true, birds: false,
+  // a long spoon lying in the sea: the handle runs in from the left, the bowl is the land's right end
+  land: [[[150, 330], [420, 300], [700, 310], [880, 240], [1080, 170], [1300, 200], [1420, 360], [1330, 560], [1100, 620], [880, 520], [700, 430], [420, 440], [160, 430]]],
+  nodes: { start: [210, 380], '34-1': [380, 370, 'n'], '34-2': [620, 370, 'n'], '34-3': [900, 330, 'n'], '34-4': [1160, 280, 'n'], '34-5': [1180, 480, 's'], port: [960, 500] },
+  paths: { 'start>34-1': [[290, 360]], '34-1>34-2': [[500, 350]], '34-2>34-3': [[760, 380]], '34-3>34-4': [[1030, 280]], '34-4>34-5': [[1280, 380]], '34-5>port': [[1070, 520]] },
+  feat: [
+    ['sprite', 'saltHeapSprite', 520, 410, 22], ['sprite', 'saltHeapSprite', 1000, 230, 20], ['sprite', 'saltCellarSprite', 1320, 470, 24],
+    ['sprite', 'saltCorkSprite', 760, 560, 22], ['sprite', 'saltPotSprite', 1180, 400, 28], ['sprite', 'saltCorkSprite', 300, 520, 16]
+  ],
+  flora: ['rock'], density: 0,
+  live: [['circle', 760, 120, 60, 0.6]]
+};
+})();
