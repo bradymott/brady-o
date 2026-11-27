@@ -12,7 +12,7 @@
      seatsEgg     33-3 THE PROPS TABLE        EGG ON END: on the mark the stick nudges the wooden prop egg against its
                                              lean; let go when it stands straight and it must stay up two seconds.
      seatsGap     33-4 THE GREEN ROOM         PERFECT GAP: walking on the plank over the tureen tips the soup; the two
-                                             crackers slide (the current spreads them); the olive sits on both while
+                                             crackers slide (the current pushes them apart); the olive sits on both while
                                              the gap is narrow: a slow count of three. If the gap opens, it plops in.
      seatsRest    33-5 THE BAND PIT           LEAVE ME A REST: four tin stagehands, the fourth naps. A count-in bar, then
                                              two bars: THROW on beats 1, 2, 3; thumb off the fourth.
@@ -237,19 +237,21 @@ TourRooms.def('seatsEgg', {
     g.coins(9, 14, 3);
     return g;
   },
-  enter(play, A, R) { if (!R.won) { R.a = 0.25; R.w = 0; R.up = 0; R.push = 0; } },
+  enter(play, A, R) { if (!R.won) { R.a = 0.14; R.w = 0; R.up = 0; R.push = 0; } },
   input(play, A, R, kit, m, p, inp, dt) { R.push = quiet(play, R) ? (inp.right ? 1 : 0) - (inp.left ? 1 : 0) : 0; },
-  reset(play, A, R, why) { R.fails = (R.fails || 0) + 1; RK.raspberry(play, why); R.a = (R.fails % 2 ? -0.25 : 0.25); R.w = 0; R.up = 0; },
+  reset(play, A, R, why) { R.fails = (R.fails || 0) + 1; RK.raspberry(play, why); R.a = (R.fails % 2 ? -0.14 : 0.14); R.w = 0; R.up = 0; R.live = false; },
   update(play, dt, A, R, kit) {
     if (R.won) { R.a = approach(R.a, 0, dt); return; }
     if (R.a == null) this.enter(play, A, R);
     const p = P(play), m = marks(play)[0], onIt = m && p.seatsProp === m;
     if (!onIt) R.push = 0;
     R.t2 = (R.t2 || 0) + dt;
-    if (!quiet(play, R)) return;
+    // the egg waits, propped on its stand, until Brady steps up to it
+    if (onIt) R.live = true;
+    if (!quiet(play, R) || !R.live) return;
     // a wobbling egg on its point: it leans further the more it leans; a nudge pushes against the lean
     const wob = Math.sin(R.t2 * 1.7) * 0.25 + Math.sin(R.t2 * 3.1 + 2) * 0.12;
-    R.w += (0.8 * R.a + wob * 0.35 * Math.min(1, Math.abs(R.a) * 6) - R.push * 2.2 - R.w * 1.2) * dt; R.a += R.w * dt;
+    R.w += (0.65 * R.a + wob * 0.35 * Math.min(1, Math.abs(R.a) * 6) - R.push * 2.2 - R.w * 1.2) * dt; R.a += R.w * dt;
     if (Math.abs(R.a) > 0.95) { this.reset(play, A, R, 'IT TOPPLED! STAND IT AGAIN'); return; }
     const straight = Math.abs(R.a) < 0.09 && Math.abs(R.w) < 0.35 && !R.push;
     if (straight) { R.up += dt; if (Math.floor(R.up * 2) !== Math.floor((R.up - dt) * 2)) chime(Math.floor(R.up * 2), true); if (R.up >= 2) TourRooms.win(play, A, R, { text: 'BALANCED ON ITS END!', coins: 3 }); }
@@ -305,11 +307,11 @@ TourRooms.def('seatsGap', {
     if (R.won) return;
     if (R.c1 == null) this.enter(play, A, R);
     const p = P(play), cx = this.cx(A), onPlank = p.onGround && p.groundTy === 8 && Math.abs(p.cx - cx) < GAP.half + 20;
-    R.tilt = approach(R.tilt, onPlank ? clamp((p.cx - cx) / GAP.half, -1, 1) : 0, dt * 2.5);
+    R.tilt = approach(R.tilt, onPlank ? clamp((p.cx - cx) / GAP.half, -1, 1) : 0, dt * 4);
     if (!quiet(play, R)) return;
     // each cracker: down the tilt, the current spreading them from the middle, drag; the rims stop them
-    const step = (c, v) => { v += (R.tilt * 150 + Math.sign(c || 1) * 26 - v * 1.6) * dt; c += v * dt; const L = GAP.half - GAP.cw / 2 - 6; if (c < -L) { c = -L; v = Math.max(0, v) * 0; } if (c > L) { c = L; v = 0; } return [c, v]; };
-    [R.c1, R.v1] = step(R.c1, R.v1); [R.c2, R.v2] = step(R.c2, R.v2);
+    const step = (c, v, sd) => { v += (R.tilt * 150 + sd * 30 - v * 1.6) * dt; c += v * dt; const L = GAP.half - GAP.cw / 2 - 6; if (c < -L) { c = -L; v = Math.max(0, v) * 0; } if (c > L) { c = L; v = 0; } return [c, v]; };
+    [R.c1, R.v1] = step(R.c1, R.v1, -1); [R.c2, R.v2] = step(R.c2, R.v2, 1);
     if (R.c2 - R.c1 < GAP.cw) { const m = (R.c1 + R.c2) / 2, v = (R.v1 + R.v2) / 2; R.c1 = m - GAP.cw / 2; R.c2 = m + GAP.cw / 2; R.v1 = R.v2 = v; }
     const gap = R.c2 - R.c1 - GAP.cw;
     if (gap <= GAP.oliveMax) { if (!R.on) { R.on = true; R.n = 0; Sound.play('pick', { vol: 0.3 }); } R.n += dt; if (Math.floor(R.n) !== Math.floor(R.n - dt)) chime(Math.floor(R.n), true); if (R.n >= 3) TourRooms.win(play, A, R, { text: 'A PERFECT GAP!', coins: 3 }); }

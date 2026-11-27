@@ -288,10 +288,10 @@ STAGES.rowg = async ({ ev, shot, run, pano }) => {
     });
     check('33-3: the shared hinge: from the near seat no lift; both feet on the far seat, the lip lifts over the tallest backrest', r.near < r.back && r.far > r.back, r);
     await ev(() => { const pr = ents('SeatsSeat').find(e => e.pair); sim(1); place(pr.px - 1, 16); sim(0.6); freeze(); }); await shot('32-33-3-shared-hinge.png');
-    r = await ev(() => { thaw(); fresh(); play('33-3'); const kind = intoRoom(95, 8); return { kind }; });
+    r = await ev(() => { thaw(); fresh(); play('33-3'); const kind = intoRoom(95, 9); return { kind }; });
     check('33-3: the props door up in the balcony (a seat\'s lift through the gap in its front) leads to room B38 (Egg on End)', r.kind === 'seatsEgg', r);
     await ev(() => { sim(0.7); freeze(); }); await shot('33-room-B38-egg-on-end-entry.png');
-    r = await ev(() => { thaw(); sim(1.8); const R = room(), f0 = R.fails || 0; toMark(0); for (let k = 0; k < 120 * 8 && (R.fails || 0) === f0; k++) sim(1 / 120, { right: R.a > 0 ? false : true, left: R.a > 0 }); return { fails: R.fails, f0, won: R.won }; });
+    r = await ev(() => { thaw(); sim(1.8); const R = room(); toMark(0); const f0 = R.fails || 0; for (let k = 0; k < 120 * 8 && (R.fails || 0) === f0; k++) sim(1 / 120, { right: R.a > 0 ? false : true, left: R.a > 0 }); return { fails: R.fails, f0, won: R.won }; });
     check('33-3 B38: nudging the egg the wrong way topples it: a miss that costs nothing', r.fails === r.f0 + 1 && !r.won, r);
     r = await ev(() => { sim(1); const R = room(); toMark(0); for (let k = 0; k < 120 * 20 && !R.won; k++) { const u = R.a * 1.6 + R.w * 0.9, d = Math.abs(u) < 0.06 ? 0 : Math.sign(u); sim(1 / 120, { right: d > 0, left: d < 0 }); } sim(1.2); return { won: R.won, cage: cageOpen() }; });
     check('33-3 B38: nudged against its lean, let go straight, held two seconds: won, the cage opens', r.won && r.cage, r);
@@ -309,14 +309,14 @@ STAGES.dock = async ({ ev, shot, run, pano }) => {
     await ev(() => { fresh(); play('33-4'); place(4, 16); sim(0.4); freeze(); }); await shot('40-33-4-start.png');
     let r = await ev(() => {
       thaw(); const h = ents('SeatsHouse').sort((a, b) => a.x0 - b.x0)[0], f = ents('SeatsBackdrop').sort((a, b) => a.x - b.x)[0];
-      place(Math.floor(f.x / 32) + 5, 16); P().invuln = 0; for (let k = 0; k < 120 * 6 && h.state() !== 'look'; k++) sim(1 / 120); const tellSeen = true; sim(0.3); const hit = P().invuln > 0 || P().dead; P().invuln = 999;
+      place(Math.floor(f.x / 32) + 5, 16); P().setPower(2, true); P().invuln = 0; for (let k = 0; k < 120 * 6 && h.state() !== 'look'; k++) sim(1 / 120); const tellSeen = true; sim(0.3); const hit = P().invuln > 0 || P().dead; P().invuln = 999;
       return { hit };
     });
     check('33-4: when the house looks, Brady standing on the stage outside a doorway is SPOTTED (a hit)', r.hit, r);
     r = await ev(() => {
       const h = ents('SeatsHouse').sort((a, b) => a.x0 - b.x0)[0], f = ents('SeatsBackdrop').sort((a, b) => a.x - b.x)[0];
-      for (let k = 0; k < 120 * 6 && h.state() !== 'idle'; k++) sim(1 / 120); walkTo((f.doorL() + f.doorR()) / 2, 4); sim(0.2); const x0 = f.x; sim(0.8, { right: true }); const rolled = (f.x - x0) / 32, framed = f.frames(P());
-      for (let k = 0; k < 120 * 6 && h.state() !== 'tell'; k++) sim(1 / 120); return { rolled, framed };
+      for (let k = 0; k < 120 * 6 && h.state() !== 'idle'; k++) sim(1 / 120); walkTo((f.doorL() + f.doorR()) / 2, 4); sim(0.2); const x0 = f.x, dbg = { cx: P().cx, dl: f.doorL(), dr: f.doorR(), feet: P().y + P().h, gy: f.gy * 32, wide: f.inDoorWide(P()), og: P().onGround }; sim(0.8, { right: true }); const rolled = (f.x - x0) / 32, framed = f.frames(P()); window.__dbg = dbg;
+      for (let k = 0; k < 120 * 6 && h.state() !== 'tell'; k++) sim(1 / 120); return { rolled, framed, dbg: window.__dbg };
     });
     check('33-4: walking in a doorway rolls the flat along with Brady (the doorway stays round him)', r.rolled > 1 && r.framed, r);
     await ev(() => freeze()); await shot('41-33-4-the-house-is-looking.png');
@@ -328,11 +328,11 @@ STAGES.dock = async ({ ev, shot, run, pano }) => {
       thaw(); place(133, 16); sim(0.3); const fr = ents('SeatsBackdrop').find(e => e.fid === 'front'), bk = ents('SeatsBackdrop').find(e => e.fid === 'back'), hs = ents('SeatsHouse').find(e => e.finale);
       walkTo((fr.doorL() + fr.doorR()) / 2, 3); const b0 = bk.x; sim(0.5, { right: true }); const opposite = bk.x < b0;
       for (let k = 0; k < 600 && !fr.frames(P()); k++) sim(1 / 120, { right: (fr.doorL() + fr.doorR()) / 2 < (bk.doorL() + bk.doorR()) / 2 ? true : false, left: (fr.doorL() + fr.doorR()) / 2 > (bk.doorL() + bk.doorR()) / 2 });
-      const framed = fr.frames(P()), overlap = Math.min(fr.doorR(), bk.doorR()) - Math.max(fr.doorL(), bk.doorL());
-      P().invuln = 0; for (let k = 0; k < 120 * 14 && !hs.borne; k++) sim(1 / 120); const hit = P().invuln > 0; P().invuln = 999;
-      return { opposite, framed, overlap, borne: hs.borne, hit };
+      for (let k = 0; k < 120 && Math.abs(P().vx) > 1; k++) sim(1 / 120); walkTo((Math.max(fr.doorL(), bk.doorL()) + Math.min(fr.doorR(), bk.doorR())) / 2, 3); for (let k = 0; k < 120 && Math.abs(P().vx) > 1; k++) sim(1 / 120); const framed = fr.frames(P()), overlap = Math.min(fr.doorR(), bk.doorR()) - Math.max(fr.doorL(), bk.doorL());
+      P().invuln = 0; const sts = []; for (let k = 0; k < 120 * 14 && !hs.borne; k++) { sim(1 / 120); const st2 = hs.state(); if (sts[sts.length - 1] !== st2) sts.push(st2 + ':' + (fr.frames(P()) ? 1 : 0) + ':' + hs.seen); } const hit = P().invuln > 0; P().invuln = 999;
+      return { opposite, framed, overlap, borne: hs.borne, hit, sts: sts.slice(0, 12), t: hs.t };
     });
-    check('33-4: the twin flats slide opposite ways; their doorways meet only shoulder-wide', r.opposite && r.framed && r.overlap > 0 && r.overlap <= 40, r);
+    check('33-4: the twin flats slide opposite ways; their doorways meet only shoulder-wide', r.opposite && r.framed && r.overlap > 0 && r.overlap <= 48, r);
     check('33-4: standing in that overlap Brady bears the big look (BRAVO) and the curtain across the way flies out', r.borne && !r.hit, r);
     await ev(() => { sim(0.5); freeze(); }); await shot('43-33-4-twin-flats-overlap.png');
     r = await ev(() => { thaw(); walkTo(170 * 32, 6); return { at: at() }; });
@@ -343,7 +343,7 @@ STAGES.dock = async ({ ev, shot, run, pano }) => {
     await ev(() => { sim(0.7); freeze(); }); await shot('44-room-B39-perfect-gap-entry.png');
     r = await ev(() => {
       thaw(); sim(1.8); const R = room(), cx = kit().data.mirror ? (28 - 1 - 11 + 0.5) * 32 : 11.5 * 32, f0 = R.fails || 0;
-      walkTo(cx + 5 * 32 * 0.7, 6); for (let k = 0; k < 120 * 8 && !R.on; k++) sim(1 / 120); walkTo(cx - 5 * 32 * 0.8, 6); for (let k = 0; k < 120 * 4 && (R.fails || 0) === f0; k++) sim(1 / 120); return { fails: R.fails, f0, won: R.won };
+      let go = false; for (let k = 0; k < 120 * 14 && (R.fails || 0) === f0 && !R.won; k++) { if (R.on && R.n > 0.2) go = true; const tx = go ? cx - 4 * 32 : cx + 5 * 32 * 0.7; sim(1 / 120, { right: P().cx < tx - 6, left: P().cx > tx + 6, action: go }); } return { fails: R.fails, f0, won: R.won };
     });
     check('33-4 B39: the gap opening under the olive is a miss (it plops in) that costs nothing', r.fails === r.f0 + 1 && !r.won, r);
     r = await ev(() => { sim(1); const R = room(), cx = kit().data.mirror ? (28 - 1 - 11 + 0.5) * 32 : 11.5 * 32; walkTo(cx + 5 * 32 * 0.7, 6); for (let k = 0; k < 120 * 12 && !R.won; k++) sim(1 / 120); sim(1.2); return { won: R.won, cage: cageOpen() }; });

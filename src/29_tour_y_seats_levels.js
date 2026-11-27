@@ -163,8 +163,8 @@ const rowgRows = (() => {
   put(Gr, 47, 16, 'e'); put(Gr, 54, 16, 'l'); put(Gr, 61, 16, 'e'); put(Gr, 50, 9, 'R'); put(Gr, 57, 9, 'o.o');
   put(Gr, 70, 16, 'c'); put(Gr, 74, 13, '?');
   // ③ the balcony: rows 2-9 over columns 78-100, its floor row 9 with a gap over the seat at 85; inside, the props door
-  fillG(Gr, 78, 0, 100, 9, 'H'); fillG(Gr, 79, 3, 99, 8, '.'); fillG(Gr, 85, 9, 86, 9, '.');
-  put(Gr, 84, 16, '7'); put(Gr, 88, 8, 'u'); put(Gr, 95, 8, 'A'); put(Gr, 90, 6, 'o.o.o');
+  fillG(Gr, 78, 0, 100, 10, 'H'); fillG(Gr, 79, 3, 99, 9, '.'); fillG(Gr, 85, 10, 86, 10, '.');
+  put(Gr, 84, 16, '7'); put(Gr, 88, 9, 'u'); put(Gr, 95, 9, 'A'); put(Gr, 90, 6, 'o.o.o');
   put(Gr, 80, 16, 'r'); put(Gr, 92, 16, '8'); put(Gr, 97, 16, 'd'); put(Gr, 104, 16, 'a'); put(Gr, 107, 16, 'c');
   // more rows: a pair of seats back to back (jump one, then the next), a stoat, a hen
   put(Gr, 114, 16, '9'); put(Gr, 122, 16, '0'); put(Gr, 118, 16, 'r'); put(Gr, 128, 16, 'j'); fillG(Gr, 131, 13, 134, 13, '-'); put(Gr, 132, 11, 'o.o');
@@ -235,8 +235,8 @@ const DK = {
   m: ['piece', 'seats.house', { w: 36, period: 4.4, phase: 0.5 }],
   '3': ['piece', 'seats.backdrop', { w: 6, h: 5, dl: 2, dw: 2, track: 12, art: 2 }], '4': ['piece', 'seats.backdrop', { w: 6, h: 5, dl: 2, dw: 2, track: 11, art: 0 }],
   n: ['piece', 'seats.house', { w: 31, period: 6.2, tell: 1.4, look: 2.4, phase: 2, finale: true, id: 'seats:finale', kx: 12 }],
-  '5': ['piece', 'seats.backdrop', { w: 6, h: 5, dl: 2, dw: 1, track: 14, fid: 'front', link: 'back', art: 1 }],
-  '6': ['piece', 'seats.backdrop', { w: 6, h: 6, dl: 3, dw: 1, track: -14, fid: 'back', rear: true, art: 2 }],
+  '5': ['piece', 'seats.backdrop', { w: 6, h: 5, dl: 2, dw: 1.5, track: 14, fid: 'front', link: 'back', art: 1 }],
+  '6': ['piece', 'seats.backdrop', { w: 6, h: 6, dl: 3, dw: 1.5, track: -14, fid: 'back', rear: true, art: 2 }],
   Z: ['piece', 'seats.curtain', { id: 'seats:finale', h: 7 }],
   A: ['spawn', 'portal', { kind: 'door', look: 'seatsDoor', targetRef: 'green@in' }], u: TELL(), a: ['anchor', 'greenOut']
 };

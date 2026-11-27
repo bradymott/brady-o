@@ -142,7 +142,7 @@ class SeatsSeat extends Ent {
   touchPlayer() {}
   pan(ctx, col, k, hot) {
     // a pan: hinged at the backrest side, folded up by k (0 flat .. 1 up)
-    const hx = (col + 1) * TS - 2, y = this.py * TS + 4;
+    const hx = (col + 1) * TS - 2, y = this.py * TS - 6;
     ctx.save(); ctx.translate(hx, y); ctx.rotate(k * 1.1); ctx.strokeStyle = INK; ctx.lineWidth = 2;
     ctx.fillStyle = SA.TEAL; rr(ctx, -TS + 2, -6, TS - 2, 11, 4); ctx.fill(); ctx.stroke();
     ctx.fillStyle = hot ? '#ffe68a' : SA.TEAL_L; ctx.fillRect(-TS + 4, -6, 6, 9);
@@ -152,7 +152,6 @@ class SeatsSeat extends Ent {
     const t = this.t, p = this.g.player, [bx, top, bot] = this.bk, gy = (bot + 1) * TS;
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
     // the standard (a tin leg) under the pan and the backrest: a tall padded teal back with its seat plate
-    ctx.fillStyle = SA.TIN_D; ctx.fillRect(this.px * TS + TS / 2 - 3, this.py * TS + 8, 6, gy - this.py * TS - 8); ctx.strokeRect(this.px * TS + TS / 2 - 3, this.py * TS + 8, 6, gy - this.py * TS - 8);
     ctx.fillStyle = SA.TEAL_D; rr(ctx, bx * TS - 2, top * TS - 6, TS + 4, gy - top * TS + 6, 9); ctx.fill(); ctx.stroke();
     ctx.fillStyle = SA.TEAL; rr(ctx, bx * TS + 3, top * TS, TS - 6, gy - top * TS - 10, 7); ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fillRect(bx * TS + 6, top * TS + 6, 5, gy - top * TS - 26);
@@ -222,7 +221,15 @@ class SeatsBackdrop extends Ent {
   inDoor(p) { return p.cx > this.doorL() + 4 && p.cx < this.doorR() - 4 && p.y + p.h > this.gy * TS - 6 && p.y + p.h <= this.gy * TS + 4; }
   // framed: in this doorway (a twin pair: in both doorways at once)
   frames(p) { if (this.rear) return false; const o = this.linked(); return this.inDoor(p) && (!o || o.inDoor(p)); }
-  move(d) { const nx = clamp(this.x + d, this.min, this.max), got = nx - this.x; this.x = nx; const o = this.linked(); if (o && got) o.x = clamp(o.x - got, o.min, o.max); return got; }
+  // a twin pair clicks into the stagehands' tape mark where its doorways meet (a little push more is absorbed)
+  err() { const o = this.linked(); return o ? (this.doorL() + this.doorR()) / 2 - (o.doorL() + o.doorR()) / 2 : null; }
+  move(d) {
+    const o = this.linked();
+    if (o && Math.abs(this.err()) < 0.5) { this.stick = (this.stick || 0) + d; if (Math.abs(this.stick) < 18) return 0; d = this.stick; this.stick = 0; }
+    const nx = clamp(this.x + d, this.min, this.max), got = nx - this.x; this.x = nx; if (o && got) o.x = clamp(o.x - got, o.min, o.max);
+    if (o && Math.abs(this.err()) < 12 && Math.abs(this.err()) >= 0.5) { const e = this.err() / 2; this.x -= e; o.x += e; this.stick = 0; TourKit.sfx('click', 'select', { vol: 0.4, pitch: 1.8 }); say(this.g, (this.doorL() + this.doorR()) / 2, this.y - 16, 'ON THE MARK!', '#9aff8a'); }
+    return got;
+  }
   update(dt) {
     this.t += dt;
     const p = this.g.player; if (!p || p.dead || this.rear) { this.lastCx = null; return; }
@@ -364,16 +371,21 @@ class SeatsSpot extends Ent {
   }
 }
 ENTITY_TYPES.seatsSpot = SeatsSpot;
+// while Brady works a follow-spot, the camera frames the stand and the whole stage across the pit
+TourHooks.on('camera', (play, dt) => {
+  const p = play.player, sp = p && p.seatsProp; if (!(sp instanceof SeatsSpot) || !play.area) return;
+  const mid = ((sp.tx - 1) * TS + sp.sx1 + TS) / 2, want = clamp(mid - Game.viewW / 2, 0, Math.max(0, play.area.W * TS - Game.viewW));
+  play.camX = approach(play.camX, want, Math.max(6, Math.abs(want - play.camX) * 6 * dt));
+});
 
 /* ---------------- the pieces (the letter's cell: st.x, st.gy - 1) ---------------- */
 Object.assign(Tour.pieces, {
-  // a fold-up seat: the letter is its pan (one row over the floor); the backrest stands in the next column, h rows
+  // a fold-up seat: the letter stands on its pan (the pan lies on the boards); the backrest stands in the next column, h rows
   // tall from the floor; { h, dir (+1: backrest to the right), pair (a shared-hinge pair: the letter is the near pan),
   // label }. The checker: the (far) pan is a spring
   'seats.seat'(st, o) {
-    const B = st.B, x = st.x, py = st.gy - 1, d = o.dir || 1, far = o.pair ? x + d : x, bx = far + d, h = o.h || 5, bot = py, top = py - h + 1;
-    if (o.pair) B.set(x, py, T.SEMI);
-    B.set(far, py, T.SEMI); for (let y = top; y <= bot; y++) B.set(bx, y, T.HARD);
+    const B = st.B, x = st.x, py = st.gy, d = o.dir || 1, far = o.pair ? x + d : x, bx = far + d, h = o.h || 5, bot = py - 1, top = py - h;
+    for (let y = top; y <= bot; y++) B.set(bx, y, T.HARD);
     B.springs.push([far, py]);
     B.spawn('seatsSeat', far, py, { px: far, py, bk: [bx, top, bot], pair: !!o.pair, label: o.label });
     return st.x;
