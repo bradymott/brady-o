@@ -31,20 +31,34 @@ const chime = (k, ok) => Sound.play('select', { vol: 0.5, pitch: ok === false ? 
 const W = 28, R1 = 22;
 // the room's shape: 28 x 14 (26 columns fit a landscape phone's view), the way in raised onto a ledge at the top left
 // (clear of the stick), a raised stage for the game. L: { st (stage top row), s0, s1 (stage columns), cx (the cage's
-// column), cy (its floor row), hatch: 'cage' | [x, y] | null, ledge (the way-in ledge's top row) }
+// column), cy (its floor row), hatch: [x, y] | null (the exit door), ledge (the way-in ledge's top row), shelf (a shelf
+// under the cage), mirror (the way in on the right, the cage at the far left) }
 function stageRoom(keep, A, o, items, L) {
-  L = Object.assign({ st: 8, s0: 6, s1: R1, cx: 19, hatch: 'cage', ledge: 6, ch: 4 }, L || {});
-  const g = RK.room(W), st = L.st;
+  L = Object.assign({ st: 8, s0: 6, s1: R1, cx: 19, hatch: null, ledge: 6, ch: 4 }, L || {});
+  const g = RK.room(W), st = L.st, M = !!L.mirror;
   g.west(keep);
-  for (let x = 1; x < 6; x++) for (let y = 1; y <= 10; y++) { const c = g.get(x, y); if (c === '@' || c === 'D') { g.put(x, L.ledge - 1, c); if (c === 'D') { g.doorsAt[x + ',' + (L.ledge - 1)] = g.doorsAt[x + ',' + y]; delete g.doorsAt[x + ',' + y]; } g.put(x, y, '.'); } }
-  g.fill(1, L.ledge, 5, 10, '#');
+  // the way in on its ledge: top left, or (mirror) top right with the cage at the far left
+  const lx0 = M ? R1 - 4 : 1, lx1 = M ? R1 : 5;
+  for (let x = 1; x < 6; x++) for (let y = 1; y <= 10; y++) { const c = g.get(x, y); if (c === '@' || c === 'D') { const nx = M ? R1 + 1 - x : x; g.put(x, y, '.'); g.put(nx, L.ledge - 1, c); if (c === 'D') { g.doorsAt[nx + ',' + (L.ledge - 1)] = g.doorsAt[x + ',' + y]; delete g.doorsAt[x + ',' + y]; } } }
+  g.fill(lx0, L.ledge, lx1, 10, '#');
   g.fill(R1 + 1, 1, W - 2, 10, '#');
-  g.fill(L.s0, st, L.s1, 10, '#');
-  const cw = Math.max(3, items.length + 2), cx = L.cx, cy = L.cy != null ? L.cy : st - 1;
-  if (L.shelf) g.fill(cx, cy + 1, cx + cw + 1, cy + 1, '#');
-  g.cage(A.id, cx, cy, items, { w: cw, h: L.ch }); if (cx + cw + 1 <= R1) g.fill(cx + cw + 1, 1, R1, cy, '#');
-  if (o.exit && L.hatch) { if (L.hatch === 'cage') g.door(cx - 2, cy, { to: o.exit, look: 'foleyDoor' }); else g.door(L.hatch[0], L.hatch[1], { to: o.exit, look: 'foleyDoor' }); }
-  g.data.st = st;
+  const cw = Math.max(3, items.length + 2), cy = L.cy != null ? L.cy : st - 1;
+  if (M) {
+    // the stage runs from the left wall to the ledge; the cage stands at its left end, its bars facing the stage
+    g.fill(1, st, lx0 - 1, 10, '#');
+    const x = 1, top = cy - L.ch + 1;
+    g.fill(x, top - 1, x + cw + 1, top - 1, '#'); g.fill(x + 1, top, x + cw, cy, '.'); g.vline(x, top - 1, cy, '#');
+    g.vline(x + cw + 1, top, cy, g.L(['lock', 'room:' + A.id]));
+    items.forEach((it, k) => g.box(x + 1 + Math.max(0, Math.floor((cw - items.length) / 2)) + k, top + 1, it));
+    g.data.cage = { x: x + cw + 1, top, y: cy, w: cw, mirror: true };
+  } else {
+    g.fill(L.s0, st, L.s1, 10, '#');
+    const cx = L.cx;
+    if (L.shelf) g.fill(cx, cy + 1, cx + cw + 1, cy + 1, '#');
+    g.cage(A.id, cx, cy, items, { w: cw, h: L.ch }); if (cx + cw + 1 <= R1) g.fill(cx + cw + 1, 1, R1, cy, '#');
+  }
+  if (o.exit && L.hatch) g.door(L.hatch[0], L.hatch[1], { to: o.exit, look: 'foleyDoor' });
+  g.data.st = st; g.data.mirror = M;
   return g;
 }
 const prizeOf = (o, keep) => RK.prize(o, keep);
@@ -84,7 +98,7 @@ const TRIM = { speed: 1 / 7, lift: 0.8, ears: [0.38, 0.72], earW: 0.03, far: 0.1
 TourRooms.def('foleyTrim', {
   title: 'A LITTLE OFF THE TOP', rule: 'TAP THROW AS AN EAR GLOWS', need: 'TRIM IT FIRST!',
   make(o, keep, ctx, A, rng) {
-    const g = stageRoom(keep, A, o, prizeOf(o, keep), { st: 7, s0: 6, cx: 18 });
+    const g = stageRoom(keep, A, o, prizeOf(o, keep), { st: 7, s0: 6, cx: 18 });   // (the way out is back through the way in)
     g.spawn(7, 6, 'foleyRoomMark', { k: 0, cue: 'THROW: LIFT' }); g.need('the lever', 7, 6);
     g.winSpot(A.id, 9, 6); g.coins(10, 14, 6);
     return g;
@@ -162,8 +176,8 @@ const shapePath = (ctx, sh, x, y, r) => {
 TourRooms.def('foleyLids', {
   title: 'ONLY ONE LID', rule: 'FIT EACH LID: CRANK TURNS, LEVER DROPS', need: 'FIT THE LIDS FIRST!',
   make(o, keep, ctx, A, rng) {
-    const g = stageRoom(keep, A, o, prizeOf(o, keep), { st: 7, s0: 6, cx: 18, hatch: null, ledge: 6 });
-    // (here the cage sits on a shelf high over the way in, the game takes the whole stage)
+    const g = stageRoom(keep, A, o, prizeOf(o, keep), { st: 7, hatch: null, ledge: 6, mirror: true });
+    // (mirrored: the way in on the right, the cage at the stage's left end)
     g.spawn(8, 6, 'foleyRoomMark', { k: 'crank', cue: 'THROW: TURN' }); g.need('the crank', 8, 6);
     g.spawn(17, 6, 'foleyRoomMark', { k: 'drop', cue: 'THROW: DROP' }); g.need('the lever', 17, 6);
     g.winSpot(A.id, 12, 6);
@@ -222,7 +236,7 @@ const GULL_COL = ['#e0403a', '#3a6ad8', '#f2c23a'];
 TourRooms.def('foleyPerch', {
   title: 'VACANT PERCH', rule: 'THROW UNDER A GULL: SEAT IT OVER ITS FISH', need: 'SEAT THE GULLS FIRST!',
   make(o, keep, ctx, A, rng) {
-    const g = stageRoom(keep, A, o, prizeOf(o, keep), { st: 7, s0: 7, cx: 18, hatch: [17, 6], ledge: 5 });
+    const g = stageRoom(keep, A, o, prizeOf(o, keep), { st: 7, hatch: [16, 6], ledge: 5, mirror: true });
     const xs = [8, 11, 14, 17].slice(0, 4);
     [8, 10, 12, 14].forEach((x, k) => { g.spawn(x, 6, 'foleyRoomMark', { k, cue: 'THROW: HOP' }); g.need('perch ' + k, x, 6); });
     g.winSpot(A.id, 11, 6);
@@ -347,7 +361,7 @@ const REC_COL = { stripes: '#d85a70', dots: '#3a8ab0', waves: '#5a9a4a', checks:
 TourRooms.def('foleyRecords', {
   title: 'FRUIT FAMILY', rule: 'TURN THE RECORDS TILL TOUCHING HALVES MATCH', need: 'MATCH THE RECORDS FIRST!',
   make(o, keep, ctx, A, rng) {
-    const g = stageRoom(keep, A, o, prizeOf(o, keep), { st: 7, s0: 6, cx: 19, hatch: [17, 6], ledge: 6 });
+    const g = stageRoom(keep, A, o, prizeOf(o, keep), { st: 7, s0: 6, cx: 19, hatch: [6, 6], ledge: 6 });   // (the way out stands at the stage's left end, clear of the tables and the cage)
     [9, 13, 17].forEach((x, k) => { g.spawn(x - 1, 6, 'foleyRoomMark', { k, cue: 'THROW: TURN' }); g.need('table ' + k, x - 1, 6); });
     g.winSpot(A.id, 12, 6);
     // halves [A, B] glued opposite each other; the solution turns are (2, 2, 0)
@@ -389,9 +403,9 @@ const RAIN = { need: 4.0, reach: 5 };
 TourRooms.def('foleyRain', {
   title: 'RAIN FOR ONE', rule: 'TIP THE TRAY: KEEP RICE ON THE CLOUD', need: 'OPEN THE FLOWER FIRST!',
   make(o, keep, ctx, A, rng) {
-    const g = stageRoom(keep, A, o, prizeOf(o, keep), { st: 7, s0: 6, cx: 18, hatch: 'cage', ledge: 5 });
-    g.spawn(8, 6, 'foleyRoomMark', { k: 0, cue: 'THROW: TAKE THE TRAY', mount: true }); g.need('the tray', 8, 6);
-    g.winSpot(A.id, 10, 6);
+    const g = stageRoom(keep, A, o, prizeOf(o, keep), { st: 7, hatch: [18, 4], ledge: 5, mirror: true });
+    g.spawn(10, 6, 'foleyRoomMark', { k: 0, cue: 'THROW: TAKE THE TRAY', mount: true }); g.need('the tray', 10, 6);
+    g.winSpot(A.id, 12, 6);
     return g;
   },
   enter(play, A, R) { if (!R.won) { R.tilt = 0; R.wet = 0; R.cx = 13 * TS; R.ct = 0; R.open = 0; } },
@@ -401,23 +415,23 @@ TourRooms.def('foleyRain', {
   update(play, dt, A, R) {
     if (R.won || !quiet(play, R)) return;
     // the cloud drifts back and forth, a little faster as the flower opens
-    R.ct += dt * (0.5 + R.wet / RAIN.need * 0.35); R.cx = 13 * TS + Math.sin(R.ct) * 3.8 * TS + Math.sin(R.ct * 2.3) * 0.8 * TS;
+    R.ct += dt * (0.5 + R.wet / RAIN.need * 0.35); R.cx = 13 * TS + Math.sin(R.ct) * 3.0 * TS + Math.sin(R.ct * 2.3) * 0.5 * TS;
     const m = markK(play, 0), pouring = m && m.mounted, on = pouring && Math.abs(this.fallX(R) - R.cx) < 30;
-    if (on) { R.wet += dt; if (Math.floor(R.wet * 4) !== Math.floor((R.wet - dt) * 4)) FX.noise(play, R.cx, 5.2 * TS, 'dots', { quiet: true, scale: 0.5 }); }
+    if (on) { R.wet += dt; if (Math.floor(R.wet * 4) !== Math.floor((R.wet - dt) * 4)) FX.noise(play, R.cx, 5.8 * TS, 'dots', { quiet: true, scale: 0.5 }); }
     else R.wet = Math.max(0, R.wet - dt * 0.35);
     if (R.wet >= RAIN.need) TourRooms.win(play, A, R, { text: 'A FLOWER, FOR ONE!', coins: 6 });
   },
   draw(play, ctx, A, R) {
-    const t = play.t, m = markK(play, 0), pouring = m && m.mounted, ty = 3.6 * TS, cx = 13 * TS, a = (R.tilt || 0) * 0.32;
+    const t = play.t, m = markK(play, 0), pouring = m && m.mounted, ty = 4.0 * TS, cx = 13 * TS, a = (R.tilt || 0) * 0.32;
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.lineJoin = 'round';
     // the tray on its pivot, its rope to the lever
-    ctx.fillStyle = '#5a5a64'; ctx.fillRect(cx - 3, ty - 40, 6, 40);
+    ctx.fillStyle = '#5a5a64'; ctx.fillRect(cx - 3, ty - 18, 6, 18); ctx.fillRect(cx - 14, ty - 20, 28, 4);   // (a short hanger from a little rail: nothing reaches up under the rule's pill)
     ctx.save(); ctx.translate(cx, ty); ctx.rotate(a); ctx.fillStyle = WOOD; rr(ctx, -4.5 * TS, -8, 9 * TS, 14, 3); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#f6eedc'; ctx.fillRect(-4.3 * TS, -12, 8.6 * TS, 5); ctx.restore();
     // the thin fall of rice (dots) from the low end
     const fx = this.fallX(R), fy = ty + Math.abs(R.tilt || 0) * 4.5 * TS * 0.32 + 6;
     if (pouring && Math.abs(R.tilt || 0) > 0.05) { ctx.fillStyle = '#fff8e0'; for (let k = 0; k < 18; k++) { const q = (t * 2.4 + k / 18) % 1, yy = fy + q * (7 * TS - fy); ctx.beginPath(); ctx.arc(fx + Math.sin(k * 7) * 2, yy, 2, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(26,20,38,0.5)'; ctx.lineWidth = 0.8; ctx.stroke(); } }
     // the tiny cloud (a painted cardboard cloud on a stick, with a paper flower in a pot on its roof)
-    const cy = 5.6 * TS, k = clamp((R.wet || 0) / RAIN.need, 0, 1);
+    const cy = 6.2 * TS, k = clamp((R.wet || 0) / RAIN.need, 0, 1);
     ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#5a5a64'; ctx.fillRect(R.cx - 2, cy + 10, 4, 7 * TS - cy - 10);
     ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(R.cx, cy, 26, 12, 0, 0, TAU); ctx.ellipse(R.cx - 12, cy - 8, 12, 10, 0, 0, TAU); ctx.ellipse(R.cx + 10, cy - 10, 14, 11, 0, 0, TAU); ctx.fill(); ctx.stroke();
     ctx.fillStyle = FELT; rr(ctx, R.cx - 5, cy - 30, 10, 10, 2); ctx.fill(); ctx.stroke();

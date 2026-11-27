@@ -68,9 +68,10 @@ const isOpen = (g, id) => !!(g.foleyOpen && g.foleyOpen.has(id));
 // the little sign that a prop is listening: a word over a white arrow, pulsing, on a dark pill
 const handCue = (ctx, x, y, t, txt) => {
   const k = 0.5 + 0.5 * Math.sin(t * 6);
-  ctx.save(); ctx.font = '9px ' + FONT_DISPLAY; const w = Math.max(52, ctx.measureText(txt || 'THROW').width + 14);
-  ctx.globalAlpha = 0.8 + 0.2 * k; ctx.fillStyle = 'rgba(20,10,20,0.78)'; rr(ctx, x - w / 2, y - 24, w, 18, 9); ctx.fill();
-  ctx.fillStyle = '#ffd84a'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt || 'THROW', x, y - 14.5);
+  // (12 world px: about 14 px on a phone at the stage zoom, the size of the game's other pills)
+  ctx.save(); ctx.font = '12px ' + FONT_DISPLAY; const w = Math.max(60, ctx.measureText(txt || 'THROW').width + 18);
+  ctx.globalAlpha = 0.8 + 0.2 * k; ctx.fillStyle = 'rgba(20,10,20,0.82)'; rr(ctx, x - w / 2, y - 28, w, 22, 11); ctx.fill();
+  ctx.fillStyle = '#ffd84a'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt || 'THROW', x, y - 16.5);
   ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(x - 4, y - 6); ctx.lineTo(x + 4, y - 6); ctx.lineTo(x, y - 1 + k * 2); ctx.closePath(); ctx.fill(); ctx.restore();
 };
 // a mark Brady must stand on: a pulsing ivory scalloped ring on the floor (gold when `hot`)
@@ -531,7 +532,7 @@ class FoleyTrumpet extends Ent {
     P.k += dt * 12 * TS;
     if (P.k >= P.len) {
       const h = P.path.hit; this.puff = null;
-      if (h && h.ear) { if (h.front) h.ear.hear(); else { K.say(this.g, h.ear.cx, h.ear.y - 10, 'THIS EAR IS FACING AWAY', '#ffd8a0', 'ear' + h.ear.x); FX.noise(this.g, h.ear.cx, h.ear.cy, 'puff', { quiet: true }); } }
+      if (h && h.ear) { if (h.front) h.ear.hear(); else { K.say(this.g, h.ear.cx, h.ear.y - 10, 'THIS HORN IS FACING AWAY', '#ffd8a0', 'ear' + h.ear.x); FX.noise(this.g, h.ear.cx, h.ear.cy, 'puff', { quiet: true }); } }
       else { const e = P.path.pts[P.path.pts.length - 1]; FX.noise(this.g, e[0], e[1], 'puff', { quiet: true, scale: 0.6 }); }
     }
   }
@@ -580,10 +581,15 @@ class FoleyEar extends Ent {
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2.4; ctx.lineJoin = 'round';
     // the hinge post
     ctx.fillStyle = WOOD; ctx.fillRect(x - 5, base - 10, 10, 10); ctx.strokeRect(x - 5, base - 10, 10, 10);
-    // the ear: upright (closed) folding down flat into a landing (open) toward its front
+    // the listening horn: a brass ear trumpet on its hinge, its wide bell toward the front, the narrow earpiece at the
+    // back; upright (closed), folding down flat into a landing (open) toward its front
     ctx.translate(x, base - 6); ctx.rotate(this.fold * f * Math.PI / 2);
-    ctx.fillStyle = APRI3; ctx.beginPath(); ctx.moveTo(0, 0); ctx.bezierCurveTo(-f * 30, -10, -f * 34, -80, f * 6, -86); ctx.bezierCurveTo(f * 36, -88, f * 30, -40, f * 10, -30); ctx.quadraticCurveTo(f * 2, -10, 0, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#e08a6a'; ctx.beginPath(); ctx.moveTo(f * 2, -12); ctx.bezierCurveTo(-f * 16, -24, -f * 14, -70, f * 6, -72); ctx.bezierCurveTo(f * 22, -72, f * 18, -46, f * 6, -38); ctx.closePath(); ctx.fill();
+    ctx.lineCap = 'round'; ctx.strokeStyle = INK; ctx.lineWidth = 9; ctx.beginPath(); ctx.moveTo(-f * 16, -20); ctx.quadraticCurveTo(0, -26, 0, -44); ctx.lineTo(0, -62); ctx.stroke();
+    ctx.strokeStyle = BRASS; ctx.lineWidth = 5; ctx.stroke();
+    ctx.strokeStyle = INK; ctx.lineWidth = 2.4; ctx.fillStyle = '#c8962a'; ctx.beginPath(); ctx.arc(-f * 16, -20, 5, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = BRASS; ctx.beginPath(); ctx.moveTo(-f * 3, -66); ctx.lineTo(f * 30, -92); ctx.lineTo(f * 30, -42); ctx.lineTo(-f * 3, -56); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#fff0b0'; ctx.fillRect(Math.min(0, f * 24), -84, 24, 3);
+    ctx.fillStyle = '#4a2a14'; ctx.beginPath(); ctx.ellipse(f * 30, -67, 7, 25, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = '#c8962a'; ctx.lineWidth = 4; ctx.stroke(); ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.stroke();
     ctx.restore();
     // a closed ear facing the trumpet listens (a little "?" toward its front)
     if (!this.open) { ctx.save(); ctx.fillStyle = 'rgba(14,8,26,0.8)'; rr(ctx, x + f * 30 - 10, this.y - 4, 20, 18, 9); ctx.fill(); ctx.fillStyle = '#ffe8c8'; ctx.font = '11px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('?', x + f * 30, this.y + 9 + Math.sin(t * 3) * 1.5); ctx.restore(); }

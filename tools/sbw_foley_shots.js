@@ -416,7 +416,7 @@ async function roomRun(page, shot, label, enter) {
   const r0 = await page.evaluate(enter);
   check(label + ': the way in, played: ' + (r0.how || ''), r0.ok, r0);
   if (!r0.ok) return;
-  const info = await page.evaluate(() => { sim(0.5); const A = S().area; return { aid: A.aid, kind: A.roomKit && A.roomKit.kind, banner: S().bannerText }; });
+  const info = await page.evaluate(() => { sim(0.5); const A = S().area; return { aid: A.aid, kind: A.roomKit && A.roomKit.kind, banner: S().bannerText, ex: P().cx }; });
   await page.evaluate(() => freeze()); await shot(label + '-room-title.png'); await page.evaluate(() => thaw());
   await page.evaluate(() => sim(1.6)); await page.evaluate(() => freeze()); await shot(label + '-room.png'); await page.evaluate(() => thaw());
   const f = await page.evaluate(ROOM_FAIL[info.kind]);
@@ -424,7 +424,7 @@ async function roomRun(page, shot, label, enter) {
   const w = await page.evaluate(() => { const g = S(), A = g.area, R = A.roomState, kit = A.roomKit; window.ROOMK[kit.kind].testWin(g, A, R, kit, (g2, keys) => sim(1 / 120, keys || {})); sim(0.6); const cage = g.entities.find(e => e.constructor.name === 'TourRoomCage'); return { won: R.won, cageOpen: cage ? cage.tiles.every(([x, y]) => g.area.tiles[y * g.area.W + x] === window.BRADY.T.EMPTY) : null }; });
   check(label + ' (' + info.kind + '): won once with the real buttons; the prize cage opens at the win', w.won && w.cageOpen !== false, w);
   await page.evaluate(() => freeze()); await shot(label + '-room-won.png'); await page.evaluate(() => thaw());
-  const out = await page.evaluate(([inX, other]) => { const g = S(), D = g.entities.filter(e => e.constructor.name === 'Portal' && e.target).sort((a, b) => b.x - a.x), d = other ? D[0] : D[D.length - 1]; const k0 = g.area.idx; place(Math.floor(d.cx / 32), Math.floor((d.y + d.h - 1) / 32)); sim(0.2); const aid = door(); return { aid, x: tileOf()[0], inX, back: aid !== g.level.areas[k0].aid, elsewhere: Math.abs(tileOf()[0] - inX) > 3 }; }, [r0.inX, !!r0.other]);
+  const out = await page.evaluate(([inX, other, ex]) => { const g = S(), D = g.entities.filter(e => e.constructor.name === 'Portal' && e.target).sort((a, b) => Math.abs(a.cx - ex) - Math.abs(b.cx - ex)), d = other ? D[D.length - 1] : D[0]; /* the way in is the door Brady arrived at */ const k0 = g.area.idx; place(Math.floor(d.cx / 32), Math.floor((d.y + d.h - 1) / 32)); sim(0.2); const aid = door(); return { aid, x: tileOf()[0], inX, back: aid !== g.level.areas[k0].aid, elsewhere: Math.abs(tileOf()[0] - inX) > 3 }; }, [r0.inX, !!r0.other, info.ex]);
   check(label + ': its door takes Brady out ' + (r0.other ? 'somewhere else than where he came in' : 'back the way he came'), out.back && (!r0.other || out.elsewhere), out);
 }
 async function run0(page, name, f) { if (want.length && !want.some(w => name.startsWith(w))) return; try { await page.evaluate(HELPERS); await page.evaluate(() => { window.ROOMK = window.BRADY_TOUR.TourRooms ? window.BRADY_TOUR.TourRooms.kinds : {}; }); await f(); } catch (e) { check(name + ' runs', false, String(e.message).slice(0, 300)); } }
@@ -559,7 +559,7 @@ LEVELS.r6 = async (page, shot) => { await run0(page, 'r6', () => roomRun(page, s
 // ---------------- 29-1's room: up through the sand-trickling gap in the tunnel's ceiling ----------------
 LEVELS.r1 = async (page, shot) => { await run0(page, 'r1', () => roomRun(page, shot, '16-29-1-B16', () => {
   play('29-1'); place(118, 13); sim(0.3); safeWalk(123); const r = AP.route([[125, 12], [128, 9]]); if (!r.ok) return { ok: false, r };
-  walkTo(130, 2); const aid = door(); return { ok: aid === 'trim', aid, inX: 130, other: true, how: 'up onto the step block, through the gap in the tunnel ceiling where the sand trickles, the hatch in the cubby' }; })); };
+  walkTo(130, 2); const aid = door(); return { ok: aid === 'trim', aid, inX: 130, other: false, how: 'up onto the step block, through the gap in the tunnel ceiling where the sand trickles, the hatch in the cubby' }; })); };
 
 // ---------------- the hidden entrance: Brazil 3-1 ----------------
 LEVELS.entrance = async (page, shot, run) => {

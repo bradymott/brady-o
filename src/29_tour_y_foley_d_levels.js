@@ -271,9 +271,9 @@ const EAR = (face, land) => ['piece', 'foley.ear', { face, g: 1, land }];
 stamps.foleyRound = {
   floor: 16, rows: round, items: ['power', 'power'], gold: { '*': 'must', P: 'hidden', R: 'risky' }, doors: [{ to: 'office@in', look: 'foleyHatch' }],
   legend: Object.assign({}, COMMON, {
-    n: SIGN('A SPEAKING TRUMPET! THROW TAKES IT, THE STICK AIMS (FOLLOW THE DOTS), THROW PUFFS. A HINGED EAR THAT HEARS YOU FOLDS DOWN'),
-    N: SIGN('AIM HIGH: THE DOTS SHOW WHERE THE PUFF GOES. GREEN RING: IT HITS THE EAR\'S FRONT'),
-    O: SIGN('THAT EAR FACES AWAY. TIN PLATTERS BOUNCE A PUFF: SEND IT ROUND'),
+    n: SIGN('A SPEAKING TRUMPET! THROW TAKES IT, THE STICK AIMS (FOLLOW THE DOTS), THROW PUFFS. THE LISTENING HORN THAT HEARS YOU FOLDS DOWN'),
+    N: SIGN('AIM HIGH: THE DOTS SHOW WHERE THE PUFF GOES. GREEN RING: IT HITS THE HORN\'S BELL'),
+    O: SIGN('THAT LISTENING HORN FACES AWAY. TIN PLATTERS BOUNCE A PUFF: SEND IT ROUND'),
     a: TRUMP(-0.2), i: TRUMP(-0.5), d: TRUMP(-0.2), f: TRUMP(-0.6), q: TRUMP(-0.2),
     A: EAR(-1, [[-4, 0, -1, 0]]), K: EAR(-1, [[-3, 1, -1, 1]]), J: EAR(-1, [[-4, 0, -1, 0]]), U: EAR(-1, [[-4, 0, -1, 0]]), E: EAR(-1, [[-4, 1, -1, 1]]), X: EAR(1, [[2, 1, 5, 1]]),
     '1': ['piece', 'foley.platter', { dirn: '/' }], '2': ['piece', 'foley.platter', { dirn: '\\' }],
@@ -282,8 +282,8 @@ stamps.foleyRound = {
 };
 stamps.foleyOffice = roomStamp('cliffs@b19Back', ['oneup']);
 const L4 = { n: 4, name: 'Sound Goes Round', mapLabel: 'Goes Round', arch: 'trumpet', theme: 'foley_round',
-  gimmick: 'Aim a speaking trumpet with the stick (the dots show the puff\'s path) and send a puff into the front of a distant hinged ear: it folds down into a landing. The last ear faces away: bounce it off the tin platters',
-  hint: 'THROW takes the trumpet, the stick aims, THROW puffs, JUMP lets go. A green ring at the end of the dots: you will hit an ear\'s front. Platters bounce a puff round corners',
+  gimmick: 'Aim a speaking trumpet with the stick (the dots show the puff\'s path) and send a puff into the bell of a distant listening horn (a brass ear trumpet on a hinge): it folds down into a landing. The last horn faces away: bounce it off the tin platters',
+  hint: 'THROW takes the trumpet, the stick aims, THROW puffs, JUMP lets go. A green ring at the end of the dots: you will hit a listening horn\'s bell. Platters bounce a puff round corners',
   postcard: 'Brady, I whispered "dinner" into a seashell and a cliff folded its ear down to listen. Very good manners for a cliff. ♥ C',
   enemies: [['foleyKettle', 4], ['foleyRay', 3]],
   mapCell: [3, 1], mapFrom: 2,
