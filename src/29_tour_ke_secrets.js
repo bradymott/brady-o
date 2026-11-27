@@ -291,6 +291,42 @@ TourRooms.def('keGolf', {
     ctx.restore();
   }
 });
+/* the room test's scripted wins (tools/sbw_rooms_test.js calls K.testWin(g, A, R, kit, frame) for a kind it has no
+   script for): each plays the game with the player's own inputs (frame(g, keys) is one 1/120 s step) */
+const hopOn = (g, frame, D, k) => {   // Brady stands on mat k (set down there) and hops on it: JUMP, land
+  const p = g.player; p.x = D.pads[k] * TS + TS / 2 - p.w / 2; p.y = (TourRoomKit.Y + 1) * TS - p.h; p.vx = p.vy = 0;
+  for (let q = 0; q < 12; q++) frame(g, {});
+  frame(g, { jump: true, jumpPressed: true });
+  for (let q = 0; q < 240 && !p.onGround; q++) frame(g, {});
+  for (let q = 0; q < 12; q++) frame(g, {});
+};
+TourRooms.kinds.keSimon.testWin = function (g, A, R, kit, frame) {
+  const D = kit.data, p = g.player;
+  p.x = (D.pads[0] - 2) * TS; for (let q = 0; q < 30 * 120 && R.phase !== 'play'; q++) frame(g, {});
+  hopOn(g, frame, D, (R.seq[0] + 1) % 4);   // a wrong mat first: a squawk, and the weavers sing it again
+  for (let q = 0; q < 30 * 120 && R.phase !== 'play'; q++) frame(g, {});
+  for (const k of R.seq.slice()) hopOn(g, frame, D, k);
+  for (let q = 0; q < 60 && !R.won; q++) frame(g, {});
+};
+TourRooms.kinds.keGolf.testWin = function (g, A, R, kit, frame) {
+  // walk the ball along; with a rock just ahead of it, back off a little and jump as he reaches it (a chip); hop
+  // the rocks (and the ball, if he ends up past it) himself
+  const p = g.player, b = g.entities.find(e => e.isBall), Y = TourRoomKit.Y;
+  const rockAhead = x => { for (let tx = Math.floor(x / TS) + 1; tx <= Math.floor(x / TS) + 2; tx++) if (tileAt(g.area, tx, Y) === T.HARD) return true; return false; };
+  let back = false;
+  for (let q = 0; q < 40 * 120 && !R.won; q++) {
+    const toBall = b.x - (p.x + p.w), chip = rockAhead(b.cx) && b.onGround && Math.abs(b.vx) < 30;
+    const rock = p.onGround && tileAt(g.area, Math.floor((p.x + p.w + 4) / TS), Y) === T.HARD;
+    if (chip && toBall < 6 && p.cx < b.cx) back = true;
+    if (back && (toBall > 48 || !chip)) back = false;
+    const keys = {};
+    if (p.cx > b.cx) { keys.left = true; if (p.onGround && p.x - (b.x + b.w) < 24) keys.jumpPressed = keys.jump = true; }   // past it: hop back over
+    else if (back) keys.left = true;
+    else { keys.right = true; if (p.onGround && ((chip && toBall > 0 && toBall < 14) || (rock && toBall > TS))) keys.jumpPressed = keys.jump = true; }
+    if (!p.onGround && p.vy < 0) keys.jump = true;
+    frame(g, keys);
+  }
+};
 // the room counts for the hats test: the ball is a prop
 try { if (window.BRADY_TOUR) window.BRADY_TOUR.keSecrets = { NOTE }; } catch (e) { /* not in a browser */ }
 })();
