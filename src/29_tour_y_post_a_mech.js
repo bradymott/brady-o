@@ -48,6 +48,7 @@ const rectPts = r => [[r[0], r[1]], [r[2], r[3]]];
   const up0 = Player.prototype.update;
   Player.prototype.update = function (dt, inp) {
     const g = this.g;
+    if (g && inp) g.postInp = inp;
     if (inPost(g) && inp && this.state === 'play' && !this.dead) {
       let claim = null;
       const prev = g.postIn && g.postIn.by;

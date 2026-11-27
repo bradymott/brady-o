@@ -91,7 +91,7 @@ const L1 = { n: 1, name: 'Perforation Walk', mapLabel: 'Perforation Walk', arch:
   exits: { main: { to: '27-2' } },
   areas: [
     { id: 'perf', gen: 'room', theme: 'post_sound', stamp: 'postPerf', post: { perf: true }, bottomKill: true },
-    { id: 'press', gen: 'room', role: 'secret', theme: 'post_room_press', stamp: 'postPressOld', post: { room: true } }
+    { id: 'press', gen: 'room', role: 'secret', room: 'postGap', theme: 'post_room_press', stamp: 'postPressOld', post: { room: true } }
   ] };
 
 /* ---------------- 27-2 Stamp Duty ---------------- */
@@ -135,7 +135,7 @@ const L2 = { n: 2, name: 'Stamp Duty', mapLabel: 'Stamp Duty', arch: 'stampduty'
   exits: { main: { to: '27-3' } },
   areas: [
     { id: 'stamp', gen: 'room', theme: 'post_album', stamp: 'postStampDuty', post: { stamp: true }, bottomKill: true },
-    { id: 'bureau', gen: 'room', role: 'secret', theme: 'post_room_bureau', stamp: 'postBureauOld', post: { room: true } }
+    { id: 'bureau', gen: 'room', role: 'secret', room: 'postFake', theme: 'post_room_bureau', stamp: 'postBureauOld', post: { room: true } }
   ] };
 
 /* ---------------- 27-3 Blotter Bay ---------------- */
@@ -181,7 +181,7 @@ const L3 = { n: 3, name: 'Blotter Bay', mapLabel: 'Blotter Bay', arch: 'blotter'
   exits: { main: { to: '27-4' } },
   areas: [
     { id: 'blot', gen: 'room', theme: 'post_blot', stamp: 'postBlot', post: { blot: true }, bottomKill: true },
-    { id: 'cellar', gen: 'room', role: 'secret', theme: 'post_room_cellar', stamp: 'postCellarOld', post: { room: true } }
+    { id: 'cellar', gen: 'room', role: 'secret', room: 'postEcho', theme: 'post_room_cellar', stamp: 'postCellarOld', post: { room: true } }
   ] };
 
 /* ---------------- 27-4 Forwarding Fold ---------------- */
@@ -226,7 +226,7 @@ const L4 = { n: 4, name: 'Forwarding Fold', mapLabel: 'Forwarding Fold', arch: '
   exits: { main: { to: '27-5' } },
   areas: [
     { id: 'fold', gen: 'room', theme: 'post_fold', stamp: 'postFoldLand', post: { fold: true }, bottomKill: true },
-    { id: 'pens', gen: 'room', role: 'secret', theme: 'post_room_pens', stamp: 'postPensOld', post: { room: true } }
+    { id: 'pens', gen: 'room', role: 'secret', room: 'postDrop', theme: 'post_room_pens', stamp: 'postPensOld', post: { room: true } }
   ] };
 
 /* ---------------- 27-5 Mismeasured Coast ---------------- */
@@ -270,7 +270,7 @@ const L5 = { n: 5, name: 'Mismeasured Coast', mapLabel: 'Mismeasured Coast', arc
   exits: { main: { to: '27-6' } },
   areas: [
     { id: 'coast', gen: 'room', theme: 'post_chart', stamp: 'postCoast', post: { scale: true }, bottomKill: true },
-    { id: 'chutes', gen: 'room', role: 'secret', theme: 'post_room_chutes', stamp: 'postChutesOld', post: { room: true } }
+    { id: 'chutes', gen: 'room', role: 'secret', room: 'postFlip', theme: 'post_room_chutes', stamp: 'postChutesOld', post: { room: true } }
   ] };
 
 /* ---------------- 27-6 Return to Sender (the boss) ---------------- */
@@ -297,7 +297,7 @@ stamps.postReturn = { floor: 19, rows: returnRows, gold: { '*': 'must', A: 'hidd
   '2': ADDR({ halves: [[41, 42], [51, 52]], y: 19, plate: [54, 19], drop: 46, barrier: [57, 10, 57, 18], period: 3.8, phase: 1.5, g: 1 }),
   x: ['decor', 'postTellWall'], a: ['anchor', 'denOut']
 }) };
-stamps.postDenOld = oldRoom('return@denOut', ['oneup'], 'postSlit');
+stamps.postDenOld = oldRoom('return@denOut', ['star'], 'postSlit');
 const L6 = { n: 6, name: 'Return to Sender', mapLabel: 'Return to Sender', arch: 'lair', theme: 'post_office', boss: 'post_thumb',
   gimmick: 'The Postmaster\'s Thumb cancels everything on the sorting desk. Don\'t stomp it: get it to cancel a torn address, whole, and each completed address posts it back along its own arm',
   hint: 'Stand on the first address while the ring settles, then step out. Jump the ink stripe from the crease plate. Hold the crease for the first mark, step off for the second. A corner curls out of a pillar by the desk\'s door...',
@@ -307,7 +307,7 @@ const L6 = { n: 6, name: 'Return to Sender', mapLabel: 'Return to Sender', arch:
   exits: { main: { to: null } },
   areas: [
     { id: 'return', gen: 'room', theme: 'post_office', stamp: 'postReturn', post: { address: true }, bottomKill: true },
-    { id: 'den', gen: 'room', role: 'secret', theme: 'post_room_den', stamp: 'postDenOld', post: { room: true } },
+    { id: 'den', gen: 'room', role: 'secret', room: 'postPeel', theme: 'post_room_den', stamp: 'postDenOld', post: { room: true } },
     { id: 'desk', gen: 'arena', role: 'arena', layout: 'desk', arenaW: 30, H: 18, roof: false, theme: 'post_arena', post: { boss: true } }
   ] };
 
