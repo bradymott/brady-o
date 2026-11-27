@@ -107,14 +107,14 @@ const beeRows = (() => {
   ground(Gr, 0, 24, 21); put(Gr, 3, 20, '@'); put(Gr, 6, 20, 'k'); put(Gr, 12, 17, '?'); put(Gr, 14, 20, 'x');
   put(Gr, 19, 20, 'f'); put(Gr, 23, 20, '1');
   ground(Gr, 25, 50, 15); put(Gr, 40, 14, 'c'); put(Gr, 34, 12, '*'); put(Gr, 28, 13, 'o.o.o'); put(Gr, 45, 10, 'd');
-  pit(Gr, 51, 63); put(Gr, 49, 14, 'e'); put(Gr, 54, 25, '2'); put(Gr, 54, 14, 'i'); put(Gr, 59, 25, '3'); put(Gr, 59, 12, 'R');
-  ground(Gr, 64, 92, 15); put(Gr, 72, 14, 'r'); put(Gr, 68, 11, '?'); put(Gr, 78, 14, 'c');
+  pit(Gr, 51, 61); put(Gr, 49, 14, 'e'); put(Gr, 53, 25, '2'); put(Gr, 53, 14, 'i'); put(Gr, 58, 25, '3'); put(Gr, 58, 12, 'R');
+  ground(Gr, 62, 92, 15); put(Gr, 72, 14, 'r'); put(Gr, 68, 11, '?'); put(Gr, 78, 14, 'c');
   // the pantry ledge: only a blossom's pad reaches it
   put(Gr, 81, 14, 'j'); put(Gr, 84, 14, '4'); fillG(Gr, 86, 9, 92, 9, 'H'); put(Gr, 90, 8, 'A'); put(Gr, 87, 8, 'u'); put(Gr, 88, 6, 'o.o');
   ground(Gr, 93, 95, 18); ground(Gr, 96, 119, 21); put(Gr, 100, 20, 'a'); put(Gr, 105, 20, 'l');
   put(Gr, 110, 20, 'n'); put(Gr, 114, 20, '5'); put(Gr, 114, 17, 'q'); put(Gr, 117, 20, '6');
   ground(Gr, 120, 150, 13); put(Gr, 124, 12, 'c'); put(Gr, 130, 9, '?'); put(Gr, 140, 12, 'r'); put(Gr, 135, 8, 'd');
-  ground(Gr, 151, 173, 21); put(Gr, 153, 20, 'c'); put(Gr, 156, 20, 'K'); put(Gr, 160, 20, 't'); put(Gr, 167, 20, 'p'); put(Gr, 171, 20, '7');
+  ground(Gr, 151, 173, 21); put(Gr, 153, 20, 'c'); put(Gr, 156, 20, 'K'); put(Gr, 160, 20, 't'); put(Gr, 169, 20, 'p'); put(Gr, 172, 20, '7');
   ground(Gr, 174, W - 1, 15); put(Gr, 180, 11, '?'); put(Gr, 185, 14, 'z'); fillG(Gr, 190, 12, 191, 14, 'H'); put(Gr, 190, 9, 'P'); put(Gr, 196, 14, 'r'); put(Gr, 205, 14, 'G');
   fillG(Gr, W - 1, 0, W - 1, 14, 'H');
   return rowsOf(Gr);
@@ -260,7 +260,7 @@ const graftRows = (() => {
   ground(Gr, 81, 103, 21); put(Gr, 84, 20, 'c'); put(Gr, 96, 17, '?'); put(Gr, 100, 20, 'r');
   ground(Gr, 104, 112, 18); put(Gr, 112, 17, '3'); pit(Gr, 113, 122); put(Gr, 117, 13, 'd'); put(Gr, 118, 15, 'R');
   ground(Gr, 123, 150, 18); put(Gr, 126, 17, 'c'); put(Gr, 135, 17, 'l'); put(Gr, 140, 14, '?'); put(Gr, 146, 17, 'K');
-  put(Gr, 150, 17, '4'); pit(Gr, 151, 161); put(Gr, 156, 12, 'd');
+  put(Gr, 150, 17, '4'); pit(Gr, 151, 161); put(Gr, 156, 11, 'd');
   ground(Gr, 162, W - 1, 18); put(Gr, 166, 17, 'c'); put(Gr, 174, 17, 'r'); fillG(Gr, 186, 15, 187, 17, 'H'); put(Gr, 186, 12, 'P'); put(Gr, 192, 17, 'z'); put(Gr, 200, 17, 'G');
   fillG(Gr, W - 1, 0, W - 1, 17, 'H');
   return rowsOf(Gr);

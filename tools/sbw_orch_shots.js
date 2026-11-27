@@ -107,7 +107,7 @@ STAGES.door = async ({ ev, shot, run }) => {
       play('11-3'); const S0 = S(); const sp = S0.area.spawns ? null : null;
       // find the last tree's column from the level spec (it spawns when in view)
       const spn = S0.level.areas[0].spawns.find(q => q.type === 'orchJpTree'); window.__tree = { tx: spn.tx, gy: spn.gy };
-      place(spn.tx - 14, spn.gy - 1); sim(0.4); return { tx: spn.tx, gy: spn.gy, at: at(), coinsNear: (() => { const A = S().area; let n = 0; for (let x = spn.tx - 12; x <= spn.tx + 6; x++) for (let y = 0; y < A.H; y++) if (A.tiles[y * A.W + x] === 5) n++; return n; })() };
+      place(spn.tx - 14, spn.gy - 1); sim(0.4); return { tx: spn.tx, gy: spn.gy, at: at(), coinsNear: (() => { const A = S().area; let n = 0; for (let x = spn.tx - 12; x <= spn.tx + 6; x++) for (let y = 0; y < A.H; y++) if (A.tiles[y * A.W + x] === 14) n++; return n; })() };
     });
     check('11-3: the little pear orchard stands by the path in the sunlit stretch (no coins leading to it)', r.tx > 0 && !r.at.dead, r);
     await ev(() => { const { tx, gy } = window.__tree; place(tx - 9, gy - 1); sim(0.3); freeze(); });
@@ -204,7 +204,7 @@ STAGES.bee = async ({ ev, shot, run, pano }) => {
     r = await ev(() => { thaw(); place(21, 20); sim(0.2); sim(0.5, { jump: true, jumpPressed: true, right: true }); sim(0.5); const a1 = at(); sim(0.5, { jump: true, jumpPressed: true, right: true }); sim(0.5); walkTo(28 * 32, 6); return { a1, a2: at() }; });
     check('28-2: up the petal step onto the first bank', r.a1.y === 17 && r.a2.y === 14, r);
     // the shy blossom: from its near bell the bee bumps a shut bud; from the far bell it blooms
-    r = await ev(() => { place(167, 20); sim(1.2); const bl = ents('OrchBlossom').find(b => b.shy); press('action'); sim(3); const near = bl.done; walkTo(160 * 32 + 16, 4); press('action'); sim(4); return { near, far: bl.done }; });
+    r = await ev(() => { place(169, 20); sim(1.2); const bl = ents('OrchBlossom').find(b => b.shy); press('action'); sim(3); const near = bl.done; walkTo(160 * 32 + 16, 4); press('action'); sim(4); return { near, far: bl.done }; });
     check('28-2: the shy blossom shuts while Brady stands by it (the bee bumps the bud); sent from the far bell, it blooms', !r.near && r.far, r);
     await ev(() => { place(165, 20); sim(0.3); freeze(); }); await shot('22-28-2-shy-blossom.png');
     await ev(() => { thaw(); place(83, 14); sim(0.3); freeze(); }); await shot('23-28-2-pantry-ledge.png');
@@ -387,7 +387,7 @@ const BOT_PAGE = () => {
       const dir = q.cx < x ? 1 : -1, tx = Math.floor((q.cx + dir * 20) / 32), fy = Math.floor((q.y + q.h + 4) / 32);
       let jump = false;
       if (q.onGround) {
-        const gapAhead = !solid(tx, fy) && !solid(tx, fy + 1) && tileAt(tx, fy) !== 2;
+        const gapAhead = !solid(tx, fy) && !solid(tx, fy + 1) && tileAt(tx, fy) !== 7;
         const wall = solid(Math.floor((q.cx + dir * 18) / 32), fy - 1);
         const crit = S().entities.some(e => e.enemy && !e.dead && !e.remove && !e.boss && !e.isOrchCrawler && (e.cx - q.cx) * dir > 0 && Math.abs(e.cx - q.cx) < 90 && Math.abs((e.y + e.h) - (q.y + q.h)) < 40);
         if ((gapAhead || wall || crit || q.hitWall) && (o.noHop !== true)) jump = true;
@@ -453,10 +453,10 @@ const BOT_ROUTES = {
     ['walk', 59 * 32], ['grip', 1], ['climb', 62, 15], ['cross'], ['climb', 69, 15], ['cross'], ['climb', 73, 14], ['letGo', 1], 'cp',
     ['walk', 91 * 32], ['grip', 1], ['climb', 91, 12], ['climb', 105, 12], ['letGo', 1], 'cp', ['walk', 145 * 32 + 16], ['grip', 1], ['climb', 147, 14], ['cross'], ['climb', 155, 12], ['push', 1], ['climb', 163, 12], ['climb', 170, 17], ['letGo', 1], 'cp',
     ['walk', 187 * 32 + 16], ['grip', 1], ['climb', 190, 13], ['cross'], ['climb', 196, 11], ['push', 1], ['climb', 202, 11], ['climb', 203, 15], ['cross'], ['climb', 207, 15], ['climb', 207, 12], ['cross'], ['climb', 208, 13], ['push', 1], ['climb', 216, 13], ['climb', 222, 17], ['letGo', 1], 'cp', ['gate']],
-  '28-2': [['walk', 19 * 32 + 16, { noHop: true }], ['press', 'action'], ['wait', 2.6], ['hopTo', 23, 0.45], ['walk', 36 * 32], 'cp',
-    ['walk', 49 * 32 + 16, { noHop: true }], ['press', 'action'], ['wait', 2.4], ['hopTo', 54, 0.4], ['walk', 54 * 32 + 16, { noHop: true }], ['press', 'action'], ['wait', 2.4], ['hopTo', 59, 0.4], ['walk', 66 * 32], 'cp', ['walk', 92 * 32],
-    ['walk', 110 * 32 + 16, { noHop: true }], ['press', 'action'], ['wait', 2.4], ['hopTo', 114, 0.45], ['walk', 114 * 32 + 16, { noHop: true }], ['press', 'action'], ['wait', 2.4], ['hopTo', 117, 0.45], ['walk', 126 * 32], 'cp',
-    ['walk', 150 * 32], ['walk', 160 * 32 + 16, { noHop: true }], ['press', 'action'], ['wait', 3.6], ['walk', 169 * 32 + 16, { noHop: true }], ['hopTo', 171, 0.45], ['walk', 178 * 32], 'cp', ['gate']],
+  '28-2': [['to', 19 * 32 + 16], ['press', 'action'], ['wait', 2.6], ['hopTo', 23, 0.45], ['walk', 36 * 32], 'cp',
+    ['to', 49 * 32 + 16], ['press', 'action'], ['wait', 2.4], ['hopTo', 53, 0.4], ['to', 53 * 32 + 16], ['press', 'action'], ['wait', 2.4], ['hopTo', 58, 0.4], ['walk', 66 * 32], 'cp', ['walk', 92 * 32],
+    ['to', 110 * 32 + 16], ['press', 'action'], ['wait', 2.4], ['hopTo', 114, 0.45], ['to', 114 * 32 + 16], ['press', 'action'], ['wait', 2.4], ['hopTo', 117, 0.45], ['walk', 126 * 32], 'cp',
+    ['walk', 150 * 32], ['to', 160 * 32 + 16], ['press', 'action'], ['wait', 3.6], ['walk', 170 * 32 + 16, { noHop: true }], ['hopTo', 172, 0.45], ['walk', 178 * 32], 'cp', ['walk', 201 * 32], ['gate']],
   '28-3': [['walk', 15 * 32 + 16, { noHop: true }], ['press', 'action'], ['wait', 0.5], ['hopTo', 15, 0.45], ['press', 'action'], ['wait', 0.5], ['hopTo', 15, 0.45], ['walk', 30 * 32], 'cp',
     ['walk', 59 * 32 + 16], ['press', 'action'], ['wait', 0.5], ['hopTo', 59, 0.45], ['press', 'action'], ['wait', 0.5], ['hopTo', 59, 0.45], ['press', 'action'], ['wait', 0.5], ['hopTo', 59, 0.45], ['walk', 70 * 32], 'cp',
     ['walk', 112 * 32], 'cp', ['walk', 139 * 32 + 16], ['press', 'action'], ['wait', 0.5], ['hopTo', 139, 0.45], ['press', 'action'], ['wait', 0.5], ['hopTo', 139, 0.45], ['hopTo', 139, 0.45], ['press', 'action'], ['wait', 0.5], ['hopTo', 139, 0.45], ['walk', 148 * 32], 'cp', ['walk', 192 * 32], ['gate']],
