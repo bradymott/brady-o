@@ -28,7 +28,7 @@ const strataGround = {
     ctx.fillStyle = OCHRE_LO; ctx.beginPath(); ctx.moveTo(0, 24 + o2 * 0.5); ctx.lineTo(TS, 23 + o1 * 0.5); ctx.lineTo(TS, TS); ctx.lineTo(0, TS); ctx.closePath(); ctx.fill();
     ctx.fillStyle = 'rgba(120,60,20,0.55)'; ctx.fillRect(0, 16 + o1, TS, 1.2);
     if (rng() < 0.5) { ctx.fillStyle = '#e8a04a'; ctx.beginPath(); ctx.ellipse(4 + rng() * 22, 4 + rng() * 3, 2.5, 1.5, 0, 0, TAU); ctx.fill(); }
-    if (rng() < 0.18) { ctx.fillStyle = '#efe2c4'; const x = 6 + rng() * 18, y = 20 + rng() * 6; ctx.fillRect(x, y, 6, 2); ctx.beginPath(); ctx.arc(x, y + 1, 1.6, 0, TAU); ctx.arc(x + 6, y + 1, 1.6, 0, TAU); ctx.fill(); }
+    if (rng() < 0.07) { ctx.fillStyle = '#efe2c4'; const x = 6 + rng() * 18, y = 14 + rng() * 12; ctx.fillRect(x, y, 6, 2); ctx.beginPath(); ctx.arc(x, y + 1, 1.6, 0, TAU); ctx.arc(x + 6, y + 1, 1.6, 0, TAU); ctx.fill(); }
   },
   paintCap(ctx, x0, x1) {
     ctx.fillStyle = OCHRE_LO; ctx.fillRect(x0, 0, x1 - x0, 11);

@@ -417,12 +417,15 @@ class BonePress extends Ent {
   }
   touchPlayer() {}
   pressY() {
-    const y = this.s.tray[2] * TS, top = y - 6 * TS, low = y - 2.4 * TS;
+    // its resting height: a little over Brady's head; it comes down onto whatever shape is in the tray
+    const y = this.s.tray[2] * TS, top = y - 4.4 * TS, p = this.g.player, [x0, x1] = this.s.tray;
+    const inTray = p && !p.dead && p.cx >= x0 * TS && p.cx <= (x1 + 1) * TS && p.y + p.h > y - 4;
+    const low = inTray ? Math.max(p.y - 2, y - 2.2 * TS) : y - 0.6 * TS;
     if (this.st === 'idle') return top;
-    if (this.st === 'tell') return top + Math.sin(this.t * 40) * 2 + this.at * 6;
-    if (this.st === 'down') return lerp(top + 5, low, this.at / 0.22);
-    if (this.st === 'hold') return low;
-    return lerp(low, top, this.at / 0.6);
+    if (this.st === 'tell') return top + Math.sin(this.t * 40) * 2.5 + this.at * 8;
+    if (this.st === 'down') return lerp(top + 7, low, this.at / 0.22);
+    if (this.st === 'hold') return this.holdY != null ? this.holdY : (this.holdY = low);
+    this.holdY = null; return lerp(low, top, this.at / 0.6);
   }
   draw(ctx) {
     const s = this.s, [x0, x1, y] = s.tray, X0 = x0 * TS, X1 = (x1 + 1) * TS, by = this.pressY();
@@ -431,8 +434,8 @@ class BonePress extends Ent {
     ctx.fillStyle = '#8a6a50'; ctx.fillRect(X0 - 4, y * TS - 6, X1 - X0 + 8, 10); ctx.strokeRect(X0 - 4, y * TS - 6, X1 - X0 + 8, 10);
     ctx.fillStyle = '#b89a78'; ctx.fillRect(X0, y * TS - 4, X1 - X0, 5);
     // the gantry and the press block (a plaster slab with a persimmon handle); its shadow grows on the tray
-    const gx = (X0 + X1) / 2, gTop = y * TS - 8 * TS;
-    ctx.fillStyle = '#6a4a2a'; ctx.fillRect(X0 - 10, gTop, 8, 8 * TS - 6); ctx.strokeRect(X0 - 10, gTop, 8, 8 * TS - 6); ctx.fillRect(X1 + 2, gTop, 8, 8 * TS - 6); ctx.strokeRect(X1 + 2, gTop, 8, 8 * TS - 6);
+    const gx = (X0 + X1) / 2, gTop = y * TS - 5.6 * TS;
+    ctx.fillStyle = '#6a4a2a'; ctx.fillRect(X0 - 10, gTop, 8, 5.6 * TS - 6); ctx.strokeRect(X0 - 10, gTop, 8, 5.6 * TS - 6); ctx.fillRect(X1 + 2, gTop, 8, 5.6 * TS - 6); ctx.strokeRect(X1 + 2, gTop, 8, 5.6 * TS - 6);
     ctx.fillRect(X0 - 14, gTop - 8, X1 - X0 + 28, 10); ctx.strokeRect(X0 - 14, gTop - 8, X1 - X0 + 28, 10);
     ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(gx, gTop + 2); ctx.lineTo(gx, by - 20); ctx.stroke(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
     const tell = this.st === 'tell' || this.st === 'down';
@@ -459,7 +462,40 @@ Tour.pieces['bone.press'] = function (st, o) {
   const B = st.B, [x0, x1, y] = o.tray;
   B.spawn('bonePress', st.x, st.gy - 1, o);
   const r = o.casts[o.need]; for (let yy = r[1]; yy <= r[3]; yy++) for (let x = r[0]; x <= r[2]; x++) B.set(x, yy, T.EMPTY);
-  B.toggle(o.g, [], [r.slice(0, 4)], { kind: 'bonePress' }); B.switchAt(o.g, Math.floor((x0 + x1) / 2), y - 1);
+  // the checker: a toggle group (the cast's tiles) switched in the tray, or (o.g null) a one-way edge from the tray
+  // to o.edge, the tile the cast lets Brady reach
+  if (o.g != null) { B.toggle(o.g, [], [r.slice(0, 4)], { kind: 'bonePress' }); B.switchAt(o.g, Math.floor((x0 + x1) / 2), y - 1); }
+  else if (o.edge) B.edge([Math.floor((x0 + x1) / 2), y - 1], o.edge);
+  return st.x;
+};
+// a soft patch of plaster floor: press DOWN on it (crouch) and it gives way: { x, y (the floor row), w, to: [x, y] the
+// tile where Brady lands below (the checker's one-way edge) }
+class BoneSoft extends Ent {
+  constructor(g, s) { super(g, s, s.w * TS, TS); this.x = s.tx * TS; this.y = s.ty * TS; this.friendly = true; this.k = 0; this.gone = false; this.press = 0; }
+  update(dt) {
+    this.t += dt; const g = this.g, p = g.player;
+    if (this.gone) { this.k = Math.min(1, this.k + dt * 2); return; }
+    const on = p && !p.dead && p.onGround && p.groundTy === this.s.ty && p.cx > this.x && p.cx < this.x + this.w;
+    this.press = on && p.inp && p.inp.down ? this.press + dt : Math.max(0, this.press - dt * 2);
+    if (this.press > 0.35) {
+      this.gone = true; for (let k = 0; k < this.s.w; k++) g.setTile(this.s.tx + k, this.s.ty, T.EMPTY);
+      g.burst(this.cx, this.y + 8, 14, '#efe6d2', 'dust'); Sound.play('stomp', { pitch: 0.7, vol: 0.6 }); g.parts.text(p.cx, p.y - 20, 'IT GIVES WAY!', '#ffd88a');
+    }
+  }
+  touchPlayer() {}
+  draw(ctx) {
+    const x = this.x, y = this.y, w = this.w, sh = this.press > 0 ? Math.sin(this.t * 50) * 1.5 : 0;
+    ctx.save();
+    if (this.gone) { ctx.globalAlpha = 1 - this.k; ctx.translate(0, this.k * 60); }
+    // the patch looks like the floor around it, with a faint plaster seam
+    ctx.strokeStyle = 'rgba(80,40,10,0.55)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x + 4 + sh, y + 3); ctx.lineTo(x + w * 0.4 + sh, y + 7); ctx.lineTo(x + w * 0.6 + sh, y + 4); ctx.lineTo(x + w - 4 + sh, y + 8); ctx.stroke();
+    ctx.restore();
+  }
+}
+ENTITY_TYPES.boneSoft = BoneSoft;
+Tour.pieces['bone.soft'] = function (st, o) {
+  const B = st.B; B.spawn('boneSoft', st.x, st.gy - 1, { tx: o.x, ty: o.y, w: o.w || 2 });
+  B.edge([o.x, o.y - 1], o.to);
   return st.x;
 };
 

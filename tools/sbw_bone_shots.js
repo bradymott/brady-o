@@ -69,6 +69,13 @@ async function session(viewport, fn) {
     window.cross = () => { const p = P(), f = p.boneFace; sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.4); return { from: f, to: p.boneFace, grip: !!p.boneGrip }; };
     window.tileT = (x, y) => { const A = S().area, T = window.BRADY.T; const t = A.tiles[y * A.W + x]; return Object.keys(T).find(k => T[k] === t); };
 
+    // wait in the tray for the press: stand, or crouch (hold down) as it comes down
+    window.pressCast = (crouch) => {
+      const pr = ents('BonePress').sort((a, b) => Math.abs(a.cx - P().cx) - Math.abs(b.cx - P().cx))[0];
+      for (let k = 0; k < 120 * 6 && pr.st !== 'tell'; k++) sim(1 / 120);
+      for (let k = 0; k < 120 * 3 && pr.st !== 'up'; k++) sim(1 / 120, crouch ? { down: true } : {});
+      sim(0.8); return { done: pr.done, bad: pr.bad };
+    };
     /* ---------------- the autopilot ----------------
        A program is a little input plan: hold `dir` for `run` s on the ground, press jump and hold it `hold` s, then
        steer in the air (air: 'dir' | 'none' | 'rev' at revAt | 'late' (none, then dir from lateAt)), or walk off
@@ -421,6 +428,46 @@ LEVELS.ascent = async (page, shot, run, pano) => {
     });
     check('37-2: climbed the last cage (critters on both faces, two collars) and reached the gate', r.row === 5 && r.state !== 'play', r);
     await page.evaluate(() => { play('37-2'); }); await pano('29-37-2-panorama.png', 0.25);
+  });
+};
+
+// ---------------- 37-3 Make an Impression ----------------
+LEVELS.clay = async (page, shot, run, pano) => {
+  await run('clay', async () => {
+    await page.evaluate(() => { fresh(); play('37-3'); place(5, 18); sim(0.6); freeze(); });
+    await shot('30-37-3-start.png');
+    let r = await page.evaluate(() => { thaw(); const a = AP.go([14, 19]); const w = pressCast(true); return { ok: a.ok, w, tile: tileT(18, 16) }; });
+    check('37-3: crouching under the press makes a low cast: it does not fit the tall outline (a miss, try again)', r.ok && !r.w.done && r.w.bad === 'low' && r.tile === 'EMPTY', r);
+    await page.evaluate(() => { const pr = ents('BonePress')[0]; for (let k = 0; k < 600 && pr.st !== 'tell'; k++) sim(1 / 120); sim(0.5); freeze(); }); await shot('31-37-3-press-tell.png'); await page.evaluate(() => thaw());
+    r = await page.evaluate(() => { const w = pressCast(false); return { w, tile: tileT(18, 16) }; });
+    check('37-3: standing under the press: a tall cast, it fits the outline and makes a step', r.w.done && r.tile === 'HARD', r);
+    await page.evaluate(() => freeze()); await shot('32-37-3-tall-cast.png'); await page.evaluate(() => thaw());
+    r = await page.evaluate(() => AP.route([[18, 16], [22, 13], [44, 13], [51, 19]]));
+    check('37-3: played: up the cast onto the cliff (P1), down to the second press', r.ok, r);
+    r = await page.evaluate(() => { const w = pressCast(true); const a = AP.route([[59, 19], [66, 19]]); return { w, tile: tileT(58, 19), ok: a.ok }; });
+    check('37-3: crouch under the press: a low, broad slab fills the pit under the low shelf; across it', r.w.done && r.tile === 'HARD' && r.ok, r);
+    await page.evaluate(() => { place(57, 18); sim(0.3); freeze(); }); await shot('33-37-3-low-slab.png'); await page.evaluate(() => thaw());
+    r = await page.evaluate(() => { const a = AP.route([[76, 19], [86, 19]]); const w = pressCast(false); const b = AP.route([[90, 16], [95, 13]]); return { a: a.ok, w, b: b.ok }; });
+    check('37-3: played: past the brush and the newt, a tall cast under the rook, up onto the high bench', r.a && r.w.done && r.b, r);
+    // the cast room: whiskers in the floor beside a hollow patch; crouch on it and it gives way
+    await page.evaluate(() => { place(107, 12); sim(0.4); freeze(); }); await shot('34-37-3-tell-floor.png');
+    r = await page.evaluate(() => { thaw(); const a = AP.go([110, 13]); sim(0.6, { down: true }); sim(1.2); const row = P().groundTy; for (let k = 0; k < 4 && Math.abs(P().cx - (112 * 32 + 16)) > 10; k++) AP.exec({ walkTo: 112 * 32 + 16, dir: 0 }, 2); for (let k = 0; k < 20 && S().area.aid !== 'cast'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.5); return { ok: a.ok, row, area: S().area.aid }; });
+    check('37-3: crouch on the hollow patch: the floor gives way, a shaft down to the cast room\'s door', r.area === 'cast', r);
+    await page.evaluate(() => { sim(0.5); freeze(); }); await shot('35-37-3-room-out-of-order.png');
+    r = await page.evaluate(() => { thaw(); place(5, 6); sim(2.5); const R = S().area.roomState; AP.go([13, 7]); throwN(1); return { won: R.won }; });
+    check('37-3 cast room: THROW at the coin slot: OUT OF ORDER (nothing lost)', !r.won, r);
+    r = await page.evaluate(() => { const R = S().area.roomState; AP.go([16, 7]); sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.3, { jump: true }); sim(1); return { won: R.won }; });
+    check('37-3 cast room: a bump from below swings the blank placard up: the real slot, the prize', r.won, r);
+    await page.evaluate(() => freeze()); await shot('36-37-3-room-out-of-order-won.png'); await page.evaluate(() => thaw());
+    r = await page.evaluate(() => { place(3, 6); sim(0.2); for (let k = 0; k < 20 && S().area.aid !== 'clay'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.6); return { area: S().area.aid, x: Math.floor(P().cx / 32), row: P().groundTy }; });
+    check('37-3 cast room: its door lets Brady out down on the floor past the bench (a chute)', r.area === 'clay' && r.x >= 122 && r.row === 19, r);
+    // the twist: a low slab under a long low shelf, then a tall one straight after
+    r = await page.evaluate(() => { const a = AP.go([131, 19]); const w = pressCast(true); const b = AP.route([[142, 19], [152, 19], [160, 19], [168, 19]]); return { a: a.ok, w, b: b.ok, tile: tileT(145, 19) }; });
+    check('37-3: the twist: bent knees: a long low slab slides under the long shelf over the pit; across', r.w.done && r.b && r.tile === 'HARD', r);
+    await page.evaluate(() => { place(140, 18); sim(0.3); freeze(); }); await shot('37-37-3-under-the-shelf.png'); await page.evaluate(() => { thaw(); place(168, 18); sim(0.3); });
+    r = await page.evaluate(() => { const w = pressCast(false); const a = AP.route([[172, 16], [176, 13], [192, 13]]); if (!a.ok) return { w, a }; sim(3, { right: true }); return { w, state: S().state }; });
+    check('37-3: then stand tall for the last cast, up the wall to the gate', r.w.done && r.state && r.state !== 'play', r);
+    await page.evaluate(() => { play('37-3'); }); await pano('39-37-3-panorama.png', 0.25);
   });
 };
 

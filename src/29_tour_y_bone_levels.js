@@ -136,7 +136,53 @@ const L2 = { n: 2, name: 'Assembly Optional', mapLabel: 'Assembly Optional', arc
     { id: 'shop', gen: 'room', role: 'secret', room: 'boneQueue', theme: 'bone_room_shop', stamp: 'boneShopOld', bone: { room: true } }
   ] };
 
-Tour.amend('bone', { stamps, levels: [L1, L2] });
+/* ---------------- 37-3 Make an Impression ---------------- */
+// ① the teach: one clay tray under a press, a cliff that wants a TALL cast (stand as it comes down); ② a pit under a
+// low shelf that wants a LOW, broad one (crouch); a brush and a newt on the floor; a tall one under a rook up to the
+// high bench (a soft patch of plaster floor there gives way if you crouch on it: the cast room); ③ the twist: the
+// slab that must go under a long low shelf (bent knees, a broad low back), then a tall one straight after, to the gate.
+const clayRows = (() => {
+  const W = 212, H = 26, Gr = grid(W, H, '.');
+  ground(Gr, 0, 19, 19); put(Gr, 3, 18, '@'); put(Gr, 6, 18, 'n'); put(Gr, 9, 15, '?'); put(Gr, 11, 18, 'k'); put(Gr, 14, 18, '1');
+  ground(Gr, 20, 45, 13); put(Gr, 30, 9, '*'); put(Gr, 38, 12, 'e'); put(Gr, 25, 12, 'l');
+  ground(Gr, 46, 54, 19); put(Gr, 48, 18, 'c'); put(Gr, 49, 18, 'N'); put(Gr, 51, 18, '2');
+  pit(Gr, 55, 63); fillG(Gr, 54, 15, 64, 16, 'H');
+  ground(Gr, 64, 91, 19); put(Gr, 70, 18, 'u'); put(Gr, 74, 14, 'R'); put(Gr, 80, 18, 'w'); put(Gr, 86, 18, '3'); put(Gr, 84, 18, 'k');
+  ground(Gr, 92, 120, 13); put(Gr, 96, 12, 'c'); put(Gr, 100, 9, '?'); put(Gr, 104, 8, 'A'); put(Gr, 98, 6, 'M'); put(Gr, 116, 12, 'l');
+  // the cast room: a soft patch of floor (whiskers beside it), a shaft, the pocket and its door
+  fillG(Gr, 110, 14, 111, 20, '.'); fillG(Gr, 108, 19, 113, 20, '.'); put(Gr, 112, 20, 'D'); put(Gr, 110, 12, 'f'); put(Gr, 112, 12, 'x');
+  ground(Gr, 121, 136, 19); put(Gr, 124, 18, 'X'); put(Gr, 127, 18, 'c'); put(Gr, 129, 18, 'k'); put(Gr, 131, 18, '4');
+  pit(Gr, 137, 152); fillG(Gr, 134, 15, 153, 16, 'H'); put(Gr, 144, 18, 'o.o.o');
+  ground(Gr, 153, 173, 19); put(Gr, 160, 18, 'w'); put(Gr, 164, 10, 'M'); put(Gr, 168, 18, '5');
+  ground(Gr, 174, W - 1, 13); put(Gr, 180, 12, 'r'); put(Gr, 186, 12, 'l'); put(Gr, 200, 12, 'G'); fillG(Gr, W - 1, 0, W - 1, 12, '#');
+  return rowsOf(Gr);
+})();
+const PRESS = (tray, need, casts, g, edge, phase) => ['piece', 'bone.press', { tray, need, casts, g, edge, phase: phase || 0 }];
+stamps.boneClay = { floor: 19, rows: clayRows, gold: { '*': 'must', A: 'high', R: 'risky' }, items: ['power', 'power'], doors: [{ to: 'cast@in', look: 'boneHatch' }], legend: {
+  n: SIGN('A CLAY PRESS! STAND IN THE TRAY AS IT COMES DOWN: STAND UP FOR A TALL CAST, CROUCH (DOWN) FOR A LOW ONE'),
+  N: SIGN('THE CHALK OUTLINE SAYS WHICH CAST FITS. TOO TALL FOR A LOW SHELF? BEND YOUR KNEES'),
+  k: ['decor', 'boneBucket'], l: ['decor', 'boneLabel'], r: ['decor', 'boneRock'], e: ['enemy', 'boneMouse'], w: ['enemy', 'boneNewt'], u: ['enemy', 'boneBrush'], M: ['enemy', 'boneRook'],
+  '1': PRESS([14, 15, 19], 'tall', { tall: [18, 16, 19, 18], low: [17, 18, 20, 18] }, 0),
+  '2': PRESS([51, 52, 19], 'low', { low: [55, 19, 63, 19], tall: [54, 15, 55, 18] }, 1),
+  '3': PRESS([86, 87, 19], 'tall', { tall: [90, 16, 91, 18], low: [89, 18, 92, 18] }, 2, null, 1.2),
+  '4': PRESS([131, 132, 19], 'low', { low: [137, 19, 152, 19], tall: [136, 15, 137, 18] }, 3),
+  '5': PRESS([168, 169, 19], 'tall', { tall: [172, 16, 173, 18], low: [171, 18, 174, 18] }, null, [174, 12], 0.8),
+  f: ['piece', 'bone.soft', { x: 110, y: 13, w: 2, to: [110, 20] }], x: ['decor', 'boneTell'], X: ['anchor', 'castOut']
+} };
+stamps.boneCastOld = oldRoom('clay@castOut', ['star']);
+const L3 = { n: 3, name: 'Make an Impression', mapLabel: 'Make an Impression', arch: 'mould', theme: 'bone_clay',
+  gimmick: 'Clay presses: stand in the tray as the press comes down and the cast takes your shape. Stand tall for a step up a wall, crouch for a low, broad slab under a shelf',
+  hint: 'Watch the chalk outline: it shows the cast that fits. The press shakes before it drops. On the high bench, mouse whiskers poke out of the floor by a patch that sounds hollow...',
+  postcard: 'Brady! You pressed yourself into the clay and it made a STEP. A step shaped like you. I stood on your shoulders. Lovely view. ♥ C',
+  enemies: [['boneMouse', 1], ['boneNewt', 2], ['boneBrush', 1], ['boneRook', 2]],
+  mapCell: [2, 0], mapFrom: 1,
+  exits: { main: { to: '37-4' } },
+  areas: [
+    { id: 'clay', gen: 'room', theme: 'bone_clay', stamp: 'boneClay', bone: { press: true }, bottomKill: true },
+    { id: 'cast', gen: 'room', role: 'secret', room: 'boneOrder', theme: 'bone_room_cast', stamp: 'boneCastOld', bone: { room: true } }
+  ] };
+
+Tour.amend('bone', { stamps, levels: [L1, L2, L3] });
 
 /* ---------------- the land's map: the quarry seen from the rim ---------------- */
 // the tipped crate where the arrival trail starts (left), the trackway terraces, the scree slope with the ribs, the
