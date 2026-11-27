@@ -287,6 +287,139 @@ async function session(viewport, fn) {
       await ev(() => { play('14-6'); });
       await pano('pano-14-6.jpg');
     });
+    /* ---------- the secret rooms: each entrance found with real inputs, each game failed once and won once, each exit used ---------- */
+    await run('secrets', async () => {
+      const R = {};
+      // a helper in the page: the room state of the current area; tokens by id
+      await ev(() => { window.room = () => S().area.roomState; window.kit = () => S().area.roomKit; window.waitArea = (aid, sec) => until(sec || 4, () => ({}), () => S().area.aid === aid && S().fade.a < 0.05 && P().state === 'play'); window.upDoor = () => { sim(0.05, { up: true, upPressed: true }); }; window.runTo = (tx, sec) => { const A = S().area; return until(sec || 12, () => { const p = P(), row = Math.round((p.y + p.h) / 32), fx = Math.floor(p.cx / 32), gap = p.onGround && [1, 2].some(d => A.tiles[row * A.W + fx + d] === 0); return { right: p.cx < tx - 6, left: p.cx > tx + 20, jump: true, jumpPressed: gap }; }, () => Math.abs(P().cx - tx) < 10 && P().onGround); };
+      window.hop = sec => { let n = 0; until(sec || 1.4, k => ({ jump: true, jumpPressed: k === 0 }), () => ++n > 30 && P().onGround); }; });
+      // 14-1: a boosted launch off the first ramp reaches the pigeon loft; inside, the scooter time trial; out through the roller door
+      await ev(() => { fresh(); play('14-1'); const loft = S().entities.find(e => e.s && e.s.look === 'itLoft'); const ramp = ents('ItRamp').filter(r => r.x < loft.x).sort((a, b) => b.x - a.x)[0]; place(Math.floor(ramp.x / 32) - 8, Math.floor((ramp.y + ramp.h) / 32) - 1); sim(0.4); });
+      await shot('80-14-1-tell-pigeon-loft.png');
+      let r = await ev(() => {
+        const loft = S().entities.find(e => e.s && e.s.look === 'itLoft'), ramp = ents('ItRamp').filter(q => q.x < loft.x).sort((a, b) => b.x - a.x)[0], p = P();
+        // a plain launch tops out under the loft
+        place(Math.floor(ramp.x / 32) - 6, Math.floor((ramp.y + ramp.h) / 32) - 1); let top = 1e9; until(2.5, () => ({ right: true }), () => { top = Math.min(top, p.y + p.h); return false; });
+        const plainTop = Math.floor(top / 32);
+        // the boosted one: boost just before the ramp, ride on, land on the loft ledge, in at its door
+        place(Math.floor(ramp.x / 32) - 6, Math.floor((ramp.y + ramp.h) / 32) - 1); let boosted = false;
+        until(3, () => { const b = !boosted && p.cx > ramp.x - 80; if (b) boosted = true; return { right: p.cx < loft.cx - 10, action: b, actionPressed: b }; }, () => p.onGround && p.y + p.h <= loft.y + loft.h + 4 && p.vy >= 0 && Math.abs(p.cx - loft.cx) < 3 * 32);
+        const onLedge = Math.abs(p.y + p.h - (loft.y + loft.h)) < 6;
+        until(1.5, () => ({ down: true, left: p.cx > loft.cx + 6, right: p.cx < loft.cx - 6 }), () => Math.abs(p.cx - loft.cx) < 8 && Math.abs(p.vx) < 10);
+        upDoor(); waitArea('garage');
+        return { plainTop, loftRow: Math.floor((loft.y + loft.h) / 32), onLedge, area: S().area.aid };
+      });
+      check('14-1 secret: a plain ramp launch tops out under the pigeon loft; a BOOSTED one lands on it and its door leads in', r.plainTop > r.loftRow && r.onLedge && r.area === 'garage', r);
+      await shot('81-14-1-time-trial.png');
+      r = await ev(() => {
+        const K = kit(), F = K.data.flags, p = P(), Rm = room();
+        // fail: pass flag 1, then dawdle (brake) until the clock runs out
+        place(F[0][0] - 2, F[0][1]); until(1.5, () => ({}), () => Rm.next >= 1); until(14, () => ({ down: true }), () => Rm.next === 0 && Rm.fails >= 1);
+        const failed = Rm.fails >= 1 && !Rm.won;
+        // win: ride into each flag in turn (a short run-up to each; the third over the washing-line bounce)
+        place(F[0][0] - 2, F[0][1]); until(1.2, () => ({ right: true }), () => Rm.next >= 1);
+        place(F[1][0] - 2, F[1][1]); until(1.2, () => ({ right: true }), () => Rm.next >= 2);
+        place(F[2][0] - 9, 10); until(4, () => ({ right: p.cx < F[2][0] * 32 + 16, jump: true, left: p.cx > F[2][0] * 32 + 40 }), () => Rm.won);
+        return { failed, won: Rm.won };
+      });
+      check('14-1 secret: the time trial is lost when the clock runs out, and won by riding through the three flags', r.failed && r.won, r);
+      await shot('82-14-1-time-trial-won.png');
+      r = await ev(() => { const d = S().entities.find(e => e.s && e.s.look === 'itGarage' && e.s.targetRef && /garageOut/.test(e.s.targetRef)); place(Math.floor(d.cx / 32), Math.floor((d.y + d.h) / 32) - 1); P().vx = 0; sim(0.3, { down: true }); upDoor(); waitArea('vicolo'); const an = S().level.areas[0].anchors.garageOut; return { area: S().area.aid, dx: Math.round((P().cx - an.x) / 32) }; });
+      check('14-1 secret: the roller door leads out onto the street further on (not back to the loft)', r.area === 'vicolo' && Math.abs(r.dx) <= 2, r);
+      // 14-2: a full charge, straight up through the flour vent; the run along the cupboard tops; the pantry hatch
+      await ev(() => { play('14-2'); const v = ents('ItFlourTell')[0]; place(Math.floor(v.x / 32) - 4, Math.floor((v.y + v.h) / 32)); sim(0.3); });
+      await shot('83-14-2-tell-flour-vent.png');
+      r = await ev(() => {
+        const v = ents('ItFlourTell')[0], pad = ents('ItDough').find(d => Math.abs(d.cx - v.cx) < 48), p = P();
+        // a half charge is not enough
+        place(Math.floor(pad.cx / 32), Math.floor(pad.hy / 32) - 1); sim(0.6); let top = 1e9, n = 0; until(1.6, k => ({ jump: true, jumpPressed: k === 0 }), () => { top = Math.min(top, p.y + p.h); return ++n > 20 && p.onGround; });
+        const halfTop = Math.floor(top / 32);
+        // full: wait, jump straight up, steer right over the cupboard tops at the top of the fling
+        play('14-2'); const v2 = ents('ItFlourTell')[0], pad2 = ents('ItDough').find(d => Math.abs(d.cx - v2.cx) < 48);
+        place(Math.floor(pad2.cx / 32), Math.floor(pad2.hy / 32) - 1); sim(1.4);
+        let air = false; until(2.5, k => { if (!P().onGround) air = true; return { jump: true, jumpPressed: k === 0, right: true }; }, () => air && P().onGround);
+        const slabRow = Math.floor((v2.y) / 32) + 0;
+        const up = feetRow();
+        // run the loft to the pantry hatch
+        const hatch = S().entities.find(e => e.s && e.s.look === 'itPantry');
+        const A = S().area, row = feetRow(); let gapX = 0; for (let x = Math.floor(P().cx / 32) + 2; x < A.W; x++) if (A.tiles[row * A.W + x] === 0) { gapX = x; break; }
+        until(10, () => { const near = P().onGround && P().cx > gapX * 32 - 64 && P().cx < gapX * 32; return { right: P().cx < hatch.cx - 6, left: P().cx > hatch.cx + 20, jump: true, jumpPressed: near }; }, () => Math.abs(P().cx - hatch.cx) < 10 && P().onGround && Math.abs(P().y + P().h - (hatch.y + hatch.h)) < 6);
+        upDoor(); waitArea('dispensa');
+        return { halfTop, up, hatchRow: Math.floor((hatch.y + hatch.h) / 32), area: S().area.aid };
+      });
+      check('14-2 secret: half a charge falls short; a full fling goes up through the vent, the cupboard-top run leads to the pantry hatch', r.halfTop >= r.hatchRow && r.up <= r.hatchRow && r.area === 'dispensa', r);
+      await shot('84-14-2-pizza-order.png');
+      r = await ev(() => {
+        const K = kit(), Rm = room(), p = P(), jump = k => { place(K.data.jars[k], 10); hop(1.2); };
+        until(0.5, () => ({}));
+        const wrong = [0, 1, 2, 3, 4, 5].find(k => Rm.order.indexOf(k) < 0); jump(wrong); const failed = Rm.fails >= 1 && !Rm.won;
+        for (const k of Rm.order.slice()) jump(k);
+        return { failed, won: Rm.won };
+      });
+      check('14-2 secret: a wrong jar burns the pizza; the three on the ticket make it', r.failed && r.won, r);
+      await shot('85-14-2-pizza-made.png');
+      r = await ev(() => { const gate = S().entities.find(e => e.constructor.name === 'Gate' && e.secret); return { gate: !!gate }; });
+      check('14-2 secret: the way on to 14-6 (a secret gate) is in the pantry', r.gate, r);
+      r = await ev(() => { const d = S().entities.find(e => e instanceof window.BRADY_TYPES.portal && e.target && e.target.area === 0); place(Math.floor(d.cx / 32), Math.floor((d.y + d.h) / 32) - 1); upDoor(); waitArea('cucina'); const an = S().level.areas[0].anchors.pantryBack, hatch = S().entities.find(e => e.s && e.s.look === 'itPantry'); return { area: S().area.aid, row: feetRow(), hatchRow: Math.floor((hatch.y + hatch.h) / 32), dx: Math.round((P().cx - an.x) / 32) }; });
+      check('14-2 secret: the pantry door drops back to the kitchen floor (not up on the loft)', r.area === 'cucina' && r.row > r.hatchRow + 3 && Math.abs(r.dx) <= 2, r);
+      // 14-3: walk into the cracked wall; the bell echo; out a storey higher
+      await ev(() => { play('14-3'); place(6, 65); sim(0.3); });
+      await shot('86-14-3-tell-cracked-wall.png');
+      r = await ev(() => { place(3, 65); until(2, () => ({ left: true }), () => S().area.aid === 'store'); waitArea('store'); return { area: S().area.aid }; });
+      check('14-3 secret: walking into the cracked stretch of wall goes in (no door, no Up)', r.area === 'store', r);
+      r = await ev(() => {
+        const K = kit(), Rm = room(), ring = k => { place(K.data.bells[k], 10); hop(1.4); };
+        until(10, () => ({}), () => Rm.phase === 'echo');
+        const wrong = [0, 1, 2].find(k => k !== Rm.tune[0]); ring(wrong); const failed = Rm.fails >= 1;
+        until(10, () => ({}), () => Rm.phase === 'echo');
+        for (const k of Rm.tune.slice()) ring(k);
+        return { failed, won: Rm.won };
+      });
+      check('14-3 secret: a wrong bell is a CLANG and the tune plays again; ringing it back wins', r.failed && r.won, r);
+      await shot('87-14-3-bell-echo.png');
+      r = await ev(() => { const d = S().entities.find(e => e.s && e.s.look === 'itTowerDoor' && e.target && e.target.area === 0 && /storeOut/.test(e.s.targetRef || '')); place(Math.floor(d.cx / 32), Math.floor((d.y + d.h) / 32) - 1); upDoor(); waitArea('torre'); return { area: S().area.aid, row: feetRow() }; });
+      check('14-3 secret: the store\'s second door comes out a storey higher', r.area === 'torre' && r.row === 57, r);
+      // 14-4: the column of song up through the gap in the ceiling, the gantry run, the opera hats, the rope down
+      await ev(() => { play('14-4'); place(14, 11); sim(0.2); });
+      await shot('88-14-4-tell-ceiling-gap.png');
+      r = await ev(() => { const d = ents('ItDiva').find(q => q.gi === 0); until(8, () => ({}), () => d.phase().singing && d.phase().k < 0.3); place(19, 11); until(4, k => ({ jump: true, jumpPressed: k === 0 }), () => S().area.aid === 'loggione'); waitArea('loggione'); return { area: S().area.aid }; });
+      check('14-4 secret: riding the song up through the gap in the ceiling comes out in the gantry', r.area === 'loggione', r);
+      await shot('89-14-4-gantry.png');
+      r = await ev(() => { const d = S().entities.find(e => e.s && e.s.look === 'itStageDoor'); runTo(d.cx, 14); upDoor(); waitArea('loggia'); return { area: S().area.aid }; });
+      check('14-4 secret: along the gantry (spike pits, sour notes) to the royal box door', r.area === 'loggia', r);
+      r = await ev(() => {
+        const K = kit(), Rm = room(), p = P(), pickCup = c => { p.x = c.x - p.w / 2; p.y = (K.data.row + 1) * 32 - 34 - p.h + 4; p.vy = 4 * 32; sim(0.05); };
+        place(K.data.slots[1] - 2, K.data.row); until(20, () => ({}), () => Rm.phase === 'pick'); pickCup(Rm.cups.find(c => c.k !== Rm.prizeCup)); const failed = !Rm.won && !!Rm.joke;
+        place(K.data.slots[1] - 2, K.data.row); until(30, () => ({}), () => Rm.phase === 'pick'); pickCup(Rm.cups.find(c => c.k === Rm.prizeCup)); sim(0.3);
+        return { failed, won: Rm.won };
+      });
+      check('14-4 secret: the opera hats: a wrong hat is a joke, the right one wins', r.failed && r.won, r);
+      await shot('90-14-4-opera-hats.png');
+      r = await ev(() => { const d = S().entities.find(e => e instanceof window.BRADY_TYPES.portal && e.target); place(Math.floor(d.cx / 32), Math.floor((d.y + d.h) / 32) - 1); upDoor(); waitArea('loggione'); place(42, 10); until(3, () => ({ right: true }), () => S().area.aid === 'teatro'); waitArea('teatro'); return { area: S().area.aid, x: Math.floor(P().cx / 32), row: feetRow() }; });
+      check('14-4 secret: back on the gantry, the rope through the hole drops into the house by the pit balcony', r.area === 'teatro' && r.x >= 36 && r.x <= 46, r);
+      // 14-5: the curtain in the wings, the tenor's gold record (a prank), then the real cage
+      await ev(() => { play('14-5'); const c = S().entities.find(e => e.constructor.name === 'TourCurtain'); place(Math.floor(c.cx / 32) - 3, 13); sim(0.3); });
+      await shot('91-14-5-tell-curtain.png');
+      r = await ev(() => { const c = S().entities.find(e => e.constructor.name === 'TourCurtain'); place(Math.floor(c.cx / 32), 13); upDoor(); waitArea('camerino'); const Rm = room(); const ch = S().entities.find(e => e.constructor.name === 'TourRoomChest'); until(9, k => ({ right: P().cx < ch.cx - 4, left: P().cx > ch.cx + 14, jump: true, jumpPressed: P().onGround && k % 40 === 0 }), () => Rm.won); return { area: S().area.aid, won: Rm.won }; });
+      check('14-5 secret: behind the curtain, the gold record is a prank, then the cage opens', r.area === 'camerino' && r.won, r);
+      await shot('92-14-5-dressing-room.png');
+      // 14-6: the pit with no coffee: drop in; the bean store; out further along
+      await ev(() => { fresh(); play('14-6'); const t = ents('ItSackTell')[0]; for (const d of ents('TourDoom')) d.front = -1e5; place(Math.floor(t.x / 32) - 3, 13); sim(0.2); });
+      await shot('93-14-6-tell-sack-pit.png');
+      r = await ev(() => { const t = ents('ItSackTell')[0]; for (const d of ents('TourDoom')) d.front = -1e5; place(Math.floor(t.x / 32) - 1, 13); until(3, () => ({ right: P().cx < t.cx }), () => S().area.aid === 'retro'); waitArea('retro'); return { area: S().area.aid, dead: P().dead }; });
+      check('14-6 secret: dropping into the pit with the bean sacks (no coffee) lands in the bean store', r.area === 'retro' && !r.dead, r);
+      r = await ev(() => {
+        const K = kit(), Rm = room(); place(10, 10); until(4, () => ({}), () => Rm.phase === 'run');
+        until(K.data.t + 4, () => ({}), () => Rm.phase === 'rest'); const failed = Rm.phase === 'rest' && !Rm.won;
+        until(4, () => ({}), () => Rm.phase === 'run');
+        for (const tk of K.data.tokens) { const e = S().entities.find(q => q.id === tk.id && !q.remove); if (e) { place(tk.tx, tk.ty); sim(0.1); } }
+        sim(0.3); return { failed, won: Rm.won };
+      });
+      check('14-6 secret: the bean store: the clock runs out once, then all six beans in time', r.failed && r.won, r);
+      await shot('94-14-6-bean-store.png');
+      r = await ev(() => { const d = S().entities.find(e => e instanceof window.BRADY_TYPES.portal && e.target); place(Math.floor(d.cx / 32), Math.floor((d.y + d.h) / 32) - 1); upDoor(); waitArea('bar'); const an = S().level.areas[0].anchors.retroBack, t = ents('ItSackTell')[0]; return { area: S().area.aid, ahead: P().cx > t.cx + 64, dx: Math.round((P().cx - an.x) / 32) }; });
+      check('14-6 secret: the store\'s door comes out further along the bar', r.area === 'bar' && r.ahead && Math.abs(r.dx) <= 2, r);
+    });
     /* ---------- the land's map ---------- */
     await run('map', async () => {
       const r = await ev(() => { for (const id of ['14-1', '14-2', '14-3', '14-4', '14-5', '14-6']) window.BRADY.Save.data.unlocked[id] = true; window.BRADY.goToMap('world', 1, '14-1'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } const s = S(); return { cc: s.ow && s.ow.cc }; });

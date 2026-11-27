@@ -53,7 +53,7 @@ class ItPigeonTell extends Ent {
 }
 // clue: flour trickling down out of a vent in the ceiling (14-2)
 class ItFlourTell extends Ent {
-  constructor(g, s) { super(g, s, (s.w || 3) * TS, (s.h || 6) * TS); this.x = s.x - TS / 2; this.y = s.y - this.h; this.back = true; }
+  constructor(g, s) { super(g, s, (s.w || 3) * TS, (s.h || 6) * TS); this.x = s.x - this.w / 2; this.y = s.y - this.h; this.back = true; }
   touchPlayer() {}
   draw(ctx) {
     const x = this.x, y = this.y, w = this.w, h = this.h, t = this.t;
@@ -308,32 +308,31 @@ TourRooms.def('itBells', {
 // through the vent onto the top of the cupboards: a run with a moka pot, a tomato and a gap (back down into the
 // kitchen), the pantry hatch at its end. { to, back }
 Tour.pieces['it.loft'] = (st, o) => {
-  const B = st.B, x = st.x, n = 42, gy = st.gy, slab = gy - 8;
+  const B = st.B, x = st.x, n = 46, gy = st.gy, slab = gy - 7;
   st.floor(x, x + n);
-  // the slab: the kitchen ceiling under the loft (two rows), from x + 2 to the end
-  B.fill(x + 2, slab, x + n, slab + 1, T.HARD);
-  // the vent (three wide) with the dough pad right under it, over a little pot
-  const vx = x + 6; B.fill(vx, slab, vx + 2, slab + 1, T.EMPTY);
-  st.pit(vx, vx + 2); B.fill(vx, slab, vx + 2, slab + 1, T.EMPTY); B.fill(x + 2, slab, vx - 1, slab + 1, T.HARD); B.fill(vx + 3, slab, x + n, slab + 1, T.HARD);
-  B.fill(vx, st.H - 2, vx + 2, st.H - 1, T.LAVA);
+  // the slab (two rows): the kitchen ceiling under the loft; a six-wide vent in it, the dough pad under the vent's
+  // left half, over a little pot of sauce
+  const vx = x + 6;
+  B.fill(x + 2, slab, x + n, slab + 1, T.HARD); B.fill(vx, slab, vx + 5, slab + 1, T.EMPTY);
+  st.pit(vx, vx + 2); B.fill(vx, st.H - 2, vx + 2, st.H - 1, T.LAVA);
   B.spawn('itDough', vx, gy - 1, { pw: 3 }); for (let q = 0; q < 3; q++) B.ghosts.push([vx + q, gy]);
-  for (let q = 0; q < 3; q++) B.edge([vx + q, gy - 1], [vx + 5, slab]);
-  B.spawn('itFlourTell', vx + 1, gy - 1, { w: 3, h: gy - slab - 2 });
+  for (let q = 0; q < 3; q++) B.edge([vx + q, gy - 1], [vx + 8, slab]);
+  B.spawn('itFlourTell', vx + 2, gy - 1, { w: 4, h: gy - slab - 2 });
   B.decorAt('itSaucePot', vx, st.H - 2, 3);
   B.spawn('itPigeonTell', x + 2, gy - 1, { dir: 1, look: 'up' });
-  for (let y = slab - 2; y > slab - 6; y--) B.pickAt(vx + 1, y);
-  // the loft run on top of the slab: coins, a moka pot, a tomato, a gap down to the kitchen
-  B.picksRow(vx + 4, vx + 10, slab - 2);
-  st.enemy('itMoka', vx + 14, slab);
-  B.fill(vx + 18, slab, vx + 20, slab + 1, T.EMPTY);
-  B.picksArc(vx + 17, vx + 21, slab - 2, 2);
-  st.enemy('itTomato', vx + 25, slab);
-  B.picksRow(vx + 27, vx + 30, slab - 2);
+  for (let y = slab - 2; y > slab - 6; y--) B.pickAt(vx + 3, y);
+  // the loft run on top of the slab: coins, a moka pot, a gap back down into the kitchen, a tomato
+  B.picksRow(vx + 7, vx + 12, slab - 2);
+  st.enemy('itMoka', vx + 16, slab);
+  B.fill(vx + 21, slab, vx + 23, slab + 1, T.EMPTY);
+  B.picksArc(vx + 20, vx + 24, slab - 2, 2);
+  st.enemy('itTomato', vx + 28, slab);
+  B.picksRow(vx + 30, vx + 33, slab - 2);
   // the pantry hatch at the loft's end; the way back from the pantry lands on the kitchen floor below
   B.spawn('portal', x + n - 3, slab - 1, { kind: 'door', look: 'itPantry', targetRef: o.to || null });
   if (o.back) B.anchor(o.back, x + n - 2, gy - 1);
   // the kitchen floor under the loft: a tomato, coins
-  st.coins(x + 12, x + 30, gy - 2); st.enemy('itTomato', x + 22, gy);
+  st.coins(x + 14, x + 34, gy - 2); st.enemy('itTomato', x + 24, gy);
   return x + n + 1;
 };
 // 14-6: the one pit with no coffee in it: soft sacks of beans at the bottom; drop in (a bottom seam into the bean
