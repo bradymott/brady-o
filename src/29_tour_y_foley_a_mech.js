@@ -742,7 +742,7 @@ class FoleyMachine extends Ent {
 // the microphone on its stand: { lock, want: 'tin' | 'rice' | 'wind' | 'pea' }; the machines near it are its choices
 class FoleyMic extends Ent {
   constructor(g, s) { super(g, s, TS, TS); this.x = s.x - TS / 2; this.y = s.y - TS; this.friendly = true; this.back = true; this.fProp = true; this.tx = Math.round(this.x / TS); this.fy = Math.round(s.y / TS); this.lockId = s.lock; this.want = s.want; this.mounted = false; this.sel = 0; this.got = null; this.done = false; this.stickT = 0; this.card = s.card; }
-  machines() { return this.g.entities.filter(e => e instanceof FoleyMachine && Math.abs(e.cx - this.cx) < 12 * TS && Math.abs(e.cy - this.cy) < 6 * TS).sort((a, b) => a.x - b.x); }
+  machines() { return this.g.entities.filter(e => e instanceof FoleyMachine && Math.abs(e.cx - this.cx) < 13 * TS && Math.abs(e.cy - this.cy) < 6 * TS).sort((a, b) => a.x - b.x); }
   fTouch(p) { return !this.done && onMark(p, this.tx, this.fy, 0.9); }
   fInput(p, inp, dt) {
     if (!this.mounted) { if (inp.actionPressed) { this.mounted = true; this.sel = clamp(this.sel, 0, this.machines().length - 1); sfx('grab', 'select', { vol: 0.4 }); } return; }

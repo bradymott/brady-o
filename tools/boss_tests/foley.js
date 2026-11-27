@@ -34,12 +34,12 @@ module.exports = async ({ page, check, shot }) => {
     const b = boss(), hp0 = b.hp; b.hurtT = 0; sim(0.3); mount(); selTo(w ? 1 : 0); b.go('lid'); sim(1 / 120);
     const tell = waitAct('clap'); sim(0.1); throwPress(); const got = mic().got; throwPress(); const hp1 = b.hp;
     // the shock ring: jump it when it comes
-    const p = P(); let jumped = false; for (let k = 0; k < 400; k++) { const sh = S().entities.find(e => e.constructor.name === 'TourShot' && !e.remove); if (sh && Math.abs(sh.cx - p.cx) < 70 && p.onGround) { jumped = true; sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.35, { jump: true }); } else sim(1 / 120); if (!sh && jumped) break; }
-    sim(0.5); return { tell, got, hp0, hp1, jumped, hurt: P().invuln < 900, phase: b.phase };
+    const p = P(); let jumped = false, ring = false; for (let k = 0; k < 400; k++) { const sh = S().entities.find(e => e.constructor.name === 'TourShot' && !e.remove); if (sh && !ring) ring = [Math.round(sh.cx), Math.round(p.cx), k, b.act, +sh.life.toFixed(2), sh.w]; if (sh && Math.abs(sh.cx - p.cx) < 70 && p.onGround) { jumped = true; sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.35, { jump: true }); } else sim(1 / 120); if (!sh && (jumped || b.act !== 'clap')) break; }
+    sim(0.5); return { tell, got, hp0, hp1, jumped, ring, hurt: P().invuln < 900, phase: b.phase };
   }, wrong);
   r = await clap(true);
   check('foley: the rice played back at his clap does nothing (it is the tin that sounds like it)', r.got === null && r.hp1 === r.hp0 && r.jumped, r);
-  for (let k = 1; k <= 2; k++) { r = await clap(false); check(`foley hit ${k}: the lid lifts (tell over half a second), the clap: the tin captured on it and played back makes him bow; the shock ring is jumped`, r.tell >= 0.5 && r.got === 'tin' && r.hp1 === r.hp0 - 1 && r.jumped, r); }
+  for (let k = 1; k <= 2; k++) { r = await clap(false); check(`foley hit ${k}: the lid lifts (tell over half a second), the clap: the tin captured on it and played back makes him bow (a quick bow cuts the clap short: no shock ring; any ring that comes is jumped)`, r.tell >= 0.5 && r.got === 'tin' && r.hp1 === r.hp0 - 1 && (r.jumped || !r.ring), r); }
   check('foley: PHASE 2 after two bows (THE HAIL)', r.phase === 2, r);
   await ev(() => { const b = boss(); b.go('wheel'); sim(0.9); }); await snap('foley_thunder_cloud.png');
   // phase 2: the cloud wheels in, the hail and the pouring rice; played back too early: nothing; on the empty: a bow

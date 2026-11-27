@@ -323,8 +323,9 @@ const HELPERS = `(() => {
       if (st === 'J') { sim(1 / 120, { jump: true, jumpPressed: true }); let t = 0; while (t < 1.2 && !(p.wash && p.wash.grip && t > 0.05)) { sim(1 / 120, { jump: true, up: true }); t += 1 / 120; } if (!(p.wash && p.wash.grip)) return { ok: false, why: 'no grab', at: tileOf() }; continue; }
       if (st === 'U') { sim(1 / 120, { jump: true, jumpPressed: true }); let t = 0; while (t < 2 && !(p.onGround && t > 0.1)) { sim(1 / 120, { jump: true, right: t > 0.2 && p.y + p.h < 6 * 32 }); t += 1 / 120; } sim(0.2); continue; }
       if (st === 'R' || st === 'L') { const d = st === 'R' ? 1 : -1; sim(1 / 120, { jump: true, jumpPressed: true, right: d > 0, left: d < 0 }); let t = 0; while (t < 2 && !(p.onGround && t > 0.1)) { sim(1 / 120, { jump: t < 0.3, right: d > 0, left: d < 0 }); t += 1 / 120; } sim(0.2); continue; }
-      const [tx, ty] = st; let t = 0;
-      while (t < 6) {
+      const [tx, ty] = st; let t = 0, still = 0, lx = p.cx, ly = p.y;
+      while (t < 6 && still < 0.25) {   // steer there (or as near as the ropes allow: stop once he stops moving)
+        if (Math.abs(p.cx - lx) + Math.abs(p.y - ly) < 0.01) still += 1 / 120; else still = 0; lx = p.cx; ly = p.y;
         if (p.dead || !(p.wash && p.wash.grip)) return { ok: false, why: p.dead ? 'died' : 'fell', at: tileOf(), st };
         const dx = tx * 32 + 16 - p.cx, dy = ty * 32 + 16 - (p.y + 8);
         if (Math.abs(dx) < 5 && Math.abs(dy) < 5) break;
@@ -478,7 +479,7 @@ LEVELS.s3 = async (page, shot, run, pano) => {
 };
 // ---------------- 29-3's room: from the top of the net up through the sand-trickling gap in the loft floor ----------------
 LEVELS.r3 = async (page, shot) => { await run0(page, 'r3', () => roomRun(page, shot, '36-29-3-B18', () => {
-  play('29-3'); place(58, 15); sim(0.3); walkTo(61, 3); const n = netGo(['grip', [61, 7], [71, 7], 'J', [71, 3], 'R']); walkTo(81, 3); const aid = door(); return { ok: aid === 'loft', aid, n, inX: 81, other: true, how: 'climb to the top of the cargo net, jump up through the gap where the sand trickles, the door in the flies' }; })); };
+  play('29-3'); place(58, 15); sim(0.3); walkTo(61, 3); const n = netGo(['grip', [61, 7], [71, 7], 'J', [73, 3], 'R']); walkTo(81, 3); const aid = door(); return { ok: aid === 'loft', aid, n, inX: 81, other: true, how: 'climb to the top of the cargo net, jump up through the gap and grab the lifting ropes, climb to their top right, jump right onto the loft floor where the sand trickles, the door in the flies' }; })); };
 
 // ---------------- 29-4 Sound Goes Round ----------------
 const S4_ROUTE = [
