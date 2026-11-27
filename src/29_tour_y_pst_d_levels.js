@@ -219,6 +219,120 @@ const L3 = { n: 3, name: 'Half a Yawn', mapLabel: 'Half a Yawn', arch: 'yawn', t
     { id: 'kitchen', gen: 'room', role: 'secret', room: 'pstTray', theme: 'pst_room_kitchen', stamp: 'pstKitchenOld', pst: { room: true } }
   ] };
 
-Tour.amend('pst', { stamps, levels: [L1, L2, L3] });
+/* ---------------- 32-4 Borrow a Second ---------------- */
+// the floor is row 19. ① the teach: an hourglass flower, a snapping jaw to hold open, a quick lift up a wall (hold it
+// at the top), P1; ② a low corridor of three jaws (one second for the fastest), the ferry and the lift over a long
+// pit (hold the lift at the bottom while the ferry brings you), a very quick lift to a high nook (a lone z: the
+// nightcaps, B34); ③ the twist: a folding ruler whose near elbow always folds back: hold the elbow and its far end
+// finishes the bridge (P3 over it); again, with a jaw at the far end to time; the gate
+const borrowRows = (() => {
+  const W = 220, H = 24, Gr = grid(W, H, '.');
+  // ① the teach
+  ground(Gr, 0, 22, 19); put(Gr, 3, 18, '@'); put(Gr, 6, 18, 'n'); put(Gr, 9, 14, '?'); put(Gr, 12, 18, 'f'); put(Gr, 16, 18, 'j');
+  put(Gr, 24, 18, 'E'); ground(Gr, 29, 36, 13); put(Gr, 32, 9, '*'); put(Gr, 30, 12, 'o.o.o');
+  ground(Gr, 37, 94, 19); put(Gr, 42, 18, 'l'); put(Gr, 48, 18, 'c'); put(Gr, 52, 14, '?');
+  // ② the corridor of jaws
+  put(Gr, 58, 18, 'N'); put(Gr, 62, 18, 'f'); fillG(Gr, 64, 9, 88, 14, 'H'); put(Gr, 68, 18, 'i'); put(Gr, 75, 18, 'k'); put(Gr, 82, 18, 'q'); put(Gr, 70, 16, 'o.o.o.o.o.o.o.o');
+  // the ferry and the lift over the long pit
+  put(Gr, 91, 18, 'V'); put(Gr, 93, 18, 'f'); put(Gr, 96, 18, 'm'); put(Gr, 105, 18, 'E'); put(Gr, 100, 13, 'w');
+  ground(Gr, 109, 116, 13); put(Gr, 112, 12, 'c');
+  ground(Gr, 117, 156, 19); put(Gr, 119, 18, 'p'); put(Gr, 136, 18, 'u');
+  // the very quick lift to the high nook
+  put(Gr, 121, 18, 'f'); put(Gr, 124, 18, 'U'); fillG(Gr, 127, 9, 132, 10, '#'); put(Gr, 130, 8, 'K'); put(Gr, 128, 8, 'Z'); put(Gr, 142, 18, 'a');
+  // ③ the folding rulers
+  put(Gr, 148, 18, 'M'); put(Gr, 152, 18, 'f'); put(Gr, 157, 18, 'r'); put(Gr, 162, 15, 'R');
+  ground(Gr, 167, 182, 19); put(Gr, 172, 13, 'w'); put(Gr, 178, 18, 'f'); put(Gr, 183, 18, 'x');
+  ground(Gr, 192, 219, 19); put(Gr, 193, 18, 'J'); put(Gr, 200, 18, 'c'); put(Gr, 204, 14, '?'); put(Gr, 211, 18, 'G'); fillG(Gr, 219, 0, 219, 18, 'H');
+  return rowsOf(Gr);
+})();
+stamps.pstBorrow = { floor: 19, rows: borrowRows, gold: { '*': 'must', A: 'high', R: 'risky' }, items: ['power', 'power', 'power', 'oneup'], legend: {
+  n: SIGN('AN HOURGLASS FLOWER! STAND BESIDE IT AND HOLD THROW TO BORROW A SECOND (ONE AT A TIME). TAP THROW BY SOMETHING MOVING TO SPEND IT THERE: IT HOLDS STILL'),
+  N: SIGN('ONE SECOND, THREE JAWS. SPEND IT ON THE QUICK ONE'),
+  V: SIGN('STAND ON A MOVING CUSHION AND TAP THROW: IT WAITS FOR YOU'),
+  M: SIGN('A FOLDING RULER: ITS NEAR ELBOW ALWAYS FOLDS BACK TOO SOON. STAND ON THE LITTLE CLOCK BY IT AND SPEND YOUR SECOND THERE'),
+  l: ['enemy', 'pstLouse'], u: ['enemy', 'pstSlug'], p: ['enemy', 'pstPea'], w: ['enemy', 'pstBat'],
+  f: ['piece', 'pst.flower', {}], j: ['piece', 'pst.jaw', { h: 4, period: 2.6 }],
+  i: ['piece', 'pst.jaw', { h: 4, period: 2.4 }], k: ['piece', 'pst.jaw', { h: 4, period: 1.5, phase: 0.6 }], q: ['piece', 'pst.jaw', { h: 4, period: 2.4, phase: 1.2 }],
+  J: ['piece', 'pst.jaw', { h: 4, period: 2.2, phase: 0.4 }],
+  E: ['piece', 'pst.mover', { pw: 3, ay: -6, speed: 4.5 }], m: ['piece', 'pst.mover', { pw: 3, ax: 5, speed: 2.4 }],
+  U: ['piece', 'pst.mover', { pw: 3, ay: -9, speed: 9 }],
+  r: ['piece', 'pst.ruler', { g: 0, n: 10, mark: -2 }], x: ['piece', 'pst.ruler', { g: 1, n: 9, mark: -2 }],
+  Z: ['piece', 'pst.z', {}],
+  K: ['spawn', 'portal', { kind: 'door', look: 'pstNook', targetRef: 'nursery@in' }], a: ['anchor', 'nurseryOut']
+} };
+stamps.pstNurseryOld = roomStamp('borrow@nurseryOut', ['magnet']);
+const L4 = { n: 4, name: 'Borrow a Second', mapLabel: 'Borrow a Second', arch: 'borrow', theme: 'pst_hour',
+  gimmick: 'Hourglass flowers lend one second of stillness at a time: hold THROW beside one to bank it, tap THROW by a moving thing to spend it there',
+  hint: 'Bank a second at a flower, then spend it on a jaw, a moving cushion or a ruler\'s elbow. Only one at a time! A lone z drifts from a nook only a held lift reaches...',
+  postcard: 'Pupo lent me a second and I spent it on a nap. He says I owe him interest. In biscuits. ♥ C',
+  enemies: [['pstLouse', 2], ['pstPea', 2], ['pstSlug', 1], ['pstBat', 2]],
+  mapCell: [3, 0], mapFrom: 2,
+  exits: { main: { to: '32-5' } },
+  areas: [
+    { id: 'borrow', gen: 'room', theme: 'pst_hour', stamp: 'pstBorrow', camera: 'free', bottomKill: true, pst: { borrow: true } },
+    { id: 'nursery', gen: 'room', role: 'secret', room: 'pstCaps', theme: 'pst_room_nursery', stamp: 'pstNurseryOld', pst: { room: true } }
+  ] };
+
+/* ---------------- 32-5 One Thought at a Time ---------------- */
+// the floor is row 19. Picture bubbles float at a fork: jump into one and its subject fills the next room until
+// another is chosen. ① the teach: a step stool up to the ledge, or a ladder up to P1; ② a towel over a pit (not the
+// tub, not the ladder), a ladder up a tall wall (the ladder also stands under a gap in a ceiling: a lone z: the even
+// pour, B35); ③ the twist: the tub as a step up to the towel's bubble; jump through it and the towel replaces the tub
+// as the landing a step higher (P3 over it); the gate
+const PIC = (g, kind, set) => ['piece', 'pst.pic', { g, kind, set }];
+const THING = (g, kind, w, h, solid) => ['piece', 'pst.thing', { g, kind, w, h, solid }];
+const thoughtRows = (() => {
+  const W = 200, H = 24, Gr = grid(W, H, '.');
+  // ① the teach
+  ground(Gr, 0, 27, 19); put(Gr, 3, 18, '@'); put(Gr, 6, 18, 'n'); put(Gr, 9, 14, '?');
+  put(Gr, 12, 18, '1'); put(Gr, 16, 18, '2');
+  put(Gr, 24, 16, 'q'); put(Gr, 22, 11, 'Y'); fillG(Gr, 17, 9, 21, 10, '#'); put(Gr, 19, 7, '*');
+  ground(Gr, 28, 34, 13); put(Gr, 30, 12, 'o.o.o');
+  ground(Gr, 35, 71, 19); put(Gr, 40, 18, 'l'); put(Gr, 46, 18, 'c'); put(Gr, 50, 14, '?'); put(Gr, 54, 18, 'p');
+  // ② the towel over the pit (the tub only sits on the far floor, the ladder leans on nothing)
+  put(Gr, 59, 18, 'N'); put(Gr, 62, 18, '3'); put(Gr, 65, 18, '4'); put(Gr, 68, 18, '5');
+  put(Gr, 72, 19, 't'); ground(Gr, 82, 103, 19); put(Gr, 76, 14, 'w');
+  put(Gr, 84, 16, 'd'); put(Gr, 88, 18, '6'); put(Gr, 91, 18, '7');
+  // the ladder up the tall wall (the tub would leave you four rows short)
+  put(Gr, 93, 16, 'X'); put(Gr, 96, 11, 'E'); ground(Gr, 98, 104, 11); put(Gr, 100, 10, 'o.o.o'); put(Gr, 102, 10, 'l');
+  ground(Gr, 105, 160, 19); put(Gr, 108, 18, 'c'); put(Gr, 100, 7, 'A');
+  // the same ladder thought also stands under a gap in a ceiling: the way to the pantry
+  fillG(Gr, 112, 9, 122, 10, 'H'); fillG(Gr, 116, 9, 117, 10, '.'); put(Gr, 116, 11, 'O'); put(Gr, 117, 12, 'Z'); put(Gr, 120, 8, 'K'); put(Gr, 113, 8, 'o.o');
+  put(Gr, 126, 18, 'p'); put(Gr, 130, 18, 'a');
+  // ③ the twist: the tub as a step to the towel's bubble, the towel a step higher
+  put(Gr, 132, 18, 'M'); put(Gr, 135, 18, '8'); put(Gr, 140, 16, 'P'); put(Gr, 141, 15, '9'); put(Gr, 139, 13, 'J');
+  fillG(Gr, 146, 10, 152, 18, '#'); put(Gr, 142, 9, 'R'); put(Gr, 148, 9, 'o.o.o'); put(Gr, 150, 9, 'u');
+  ground(Gr, 153, 199, 19); put(Gr, 158, 18, 'c'); put(Gr, 163, 14, '?'); put(Gr, 168, 18, 'l'); put(Gr, 180, 18, 'G'); fillG(Gr, 199, 0, 199, 18, 'H');
+  return rowsOf(Gr);
+})();
+stamps.pstThought = { floor: 19, rows: thoughtRows, gold: { '*': 'must', A: 'high', R: 'risky' }, items: ['power', 'power', 'oneup'], legend: {
+  n: SIGN('PICTURE BUBBLES! JUMP INTO ONE AND PUPO THINKS OF ITS THING: IT STANDS IN THE NEXT ROOM UNTIL HE THINKS OF ANOTHER'),
+  N: SIGN('ONE THOUGHT AT A TIME. WHICH ONE GETS YOU OVER?'),
+  M: SIGN('A TUB TO STAND ON... AND THEN SOMETHING HIGHER TO LAND ON'),
+  l: ['enemy', 'pstLouse'], u: ['enemy', 'pstSlug'], p: ['enemy', 'pstPea'], w: ['enemy', 'pstBat'],
+  '1': PIC(0, 'stool', [0, 1]), '2': PIC(1, 'ladder', [0, 1]),
+  q: THING(0, 'stool', 2, 3, 'HARD'), Y: THING(1, 'ladder', 2, 8),
+  '3': PIC(0, 'tub', [0, 1, 2]), '4': PIC(1, 'towel', [0, 1, 2]), '5': PIC(2, 'ladder', [0, 1, 2]),
+  t: THING(1, 'towel', 10, 1), d: THING(0, 'tub', 4, 3, 'HARD'),
+  '6': PIC(0, 'tub', [0, 1, 2]), '7': PIC(2, 'ladder', [0, 1, 2]), X: THING(0, 'tub', 3, 3, 'HARD'), E: THING(2, 'ladder', 2, 8),
+  O: THING(2, 'ladder', 2, 8),
+  '8': PIC(0, 'tub', [0, 1]), P: THING(0, 'tub', 4, 3, 'HARD'), '9': PIC(1, 'towel', [0, 1]), J: THING(1, 'towel', 5, 1),
+  Z: ['piece', 'pst.z', {}],
+  K: ['spawn', 'portal', { kind: 'door', look: 'pstNook', targetRef: 'pantry@in' }], a: ['anchor', 'pantryOut']
+} };
+stamps.pstPantryOld = roomStamp('thought@pantryOut', ['star']);
+const L5 = { n: 5, name: 'One Thought at a Time', mapLabel: 'One Thought at a Time', arch: 'thought', theme: 'pst_picture',
+  gimmick: 'At each fork in Pupo\'s dream, jump into a picture bubble: its subject (a tub, a towel, a ladder, a step stool) fills the next room until another is chosen',
+  hint: 'Pick the thought that gets you over, then change your mind when you must. The tub is a step; the towel can be a step higher. A lone z drifts down out of a gap in a ceiling...',
+  postcard: 'Pupo thought about a bath all afternoon and now the hall is full of tub. I am writing this from inside it. ♥ C',
+  enemies: [['pstLouse', 3], ['pstPea', 2], ['pstSlug', 1], ['pstBat', 1]],
+  mapCell: [3, 1], mapFrom: 3,
+  exits: { main: { to: '32-6' } },
+  areas: [
+    { id: 'thought', gen: 'room', theme: 'pst_picture', stamp: 'pstThought', camera: 'free', bottomKill: true },
+    { id: 'pantry', gen: 'room', role: 'secret', room: 'pstPour', theme: 'pst_room_pantry', stamp: 'pstPantryOld', pst: { room: true } }
+  ] };
+
+Tour.amend('pst', { stamps, levels: [L1, L2, L3, L4, L5] });
 Tour.pstLevels = { grid, put, fillG, ground, pit, rowsOf, roomStamp, SIGN, CUSH, stamps };
 })();

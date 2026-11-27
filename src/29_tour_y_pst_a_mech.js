@@ -504,8 +504,8 @@ class PstPic extends Ent {
   update(dt) { this.t += dt; if (this.bumpT > 0) this.bumpT -= dt; }
   touchPlayer(p) {
     if (p.dead || this.bumpT > 0) return;
-    if (p.vy < 0 && p.y > this.y + this.h * 0.4) {
-      this.bumpT = 0.4; p.vy = Math.max(p.vy, 2 * TS); p.y = this.y + this.h + 1;
+    if (p.vy < 0) {
+      this.bumpT = 0.6;
       const g = this.g;
       for (const gi of this.set) { const want = gi === this.gi; if (g.toggleBit(gi) !== want) g.flipToggle(gi, true); }
       Sound.play('bump', { vol: 0.5 }); Sound.play('select', { vol: 0.5, pitch: 1.3 }); g.parts.text(this.cx, this.y - 6, 'A ' + this.kind.toUpperCase() + '!', '#fff4dc');
@@ -527,7 +527,8 @@ ENTITY_TYPES.pstPic = PstPic;
 Tour.pieces['pst.pic'] = function (st, o) { const B = st.B; B.switchAt(o.g, st.x, st.gy - 1); if (!B.toggles[o.g]) B.toggle(o.g, [], [], { kind: 'thing' }); B.spawn('pstPic', st.x, st.gy - 1, { g: o.g, kind: o.kind, set: o.set }); return st.x; };
 Tour.pieces['pst.thing'] = function (st, o) {
   const B = st.B, x = st.x, y = st.gy - 1, w = o.w || 3, h = o.h || 1, tt = T[o.solid || 'SEMI'];
-  B.toggle(o.g, [], [o.solid === 'HARD' ? [x, y, x + w - 1, y + h - 1, tt] : [x, y, x + w - 1, y, tt]], { kind: 'thing' });
+  const rects = o.kind === 'ladder' ? Array.from({ length: Math.ceil(h / 2) }, (_, k) => [x, y + 2 * k, x + w - 1, y + 2 * k, T.SEMI]) : [o.solid === 'HARD' ? [x, y, x + w - 1, y + h - 1, tt] : [x, y, x + w - 1, y, tt]];
+  B.toggle(o.g, [], rects, { kind: 'thing' });
   B.spawn('pstThing', x, y, { g: o.g, kind: o.kind, w, h, tx: x, ty: y });
   return st.x;
 };
