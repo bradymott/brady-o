@@ -50,6 +50,8 @@ class MoonGame extends Ent {
   fail(text) { const g = this.g, p = g.player; TourKit.sfx('fizz', 'bump', { vol: 0.5, pitch: 0.6 }); if (p) g.parts.text(p.cx, p.y - 20, text, '#ff9a9a'); }
   update(dt) {
     this.t += dt; const g = this.g, p = g.player, S = this.st;
+    // (the controller's box follows the view, so its pads, lamps, wheels, fuses and ball are always drawn)
+    this.x = g.camX; this.y = g.camY; this.w = Game.viewW; this.h = Game.viewH;
     if (!this.told && p) { this.told = true; const R = RULES[this.kind]; g.bannerText = R[0]; g.bannerT = 1.8; g.toast && g.toast(R[1]); }
     if (this.won || !p || p.dead) { if (this.kind === 'moonPutt') this.ballStep(dt); return; }
     const landed = p.onGround && !this.wasG; this.wasG = p.onGround;
