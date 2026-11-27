@@ -454,6 +454,27 @@ const BoxArt = (() => {
         O(c, 16, py, 2, '#e8e2d4', 1);
       });
     } }
+    ,
+    // ---- The Umbrella Repair District (31, hidden land): an ink-blue hook-latched rib case, coral rivets, a coral J
+    //      latch; the hit flips the latch up, the lid swings open and a fan of marigold canopy wedges springs out ----
+    umb: { name: 'The Umbrella Repair District', draw(c, p) {
+      const Nv = '#2e3f7a', Nv2 = '#1f2a56', Nl = '#4a62a8', Co = '#ef6f5a', Gd = '#f4b32e', Gl = '#ffd060';
+      const q = io(seg(p, 0.1, 0.7)), fan = Math.sin(seg(p, 0.15, 0.95) * PI);
+      // the open lid behind (swinging up and back from the hinge)
+      if (q > 0.02) { const h = 8 * q; G(c, [[4, 13], [28, 13], [27, 13 - h], [5, 13 - h]], Nv2); }
+      // the fan of wedges rising out of the case
+      alpha(c, fan, () => { for (let k = 0; k < 5; k++) { const a = -PI / 2 + (k - 2) * 0.42, r = 10 + 4 * fan; G(c, [[16, 18], [16 + Math.cos(a - 0.2) * r, 18 + Math.sin(a - 0.2) * r - 4 * fan], [16 + Math.cos(a + 0.2) * r, 18 + Math.sin(a + 0.2) * r - 4 * fan]], k % 2 ? Gl : Gd, 1.2); } });
+      // the case
+      R(c, 3, 13, 26, 16, 2, Nv);
+      c.fillStyle = Nl; c.fillRect(4, 14, 24, 2.2);
+      L(c, [[3, 19], [29, 19]], K, 1.2); L(c, [[3, 24], [29, 24]], K, 1);
+      // the closed lid (it lifts away on the hit)
+      if (q < 0.98) alpha(c, 1 - q, () => R(c, 2.5, 8 + -3 * q, 27, 6, 2, Nv));
+      for (const [x, y] of [[6, 16.5], [26, 16.5], [6, 26.5], [26, 26.5]]) O(c, x, y, 1.4, Co, 0.8);
+      // the coral J latch: hanging down over the front, flipped up on the hit
+      const fl = seg(p, 0, 0.3);
+      rot(c, 16, 14, -fl * PI * 0.9, () => { R(c, 14, 12, 4, 5, 1, Co, 1.2); L(c, [[16, 17], [16, 22]], K, 3.2); L(c, [[16, 17], [16, 22]], Co, 1.8); c.beginPath(); c.arc(14, 22, 2, 0, PI); c.strokeStyle = K; c.lineWidth = 3.2; c.stroke(); c.strokeStyle = Co; c.lineWidth = 1.8; c.stroke(); });
+    } }
   };
 
   // ---- painting the states ----

@@ -260,7 +260,10 @@ TourHats.NOT = new Set([].concat(
   'w22Alarm w22Envelope w22Hourglass w22Echo w22Loop w22Mirror w22Pane w22Strike w22Pendulum w22Copy w22Slab w22Lake w22ReflectDoor w22Key w22Ink w22TimeFall w22NumDoorE rbPage rbStamp rbTornPage'.split(' '),
   // Wrong Side of the Wash (26): the drying nets and their critters (drawn behind the cloth on the far face), the
   // beetle's trouser wall, the peephole tell, sweaters, seams, felt, pockets, peg jaws, loose sheets, the bakery hem
-  'washNet washCrawler washBeetleGate washPeep washSweater washSeam washFeltArt washPocket washJaws washLooseSheet washHem'.split(' ')
+  'washNet washCrawler washBeetleGate washPeep washSweater washSeam washFeltArt washPocket washJaws washLooseSheet washHem'.split(' '),
+  // The Umbrella Repair District (31): the canopies and their critters (drawn through the cloth on the far face), the
+  // seated tick, the tickets, drips, gutters, hooks, panels, puddled canopies, jams, room stations, the stand in 8-1
+  'umbCanopy umbCrawler umbTickSeat umbTicket umbDrip umbGutter umbSluice umbHook umbPanel umbPanelRain umbShutter umbShake umbCupGate umbJam umbStation umbStandDoor'.split(' ')
 ));
 
 /* ---------- the animals: [fx, fxFlip, fy, size] (see the header) ---------- */
@@ -323,7 +326,9 @@ Object.assign(TourHats.HEADS, {
   // Table for Two (36): the pepper flea, the knife-rest dachshund, the butter-curl snail
   tabPepper: [0.15, 0.15, -1.55, 0], tabRest: [0.62, 0.62, -1.3, 0], tabButter: [0.45, 0.45, -1.0, 0],
   // Wrong Side of the Wash (26): the peg beetle, the lint lamb, the hanger heron, the sock moth
-  washBeetle: [0.45, 0.45, -1.3, 0], washLamb: [0.55, 0.55, -1.1, 0], washHeron: [0.4, 0.4, -1.42, 0], washMoth: [0.08, 0.08, -1.2, 0]
+  washBeetle: [0.45, 0.45, -1.3, 0], washLamb: [0.55, 0.55, -1.1, 0], washHeron: [0.4, 0.4, -1.42, 0], washMoth: [0.08, 0.08, -1.2, 0],
+  // The Umbrella Repair District (31): the rivet tick, the puddle mule, the drip finch, the ferrule ferret
+  umbTick: [0.45, 0.45, -1.25, 0], umbMule: [0.55, 0.55, -1.35, 0], umbFinch: [0.25, 0.25, -1.3, 0], umbFerret: [0.62, 0.62, -1.2, 0],
 
 });
 
