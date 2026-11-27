@@ -35,11 +35,12 @@ const PstArt = {
   // a cream thought bubble: a flat-bottomed cloud with a scalloped underside (w x h, top-left at x, y)
   bubble(ctx, x, y, w, h, fill, line) {
     ctx.save(); ctx.fillStyle = fill || CREAM; ctx.strokeStyle = line || INK; ctx.lineWidth = 2; ctx.lineJoin = 'round';
-    const n = Math.max(2, Math.round(w / 22)), r = w / n / 2;
-    ctx.beginPath(); ctx.moveTo(x + r * 0.6, y + h * 0.5);
-    for (let k = 0; k < n; k++) ctx.arc(x + r + k * 2 * r, y + r * 0.9, r * 1.02, Math.PI, 0);
-    ctx.lineTo(x + w - r * 0.4, y + h - r * 0.5);
-    for (let k = n - 1; k >= 0; k--) ctx.arc(x + r + k * 2 * r, y + h - r * 0.6, r * 0.75, 0, Math.PI);
+    const rc = Math.min(h / 2, w / 2), n = Math.max(1, Math.round((w - 2 * rc) / (h * 0.7))), sp = (w - 2 * rc) / n, rt = Math.max(sp * 0.62, h * 0.3), rb = Math.max(sp * 0.5, h * 0.2);
+    ctx.beginPath();
+    ctx.arc(x + rc, y + h / 2, rc, Math.PI * 0.5, Math.PI * 1.5);
+    for (let k = 0; k < n; k++) { const cx = x + rc + sp * (k + 0.5); ctx.arc(cx, y + rt * 0.75, rt, Math.PI * 1.1, Math.PI * 1.9); }
+    ctx.arc(x + w - rc, y + h / 2, rc, -Math.PI * 0.5, Math.PI * 0.5);
+    for (let k = n - 1; k >= 0; k--) { const cx = x + rc + sp * (k + 0.5); ctx.arc(cx, y + h - rb * 0.7, rb, Math.PI * 0.15, Math.PI * 0.85); }
     ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.restore();
   },
@@ -106,7 +107,7 @@ const tuftPaint = (ctx, rng, base, line, dot) => {
 };
 const cushionGround = {
   style: 'cushion', cap: HONEY_HI, capHi: '#fff1c0', dirt: HONEY, dirt2: HONEY_LO, rock: PLUM,
-  paint(ctx, rng) { tuftPaint(ctx, rng, HONEY, HONEY_LO, PLUM_LO); },
+  paint(ctx, rng, o) { if (!o || o.top) tuftPaint(ctx, rng, HONEY, HONEY_LO, PLUM_LO); else tuftPaint(ctx, rng, PLUM, PLUM_LO, HONEY_LO); },
   paintCap(ctx, x0, x1) {
     ctx.fillStyle = HONEY_LO; ctx.fillRect(x0, 0, x1 - x0, 12);
     ctx.fillStyle = HONEY_HI; for (let x = x0; x < x1; x += 16) { ctx.beginPath(); ctx.ellipse(x + 8, 5, 9, 6, 0, 0, TAU); ctx.fill(); }
@@ -117,7 +118,7 @@ const cushionGround = {
 // the dream floor variant for later stages: plum velvet with the honey piping
 const velvetGround = {
   style: 'velvet', cap: PLUM_HI, capHi: '#e08ab4', dirt: PLUM, dirt2: PLUM_LO, rock: PLUM_LO,
-  paint(ctx, rng) { tuftPaint(ctx, rng, PLUM, PLUM_LO, '#ffd673'); },
+  paint(ctx, rng, o) { if (o && o.top) tuftPaint(ctx, rng, PLUM, PLUM_LO, '#ffd673'); else tuftPaint(ctx, rng, '#5e1f42', '#3a0e26', HONEY_LO); },
   paintCap(ctx, x0, x1) {
     ctx.fillStyle = PLUM_LO; ctx.fillRect(x0, 0, x1 - x0, 12);
     ctx.fillStyle = PLUM_HI; for (let x = x0; x < x1; x += 16) { ctx.beginPath(); ctx.ellipse(x + 8, 5, 9, 6, 0, 0, TAU); ctx.fill(); }

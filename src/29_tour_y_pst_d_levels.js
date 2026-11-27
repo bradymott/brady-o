@@ -67,24 +67,25 @@ const dreamRows = (() => {
   // ③ the twist: think inside the low tunnel, walk out, the lift fires on the far side
   put(Gr, 159, 18, 'M');
   ground(Gr, 160, 169, 19); fillG(Gr, 162, 9, 169, 16, 'H'); put(Gr, 163, 18, '9'); ground(Gr, 170, 173, 19); ground(Gr, 174, 182, 13); put(Gr, 175, 11, 'o.o.o.o');
-  ground(Gr, 183, 203, 19); put(Gr, 188, 18, 'l'); put(Gr, 192, 13, 'w'); put(Gr, 186, 15, 'o.o.o');
-  // again: a far floor four tiles long, a soft pit beyond it (a cushion at its bottom to climb back), the ledge out
-  // over the pit
-  fillG(Gr, 197, 9, 203, 16, 'H'); put(Gr, 197, 18, 'E'); ground(Gr, 204, 207, 19);
-  ground(Gr, 208, 213, 22); put(Gr, 208, 21, 'J'); fillG(Gr, 208, 13, 218, 14, 'H'); put(Gr, 212, 10, 'R'); put(Gr, 209, 12, 'o.o.o');
-  ground(Gr, 214, 243, 19); put(Gr, 222, 18, 'c'); put(Gr, 225, 14, '?'); put(Gr, 229, 18, 'p'); put(Gr, 236, 18, 'G'); fillG(Gr, 243, 0, 243, 18, 'H');
+  ground(Gr, 183, 207, 19); put(Gr, 188, 18, 'l'); put(Gr, 192, 13, 'w'); put(Gr, 186, 15, 'o.o.o');
+  // again, harder: the tunnel's ceiling has spikes in it (a lift inside it hurts), the far floor is short, the wall
+  // taller; P3 over the wall
+  fillG(Gr, 197, 9, 203, 15, 'H'); fillG(Gr, 197, 16, 203, 16, 'v'); put(Gr, 197, 18, 'E'); put(Gr, 195, 18, 'V');
+  ground(Gr, 208, 216, 13); put(Gr, 212, 9, 'R'); put(Gr, 209, 11, 'o.o.o'); put(Gr, 214, 12, 'l');
+  ground(Gr, 217, 243, 19); put(Gr, 224, 18, 'c'); put(Gr, 227, 14, '?'); put(Gr, 230, 18, 'p'); put(Gr, 236, 18, 'G'); fillG(Gr, 243, 0, 243, 18, 'H');
   return rowsOf(Gr);
 })();
 stamps.pstDream = { floor: 19, rows: dreamRows, gold: { '*': 'must', R: 'risky', A: 'high' }, items: ['power', 'power', 'power', 'oneup'], legend: {
   n: SIGN('DREAM CUSHIONS ARE TOO SOFT TO JUMP FROM. PRESS JUMP ON ONE: PUPO HAS A THOUGHT... AND ONE BREATH LATER IT LIFTS YOU'),
   N: SIGN('THINK FIRST, THEN MOVE: THE THOUGHT LIFTS YOU FROM WHEREVER YOU ARE STANDING WHEN IT POPS'),
   M: SIGN('A SHELF IN THE WAY? HAVE THE THOUGHT HERE, WALK OUT FROM UNDER IT, AND LET IT POP ON THE FAR SIDE'),
+  V: SIGN('MIND THE SPIKES IN THIS ONE: BE OUT FROM UNDER IT BEFORE THE BUBBLE POPS'),
   l: ['enemy', 'pstLouse'], u: ['enemy', 'pstSlug'], p: ['enemy', 'pstPea'], w: ['enemy', 'pstBat'], e: ['enemy', 'pstLouse'], m: ['enemy', 'pstPea'],
   k: ['decor', 'pstPillowPile'],
   '1': CUSH(4, [[5, -5]]), '2': CUSH(3, [[4, -6]]), '3': CUSH(3, [[12, -6]]),
   '4': CUSH(3, [[4, -5]]), '5': CUSH(3, [[5, -5]]),
   '6': CUSH(3), '7': CUSH(2, [[-2, -6], [3, -6]]), '8': CUSH(3),
-  '9': CUSH(3, [[12, -6]]), E: CUSH(3, [[11, -6]]), J: CUSH(6, [[-3, -3], [-1, -3]]),
+  '9': CUSH(3, [[12, -6]]), E: CUSH(3, [[12, -6]]),
   Z: ['piece', 'pst.z', {}],
   K: ['spawn', 'portal', { kind: 'door', look: 'pstNook', targetRef: 'forts@in' }], a: ['anchor', 'fortsOut']
 } };
