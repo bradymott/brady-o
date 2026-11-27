@@ -88,7 +88,7 @@ const brain = {
       b.x = lerp(b.sx, b.tx, k) - b.w / 2; b.y = top - Math.sin(k * Math.PI) * 5 * TS;
       if (k >= 1) {
         b.y = top; g.shake(8); Sound.play('stomp', { pitch: 0.45 }); g.burst(b.cx, b.floorY, 18, '#e8c898', 'dust');
-        for (const d of [-1, 1]) tourFire(g, b.cx + d * (b.w / 2 + 6), b.floorY - 20, { vx: d * 5.2 * TS, w: 24, h: 20, ground: true, life: 2.2, col: '#f0dcb4', art: waveArt });
+        for (const d of [-1, 1]) tourFire(g, b.cx + d * (b.w / 2 + 6), b.floorY - 12, { vx: d * 5.2 * TS, w: 26, h: 22, ground: true, life: 2.2, col: '#f0dcb4', art: waveArt });
         // the heel pops off and lands a little behind it
         b.loose = { x: clamp(b.cx - b.dir * (b.w / 2 + 40), b.arenaX0 + 20, b.arenaX1 - 20), kind: 'heel' };
         b.go('heelDown');
