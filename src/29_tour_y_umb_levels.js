@@ -19,7 +19,7 @@ const pit = (Gr, x0, x1) => fillG(Gr, x0, 0, x1, Gr.length - 1, '.');
 const rowsOf = Gr => Gr.map(r => r.join(''));
 const stamps = {};
 // a room kind once the rooms file has it (until then the stand-in stamp is the room)
-const RK = k => (typeof TourRooms !== 'undefined' && TourRooms.kinds[k]) ? k : undefined;
+const RK = k => k;
 const SIGN = text => ['spawn', 'sign', { text }];
 const CANP = (w, h, holes) => ['piece', 'umb.canopy', { w, h, holes: holes || [] }];
 const CRAWL = o => ['piece', 'umb.crawler', o];

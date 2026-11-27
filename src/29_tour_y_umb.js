@@ -231,17 +231,15 @@ const painters = {
   umbFarRoofs(ctx, L, rng, H) {
     const b = L.base;
     shopRow(ctx, rng, b, L.color, 70, 150, false);
-    ctx.save(); ctx.globalAlpha = 0.55;
-    for (let k = 0; k < 9; k++) { const x = rng() * BG_W, y = b - 60 - rng() * 50, r = 16 + rng() * 14; wrapDraw(x - r, r * 2, X => UmbArt.umbrella(ctx, X + r, y, r, { len: 0, c1: rng() < 0.5 ? GOLD : CORAL, c2: GOLD_L, inside: rng() < 0.3 })); }
-    ctx.restore();
+    ctx.fillStyle = shade(L.color, -0.15); for (let k = 0; k < 16; k++) { const x = rng() * BG_W; wrapDraw(x, 14, X => { ctx.fillRect(X, b - 150 - rng() * 30, 10, 26); ctx.fillRect(X - 2, b - 154 - rng() * 30, 14, 4); }); }
   },
   // near: repair stalls under striped awnings, umbrellas hung up to drip on rails, a wet street shine
   umbStalls(ctx, L, rng, H) {
     const b = L.base;
     shopRow(ctx, rng, b, L.color, 120, 190, true);
     for (let x = 40; x < BG_W; x += 260 + Math.floor(rng() * 80)) {
-      ctx.fillStyle = INK; ctx.fillRect(x, b - 120, 150, 4);
-      for (let k = 0; k < 5; k++) UmbArt.furled(ctx, x + 16 + k * 28, b - 116, 46 + (k % 2) * 8, [NAVY_L, CORAL, GOLD_D, '#5a9a8a', NAVY][k], 0);
+      for (let k = 0; k < 6; k++) { ctx.fillStyle = k % 2 ? CHALK : shade(CORAL, -0.15); ctx.beginPath(); ctx.moveTo(x + k * 24, b - 120); ctx.lineTo(x + k * 24 + 24, b - 120); ctx.lineTo(x + k * 24 + 26, b - 96); ctx.lineTo(x + k * 24 - 2, b - 96); ctx.closePath(); ctx.fill(); }
+      ctx.fillStyle = shade(L.color, -0.3); ctx.fillRect(x + 30, b - 150, 84, 22); ctx.fillStyle = GOLD_D; ctx.fillRect(x + 36, b - 144, 72, 10);
     }
     ctx.fillStyle = 'rgba(200,220,255,0.12)'; ctx.fillRect(0, b - 6, BG_W, 6);
   },
@@ -255,18 +253,15 @@ const painters = {
       ctx.fillStyle = '#5a6a8a'; ctx.fillRect(x - 60, b - 220, 74, 10);
       ctx.fillStyle = '#7a5a3a'; ctx.fillRect(x + 20, b - 54, 40, 54); ctx.fillStyle = '#5a3a22'; ctx.fillRect(x + 20, b - 40, 40, 4); ctx.fillRect(x + 20, b - 16, 40, 4);
     }
-    ctx.fillStyle = 'rgba(160,210,255,0.6)'; for (let k = 0; k < 50; k++) { const x = rng() * BG_W, y = b - 260 + rng() * 240; ctx.beginPath(); ctx.ellipse(x, y, 1.6, 3.2, 0, 0, TAU); ctx.fill(); }
   },
   // 31-3: a hook exchange: wires strung across a high hall, closed umbrellas riding them, numbered hooks
   umbWires(ctx, L, rng, H) {
     const b = L.base;
     ctx.fillStyle = L.color; ctx.fillRect(0, 0, BG_W, H);
     ctx.fillStyle = shade(L.color, -0.08); for (let x = 0; x < BG_W; x += 120) ctx.fillRect(x, 0, 16, b);
-    for (let row = 0; row < 3; row++) {
-      const y = 70 + row * 70, a = 0.4 + row * 0.2;
-      ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(BG_W, y + 6); ctx.stroke();
-      for (let x = 20 + row * 30; x < BG_W; x += 70 + rng() * 40) UmbArt.furled(ctx, x, y + 4, 40 + row * 6, [NAVY_L, CORAL, GOLD_D, '#5a9a8a'][Math.floor(rng() * 4)], 0);
-      ctx.restore();
+    for (let x = 30; x < BG_W; x += 260) for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) {
+      const px = x + c * 48, py = b - 300 + r * 60; ctx.fillStyle = shade(L.color, -0.22); ctx.fillRect(px, py, 42, 52); ctx.fillStyle = shade(L.color, -0.4); ctx.fillRect(px + 4, py + 4, 34, 44);
+      ctx.fillStyle = (r + c) % 3 ? '#ffe2c8' : CORAL; ctx.fillRect(px + 12, py + 30, 16, 12);
     }
     ctx.fillStyle = shade(L.color, -0.2); ctx.fillRect(0, b - 10, BG_W, 10);
   },
@@ -276,9 +271,8 @@ const painters = {
     ctx.fillStyle = L.color; ctx.fillRect(0, 0, BG_W, H);
     for (let x = 0; x < BG_W; x += 200) {
       wrapDraw(x, 200, X => {
-        ctx.fillStyle = shade(GOLD, -0.12); ctx.beginPath(); ctx.moveTo(X, 40); ctx.quadraticCurveTo(X + 100, -10, X + 200, 40); ctx.lineTo(X + 200, 70); ctx.quadraticCurveTo(X + 100, 30, X, 70); ctx.closePath(); ctx.fill();
-        ctx.strokeStyle = NAVY; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(X + 100, 14); ctx.lineTo(X + 100, b); ctx.stroke();
-        ctx.fillStyle = shade(L.color, -0.1); ctx.fillRect(X + 92, 70, 16, b - 70);
+        ctx.fillStyle = shade(L.color, -0.12); ctx.beginPath(); ctx.moveTo(X, 40); ctx.lineTo(X + 200, 40); ctx.lineTo(X + 200, 70); ctx.arc(X + 100, 110, 92, -0.45, Math.PI + 0.45, true); ctx.lineTo(X, 40); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = shade(L.color, -0.1); ctx.fillRect(X + 92, 70, 16, b - 70); ctx.fillRect(X - 8, 70, 16, b - 70);
       });
     }
     ctx.strokeStyle = 'rgba(232,240,255,0.4)'; ctx.lineWidth = 1.4; for (let k = 0; k < 120; k++) UmbArt.dash(ctx, rng() * BG_W, 80 + rng() * (b - 100), 12);
@@ -288,7 +282,7 @@ const painters = {
     const b = L.base;
     shopRow(ctx, rng, b - 20, L.color, 90, 170, false);
     for (let x = 80; x < BG_W; x += 240) { ctx.fillStyle = INK; ctx.fillRect(x, b - 150, 5, 150); ctx.fillStyle = '#ffe8a0'; ctx.beginPath(); ctx.arc(x + 2, b - 156, 9, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(255,232,160,0.18)'; ctx.beginPath(); ctx.arc(x + 2, b - 150, 40, 0, TAU); ctx.fill(); }
-    ctx.fillStyle = 'rgba(150,180,230,0.35)'; for (let k = 0; k < 14; k++) { const x = rng() * BG_W; ctx.beginPath(); ctx.ellipse(x, b - 8 - rng() * 10, 30 + rng() * 40, 5, 0, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = 'rgba(255,232,160,0.16)'; for (let x = 80; x < BG_W; x += 240) ctx.fillRect(x - 4, b - 4, 12, 30);
   },
   // 31-6: the inspector's hall: a long repair bench, rib cases on shelves, a big barometer dial
   umbHall(ctx, L, rng, H) {
@@ -353,7 +347,7 @@ const themes = {
   umb_gutter: base({ name: 'Every Drop Accounted For', music: 'tour_umb_drip', particles: 'rain', rays: null, sky: ['#5a6a8a', '#7a8aa8', '#a8b4c8'], horizonGlow: '#d8e0f0', celestial: { type: 'none' }, stars: 0,
     layers: [{ kind: 'umbRain', color: 'rgba(232,240,255,0.3)', base: 200, f: 0.02 }, { kind: 'umbPipes', color: '#8a5a4a', base: 420, f: 0.16 }], fog: '#9aa8c0', decor: ['umbBarrel'] }, district),
   umb_hooks: base({ name: 'Hook Exchange', music: 'tour_umb', particles: 'none', rays: null, sky: ['#d8c8a8', '#e8dcc0', '#f4ecd8'], horizonGlow: '#fff4e0', celestial: { type: 'none' }, stars: 0,
-    layers: [{ kind: 'umbWires', color: '#e0d0b0', base: 420, f: 0.12 }], fog: '#e8dcc4', decor: ['umbStand'] }, district),
+    layers: [{ kind: 'umbWires', color: '#e0d0b0', base: 420, f: 0.12 }], fog: '#e8dcc4', decor: ['umbBench'] }, district),
   umb_arcade: base({ name: 'Panel Beater', music: 'tour_umb_drip', particles: 'rain', rays: null, sky: ['#4a5a7a', '#6a7a98', '#8a98b0'], horizonGlow: '#c8d4e8', celestial: { type: 'none' }, stars: 0,
     layers: [{ kind: 'umbArcade', color: '#7a8aa4', base: 420, f: 0.14 }], fog: '#8a98b0', decor: ['umbBench'] }, district),
   umb_puddles: base({ name: 'Shake Well', music: 'tour_umb', particles: 'rain', rays: null, sky: ['#3a3a6a', '#7a6a9a', '#d8a8a0'], horizonGlow: '#ffd8b0', celestial: { type: 'none' }, stars: 0.2,
@@ -644,6 +638,7 @@ Tour.country({
   levels: []
 });
 // for the land's other files and the tests
-Tour.umbKit = { SOLID, say: UmbSay, COL, INK, UmbArt, tickArt, muleArt, finchArt, ferretArt, splashArt, decor };
+// the land's own opened locks (kept off the HUD's key row): g.umbKeys
+Tour.umbKit = { keys: g => g.umbKeys || (g.umbKeys = new Set()), SOLID, say: UmbSay, COL, INK, UmbArt, tickArt, muleArt, finchArt, ferretArt, splashArt, decor };
 try { if (typeof window !== 'undefined') { window.BRADY_TOUR = window.BRADY_TOUR || {}; window.BRADY_TOUR.umbKit = Tour.umbKit; if (typeof TourMap !== 'undefined' && !window.BRADY_TOUR.TourMap) window.BRADY_TOUR.TourMap = TourMap; } } catch (e) { /* not in a browser */ }
 })();

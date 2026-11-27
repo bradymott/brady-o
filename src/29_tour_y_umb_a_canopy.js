@@ -264,10 +264,10 @@ class UmbTickSeat extends Ent {
     this.t += dt; if (this.msgT > 0) this.msgT -= dt; if (this.flex > 0) this.flex -= dt;
     const g = this.g, p = g.player;
     if (this.open) { this.vy += PHYS.gDown * 0.6 * dt; this.fly += this.vy * dt; this.flyX = (this.flyX || 0) + this.vx * dt; return; }
-    if (g.keys && g.keys.has(this.id)) { this.release(); return; }
+    if (UK.keys(g).has(this.id)) { this.release(); return; }
     if (!p || p.dead) return;
     const W = p.umb, atMark = !!(W && W.grip && overlap(p, this.markBox())), I = p.inp || {};
-    if (atMark && I.actionPressed) { this.flex = 0.5; g.keys.add(this.id); this.release(); return; }
+    if (atMark && I.actionPressed) { this.flex = 0.5; UK.keys(g).add(this.id); this.release(); return; }
     // beside the tick: he tells you where to push from
     if (W && W.grip && Math.abs(p.cx - this.cx) < 2 * TS && this.msgT <= 0) { this.msgT = 3.2; UK.say(g, this.cx, this.y - 10, 'I\'M COUNTING THIS RIB! (FROM THE OTHER END, IF YOU MUST)', UA.CHALK); }
   }

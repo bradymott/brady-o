@@ -36,7 +36,7 @@ const lockTiles = s => { const tx = Math.floor(s.x / TS), ty1 = Math.floor((s.y 
 class UmbLockBase extends Ent {
   constructor(g, s, h) { super(g, s, TS, h * TS); this.x = s.x - TS / 2; this.y = s.y - this.h; this.id = s.id; this.open = false; this.tiles = []; const tx = Math.floor(s.x / TS), ty1 = Math.floor((s.y - 1) / TS); for (let k = 0; k < h; k++) this.tiles.push([tx, ty1 - k]); this.tx = tx; this.ty1 = ty1; this.openT = 0; }
   release() { if (this.open) return; this.open = true; for (const [x, y] of this.tiles) this.g.setTile(x, y, T.EMPTY); Sound.play('door', { vol: 0.6 }); }
-  update(dt) { this.t += dt; if (this.open) this.openT = Math.min(1, this.openT + dt * 1.5); else if (this.g.keys && this.g.keys.has(this.id)) this.release(); }
+  update(dt) { this.t += dt; if (this.open) this.openT = Math.min(1, this.openT + dt * 1.5); else if (UK.keys(this.g).has(this.id)) this.release(); }
   touchPlayer() {}
 }
 
@@ -64,6 +64,9 @@ class UmbDrip extends Ent {
   touchPlayer() {}
   draw(ctx) {
     ctx.save();
+    // a length of leaky eaves gutter on a bracket (the drip comes from its crack)
+    ctx.fillStyle = '#7a8aa8'; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(this.cx - 30, this.top - 8); ctx.lineTo(this.cx + 30, this.top - 8); ctx.lineTo(this.cx + 26, this.top + 4); ctx.lineTo(this.cx - 26, this.top + 4); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#5a6a8a'; ctx.fillRect(this.cx - 34, this.top - 40, 6, 36); ctx.strokeRect(this.cx - 34, this.top - 40, 6, 36);
     // the crack in the eave and a beard of moss
     ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(this.cx - 8, this.top + 2); ctx.lineTo(this.cx - 2, this.top + 8); ctx.lineTo(this.cx + 3, this.top + 3); ctx.lineTo(this.cx + 9, this.top + 9); ctx.stroke();
     for (const d of this.drops) UA.drop(ctx, this.cx, d.y, 4);
@@ -90,7 +93,7 @@ class UmbGutter extends Ent {
   update(dt) {
     this.t += dt; if (this.msgT > 0) this.msgT -= dt;
     const g = this.g, p = g.player;
-    if (!this.full && g.keys && g.keys.has(this.id)) { this.full = true; this.lvl = this.need; }
+    if (!this.full && UK.keys(g).has(this.id)) { this.full = true; this.lvl = this.need; }
     // a stamp: landing on the plate from a jump
     if (p && !p.dead) {
       const landed = p.onGround && !this.wasG && this.lastVy > 3 * TS && p.groundTy === this.fy && Math.abs(p.cx - (this.padX * TS + TS / 2)) < TS * 0.9;
@@ -108,7 +111,7 @@ class UmbGutter extends Ent {
         this.runs.splice(i, 1);
         if (this.big && r.w < 2) { if (this.msgT <= 0) { this.msgT = 2.2; } UK.say(g, this.cisX * TS + 16, this.y - 70, 'TOO SMALL: IT SLIPS THROUGH THE GRATE! (LET TWO MERGE)', UA.CHALK); TourKit.sfx('plip', 'select', { vol: 0.3, pitch: 0.7 }); continue; }
         this.lvl = Math.min(this.need, this.lvl + (this.big ? 1 : r.w)); TourKit.sfx('gloop', 'pick', { vol: 0.4, pitch: 0.8 + this.lvl * 0.15 });
-        if (this.lvl >= this.need && !this.full) { this.full = true; g.keys.add(this.id); UK.say(g, this.cisX * TS + 16, this.y - 70, 'FULL! EVERY DROP ACCOUNTED FOR', UA.GOLD_L); g.burst(this.cisX * TS + 16, this.y - 30, 14, '#8ac8f4', 'confetti'); }
+        if (this.lvl >= this.need && !this.full) { this.full = true; UK.keys(g).add(this.id); UK.say(g, this.cisX * TS + 16, this.y - 70, 'FULL! EVERY DROP ACCOUNTED FOR', UA.GOLD_L); g.burst(this.cisX * TS + 16, this.y - 30, 14, '#8ac8f4', 'confetti'); }
         else if (!this.full) UK.say(g, this.cisX * TS + 16, this.y - 70, this.lvl + ' / ' + this.need, '#ffffff');
       }
     }
@@ -189,7 +192,7 @@ class UmbHook extends Ent {
     this.t += dt; if (this.msgT > 0) this.msgT -= dt; if (this.slip > 0) this.slip -= dt;
     const g = this.g, p = g.player, I = (p && p.inp) || {};
     if (this.rigid) return;
-    if (g.keys && g.keys.has('umb:hook' + this.tx)) { this.n = this.need; this.makeRigid(); return; }
+    if (UK.keys(g).has('umb:hook' + this.tx)) { this.n = this.need; this.makeRigid(); return; }
     const on = nearMark(p, this.tx, this.fy, 0.9);
     if (!this.hold) {
       // the full chain stays rigid when he lets go; a short one slips
@@ -211,7 +214,7 @@ class UmbHook extends Ent {
   makeRigid() {
     if (this.rigid) return; this.rigid = true; this.hold = false; this.n = this.need;
     for (const [x, y] of this.cells) this.g.setTile(x, y, T.SEMI);
-    this.g.keys.add('umb:hook' + this.tx);
+    UK.keys(this.g).add('umb:hook' + this.tx);
     Sound.play('door', { vol: 0.5 }); UK.say(this.g, this.cx + this.dir * this.span * TS / 2, this.y - 40, 'RIGID! A BRIDGE OF HANDLES', '#ffffff');
   }
   touchPlayer() {}
@@ -283,7 +286,7 @@ class UmbPanel extends Ent {
   update(dt) {
     this.t += dt; if (this.popT > 0) this.popT -= dt; if (this.cool > 0) this.cool -= dt;
     const g = this.g, p = g.player;
-    if (this.walled && this.dent && g.keys && g.keys.has(this.id)) this.pop(true);
+    if (this.walled && this.dent && UK.keys(g).has(this.id)) this.pop(true);
     if (p && !p.dead) {
       // a head-bump from underneath: he was rising, now he's stopped against the panel's underside
       const under = p.cx > this.x + 4 && p.cx < this.x + this.w - 4 && Math.abs(p.y - (this.y + TS)) < 8;
@@ -294,12 +297,12 @@ class UmbPanel extends Ent {
   pop(quiet) {
     const g = this.g; this.dent = false; this.popT = 0.4;
     if (!quiet) { TourKit.sfx('pop', 'kick', { vol: 0.5, pitch: 1.5 }); g.burst(this.cx, this.y + TS, 10, UA.GOLD, 'confetti'); UK.say(g, this.cx, this.y - 20, 'POP!', '#ffffff'); }
-    if (this.walled) { g.keys.add(this.id); for (let y = this.py + 1; y < this.fy; y++) g.setTile(this.cur, y, T.EMPTY); }
+    if (this.walled) { UK.keys(g).add(this.id); for (let y = this.py + 1; y < this.fy; y++) g.setTile(this.cur, y, T.EMPTY); }
     // in a row of three: this one pops its left neighbour back in
     if (this.group) {
       const L = g.entities.filter(e => e instanceof UmbPanel && e.group === this.group), nb = L.find(e => e.gi === this.gi - 1);
       if (nb && !nb.dent) { nb.dent = true; nb.popT = 0.4; UK.say(g, nb.cx, nb.y - 20, 'BOINK! IT POPPED BACK IN', UA.CHALK); }
-      if (L.every(e => !e.dent)) { g.keys.add('umb:' + this.group); UK.say(g, this.cx, this.y - 44, 'ALL THREE OUT! THE SHUTTER\'S UP', UA.GOLD_L); }
+      if (L.every(e => !e.dent)) { UK.keys(g).add('umb:' + this.group); UK.say(g, this.cx, this.y - 44, 'ALL THREE OUT! THE SHUTTER\'S UP', UA.GOLD_L); }
     }
   }
   touchPlayer() {}
@@ -371,7 +374,7 @@ Object.assign(Tour.pieces, {
   }
 });
 // the rain sheet itself is drawn by its panel; the lock entity is only its tiles
-class UmbPanelRain extends UmbLockBase { constructor(g, s) { super(g, s, s.h || 1); } update(dt) { this.t += dt; if (!this.open && this.g.keys && this.g.keys.has(this.id)) this.release(); } release() { if (this.open) return; this.open = true; for (const [x, y] of this.tiles) this.g.setTile(x, y, T.EMPTY); } draw() {} }
+class UmbPanelRain extends UmbLockBase { constructor(g, s) { super(g, s, s.h || 1); } update(dt) { this.t += dt; if (!this.open && UK.keys(this.g).has(this.id)) this.release(); } release() { if (this.open) return; this.open = true; for (const [x, y] of this.tiles) this.g.setTile(x, y, T.EMPTY); } draw() {} }
 ENTITY_TYPES.umbPanelRain = UmbPanelRain;
 
 /* ======================= 31-5 SHAKE: herding puddles on a canopy floor ======================= */
@@ -389,12 +392,12 @@ class UmbShake extends Ent {
   update(dt) {
     this.t += dt; if (this.msgT > 0) this.msgT -= dt;
     const g = this.g, p = g.player;
-    if (!this.done && g.keys && g.keys.has(this.id)) this.done = true;
+    if (!this.done && UK.keys(g).has(this.id)) this.done = true;
     if (this.flung) {
       this.flung.u += dt / 1.1;
       if (this.flung.u >= 1) {
         const f = this.flung; this.flung = null;
-        if (f.n >= this.need) { this.done = true; g.keys.add(this.id); Sound.play('door', { vol: 0.6 }); UK.say(g, this.scoopX(), this.y - this.cupH * TS - 30, 'IN THE CUP! DOWN IT GOES', UA.GOLD_L); }
+        if (f.n >= this.need) { this.done = true; UK.keys(g).add(this.id); Sound.play('door', { vol: 0.6 }); UK.say(g, this.scoopX(), this.y - this.cupH * TS - 30, 'IN THE CUP! DOWN IT GOES', UA.GOLD_L); }
         else { UK.say(g, this.scoopX(), this.y - this.cupH * TS - 30, this.need > 1 ? 'NOT HIGH ENOUGH: ' + this.need + ' MUST LEAVE TOGETHER!' : 'MISSED!', UA.CHALK); for (let k = 0; k < f.n; k++) this.pud.push({ x: lerp(this.x + 1.5 * TS, this.x + this.w - 1.5 * TS, Math.random()), vx: 0 }); }
       }
     }
@@ -481,7 +484,7 @@ class UmbJam extends Ent {
   update(dt) {
     this.t += dt; if (this.msgT > 0) this.msgT -= dt; const g = this.g, p = g.player, I = (p && p.inp) || {};
     if (this.open) { this.openT = Math.min(1, this.openT + dt * 1.4); return; }
-    if (g.keys && g.keys.has(this.id)) { this.release(); return; }
+    if (UK.keys(g).has(this.id)) { this.release(); return; }
     if (!p || p.dead) { this.hold = false; return; }
     if (!this.hold) {
       this.pos = Math.max(0, this.pos - dt * 3);
@@ -491,7 +494,7 @@ class UmbJam extends Ent {
     if (!I.action || !p.onGround) { this.hold = false; return; }
     // walking back (away from the collar) slides the runner home along the shaft
     this.pos = clamp((p.cx - this.x0) * this.side / (this.pull * TS), 0, 1);
-    if (this.pos >= 1) { g.keys.add(this.id); this.release(); }
+    if (this.pos >= 1) { UK.keys(g).add(this.id); this.release(); }
   }
   release() {
     if (this.open) return; this.open = true; this.hold = false; this.pos = 1;
