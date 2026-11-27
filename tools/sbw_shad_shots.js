@@ -418,12 +418,12 @@ LEVELS.cust = async (page, shot, run, pano) => {
   await run('cust', async () => {
     await page.evaluate(helpers);
     await page.evaluate(() => { fresh(); playP('35-5'); place(4, 18); sim(0.6); freeze(); }); await shot('50-35-5-start.png');
-    let r = await page.evaluate(() => { thaw(); walkX(11 * 32 + 16); sim(1.5); return { grille: tileName(24, 17) }; });
+    let r = await page.evaluate(() => { thaw(); walkX(12 * 32 + 16); sim(1.5); return { grille: tileName(24, 17) }; });
     check('35-5: between the lamps but off the spot: the feet miss their slots, the grille stays', r.grille === 'HARD', r);
-    await shotAt(page, shot, '51-35-5-split.png', () => { walkX(12 * 32 + 30); sim(0.2); });
-    r = await page.evaluate(() => { walkX(13 * 32 + 16); sim(1.5); return { grille: tileName(24, 17) }; });
+    await shotAt(page, shot, '51-35-5-split.png', () => { walkX(13 * 32 + 30); sim(0.2); });
+    r = await page.evaluate(() => { walkX(14 * 32 + 16); sim(1.5); return { grille: tileName(24, 17) }; });
     check('35-5: both shadows\' feet on their claim slots for a breath: both stamped, the grille rolls up', r.grille === 'EMPTY', r);
-    r = await page.evaluate(() => { const a = AP.route([[30, 19], [40, 19], [46, 19]]); const n0 = (window.__pills || 0); walkX(48 * 32 + 16); sim(1.5); const pill = (window.__pills || 0) > n0, g1 = tileName(60, 17); walkX(52 * 32 + 16); sim(1.5); return { a: a.ok, pill, g1, grille: tileName(60, 17) }; });
+    r = await page.evaluate(() => { const a = AP.route([[30, 19], [40, 19], [46, 19]]); const n0 = (window.__pills || 0); walkX(48 * 32 + 16); sim(1.5); const pill = (window.__pills || 0) > n0, g1 = tileName(60, 17); walkX(50 * 32 + 16); sim(1.5); return { a: a.ok, pill, g1, grille: tileName(60, 17) }; });
     check('35-5: the last desk: the hats line up first (it says so, nothing opens); the feet decide', r.pill && r.g1 === 'HARD' && r.grille === 'EMPTY', r);
     await shotAt(page, shot, '52-35-5-secret-tell.png', () => { AP.go([62, 19]); sim(0.3); });
     r = await page.evaluate(() => { const a = AP.go([66, 19]); return { ok: a.ok }; });
@@ -473,15 +473,15 @@ LEVELS.entry = async (page, shot, run, pano) => {
     let r = await page.evaluate(() => { fresh(); const T = window.BRADY_TOUR; return { stop: T.TourMap ? T.TourMap.stopState(T.Tour.stops.shad) : null, open: T.TourProgress.countryUnlocked(T.Tour.countries.shad) }; });
     check('entrance: on a fresh save the department is hidden (no pin, not open)', r.stop === 'hidden' && !r.open, r);
     r = await page.evaluate(() => { playP('18-1'); P().setPower(0, true); sim(1.2); const g = S(), gate = g.entities.find(e => e.constructor.name === 'ShadKeyholeGate'); window.__gate = gate; return { gate: !!gate, start: tileOf() }; });
-    check('entrance: 18-1 starts as before, the locker and its shadow a few steps to the left', r.gate, r);
+    check('entrance: 18-1 starts as before (same start tile), the locker a few steps to the right', r.gate && r.start[0] === 3, r);
     await page.evaluate(() => { freeze(); }); await shot('01-entrance-18-1-start.png');
-    r = await page.evaluate(() => { thaw(); walkX(13 * 32, 3); sim(0.5); return { at: tileOf() }; });
+    r = await page.evaluate(() => { thaw(); walkX(10 * 32 + 16, 3); sim(0.5); return { at: tileOf() }; });
     await page.evaluate(() => { freeze(); }); await shot('02-entrance-locker-shadow.png');
-    r = await page.evaluate(() => { thaw(); walkX(6 * 32 + 16, 3); sim(1.5); return { state: P().state, at: tileOf() }; });
-    check('entrance: standing in the shadow, shoes gone dark, does nothing by itself', r.state === 'play', r);
+    r = await page.evaluate(() => { thaw(); walkX(2 * 32, 4); walkX(5 * 32 + 20, 3); sim(1.5); return { state: P().state, at: tileOf() }; });
+    check('entrance: walking through the shadow and standing on the keyhole, shoes gone dark, does nothing by itself', r.state === 'play', r);
     await page.evaluate(() => { freeze(); }); await shot('03-entrance-shoes-gone.png');
-    r = await page.evaluate(() => { thaw(); for (let k = 0; k < 120 * 2 && P().state === 'play'; k++) sim(1 / 120, { left: true }); return { state: P().state, at: tileOf() }; });
-    check('entrance: all the way in, on the keyhole, still pushing left: Brady slips through the keyhole', r.state === 'portal', r);
+    r = await page.evaluate(() => { thaw(); for (let k = 0; k < 120 * 2 && P().state === 'play'; k++) sim(1 / 120, { down: true }); return { state: P().state, at: tileOf() }; });
+    check('entrance: deep in the shadow, crouched on the keyhole: Brady slips through it', r.state === 'portal', r);
     await page.evaluate(() => { sim(0.7); freeze(); }); await shot('04-entrance-slipping-through.png');
     r = await page.evaluate(() => { thaw(); sim(2); const g = S(); return { state: g.state, key: g.exitKey, banner: g.bannerText }; });
     check('entrance: the land\'s name shows and 18-1 clears through its hidden exit', r.state !== 'play' && r.key === 'shad', r);
@@ -515,7 +515,7 @@ const BOT = {
     [33, [[38, 17], [42, 15], { claim: 47 }, [58, 15], [62, 19], { post: 66, dir: 1 }, [70, 19], [78, 19]]],
     [78, [{ claim: 88 }, [91, 19], [98, 19], { post: 100, dir: 1 }, [110, 19], [116, 19]]],
     [115, [{ hop: 126, act: true }, [134, 19], { post: 136, dir: 1 }, [143, 19], [151, 19], { bump: [150, 19] }, [158, 19], 'finish']]],
-  '35-5': [[0, [{ bump: [6, 19] }, { stand: 13 }, [26, 19], [35, 19]]], [35, [{ bump: [40, 19] }, [46, 19], { stand: 52 }, [62, 19], [76, 19], [84, 19], [91, 19], 'boss']]]
+  '35-5': [[0, [{ bump: [6, 19] }, { stand: 14 }, [26, 19], [35, 19]]], [35, [{ bump: [40, 19] }, [46, 19], { stand: 50 }, [62, 19], [76, 19], [84, 19], [91, 19], 'boss']]]
 };
 LEVELS.bot = async (page, shot, run) => {
   if (!want.includes('bot')) return;

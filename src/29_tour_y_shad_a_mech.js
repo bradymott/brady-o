@@ -274,8 +274,19 @@ class ShadOverlap extends Ent {
     // the fixed lamp's shadow (A) and the screen's shadow (B): pale grape, see-through, dashed edges
     const paint = (rects, ox, fill) => { ctx.fillStyle = fill; for (const r of rects) ctx.fillRect(r[0] * TS + ox, r[1] * TS, (r[2] - r[0] + 1) * TS, (r[3] - r[1] + 1) * TS); };
     const edge = (rects, ox, col) => { ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.setLineDash([6, 4]); for (const r of rects) ctx.strokeRect(r[0] * TS + ox + 1, r[1] * TS + 1, (r[2] - r[0] + 1) * TS - 2, (r[3] - r[1] + 1) * TS - 2); ctx.setLineDash([]); };
-    paint(s.a, 0, 'rgba(124,74,140,0.32)'); paint(s.b, dx, 'rgba(124,74,140,0.32)');
-    edge(s.a, 0, 'rgba(58,24,72,0.7)'); edge(s.b, dx, 'rgba(58,24,72,0.7)');
+    const bb = (rects, ox) => [Math.min(...rects.map(r => r[0])) * TS + ox, Math.min(...rects.map(r => r[1])) * TS, (Math.max(...rects.map(r => r[2])) + 1) * TS + ox, (Math.max(...rects.map(r => r[3])) + 1) * TS];
+    const A = bb(s.a, 0), Bx = bb(s.b, dx), cone = (lx, ly, R) => { ctx.fillStyle = 'rgba(255,248,200,0.22)'; ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(R[0] - 10, R[1] - 10); ctx.lineTo(R[2] + 10, R[1] - 10); ctx.lineTo(R[2] + 10, R[3] + 6); ctx.lineTo(R[0] - 10, R[3] + 6); ctx.closePath(); ctx.fill(); };
+    // what casts shadow A: a hat on a wall hook, lit by a wall lamp above and behind it (a fixed cone)
+    const lax = A[0] - 2.2 * TS, lay = A[1] - 2.4 * TS, hx = lerp(lax, (A[0] + A[2]) / 2, 0.35), hy = lerp(lay, (A[1] + A[3]) / 2, 0.35);
+    cone(lax, lay, A);
+    ctx.fillStyle = SAL; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(lax - 8, lay - 4, 16, 8); ctx.strokeRect(lax - 8, lay - 4, 16, 8); SA.pin(ctx, lax, lay + 6, t);
+    ctx.fillStyle = '#8a6a4a'; ctx.fillRect(hx - 2, hy - 14, 4, 14); ctx.strokeRect(hx - 2, hy - 14, 4, 14);
+    ctx.fillStyle = '#3a7ac8'; ctx.beginPath(); ctx.ellipse(hx, hy - 2, 13, 4, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(hx - 8, hy - 3); ctx.quadraticCurveTo(hx - 8, hy - 15, hx, hy - 15); ctx.quadraticCurveTo(hx + 8, hy - 15, hx + 8, hy - 3); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // what casts shadow B: the screen's clip-on lamp, a cone from it
+    cone(this.cxF, fy - 84, Bx);
+    paint(s.a, 0, 'rgba(124,74,140,0.45)'); paint(s.b, dx, 'rgba(124,74,140,0.45)');
+    edge(s.a, 0, 'rgba(58,24,72,0.85)'); edge(s.b, dx, 'rgba(58,24,72,0.85)');
+    SA.notch(ctx, (A[0] + A[2]) / 2, A[1], 1.1, 0, '#f2d8b8'); SA.notch(ctx, (Bx[0] + Bx[2]) / 2 + 8, Bx[1], 1.1, 0, '#f2d8b8');
     // the overlap: solid, near-black grape with a bright butter edge on top (the step)
     for (const [x, y] of this.cur) {
       ctx.fillStyle = GRA_DK; ctx.fillRect(x * TS, y * TS, TS, TS);

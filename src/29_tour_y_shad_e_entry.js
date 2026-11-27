@@ -2,20 +2,19 @@
    THE DEPARTMENT OF UNCLAIMED SHADOWS: the hidden way in (the land's best secret), on the Moon, 18-1 ONE SMALL HOP.
    ChatGPT's entrance: "walk all the way into the shadow of the sample locker, past the point where Brady's shoes
    disappear. The locker's shadow has a keyhole."
-   Just left of where Brady lands on the Moon, a little way back from the start, a grey sample locker stands on the dust
-   (labelled like the Moon's own crates, painted the way 18-1's props are). The low sun throws its shadow long across the
-   ground to the left, black as the sky. Deep in that shadow, at its far end, there is a keyhole-shaped patch of light: the
-   only odd thing in the scene. Walk left into the shadow: first Brady's shoes go dark, then at the far end, standing on the
-   keyhole, keep pushing left a moment: he slips through it.
-   No sign, no arrow, no coin trail, nothing on the level card. The host level's exits, postcards and totals are as they
-   were; its own files are not touched: this file copies 18-1's stamp with twelve plain columns of dust added on its left
-   (the locker and its shadow stand there) and adds the 'shad' exit.
+   A few steps right of where Brady lands on the Moon, a grey sample locker stands on the dust (labelled like the Moon's
+   own crates, painted the way 18-1's props are). The low sun behind it throws its shadow long across the ground to the
+   left, back toward the start, black as the sky, deeper the further it reaches. Near its far end there is a
+   keyhole-shaped patch of light: the only odd thing in the scene. Walk into the shadow (Brady's shoes go dark), and on
+   the keyhole crouch (stick down) a moment: he slips through it. Walking over it does nothing.
+   No sign, no arrow, no coin trail, nothing on the level card. 18-1 keeps every tile, coin, anchor and exit where it was:
+   this file turns one empty cell of its start ground into the locker's letter and adds the 'shad' exit.
    ============================================================ */
 (function () {
 const MOON = Tour.countries.moon, K = Tour.shadKit;
 if (!MOON || !K || !MOON.levels[0]) return;
 const INK = '#1a1426', STEEL = '#b8bcc8', STEEL_HI = '#dfe2ea', STEEL_LO = '#7e8292', DUST_LO = '#8e889c', PIWI = '#d6307a';
-const PAD = 16, LOCKER_TX = 11, WALL = 5;   // sixteen columns of dust on the left (the first five a rock outcrop); the locker's column
+const LOCKER_TX = 8, TIP_TX = 4, KEY_TX = 5;   // the locker's column, the shadow's far end, the keyhole's column (18-1's own tiles)
 
 /* ---------------- the locker and its long black shadow ---------------- */
 Object.assign(Decor, {
@@ -42,7 +41,7 @@ const shadowOf = (ctx, g, gate, t) => {
   const fy = gate.fy, x1 = gate.lockerX - 22, x0 = gate.wallX, far = 14;
   ctx.save();
   ctx.fillStyle = 'rgba(6,4,12,0.96)';
-  ctx.beginPath(); ctx.moveTo(x1, fy + 2); ctx.lineTo(x1, fy - 2); ctx.lineTo(x0 + 60, fy - far); ctx.lineTo(x0, fy - far); ctx.lineTo(x0, fy + 16); ctx.lineTo(x1 - 20, fy + 16); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x1, fy + 2); ctx.lineTo(x1, fy - 2); ctx.lineTo(x0 + 50, fy - far); ctx.quadraticCurveTo(x0 - 8, fy - far, x0 - 10, fy + 2); ctx.lineTo(x0 - 4, fy + 16); ctx.lineTo(x1 - 20, fy + 16); ctx.closePath(); ctx.fill();
   // the keyhole: a round head and a flared foot, pale as the sunlit dust, lying in the shadow
   const kx = gate.cx + 4, ky = fy + 3;
   ctx.fillStyle = '#f2eee0'; ctx.beginPath(); ctx.arc(kx, ky - 4, 4.6, 0, TAU); ctx.fill();
@@ -57,13 +56,13 @@ class ShadKeyholeGate extends ENTITY_TYPES.gate {
     this.w = TS; this.h = TS; this.x = s.x - TS / 2; this.y = s.y - TS; this.dive = null; this.friendly = false; this.pushT = 0; this.row = Math.round(s.y / TS); this.fy = this.row * TS;
     this.lockerX = s.lockerX || (this.cx + 6 * TS); this.wallX = s.wallX || 0;
   }
-  at(p) { return p && !p.dead && p.state === 'play' && p.onGround && p.groundTy === this.row && p.cx < this.cx + 30; }
+  at(p) { return p && !p.dead && p.state === 'play' && p.onGround && p.groundTy === this.row && Math.abs(p.cx - (this.cx + 4)) < 18; }
   update(dt) {
     this.t += dt; const g = this.g, p = g.player;
     if (this.dive == null) {
       const inp = p && p.inp;
-      this.pushT = this.at(p) && inp && inp.left && !inp.right ? this.pushT + dt : 0;
-      if (this.pushT > 0.45 && !this.used && g.state === 'play') {
+      this.pushT = this.at(p) && inp && inp.down && !inp.left && !inp.right ? this.pushT + dt : 0;
+      if (this.pushT > 0.6 && !this.used && g.state === 'play') {
         this.used = true; this.dive = 0; p.state = 'portal'; p.portalT = 0; p.vx = 0; p.vy = 0; p.invuln = 3; this.px = p.cx; this.py = p.y;
         TourKit.sfx('keyhole', 'secret', { vol: 0.5, pitch: 0.7 }); g.burst(this.cx, this.fy, 14, '#f2eee0', 'spark');
       }
@@ -99,8 +98,8 @@ TourHooks.exitKind('shadKeyhole', { title: 'A HIDDEN LAND!', marksDone: false })
 // the locker piece: the locker (a decor prop) and the keyhole's exit at the shadow's far end
 Tour.pieces['shad.locker'] = function (st, o) {
   const B = st.B, x = st.x, gy = st.gy;
-  B.decorAt('shadLocker', x + 1, gy, 0);
-  B.spawn('shadKeyholeGate', WALL, gy - 1, { exit: 'shad', lockerX: (x + 1) * TS, wallX: WALL * TS });
+  B.decorAt('shadLocker', x, gy, 0);
+  B.spawn('shadKeyholeGate', KEY_TX, gy - 1, { exit: 'shad', lockerX: (x + 0.5) * TS, wallX: TIP_TX * TS });
   return x + 2;
 };
 
@@ -108,14 +107,15 @@ Tour.pieces['shad.locker'] = function (st, o) {
 {
   const L0 = MOON.levels[0], S0 = TourStamp.get('moonHop', 'moon');
   if (L0 && L0.areas && S0 && !L0.exits.shad) {
-    const rows = S0.rows.map((r, y) => { const c = r[0] === '#' || r[0] === 'H' ? '#' : '.'; let pad = (y >= S0.floor - 5 ? '#' : c).repeat(WALL) + c.repeat(PAD - WALL); if (y === S0.floor - 1) pad = pad.slice(0, LOCKER_TX) + '!' + pad.slice(LOCKER_TX + 1); return pad + r; });
+    // one cell of 18-1's open start ground becomes the locker's letter: no tile, coin or anchor moves
+    const rows = S0.rows.map((r, y) => y === S0.floor - 1 && r[LOCKER_TX] === '.' ? r.slice(0, LOCKER_TX) + '!' + r.slice(LOCKER_TX + 1) : r);
     const S1 = Object.assign({}, S0, { rows, legend: Object.assign({}, S0.legend, { '!': ['piece', 'shad.locker', {}] }) });
     const spec = JSON.parse(JSON.stringify(Object.assign({}, L0, { index: undefined, kind: undefined, v2: undefined, legacySecret: undefined })));
     spec.n = 1; spec.secret = L0.secret;
     spec.exits = Object.assign({}, JSON.parse(JSON.stringify(L0.exits)), { shad: { to: 'land:shad', via: 'shadKeyhole' } });
     const A = spec.areas.find(a => a.id === 'surface'); A.stamp = 'shadMoonHop'; A.shadMoon = true;
     Tour.amend('moon', { stamps: { shadMoonHop: S1 }, levels: [spec] });
-    K.hostLevel = '18-1'; K.hostPad = PAD;
+    K.hostLevel = '18-1'; K.keyTx = KEY_TX;
   }
 }
 // the area flag rides onto the built area (the shadow is drawn only there)

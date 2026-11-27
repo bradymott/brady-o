@@ -139,10 +139,10 @@ const L2 = { n: 2, name: 'Long Division', mapLabel: 'Long Division', arch: 'lamp
 // a step up to a ledge (a block on it whose right face is only painted: the boot room), the trench again with a crow;
 // ③ the twist: an L-shaped shadow: the wide overlap is too low, the narrow one climbs to the high ledge
 const OV = [
-  { a: [[22, 15, 26, 17]], b: [[14, 15, 18, 17]], rail: [8, 16, 19], at: 8, good: 16, g: 0 },
-  { a: [[46, 13, 49, 17]], b: [[40, 16, 43, 17]], rail: [36, 42, 19], at: 36, good: 42, g: 1 },
-  { a: [[91, 16, 99, 17]], b: [[84, 16, 88, 17]], rail: [80, 88, 19], at: 80, good: 88, g: 2 },
-  { a: [[124, 16, 127, 17], [126, 12, 127, 15]], b: [[118, 12, 119, 17]], rail: [112, 120, 19], at: 112, good: 120, g: 3 }
+  { a: [[22, 15, 26, 17]], b: [[14, 14, 19, 17]], rail: [8, 16, 19], at: 8, good: 16, g: 0 },
+  { a: [[46, 13, 49, 17]], b: [[40, 16, 44, 17]], rail: [36, 42, 19], at: 36, good: 42, g: 1 },
+  { a: [[91, 16, 99, 17]], b: [[84, 15, 88, 17]], rail: [80, 88, 19], at: 80, good: 88, g: 2 },
+  { a: [[124, 16, 127, 17], [126, 12, 127, 15]], b: [[118, 11, 119, 17]], rail: [112, 120, 19], at: 112, good: 120, g: 3 }
 ];
 const ovRows = (() => {
   const W = 170, H = 24, Gr = grid(W, H, '.');
@@ -242,8 +242,8 @@ const SPLIT = o => ['piece', 'shad.split', o];
 stamps.shadCust = { floor: 19, rows: custRows, gold: GOLD, items: ['power', 'power'], doors: [{ to: 'cutout@in', look: 'shadHatch' }, { to: 'counter@in', look: 'shadDoor' }], legend: Object.assign({}, COMMON, {
   n: SIGN('TWO LAMPS, TWO SHADOWS. BOTH FEET ON THEIR SLOTS'),
   N: SIGN('THE HATS LINE UP FIRST. ONLY THE FEET COUNT'),
-  '1': SPLIT({ lamps: [9, 21], at: 13, lock: 'shad:j1' }), r: GRILLE('shad:j1'),
-  '2': SPLIT({ lamps: [44, 56], at: 52, decoy: 48, lock: 'shad:j2' }), R: GRILLE('shad:j2'),
+  '1': SPLIT({ lamps: [10, 18], at: 14, lock: 'shad:j1' }), r: GRILLE('shad:j1'),
+  '2': SPLIT({ lamps: [46, 54], at: 50, decoy: 48, lock: 'shad:j2' }), R: GRILLE('shad:j2'),
   a: ['anchor', 'cutoutOut']
 }) };
 stamps.shadCutoutOld = oldRoom('cust@cutoutOut', ['star']);

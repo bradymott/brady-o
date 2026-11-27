@@ -92,38 +92,38 @@ const brain = {
     const G = this.geo(b), p = b.g.player; if (!p || p.dead || p.cx <= G.L + 6 || p.cx >= G.R - 6) return null;
     return K.splitFeet(G.L, G.R, p.cx);
   },
-  // the clerk, flat on the wall: (x, feet y), height h, alpha a; o: { arm: reach px to the left, leg: kick px, hat lift }
+  // the clerk: a shadow cast on the wall at (x, feet y), height h. Painted flat into its own little canvas (grape, no ink,
+  // no modelling, no eyes: the visor's green band and the hat's notch are its face), its feet fading out into the
+  // skirting, then laid on the wall see-through and leaning like a cast shadow. o: { palm, heel, hat (lift px), half
+  // (-1 / 1: one half only), a (alpha), arm < 0 (the arm is down along the wall, drawn by the attack) }
   clerk(ctx, x, y, h, t, o) {
-    o = o || {}; const s = h / 150;
-    ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.globalAlpha *= o.a == null ? 1 : o.a;
-    ctx.fillStyle = GRA; ctx.strokeStyle = INK; ctx.lineWidth = 2.5 / s; ctx.lineJoin = 'round';
-    const half = o.half || 0, clipL = half === -1, clipR = half === 1;
-    ctx.save(); if (half) { ctx.beginPath(); ctx.rect(clipL ? -80 : 0, -220, 80, 240); ctx.clip(); }
-    // legs (trousers), one heel lifted in the kick's tell; the long flat leg in the kick
+    o = o || {}; const s = h / 150, W = 200, H = 250, R = 2, FY = 236;
+    const C = this.canvas || (this.canvas = (() => { const c = document.createElement('canvas'); c.width = W * R; c.height = H * R; return c; })()), c = C.getContext('2d');
+    c.setTransform(R, 0, 0, R, 0, 0); c.globalCompositeOperation = 'source-over'; c.clearRect(0, 0, W, H);
+    c.save(); c.translate(W / 2, FY); c.scale(s, s);
+    if (o.half) { c.beginPath(); c.rect(o.half < 0 ? -100 : 0, -260, 100, 280); c.clip(); }
+    c.fillStyle = GRA;
     const heel = o.heel ? 10 : 0;
-    ctx.beginPath(); ctx.rect(-20, -60, 16, 60 - heel); ctx.rect(4, -60, 16, 60); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.ellipse(-12, -2 - heel, 14, 6, 0, 0, TAU); ctx.ellipse(14, -2, 14, 6, 0, 0, TAU); ctx.fill(); ctx.stroke();
-    // the body: a boxy waistcoat with a pocket and a pen
-    ctx.beginPath(); ctx.moveTo(-26, -60); ctx.lineTo(-30, -112); ctx.lineTo(30, -112); ctx.lineTo(26, -60); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.strokeStyle = GRA_HI; ctx.lineWidth = 2 / s; ctx.beginPath(); ctx.moveTo(0, -110); ctx.lineTo(0, -62); ctx.stroke(); ctx.strokeStyle = INK; ctx.lineWidth = 2.5 / s;
-    // arms with salmon sleeve garters; the left one long in the reach, its palm flat in the tell
-    const reach = o.arm || 0, palm = o.palm;
-    ctx.fillStyle = GRA;
-    if (reach < 0) { ctx.beginPath(); ctx.rect(-36, -106, 12, 90); ctx.fill(); ctx.stroke(); }
-    else { ctx.beginPath(); ctx.rect(-36, -106, 12, 46); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.ellipse(-30, -56, palm ? 14 : 8, palm ? 7 : 8, 0, 0, TAU); ctx.fill(); ctx.stroke(); }
-    ctx.beginPath(); ctx.rect(24, -106, 12, 46); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.arc(30, -56, 8, 0, TAU); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = SAL; ctx.fillRect(-34, -106, 6, 12); ctx.fillRect(24, -96, 12, 6);
-    // the head, a green visor, white eyes, the bowler hat (lifted in the split's tell) with the department's notch
-    ctx.fillStyle = GRA; ctx.beginPath(); ctx.ellipse(0, -130, 20, 19, 0, 0, TAU); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = VISOR; ctx.beginPath(); ctx.moveTo(-22, -140); ctx.lineTo(26, -140); ctx.lineTo(30, -133); ctx.lineTo(-18, -133); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = WHITE; for (const dx of [-7, 7]) { ctx.beginPath(); ctx.ellipse(dx, -127, 4, o.squint ? 2 : 4.5, 0, 0, TAU); ctx.fill(); }
-    ctx.fillStyle = INK; for (const dx of [-7, 7]) { ctx.beginPath(); ctx.arc(dx - 1, -126, 1.8, 0, TAU); ctx.fill(); }
+    c.fillRect(-20, -60, 16, 60 - heel); c.fillRect(4, -60, 16, 60);
+    c.beginPath(); c.ellipse(-12, -2 - heel, 14, 6, 0, 0, TAU); c.ellipse(14, -2, 14, 6, 0, 0, TAU); c.fill();
+    c.beginPath(); c.moveTo(-26, -60); c.lineTo(-30, -112); c.lineTo(30, -112); c.lineTo(26, -60); c.closePath(); c.fill();
+    if (o.arm < 0) c.fillRect(-36, -106, 12, 90);
+    else { c.fillRect(-36, -106, 12, 46); c.beginPath(); c.ellipse(-30, -56, o.palm ? 15 : 8, o.palm ? 6 : 8, 0, 0, TAU); c.fill(); }
+    c.fillRect(24, -106, 12, 46); c.beginPath(); c.arc(30, -56, 8, 0, TAU); c.fill();
+    c.fillStyle = SAL; c.fillRect(-36, -100, 12, 6); c.fillRect(24, -100, 12, 6);
+    c.fillStyle = GRA; c.beginPath(); c.ellipse(0, -130, 20, 19, 0, 0, TAU); c.fill();
+    c.fillStyle = VISOR; c.beginPath(); c.moveTo(-22, -140); c.lineTo(26, -140); c.lineTo(30, -133); c.lineTo(-18, -133); c.closePath(); c.fill();
     const hl = o.hat || 0;
-    ctx.fillStyle = GRA; ctx.beginPath(); ctx.ellipse(0, -146 - hl, 30, 6, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-18, -148 - hl); ctx.quadraticCurveTo(-18, -172 - hl, 0, -172 - hl); ctx.quadraticCurveTo(18, -172 - hl, 18, -148 - hl); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = BUT; ctx.fillRect(-18, -154 - hl, 36, 5);
-    SA.notch(ctx, 22, -146 - hl, 1.3, 0, '#c2aa78');
-    ctx.restore();
-    ctx.restore();
+    c.fillStyle = GRA; c.beginPath(); c.ellipse(0, -146 - hl, 30, 6, 0, 0, TAU); c.fill(); c.beginPath(); c.moveTo(-18, -148 - hl); c.quadraticCurveTo(-18, -172 - hl, 0, -172 - hl); c.quadraticCurveTo(18, -172 - hl, 18, -148 - hl); c.closePath(); c.fill();
+    c.fillStyle = BUT; c.fillRect(-18, -154 - hl, 36, 5);
+    // the department's notch: a bite out of the brim (the wall shows through)
+    c.globalCompositeOperation = 'destination-out'; c.beginPath(); c.moveTo(16, -147 - hl); c.lineTo(28, -147 - hl); c.lineTo(22, -139 - hl); c.closePath(); c.fill();
+    c.restore();
+    // the feet fade into the skirting
+    c.globalCompositeOperation = 'destination-out'; const gr = c.createLinearGradient(0, FY - 34 * s, 0, FY + 2); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,0.95)'); c.fillStyle = gr; c.fillRect(0, FY - 34 * s, W, 40 * s + 4);
+    c.globalCompositeOperation = 'source-over';
+    ctx.save(); ctx.globalAlpha *= 0.72 * (o.a == null ? 1 : o.a); ctx.translate(x, y); ctx.transform(1, 0, -0.16, 1, 0, 0);
+    ctx.drawImage(C, -W / 2, -FY, W, H); ctx.restore();
   },
   draw(b, ctx, t) {
     const A = b.act, G = this.geo(b), ph = b.phase || 1;
@@ -131,7 +131,7 @@ const brain = {
     const reaching = A === 'reach' || (A === 'hold' && ph === 1) || (A === 'back' && ph === 1);
     const kicking = A === 'kick' || (A === 'hold' && ph === 2) || (A === 'back' && ph === 2);
     const fade = A === 'gone' ? 1 - (b.fade || 0) : 1;
-    this.clerk(ctx, G.home, b.floorY, b.h, t, { palm: A === 'palm', arm: reaching ? -1000 : 0, heel: A === 'heel', a: fade, squint: A === 'palm' || A === 'heel' });
+    this.clerk(ctx, G.home, b.floorY, b.h, t, { palm: A === 'palm', arm: reaching ? -1 : 0, heel: A === 'heel', a: fade });
   }
 };
 // the counter's lamps, slots and tells; the reach and the kick along the floor; the two halves; one line at a time on
@@ -164,6 +164,7 @@ TourHooks.on('afterEntities', (play, ctx) => {
     ctx.fillStyle = GRA; ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.fillRect(tip + 12, fy - 26, G.home - 36 - tip, 11); ctx.strokeRect(tip + 12, fy - 26, G.home - 36 - tip, 11);
     ctx.beginPath(); ctx.ellipse(tip, fy - 18, 16, 11, 0, 0, TAU); ctx.fill(); ctx.stroke();
     for (let f = 0; f < 4; f++) { ctx.beginPath(); ctx.ellipse(tip - 14, fy - 27 + f * 6, 8, 3, 0, 0, TAU); ctx.fill(); ctx.stroke(); }
+    if (A === 'reach') { ctx.strokeStyle = BUT_HI; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(tip - 4, fy - 18, 22, 14, 0, 0, TAU); ctx.stroke(); }
     ctx.fillStyle = SAL; ctx.fillRect(tip + 20, fy - 26, 6, 11);
   }
   // the kick: a long flat leg along the floor and its pointed shoe
@@ -171,6 +172,7 @@ TourHooks.on('afterEntities', (play, ctx) => {
     const tip = lerp(G.home - 30, b.tx, b.ext || 0);
     ctx.fillStyle = GRA; ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.fillRect(tip + 10, fy - 22, G.home - 30 - tip, 14); ctx.strokeRect(tip + 10, fy - 22, G.home - 30 - tip, 14);
     ctx.beginPath(); ctx.moveTo(tip + 12, fy - 24); ctx.lineTo(tip - 22, fy - 4); ctx.lineTo(tip + 14, fy - 2); ctx.closePath(); ctx.fill(); ctx.stroke();
+    if (A === 'kick') { ctx.strokeStyle = BUT_HI; ctx.lineWidth = 3; ctx.stroke(); }
   }
   // the claim pulling the hand or the boot into its slot
   if (A === 'hold' && b.claimed) { const x = ph === 1 ? G.hand : G.boot; ctx.strokeStyle = `rgba(255,240,150,${0.6 + 0.4 * k})`; ctx.lineWidth = 5; ctx.strokeRect(x - 30, fy - 26, 60, 28); }
@@ -185,7 +187,7 @@ TourHooks.on('afterEntities', (play, ctx) => {
     if (A === 'stamp') xs = G.feet.slice();
     const hat = A === 'hats' ? Math.min(1, b.at / 0.4) * 24 : 0, flat = A === 'rush';
     xs.forEach((x, i) => {
-      if (flat) { ctx.save(); ctx.fillStyle = GRA; ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(x, fy - 12, 40, 13, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = WHITE; ctx.beginPath(); ctx.arc(x + (i ? -24 : 24), fy - 15, 3.5, 0, TAU); ctx.fill(); ctx.restore(); }
+      if (flat) { ctx.save(); ctx.fillStyle = GRA; ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(x, fy - 12, 40, 13, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = BUT_HI; ctx.lineWidth = 3; ctx.stroke(); ctx.restore(); }
       else brain.clerk(ctx, x, fy, b.h * 0.86, t, { half: i ? 1 : -1, hat, a: A === 'stamp' ? 1 - Math.min(1, b.at / 1.2) * 0.6 : 0.95 });
     });
     if (A === 'stamp') for (const x of G.feet) { ctx.fillStyle = '#c84a4a'; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.save(); ctx.translate(x, fy - 60); ctx.rotate(-0.2); ctx.fillRect(-30, -10, 60, 20); ctx.strokeRect(-30, -10, 60, 20); ctx.fillStyle = WHITE; ctx.font = '9px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.fillText('CLAIMED', 0, 4); ctx.restore(); }
