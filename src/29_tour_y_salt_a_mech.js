@@ -63,7 +63,7 @@ class SaltNotch extends Ent {
     // the FULL line at the lip: a gold dashed bar with a tag, big while it is short
     if (this.fill < 1) {
       ctx.setLineDash([8, 6]); ctx.strokeStyle = SA.GOLD; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x0 + 2, lip + 3); ctx.lineTo(x1 - 2, lip + 3); ctx.stroke(); ctx.setLineDash([]);
-      SA.pill(ctx, (x0 + x1) / 2, lip + 1.3 * TS, Math.round(this.fill * 100) + '%  FULL AT THE LINE', '#ffffff', 0.9);
+      SA.pill(ctx, (x0 + x1) / 2, lip - 2.2 * TS, Math.round(this.fill * 100) + '%  FULL AT THE LINE', '#ffffff', 0.9);
     }
     if (this.spill > 0) { for (let k = 0; k < 5; k++) { const u = (this.t * 3 + k / 5) % 1; ctx.fillStyle = SA.CRYS; ctx.fillRect(x1 - 6 + u * 30, lip - 6 + u * u * 50, 4, 4); } SA.pill(ctx, (x0 + x1) / 2, lip - 1.2 * TS, 'SPILLING!', '#ff9a8a'); }
     ctx.restore();
@@ -71,6 +71,7 @@ class SaltNotch extends Ent {
 }
 // the heap: on its mark hold RUN to scuff; salt slides to its notches in order (see the header)
 class SaltHeap extends SaltMark {
+  saltTouch(p) { return this.live() && onMark(p, this.tx, this.fy, 1.0); }
   constructor(g, s) { super(g, s, TS, TS); this.cap = s.cap || 1.6; this.salt = this.cap; this.notches = s.notches; this.rate = 0.8; this.target = null; this.refillT = 0; this.cue = 'HOLD RUN'; this.hx = (this.tx + 1.8) * TS; }
   live() { return this.salt > 0.02 && this.notchList().some(n => n.fill < 1); }
   notchList() { return this.notches.map(id => byId(this.g, SaltNotch, id)).filter(Boolean); }
@@ -144,7 +145,7 @@ class SaltBasin extends Ent {
     ctx.fillStyle = k >= 1 ? 'rgba(40,90,210,0.78)' : `rgba(${80 - 40 * k},${150 - 60 * k},${220 - 10 * k},0.66)`; ctx.fillRect(x0, top, w, bot - top);
     ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 2; ctx.beginPath(); for (let x = x0; x <= x0 + w; x += 8) ctx.lineTo(x, top + Math.sin(x * 0.08 + this.t * 3) * 2); ctx.stroke();
     // the density gauge on the near wall: bands, the filled ones white, the float band gold
-    const gx = x0 + 8, gh = Math.min(bot - top - 16, 3 * TS), gy0 = top + 8;
+    const gx = x0 - 22, gh = 2.2 * TS, gy0 = top + 6;
     ctx.save(); ctx.fillStyle = 'rgba(10,20,50,0.75)'; rr(ctx, gx - 4, gy0 - 4, 22, gh + 8, 6); ctx.fill(); ctx.restore();
     if (this.cork) this.cork.drawBody(ctx);
     for (let q = 0; q < this.need + (this.lip ? 1 : 0); q++) { const bh = gh / (this.need + (this.lip ? 1 : 0)), yy = gy0 + gh - (q + 1) * bh; ctx.fillStyle = q < this.dose ? (q === this.need - 1 ? SA.GOLD : '#ffffff') : (q >= this.need ? 'rgba(255,120,110,0.5)' : 'rgba(255,255,255,0.18)'); ctx.fillRect(gx, yy + 1, 14, bh - 2); }
@@ -160,11 +161,11 @@ class SaltCork extends Ent {
   riding() { const p = this.g.player; return !!(p && p.ride === this && p.onGround); }
   update(dt) {
     this.t += dt; const B = this.B, px = this.x, py = this.y;
-    const surf = B.sy * TS + 8, floor = (B.by + 1) * TS - this.h;
+    const surf = B.sy * TS, floor = (B.by + 1) * TS - this.h;
     let ty = B.dose >= B.need ? surf : lerp(floor, floor - 0.6 * TS, B.dose / B.need);
     if (this.drift > 0) { this.drift += dt; ty = surf - this.drift * 2.6 * TS; this.x += dt * 1.2 * TS; }
-    this.ry = approach(this.ry, ty, dt * (this.ry > ty ? 2.2 : 3) * TS) + (B.dose >= B.need && !this.drift ? Math.sin(this.t * 2.4) * 0.15 : 0);
-    if (B.dose >= B.need && !this.drift) { const goal = this.riding() ? this.far : this.home; this.x = approach(this.x, goal, dt * 1.6 * TS); }
+    this.ry = approach(this.ry, ty, dt * (this.ry > ty ? 2.2 : 5) * TS) + (B.dose >= B.need && !this.drift ? Math.sin(this.t * 2.4) * 0.15 : 0);
+    if (B.dose >= B.need && !this.drift) { const goal = this.riding() ? this.far : this.home; this.x = approach(this.x, goal, dt * 2.6 * TS); }
     // sunk in its cradle it is no floor (the brine is deep): only a floating cork holds Brady
     this.y = this.afloat() ? this.ry : 1e5;
     this.dx = this.x - px; this.dy = py > 1e4 || this.y > 1e4 ? 0 : this.y - py;
@@ -283,8 +284,8 @@ class SaltCrystal extends SaltMark {
 // hole; the gold bowl (index `gold`) needs `need` of one pour (1 = all of it); a cellar gate (a lock) opens when it
 // gets it. The cap shakes (1.0 s tell) every `per` seconds, then pours for 1.2 s.
 class SaltCap extends Ent {
-  constructor(g, s) { super(g, s, TS, TS); Object.assign(this, { id: s.id, holes: s.holes, fy: s.fy, bowlY: s.bowlY, gold: s.gold, need: s.need, per: s.per || 4.2, lock: s.lock, narrow: !!s.narrow }); this.cyc = 1.0; this.got = s.holes.map(() => 0); this.done = false; this.back = true; this.friendly = true; this.x = (s.holes[0] - 2) * TS; this.w = (s.holes[s.holes.length - 1] - s.holes[0] + 5) * TS; this.y = (s.fy - 2) * TS; this.h = 2 * TS; }
-  plugged(k) { const p = this.g.player; if (!p || p.dead || !p.onGround || p.groundTy !== this.fy + 1) return false; return Math.abs(p.cx - (this.holes[k] + 0.5) * TS) < TS * 0.66; }
+  constructor(g, s) { super(g, s, TS, TS); Object.assign(this, { id: s.id, holes: s.holes, fy: s.fy, bowlY: s.bowlY, gold: s.gold, need: s.need, per: s.per || 4.2, lock: s.lock, narrow: !!s.narrow, span: s.span || null }); this.cyc = 1.0; this.got = s.holes.map(() => 0); this.done = false; this.back = true; this.friendly = true; this.x = (s.holes[0] - 3) * TS; this.w = (s.holes[s.holes.length - 1] - s.holes[0] + 7) * TS; this.y = (s.fy - 2) * TS; this.h = 7 * TS; }
+  plugged(k) { const p = this.g.player; if (!p || p.dead || !p.onGround || p.groundTy !== this.fy + 1) return false; return Math.abs(p.cx - (this.holes[k] + 0.5) * TS) < TS * 0.85; }
   update(dt) {
     this.t += dt; if (this.done) return;
     const g = this.g, p = g.player; if (!p || Math.abs(p.cx - this.cx) > 14 * TS) return;
@@ -299,13 +300,15 @@ class SaltCap extends Ent {
     }
     if (this.cyc >= this.per + 1.2) {
       const gk = this.got[this.gold] || 0;
-      if (gk >= this.need - 0.02) { this.done = true; g.keys.add(this.lock); say(g, (this.holes[this.gold] + 0.5) * TS, this.bowlY * TS - 2 * TS, 'THE GOLD BOWL SINKS! THE GATE LIFTS', SA.GOLD); TourKit.sfx('clunk', 'secret', { vol: 0.5 }); }
+      if (gk >= this.need - 0.06) { this.done = true; g.keys.add(this.lock); say(g, (this.holes[this.gold] + 0.5) * TS, this.bowlY * TS - 2 * TS, 'THE GOLD BOWL SINKS! THE GATE LIFTS', SA.GOLD); TourKit.sfx('clunk', 'secret', { vol: 0.5 }); }
       else if (this.open) say(g, (this.holes[this.gold] + 0.5) * TS, this.bowlY * TS - 2 * TS, gk > 0 ? 'NOT ENOUGH IN THE GOLD BOWL' : 'NONE IN THE GOLD BOWL', '#ffffff');
       this.cyc = 0; this.open = null; this.toldS = false; if (!this.done) this.got = this.holes.map(() => 0);
     }
   }
   touchPlayer() {}
   draw(ctx) {
+    // the cap's charcoal disc over the chamber (drawn over its tiles), its rim
+    if (this.span) { const x0 = this.span[0] * TS, x1 = (this.span[1] + 1) * TS, y0 = (this.fy + 1) * TS; ctx.save(); ctx.fillStyle = SA.CHAR; ctx.fillRect(x0, y0, x1 - x0, TS); ctx.fillStyle = SA.CHAR_L; ctx.fillRect(x0, y0, x1 - x0, 5); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(x0, y0, x1 - x0, TS); ctx.fillStyle = 'rgba(0,0,0,0.35)'; for (let x = x0 + 12; x < x1; x += 24) { ctx.beginPath(); ctx.arc(x, y0 + 20, 2, 0, TAU); ctx.fill(); } ctx.restore(); }
     const t = this.t, fyp = (this.fy + 1) * TS, shake = !this.done && this.cyc >= this.per - 1.0 && this.cyc < this.per ? Math.sin(t * 46) * 2.5 : 0, pour = !this.done && this.cyc >= this.per && this.cyc < this.per + 1.2;
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
     // the holes in the disc: charcoal pinholes; the plugged ones under Brady's shoe; a pour drops from each open one
@@ -362,7 +365,7 @@ class SaltWeigh extends Ent {
       if (this.S > 1.17) { this.S = 0; this.tip = 1; say(g, this.cx, this.y, 'TOO SALTY! STEP OFF SOONER', '#ffffff'); this.state = 'rest'; this.st = 0; }
       return;
     }
-    if (this.state === 'rest') { if (this.st > 1.2 && !on) { this.state = 'wait'; this.st = 0; } }
+    if (this.state === 'rest') { if (this.st > 1.2) { this.state = 'wait'; this.st = 0; } }
   }
   judge() {
     const g = this.g, S = this.S; this.S = 0; this.tip = 1; this.st = 0;
@@ -440,7 +443,7 @@ Object.assign(Tour.pieces, {
   // lock, narrow, per }; its gate is placed by 'salt.gate'; the checker's key: standing on the plug spot(s)
   'salt.cap'(st, o) {
     const B = st.B, x = st.x, fy = st.gy - 1, holes = o.holes.map(d => x + d);
-    B.spawn('saltCap', x, fy, { id: o.id, holes, fy, bowlY: fy + (o.bowlDy || 5), gold: o.gold, need: o.need, lock: o.lock, narrow: !!o.narrow, per: o.per });
+    B.spawn('saltCap', x, fy, { id: o.id, holes, fy, bowlY: fy + (o.bowlDy || 4), gold: o.gold, need: o.need, lock: o.lock, narrow: !!o.narrow, per: o.per, span: o.span ? [x + o.span[0], x + o.span[1]] : null });
     const plug = (o.plug || []).map(d => [x + d, fy]); if (plug.length) B.vkey(o.lock, plug, 'any');
     return st.x;
   },

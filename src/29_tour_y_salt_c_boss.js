@@ -69,6 +69,7 @@ const brain = {
     const on = this.on(b);
     b.read = approach(b.read, this.reading(b), dt * 2.5);
     this.hazards(b, dt);
+    if (b.act !== 'pour') b.flowing = false;
     if (b.act === 'walk') b.go('idle');
     if (b.act === 'idle') { b.S = 0; if (b.at > 1.4) b.go('tell'); return; }
     if (b.act === 'tell') {
@@ -139,23 +140,6 @@ const brain = {
     ctx.fillStyle = INK; for (const dx of [-10, 10]) { ctx.beginPath(); ctx.arc(x + dx + look, y - 58, 2.6, 0, TAU); ctx.fill(); }
     ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x - 17, y - 68); ctx.lineTo(x - 4, y - 64); ctx.moveTo(x + 17, y - 68); ctx.lineTo(x + 4, y - 64); ctx.stroke();
     ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(x, y - 47); ctx.quadraticCurveTo(x - 10, y - 51, x - 16, y - 44); ctx.quadraticCurveTo(x - 8, y - 47, x, y - 44); ctx.quadraticCurveTo(x + 8, y - 47, x + 16, y - 44); ctx.quadraticCurveTo(x + 10, y - 51, x, y - 47); ctx.fill();
-    // his arm and hand: the tell (one finger, two fingers, the rub) held up big; else the shaker over the bowl
-    const hx = x - 40, hy = y - 70;
-    ctx.lineWidth = 6; ctx.strokeStyle = INK; ctx.beginPath(); ctx.moveTo(x - 26, y - 40); ctx.lineTo(hx, hy + 18); ctx.stroke();
-    ctx.lineWidth = 2.2; ctx.fillStyle = '#ffffff';
-    if (tell) {
-      ctx.beginPath(); ctx.arc(hx, hy + 14, 10, 0, TAU); ctx.fill(); ctx.stroke();
-      const n = ph === 3 ? 2 : ph;
-      for (let q = 0; q < n; q++) { const fx = hx - 4 + q * 8 + (ph === 3 ? Math.sin(b.t * 30) * 2 * (q ? 1 : -1) : 0); rr(ctx, fx - 3.5, hy - 12 - (ph === 3 && q ? -8 : 0), 7, 22, 3.5); ctx.fill(); ctx.stroke(); }
-      if (ph === 3) { for (let q = 0; q < 3; q++) { ctx.fillStyle = SA.CRYS; ctx.fillRect(hx - 3 + Math.sin(b.t * 9 + q) * 6, hy + 28 + ((b.t * 40 + q * 9) % 26), 3, 3); } }
-    } else {
-      // the shaker, held out over the spoon's bowl (pouring while he pours)
-      const sx = (b.sp1 - 1.5 * TS), sy = b.floorY - 4.6 * TS;
-      ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(hx, hy + 18); ctx.lineTo(sx + 16, sy - 8); ctx.stroke(); ctx.lineWidth = 2.2;
-      ctx.fillStyle = SA.COBALT; ctx.fillRect(sx - 14, sy - 30, 28, 26); ctx.strokeRect(sx - 14, sy - 30, 28, 26); ctx.fillStyle = SA.CHAR; ctx.beginPath(); ctx.ellipse(sx, sy - 4, 17, 6, 0, 0, TAU); ctx.fill(); ctx.stroke();
-      if (b.flowing) SA.stream(ctx, sx, sy + 2, b.floorY - 10, b.t, ph === 2 && b.act === 'pour' ? 0.6 : ph === 3 ? 0.25 : 0.6);
-      if (b.act === 'coarse' && b.at < 0.6) for (let q = 0; q < 3; q++) { const u = Math.min(1, b.at / 0.5); SA.cube(ctx, sx - 12 + q * 10, sy + 10 + u * (b.floorY - sy - 20), 12); }
-    }
     ctx.restore();
   }
 };
@@ -179,7 +163,7 @@ TourHooks.on('afterEntities', (play, ctx) => {
   const want = (b.act === 'pour' && !on) || (b.act === 'gap');
   if (want || (b.act === 'tell' && ph !== 2 && !on)) SA.ring(ctx, cxs, fy, t, true, 3 * TS);
   // the dial on the wall at the left: a big needle over a scale, the gold PINCH band, the shoe mark in phase 3
-  const dx = b.arenaX0 + 4.5 * TS, dy = fy - 5.2 * TS, R = 2.1 * TS, ang = v => Math.PI + clamp(v / 1.6, 0, 1) * Math.PI;
+  const dx = b.arenaX0 + 4.5 * TS, dy = fy - 4.3 * TS, R = 1.8 * TS, ang = v => Math.PI + clamp(v / 1.6, 0, 1) * Math.PI;
   ctx.fillStyle = '#f6f2e8'; ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(dx, dy, R, Math.PI, TAU); ctx.closePath(); ctx.fill(); ctx.stroke();
   ctx.lineWidth = 14; ctx.strokeStyle = SA.GOLD; ctx.beginPath(); ctx.arc(dx, dy, R - 12, ang(BAND[0]), ang(BAND[1])); ctx.stroke();
   ctx.lineWidth = 2; ctx.strokeStyle = INK; for (let v = 0; v <= 1.6; v += 0.2) { const a = ang(v); ctx.beginPath(); ctx.moveTo(dx + Math.cos(a) * (R - 4), dy + Math.sin(a) * (R - 4)); ctx.lineTo(dx + Math.cos(a) * (R - 20), dy + Math.sin(a) * (R - 20)); ctx.stroke(); }
@@ -187,6 +171,25 @@ TourHooks.on('afterEntities', (play, ctx) => {
   const a = ang(b.read); ctx.lineWidth = 5; ctx.strokeStyle = '#c8323a'; ctx.beginPath(); ctx.moveTo(dx, dy); ctx.lineTo(dx + Math.cos(a) * (R - 8), dy + Math.sin(a) * (R - 8)); ctx.stroke();
   ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(dx, dy, 7, 0, TAU); ctx.fill();
   SA.pill(ctx, dx, dy + 16, ph === 3 ? 'STEP OFF AT THE SHOE' : 'STEP OFF IN THE GOLD', SA.GOLD);
+
+  // his arm: the tell held up big (one finger, two fingers, the rub) or the shaker held out over the spoon's bowl
+  { const x = b.cx, y = b.y + b.h, tell = b.act === 'tell', hx = x - 46, hy = y - 78;
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 6; ctx.lineCap = 'round';
+    if (tell) {
+      ctx.beginPath(); ctx.moveTo(x - 26, y - 40); ctx.lineTo(hx, hy + 18); ctx.stroke(); ctx.lineWidth = 2.4; ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(hx, hy + 14, 13, 0, TAU); ctx.fill(); ctx.stroke();
+      const n = ph === 3 ? 2 : ph;
+      for (let q = 0; q < n; q++) { const fx = hx - 5 + q * 10 + (ph === 3 ? Math.sin(t * 30) * 2.5 * (q ? 1 : -1) : 0); rr(ctx, fx - 4.5, hy - 16 + (ph === 3 && q ? 10 : 0), 9, 28, 4.5); ctx.fill(); ctx.stroke(); }
+      if (ph === 3) for (let q = 0; q < 3; q++) { ctx.fillStyle = SA.CRYS; ctx.fillRect(hx - 3 + Math.sin(t * 9 + q) * 6, hy + 30 + ((t * 40 + q * 9) % 26), 3, 3); }
+      SA.pill(ctx, hx, hy - 34, ph === 1 ? 'ONE FINGER' : ph === 2 ? 'TWO FINGERS' : 'THE RUB', SA.GOLD);
+    } else {
+      const sx = b.sp1 - 1.4 * TS, sy = fy - 4.4 * TS;
+      ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(x - 26, y - 40); ctx.quadraticCurveTo(x - 60, sy - 30, sx + 16, sy - 14); ctx.stroke(); ctx.lineWidth = 2.4;
+      ctx.fillStyle = SA.COBALT; ctx.fillRect(sx - 16, sy - 32, 32, 28); ctx.strokeRect(sx - 16, sy - 32, 32, 28); ctx.fillStyle = SA.CHAR; ctx.beginPath(); ctx.ellipse(sx, sy - 4, 19, 7, 0, 0, TAU); ctx.fill(); ctx.stroke();
+      if (b.flowing) SA.stream(ctx, sx, sy + 2, fy - 14, t, ph === 3 ? 0.3 : 0.7);
+      if (b.act === 'coarse' && b.at < 0.6) for (let q = 0; q < 3; q++) { const u = Math.min(1, b.at / 0.5); SA.cube(ctx, sx - 16 + q * 11, sy + 12 + u * (fy - sy - 22), 13); }
+    }
+    ctx.restore(); }
   // the crystals' shadows (the tell) and the crystals falling into them
   for (const c of b.crystals) {
     if (c.t < 1.0) { const k = c.t; ctx.fillStyle = `rgba(20,20,50,${0.25 + 0.35 * k})`; ctx.beginPath(); ctx.ellipse(c.x, fy - 2, 20 + 6 * k, 6, 0, 0, TAU); ctx.fill(); if (c.t > 0.7) SA.cube(ctx, c.x - 14, lerp(fy - 7 * TS, fy, (c.t - 0.7) / 0.3), 28); }

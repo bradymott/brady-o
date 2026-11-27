@@ -305,6 +305,9 @@ Object.assign(ENEMY_SAFE_TYPES, { orchCrawler: 'on a trellis: touches only Brady
 // 29_tour_y_umb_c_boss.js touch()); a canopy critter touches only Brady on its own face (customCollide)
 Object.assign(BOSS_SAFE, { umb_inspector: ['back', 'tell', 'poke', 'scoop', 'jab', 'caught', 'drop'] });
 Object.assign(ENEMY_SAFE_TYPES, { umbCrawler: 'on a canopy: touches only Brady on its own face (customCollide)' });
+// The Table Salt Sea (34): A Pinch is cork behind his pot (his crystals and lumps hurt, never his body:
+// 29_tour_y_salt_c_boss.js touch())
+Object.assign(BOSS_SAFE, { salt_pinch: ['idle', 'tell', 'coarse', 'gap', 'pour', 'season'] });
 const OLD_TYPES = { greeter: 1, pony: 1 };   // the old Black Rock City enemies (08a_chunks.js / 10b_burners.js): in no tour level
 if (!noSweep) {
   const noHurt = [];

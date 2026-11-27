@@ -53,7 +53,7 @@ function saucer(ctx, x, y, t, sink) {
 /* ---------------- the last stall's saucer and the way in ---------------- */
 class SaltMaSaucer extends Ent {
   constructor(g, s) {
-    super(g, s, TS, TS); this.tx = s.tx; this.cy = s.cy; this.x0 = s.x0; this.x1 = s.x1; this.gy = s.gy; this.x = this.x0[0] * TS - 16; this.w = (this.x1[2] - this.x0[0] + 2) * TS; this.y = (this.cy - 4) * TS; this.h = (this.gy - this.cy + 4) * TS; this.back = true; this.friendly = true;
+    super(g, s, TS, TS); this.tx = s.tx; this.crow = s.cy; this.x0 = s.x0; this.x1 = s.x1; this.gy = s.gy; this.x = this.x0[0] * TS - 16; this.w = (this.x1[2] - this.x0[0] + 2) * TS; this.y = (this.crow - 4) * TS; this.h = (this.gy - this.crow + 4) * TS; this.back = true; this.friendly = true;
     this.exitKey = 'salt'; this.secret = true; this.arr = -1; this.crouchT = 0; this.sx = (this.tx + 0.5) * TS;
   }
   update(dt) {
@@ -61,21 +61,21 @@ class SaltMaSaucer extends Ent {
     const g = this.g, p = g.player;
     if (!p || p.dead) return;
     if (this.arr >= 0) {
-      this.arr += dt; p.vx = 0; p.vy = 0; p.x = this.sx - p.w / 2; p.y = this.cy * TS - p.h + Math.min(p.h + 6, this.arr * 50); p.invuln = Math.max(p.invuln || 0, 0.5);
+      this.arr += dt; p.vx = 0; p.vy = 0; p.x = this.sx - p.w / 2; p.y = this.crow * TS - p.h + Math.min(p.h + 6, this.arr * 50); p.invuln = Math.max(p.invuln || 0, 0.5);
       if (this.arr > 0.3 && !this.named) { this.named = true; g.bannerText = 'THE TABLE SALT SEA'; g.bannerT = 2.6; TourKit.sfx('secret', 'secret', { vol: 0.9 }); if (g.toast) g.toast('A HIDDEN LAND! DOWN THROUGH THE SAUCER\'S RIM...'); }
       if (this.arr > 2.3 && g.state === 'play') { p.state = 'play'; g.levelClear(this); }
       return;
     }
     // crouching on the saucer (on the counter, over it): it sinks; a full second and Brady slips through the rim
-    const on = p.onGround && p.groundTy === this.cy && Math.abs(p.cx - this.sx) < 0.6 * TS;
+    const on = p.onGround && p.groundTy === this.crow && Math.abs(p.cx - this.sx) < 0.6 * TS;
     const down = !!(p.inp ? p.inp.down : Input.down) || p.crouch;
-    if (on && down) { this.crouchT += dt; if (this.crouchT >= 1.0) { this.arr = 0; p.stunT = 3; g.burst(this.sx, this.cy * TS - 10, 14, '#ffffff', 'dust'); TourKit.sfx('crunch', 'bump', { vol: 0.6, pitch: 1.3 }); } }
+    if (on && down) { this.crouchT += dt; if (this.crouchT >= 1.0) { this.arr = 0; p.stunT = 3; g.burst(this.sx, this.crow * TS - 10, 14, '#ffffff', 'dust'); TourKit.sfx('crunch', 'bump', { vol: 0.6, pitch: 1.3 }); } }
     else this.crouchT = Math.max(0, this.crouchT - dt * 2);
   }
   touchPlayer() {}
   draw(ctx) {
     // the three stalls behind everything; the saucer on the last counter
-    const y = this.cy * TS, gy = this.gy * TS;
+    const y = this.crow * TS, gy = this.gy * TS;
     for (let k = 0; k < 3; k++) { const a = this.x0[k], b = this.x1[k]; stall(ctx, a * TS, (b + 1) * TS, y, gy, k); }
     saucer(ctx, this.sx, y, this.t, Math.min(1, this.crouchT));
   }
@@ -87,7 +87,7 @@ ENTITY_TYPES.saltMaSaucer = SaltMaSaucer;
   Player.prototype.draw = function (ctx) {
     const e = this.g && this.g.entities && this.g.entities.find(q => q instanceof SaltMaSaucer && q.arr >= 0);
     if (!e) return dr0.apply(this, arguments);
-    ctx.save(); ctx.beginPath(); ctx.rect(this.x - 60, this.y - 400, this.w + 120, e.cy * TS - 12 - (this.y - 400)); ctx.clip(); dr0.apply(this, arguments); ctx.restore();
+    ctx.save(); ctx.beginPath(); ctx.rect(this.x - 60, this.y - 400, this.w + 120, e.crow * TS - 12 - (this.y - 400)); ctx.clip(); dr0.apply(this, arguments); ctx.restore();
   };
 }
 // the checker: an exit box standing on the saucer's counter

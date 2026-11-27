@@ -273,7 +273,10 @@ TourHats.NOT = new Set([].concat(
   'orchTrellis orchFork orchCrawler orchBite orchBlossom orchBell orchBud orchSleeve orchGraft orchLoaded orchBasket orchHedgeGate orchRoomMark orchPerchMark orchJpTree'.split(' '),
   // The Umbrella Repair District (31): the canopies and their critters (drawn through the cloth on the far face), the
   // seated tick, the tickets, drips, gutters, hooks, panels, puddled canopies, jams, room stations, the stand in 8-1
-  'umbCanopy umbCrawler umbTickSeat umbTicket umbDrip umbGutter umbSluice umbHook umbPanel umbPanelRain umbShutter umbShake umbCupGate umbJam umbStation umbStandDoor'.split(' ')
+  'umbCanopy umbCrawler umbTickSeat umbTicket umbDrip umbGutter umbSluice umbHook umbPanel umbPanelRain umbShutter umbShake umbCupGate umbJam umbStation umbStandDoor'.split(' '),
+  // The Table Salt Sea (34): notches, heaps, basins, spoons, crystals, the cap, cellar gates, the grain tell, weighing
+  // spoons, room marks, the saucer in 5-3
+  'saltNotch saltHeap saltBasin saltSpoon saltCrystal saltCap saltCellarGate saltGrain saltWeigh saltRoomMark saltMaSaucer'.split(' ')
 ));
 
 /* ---------- the animals: [fx, fxFlip, fy, size] (see the header) ---------- */
@@ -345,6 +348,8 @@ Object.assign(TourHats.HEADS, {
   orchFly: [0.3, 0.3, -1.1, 0], orchWorm: [0.4, 0.4, -0.9, 0], orchFinch: [0.3, 0.3, -1.3, 0], orchSnail: [0.5, 0.5, -1.15, 0],
   // The Umbrella Repair District (31): the rivet tick, the puddle mule, the drip finch, the ferrule ferret
   umbTick: [0.45, 0.45, -1.25, 0], umbMule: [0.55, 0.55, -1.35, 0], umbFinch: [0.25, 0.25, -1.3, 0], umbFerret: [0.62, 0.62, -1.2, 0],
+  // The Table Salt Sea (34): the grain wren, the brine shrimp, the cork weevil, the salt lick
+  saltWren: [0.3, 0.3, -1.3, 0], saltShrimp: [0.4, 0.4, -1.1, 0], saltWeevil: [0.4, 0.4, -1.15, 0], saltLick: [0.05, 0.05, -1.25, 0],
 
 });
 

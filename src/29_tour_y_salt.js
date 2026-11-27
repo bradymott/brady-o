@@ -206,7 +206,7 @@ function cellars(ctx, b, rng, col, h0, h1) {
     const w = 50 + rng() * 40, h = h0 + rng() * (h1 - h0);
     wrapDraw(x, w + 20, X => {
       ctx.fillStyle = col; ctx.fillRect(X, b - h, w, h + 400); ctx.fillStyle = shade(col, 0.25); ctx.fillRect(X + 6, b - h + 8, 8, h - 16);
-      if (rng() < 0.5) { ctx.fillStyle = shade(CORK, -0.25); ctx.fillRect(X - 4, b - h - 14, w + 8, 14); ctx.fillRect(X + w / 2 - 8, b - h - 22, 16, 8); }
+      if (rng() < 0.5) { ctx.fillStyle = shade(col, -0.12); ctx.fillRect(X - 4, b - h - 14, w + 8, 14); ctx.fillRect(X + w / 2 - 8, b - h - 22, 16, 8); }
       else { ctx.fillStyle = shade(CHAR, 0.2); ctx.beginPath(); ctx.ellipse(X + w / 2, b - h, w / 2 + 4, 12, 0, Math.PI, TAU); ctx.fill(); ctx.fillStyle = shade(col, -0.3); for (let k = -1; k <= 1; k++) { ctx.beginPath(); ctx.arc(X + w / 2 + k * 10, b - h - 5, 2, 0, TAU); ctx.fill(); } }
     });
   }
@@ -259,7 +259,7 @@ const base = (o, ...mix) => Object.assign({}, ...mix, o);
 const roomTheme = (name, col, kind, rt) => base({ name, music: 'tour_salt_room', particles: 'none', rays: null, sky: [col, col, col], horizonGlow: '#ffffff', celestial: { type: 'none' }, stars: 0, layers: [{ kind, base: 400, f: 0.05 }], fog: col, decor: [] }, rt);
 const themes = {
   salt_flats: base({ name: 'Angle of Repose', music: 'tour_salt', particles: 'none', rays: '#fff8e0', sky: ['#8ab0e8', '#b8d0f4', '#e8f0fc'], horizonGlow: '#ffffff', celestial: { type: 'sun', x: 0.72, y: 0.22, r: 28, color: '#fffbe8', glow: '#ffffff' }, stars: 0,
-    layers: [{ kind: 'saltFlats', color: '#dfe8f6', base: 300, f: 0.06 }, { kind: 'saltCellars', color: '#7a98d8', base: 360, f: 0.12 }, { kind: 'saltSteps', color: '#cbd8ee', base: 440, f: 0.22 }], fog: '#d8e4f6', decor: ['saltHeapSmall', 'saltCellarProp'] }, shore),
+    layers: [{ kind: 'saltFlats', color: '#dfe8f6', base: 300, f: 0.06 }, { kind: 'saltCellars', color: '#a8bce6', base: 360, f: 0.12 }, { kind: 'saltSteps', color: '#cbd8ee', base: 440, f: 0.22 }], fog: '#d8e4f6', decor: ['saltHeapSmall', 'saltCellarProp'] }, shore),
   salt_sea: base({ name: 'Grain Elevator', music: 'tour_salt_sea', particles: 'none', rays: null, sky: ['#5a88d8', '#8ab0ec', '#cfe0fa'], horizonGlow: '#f0f6ff', celestial: { type: 'sun', x: 0.25, y: 0.2, r: 26, color: '#fffbe8', glow: '#ffffff' }, stars: 0,
     layers: [{ kind: 'saltSea', color: '#4a7ad0', base: 330, f: 0.08 }, { kind: 'saltSteps', color: '#d4dff0', base: 450, f: 0.2 }], fog: '#a8c4ee', decor: ['saltCellarProp'] }, shore),
   salt_cave: base({ name: 'Crystal Habit', music: 'tour_salt_sea', particles: 'none', rays: null, sky: ['#1a2a5a', '#25386e', '#30468a'], horizonGlow: '#5a82e8', celestial: { type: 'none' }, stars: 0,
@@ -280,7 +280,7 @@ const decor = {
   // a little heap of salt left on the flats (scenery: grey-white and low, nothing like the gold-ringed heaps)
   saltHeapSmall(ctx, x, y) { ctx.save(); ctx.globalAlpha = 0.75; ctx.fillStyle = '#dfe6f2'; ctx.beginPath(); ctx.moveTo(x - 20, y); ctx.quadraticCurveTo(x, y - 18, x + 20, y); ctx.closePath(); ctx.fill(); ctx.restore(); },
   // an empty cobalt salt cellar on its side (scenery), its cork lid beside it
-  saltCellarProp(ctx, x, y) { ctx.save(); ctx.globalAlpha = 0.85; ctx.fillStyle = COBALT_D; ctx.fillRect(x - 16, y - 22, 26, 22); ctx.fillStyle = shade(CORK, -0.15); ctx.fillRect(x + 12, y - 8, 10, 8); ctx.restore(); },
+  saltCellarProp(ctx, x, y) { ctx.save(); ctx.globalAlpha = 0.5; ctx.fillStyle = '#8aa0d0'; ctx.fillRect(x - 16, y - 22, 26, 22); ctx.fillStyle = '#c8b8a8'; ctx.fillRect(x + 12, y - 8, 10, 8); ctx.restore(); },
   // the grain tell (drawn by an entity, see the levels file)
   saltTip(ctx, x, y, t) { SaltArt.grain(ctx, x, y - 6, t || 0); }
 };

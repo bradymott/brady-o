@@ -104,7 +104,7 @@ const SEA = Object.assign({}, ENEMY, {
   N: ['piece', 'salt.basin', { id: 'b1', w: 9, d: 4, need: 1 }], '1': ['piece', 'salt.spoon', { basin: 'b1' }],
   d: ['piece', 'salt.basin', { id: 'b2', w: 10, d: 4, need: 2 }], '2': ['piece', 'salt.spoon', { basin: 'b2' }],
   e: ['piece', 'salt.basin', { id: 'b3', w: 12, d: 4, need: 2 }], '3': ['piece', 'salt.spoon', { basin: 'b3' }],
-  M: ['piece', 'salt.basin', { id: 'b4', w: 13, d: 4, need: 1, lip: true }], '4': ['piece', 'salt.spoon', { basin: 'b4', auto: 2.6 }],
+  M: ['piece', 'salt.basin', { id: 'b4', w: 13, d: 4, need: 1, lip: true }], '4': ['piece', 'salt.spoon', { basin: 'b4', auto: 3.4 }],
   A: DOOR('lamps@in'), u: GRAIN(), a: ['anchor', 'lampsOut']
 });
 stamps.saltSea = { floor: 18, rows: seaRows, legend: SEA, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power'] };
@@ -177,7 +177,7 @@ const L3 = { n: 3, name: 'Crystal Habit', mapLabel: 'Crystal Habit', arch: 'cube
 const capRows = (() => {
   const W = 190, H = 22, Gr = grid(W, H, '.');
   ground(Gr, 0, W - 1, 14);
-  const chamber = (x0, x1) => { fillG(Gr, x0, 15, x1, 19, '.'); fillG(Gr, x0, 14, x1, 14, 'H'); };
+  const chamber = (x0, x1) => { fillG(Gr, x0, 15, x1, 16, '.'); fillG(Gr, x0, 14, x1, 14, 'H'); };
   put(Gr, 3, 13, '@'); put(Gr, 6, 13, 'k'); put(Gr, 9, 10, '?');
   chamber(15, 28); put(Gr, 16, 13, '1'); put(Gr, 28, 13, 'U');
   put(Gr, 32, 13, 'c'); put(Gr, 36, 9, '*'); put(Gr, 34, 11, 'o.o.o'); put(Gr, 42, 13, 'r'); put(Gr, 46, 13, 'K');
@@ -196,10 +196,10 @@ const CAP = Object.assign({}, ENEMY, {
   K: SIGN('HALF A POUR IS ENOUGH HERE: PLUG ONE OF THE OTHER HOLES'),
   Z: SIGN('A NARROW BOWL NEEDS THE WHOLE POUR. TWO HOLES SIT SIDE BY SIDE: STAND ASTRIDE THEM'),
   x: ['decor', 'saltCellarProp'],
-  '1': ['piece', 'salt.cap', { id: 'cap1', holes: [2, 8], gold: 1, need: 1, bowlDy: 7, lock: 'gate1', plug: [2] }], U: ['piece', 'salt.gate', { id: 'gate1', h: 4 }],
-  '2': ['piece', 'salt.cap', { id: 'cap2', holes: [2, 7, 12], gold: 2, need: 0.5, bowlDy: 7, lock: 'gate2', plug: [2, 7] }], V: ['piece', 'salt.gate', { id: 'gate2', h: 4 }],
-  '3': ['piece', 'salt.cap', { id: 'cap3', holes: [3, 8, 12], gold: 0, need: 0.5, bowlDy: 7, lock: 'gate3', plug: [8, 12] }], E: ['piece', 'salt.gate', { id: 'gate3', h: 4 }],
-  '4': ['piece', 'salt.cap', { id: 'cap4', holes: [3, 4, 10], gold: 2, need: 1, bowlDy: 7, lock: 'gate4', plug: [3, 4], narrow: true }], Y: ['piece', 'salt.gate', { id: 'gate4', h: 4 }],
+  '1': ['piece', 'salt.cap', { id: 'cap1', holes: [2, 8], gold: 1, need: 1, bowlDy: 4, span: [-1, 12], lock: 'gate1', plug: [2] }], U: ['piece', 'salt.gate', { id: 'gate1', h: 4 }],
+  '2': ['piece', 'salt.cap', { id: 'cap2', holes: [2, 7, 12], gold: 2, need: 0.5, bowlDy: 4, span: [-1, 14], lock: 'gate2', plug: [2, 7] }], V: ['piece', 'salt.gate', { id: 'gate2', h: 4 }],
+  '3': ['piece', 'salt.cap', { id: 'cap3', holes: [3, 8, 12], gold: 0, need: 0.5, bowlDy: 4, span: [-1, 14], lock: 'gate3', plug: [8, 12] }], E: ['piece', 'salt.gate', { id: 'gate3', h: 4 }],
+  '4': ['piece', 'salt.cap', { id: 'cap4', holes: [3, 4, 10], gold: 2, need: 1, bowlDy: 4, span: [-1, 14], lock: 'gate4', plug: [3, 4], narrow: true }], Y: ['piece', 'salt.gate', { id: 'gate4', h: 4 }],
   A: DOOR('rattle@in'), u: GRAIN(), a: ['anchor', 'rattleOut']
 });
 stamps.saltCap = { floor: 14, rows: capRows, legend: CAP, gold: { '*': 'must', R: 'risky', P: 'high' }, items: ['power', 'power', 'power', 'power'] };
