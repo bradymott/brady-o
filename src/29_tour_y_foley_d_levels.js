@@ -23,6 +23,8 @@ const mk = (W, H) => {
     ground(x0, x1, top) { return o.fill(x0, top, x1, H - 1, '#'); },
     pit(x0, x1) { return o.fill(x0, 0, x1, H - 1, '.'); },
     coins(x0, x1, y) { for (let x = x0; x <= x1; x += 2) o.put(x, y, 'o'); return o; },
+    // scenery along a floor row: a letter every `step` tiles where the cell is free and stands on ground
+    dress(F, step, letters) { let k = 0; for (let x = 6; x < W - 4; x += step) { if (g[F - 1][x] === '.' && g[F][x] === '#' && g[F - 1][x - 1] === '.' && g[F - 1][x + 1] === '.') g[F - 1][x] = letters[k++ % letters.length]; } return o; },
     rows() { return g.map(r => r.join('')); }
   };
   return o;
@@ -31,7 +33,7 @@ const stamps = {};
 // a secret room's old stamp (TourRooms keeps its door back and its prize boxes): '@', 'D', the prize '?'
 const roomStamp = (back, items) => ({ floor: 12, rows: ['############################', '#..........................#', '#.........................?#', '#..........................#'].concat(Array.from({ length: 7 }, () => '#..........................#')).concat(['#.@.D......................#', '############################', '############################']), items, doors: [{ to: back, look: 'foleyHatch' }] });
 const SIGN = text => ['spawn', 'sign', { text }];
-const COMMON = { l: ['enemy', 'foleyClam'], k: ['enemy', 'foleyKettle'], r: ['enemy', 'foleyRay'], m: ['enemy', 'foleyCrab'], e: ['piece', 'foley.sand', {}], E: ['piece', 'foley.sand', { up: true }] };
+const COMMON = { x: ['decor', 'foleyGrass'], z: ['decor', 'foleyLamp'], l: ['enemy', 'foleyClam'], k: ['enemy', 'foleyKettle'], r: ['enemy', 'foleyRay'], m: ['enemy', 'foleyCrab'], e: ['piece', 'foley.sand', {}], E: ['piece', 'foley.sand', { up: true }] };
 const PROP = (pid, kind) => ['piece', 'foley.prop', { pid, kind }];
 const FLOCK = (id, w, h, size, props, at, skip) => ['piece', 'foley.flock', { id, w, h, size, props, at, skip }];
 
@@ -82,6 +84,7 @@ const look = (() => {
   G.fill(187, 6, 201, 9, 'H'); G.put(190, 5, 'i');           // the tom (pid t6) on the ground, the block (pid t7) on the roof
   G.put(194, 13, 'U'); G.put(196, 13, 'V');                  // the little shells x194-195, the big x196-197
   G.put(203, 13, 'G'); G.fill(205, 0, 205, 17, 'H');
+  G.dress(14, 9, 'x');
   return G.rows();
 })();
 stamps.foleyLook = {
@@ -143,6 +146,7 @@ const quiet = (() => {
   G.ground(155, 170, F); G.put(160, 13, 'r'); G.put(164, 13, 'c');
   G.pit(171, 182); G.put(171, 14, '6'); G.coins(172, 181, 11);
   G.ground(183, 203, F); G.put(188, 13, 'k'); G.put(199, 13, 'G'); G.fill(203, 0, 203, 17, 'H');
+  G.dress(14, 9, 'x');
   return G.rows();
 })();
 const PANEL = (n, more) => ['piece', 'foley.panel', Object.assign({ n }, more || {})];
@@ -200,6 +204,7 @@ const under = (() => {
   G.put(112, 15, 'k'); G.put(118, 15, 'V'); G.put(120, 15, 'd'); G.put(134, 15, 'r'); G.put(140, 15, 'k');
   G.put(150, 15, 'c'); G.pit(158, 161); G.put(162, 13, '----'); G.pit(166, 169); G.put(172, 15, 'm'); G.put(180, 15, 'r');
   G.put(194, 15, 'G'); G.fill(199, 0, 199, 19, 'H');
+  G.dress(16, 9, 'z');
   return G.rows();
 })();
 const BANK = (id, props, pics, more) => ['piece', 'foley.bank', Object.assign({ id, props, pics, sx: props.length + 3, sh: 6 }, more || {})];
@@ -258,6 +263,7 @@ const round = (() => {
   G.put(140, 15, 'q'); G.pit(144, 161); G.put(146, 13, '--'); G.fill(150, 10, 151, 10, 'H'); G.put(150, 9, 'X');
   G.put(165, 14, '1'); G.put(165, 8, '2');
   G.ground(162, 203, F); G.put(170, 15, 'c'); G.put(178, 15, 'r'); G.put(186, 15, 'k'); G.put(198, 15, 'G'); G.fill(203, 0, 203, 19, 'H');
+  G.dress(16, 9, 'x');
   return G.rows();
 })();
 const TRUMP = (a) => ['piece', 'foley.trumpet', { a, g: 1 }];
@@ -309,9 +315,10 @@ const take = (() => {
   // ③ the twist: the thunderclap desks
   G.put(150, 15, 'q'); G.pit(163, 167); G.put(165, 10, 'R'); G.put(171, 15, 'k'); G.put(176, 15, 't'); G.put(186, 15, 'r');
   G.put(196, 15, 'G'); G.fill(199, 0, 199, 19, 'H');
+  G.dress(16, 9, 'z');
   return G.rows();
 })();
-const DESK = (id, prop, band, more) => ['piece', 'foley.desk', Object.assign({ id, prop, band, gx: 5, gh: 5, spk: [3, -3] }, more || {})];
+const DESK = (id, prop, band, more) => ['piece', 'foley.desk', Object.assign({ id, prop, band, gx: 5, gh: 5, spk: [4, -1] }, more || {})];
 stamps.foleyTake = {
   floor: 16, rows: take, items: ['power', 'power'], gold: { '*': 'must', P: 'hidden', R: 'risky' }, doors: [{ to: 'cabin@in', look: 'foleyHatch' }],
   legend: Object.assign({}, COMMON, {
@@ -359,6 +366,7 @@ const storm = (() => {
   G.put(111, 11, '---'); G.fill(116, 9, 122, 13, 'H'); G.fill(117, 11, 121, 13, '.'); G.fill(116, 11, 116, 13, 'F'); G.put(115, 13, 'E');
   G.put(120, 13, 'D'); G.put(113, 13, 'p'); G.put(119, 11, 'P');
   G.put(126, 13, 'Z'); G.put(130, 13, 'D'); G.fill(139, 0, 139, 17, 'H');
+  G.dress(14, 9, 'z');
   return G.rows();
 })();
 const MIC = (id, want, gx) => ['piece', 'foley.mic', { id, want, gx, gh: 5, card: [0, -5] }];

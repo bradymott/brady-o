@@ -97,7 +97,7 @@ const brain = {
   guardText: lines.stomp,
   mach(b, kind) { return b.g.entities.find(e => e instanceof FoleyBossMachine && e.kind === kind); },
   quiet(b) { for (const e of b.g.entities) if (e instanceof FoleyBossMachine) e.on = false; },
-  wake(b) { b.phase = 1; b.baseY = b.y; b.lid = 0; b.crank = 0; b.cloud = 0; TourKit.sfx('thunder', 'thunder', { vol: 0.5 }); K.bossLine(b.g, 'A STORM! FOR ME! WITH NO THANK-YOU? UNTHINKABLE!', '#e8f0ff'); },
+  wake(b) { b.sounding = () => b.act === 'quiet' && b.at > 0.5 && b.state === 'fight'; b.phase = 1; b.baseY = b.y; b.lid = 0; b.crank = 0; b.cloud = 0; TourKit.sfx('thunder', 'thunder', { vol: 0.5 }); K.bossLine(b.g, 'A STORM! FOR ME! WITH NO THANK-YOU? UNTHINKABLE!', '#e8f0ff'); },
   phase(b, n) {
     this.quiet(b); b.cloud = 0;
     if (n === 2) { b.g.bannerText = 'THE HAIL!'; b.g.bannerT = 2; K.bossLine(b.g, 'HAIL! THE CROWD ADORES HAIL.', '#e8f0ff'); }
@@ -122,7 +122,7 @@ const brain = {
   update(b, dt) {
     const g = b.g, p = g.player, ph = b.phase || 1;
     b.guard = 'bounce'; b.vx = 0; b.dir = -1;
-    b.y = approach(b.y, b.baseY - 1.2 * TS, 3 * TS * dt);
+    b.y = approach(b.y, b.baseY, 3 * TS * dt);
     if (b.bowT > 0) b.bowT -= dt;
     b.lid = approach(b.lid || 0, (b.act === 'lid' || b.act === 'clap' || b.act === 'quiet' || b.act === 'thanks') ? 1 : 0, dt * 3);
     b.pose = b.act;
@@ -131,7 +131,7 @@ const brain = {
     if (b.act === 'lid') { if (b.first) { K.bossLine(g, 'LID UP! HERE COMES MY CLAP...', '#e8f0ff'); TourKit.sfx('creak', 'select', { vol: 0.4, pitch: 0.6 }); } if (b.at > 1.0) { b.go('clap'); const m = this.mach(b, 'tin'); if (m) m.on = true; FX.noise(g, b.cx, b.y + 10, 'jag', { scale: 1.6 }); TourKit.sfx('clap', 'thunder', { vol: 0.6 }); g.shake(4); } }
     else if (b.act === 'clap') {
       if (Math.floor(b.at * 4) !== Math.floor((b.at - dt) * 4)) FX.noise(g, b.cx, b.y + 10, 'jag', { quiet: true, scale: 1.3 });
-      if (b.at > 0.5 && !b.waved) { b.waved = true; tourFire(g, b.cx - 50, b.floorY - 22, { vx: -5 * TS, w: 36, h: 20, life: 6, ground: true, col: '#9ad0e0', art: waveArt }); }
+      if (b.at > 0.5 && !b.waved) { b.waved = true; tourFire(g, b.cx - 50, b.floorY - 11, { vx: -5 * TS, w: 36, h: 20, life: 6, ground: true, col: '#9ad0e0', art: waveArt }); }
       if (b.at > 1.1) { const m = this.mach(b, 'tin'); if (m) m.on = false; b.waved = false; b.go('wait'); }
     } else if (b.act === 'wait') { if (b.at > 3.0) b.go('walk'); }
     // ---- 2: the hail ----
@@ -181,7 +181,7 @@ TourHooks.on('afterEntities', (play, ctx) => {
   const t = play.t, rice = brain.mach(b, 'rice');
   // the painted cloud on its rail, wheeling in over the rice tray
   if (b.cloud > 0 && rice) {
-    const cx = rice.cx + (1 - b.cloud) * 8 * TS, cy = b.floorY - 7.5 * TS;
+    const cx = rice.cx + (1 - b.cloud) * 8 * TS, cy = b.floorY - 4.4 * TS;
     ctx.save(); ctx.strokeStyle = '#5a5a64'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(rice.cx - 3 * TS, cy - 30); ctx.lineTo(rice.cx + 9 * TS, cy - 30); ctx.stroke();
     ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx, cy - 30); ctx.lineTo(cx, cy - 16); ctx.stroke();
     ctx.fillStyle = '#c8c8d8'; ctx.beginPath(); ctx.ellipse(cx, cy, 48, 18, 0, 0, TAU); ctx.ellipse(cx - 22, cy - 10, 20, 14, 0, 0, TAU); ctx.ellipse(cx + 20, cy - 12, 24, 16, 0, 0, TAU); ctx.fill(); ctx.stroke();
@@ -200,10 +200,10 @@ TourHooks.on('afterEntities', (play, ctx) => {
 // the arena: the mic on its little dais near the left, the tin sheet, the rice tray and the windcloth along the stage
 Tour.pieces['foley.arena_tin'] = function (st, o) {
   const B = st.B, { x0, w, GY } = o;
-  B.spawn('foleyBossMic', x0 + 6, GY - 1, { lock: 'foley:boss', want: null });
-  B.spawn('foleyBossMachine', x0 + 2, GY - 1, { kind: 'tin' });
-  B.spawn('foleyBossMachine', x0 + 10, GY - 1, { kind: 'rice' });
-  B.spawn('foleyBossMachine', x0 + 14, GY - 1, { kind: 'wind' });
+  B.spawn('foleyBossMic', x0 + 8, GY - 1, { lock: 'foley:boss', want: null });
+  B.spawn('foleyBossMachine', x0 + 5, GY - 1, { kind: 'tin' });
+  B.spawn('foleyBossMachine', x0 + 12, GY - 1, { kind: 'rice' });
+  B.spawn('foleyBossMachine', x0 + 16, GY - 1, { kind: 'wind' });
   B.decorAt('foleyLamp', x0 + 1, GY, 1); B.decorAt('foleyLamp', x0 + w - 1, GY, 2);
 };
 Object.assign(K, { thunderBrain: brain, drawThunder, FoleyBossMic, FoleyBossMachine });

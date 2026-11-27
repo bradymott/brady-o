@@ -617,7 +617,7 @@ class FoleyDesk extends Ent {
     const u = this.u(), g = this.g;
     if (inp.actionPressed && !this.rec) {
       if (Math.abs(u - this.band[0]) <= this.win) { this.rec = { a: u }; sfx('rec', 'select', { vol: 0.4, pitch: 1.4 }); }
-      else { this.rec = { a: u, bad: true }; K.say(g, this.cx, this.y - 70, u < this.band[0] ? 'TOO EARLY: START AT THE BAND' : 'TOO LATE: START AT THE BAND', '#ff9a9a', 'desk' + this.tx); sfx('bonk', 'bump', { vol: 0.4 }); }
+      else { this.rec = { a: u, bad: true }; K.say(g, this.cx, this.y - 5.2 * TS, u < this.band[0] ? 'TOO EARLY: START AT THE BAND' : 'TOO LATE: START AT THE BAND', '#ff9a9a', 'desk' + this.tx); sfx('bonk', 'bump', { vol: 0.4 }); }
     }
     if (this.rec && !inp.action) this.release(u);
   }
@@ -630,7 +630,7 @@ class FoleyDesk extends Ent {
       const T2 = TAKES[this.prop] || TAKES.door, sp = this.spk ? [this.spk[0] * TS, this.spk[1] * TS] : [this.cx, this.y];
       FX.noise(g, sp[0], sp[1], T2.noise); sfx('play', T2.noise === 'thump' ? 'thunder' : 'door', { vol: 0.6 });
       K.say(g, sp[0], sp[1] - 30, T2.word + ' ...THAT\'S A TAKE!', '#ffd84a', 'desk' + this.tx);
-    } else K.say(g, this.cx, this.y - 70, u < end ? 'CUT TOO SHORT: LET GO AT THE BAND\'S END' : (this.prop === 'thunder' ? 'TOO LONG: THAT\'S THE RATTLE. JUST THE CRACK' : 'TOO LONG: LET GO AT THE BAND\'S END'), '#ff9a9a', 'desk' + this.tx);
+    } else K.say(g, this.cx, this.y - 5.2 * TS, u < end ? 'CUT TOO SHORT: LET GO AT THE BAND\'S END' : (this.prop === 'thunder' ? 'TOO LONG: THAT\'S THE RATTLE. JUST THE CRACK' : 'TOO LONG: LET GO AT THE BAND\'S END'), '#ff9a9a', 'desk' + this.tx);
   }
   update(dt) { this.t += dt; this.ph += dt; if (this.playT > 0) this.playT -= dt; if (this.rec && this.u() < (this.rec.a || 0) - 0.5) this.release(this.u()); }
   touchPlayer() {}
@@ -742,7 +742,7 @@ class FoleyMachine extends Ent {
 // the microphone on its stand: { lock, want: 'tin' | 'rice' | 'wind' | 'pea' }; the machines near it are its choices
 class FoleyMic extends Ent {
   constructor(g, s) { super(g, s, TS, TS); this.x = s.x - TS / 2; this.y = s.y - TS; this.friendly = true; this.back = true; this.fProp = true; this.tx = Math.round(this.x / TS); this.fy = Math.round(s.y / TS); this.lockId = s.lock; this.want = s.want; this.mounted = false; this.sel = 0; this.got = null; this.done = false; this.stickT = 0; this.card = s.card; }
-  machines() { return this._m || (this._m = this.g.entities.filter(e => e instanceof FoleyMachine && Math.abs(e.cx - this.cx) < 12 * TS && Math.abs(e.cy - this.cy) < 6 * TS).sort((a, b) => a.x - b.x)); }
+  machines() { return this.g.entities.filter(e => e instanceof FoleyMachine && Math.abs(e.cx - this.cx) < 12 * TS && Math.abs(e.cy - this.cy) < 6 * TS).sort((a, b) => a.x - b.x); }
   fTouch(p) { return !this.done && onMark(p, this.tx, this.fy, 0.9); }
   fInput(p, inp, dt) {
     if (!this.mounted) { if (inp.actionPressed) { this.mounted = true; this.sel = clamp(this.sel, 0, this.machines().length - 1); sfx('grab', 'select', { vol: 0.4 }); } return; }

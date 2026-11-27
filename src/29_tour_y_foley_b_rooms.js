@@ -84,9 +84,9 @@ const TRIM = { speed: 1 / 7, lift: 0.8, ears: [0.38, 0.72], earW: 0.03, far: 0.1
 TourRooms.def('foleyTrim', {
   title: 'A LITTLE OFF THE TOP', rule: 'THE CLIPPERS RUN ALONG THE MIC\'S FUR. TAP THROW AS AN EAR GLOWS TO LIFT THEM OVER IT', need: 'TRIM IT FIRST!',
   make(o, keep, ctx, A, rng) {
-    const g = stageRoom(keep, A, o, prizeOf(o, keep), { st: 8, s0: 6, cx: 18 });
-    g.spawn(7, 7, 'foleyRoomMark', { k: 0, cue: 'THROW: LIFT' }); g.need('the lever', 7, 7);
-    g.winSpot(A.id, 9, 7); g.coins(10, 14, 7);
+    const g = stageRoom(keep, A, o, prizeOf(o, keep), { st: 7, s0: 6, cx: 18 });
+    g.spawn(7, 6, 'foleyRoomMark', { k: 0, cue: 'THROW: LIFT' }); g.need('the lever', 7, 6);
+    g.winSpot(A.id, 9, 6); g.coins(10, 14, 6);
     return g;
   },
   enter(play, A, R) { if (!R.won) this.reset(R); },
@@ -114,10 +114,10 @@ TourRooms.def('foleyTrim', {
     R.up = TRIM.lift; R.cool = 0.3; Sound.play('jump', { vol: 0.35, pitch: 1.6 });
   },
   draw(play, ctx, A, R) {
-    const t = play.t, x0 = 8 * TS, x1 = 18 * TS, y = 5.9 * TS, u = clamp(R.u || 0, 0, 1), cx = x0 + u * (x1 - x0);
+    const t = play.t, x0 = 8 * TS, x1 = 18 * TS, y = 5.5 * TS, u = clamp(R.u || 0, 0, 1), cx = x0 + u * (x1 - x0);
     ctx.save(); ctx.lineJoin = 'round';
     // the stand
-    ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = WOOD2; for (const sx of [x0 + 10, x1 - 10]) { ctx.fillRect(sx - 3, y + 16, 6, 8 * TS - y - 16); ctx.strokeRect(sx - 3, y + 16, 6, 8 * TS - y - 16); }
+    ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = WOOD2; for (const sx of [x0 + 10, x1 - 10]) { ctx.fillRect(sx - 3, y + 16, 6, 7 * TS - y - 16); ctx.strokeRect(sx - 3, y + 16, 6, 7 * TS - y - 16); }
     // the fluffy mic cover lying along: trimmed (neat, short) behind the clippers, shaggy ahead
     const fur = (a, b, long) => { ctx.fillStyle = long ? '#e8dcc0' : '#d8c8a0'; ctx.beginPath(); ctx.moveTo(a, y + 18); for (let xx = a; xx <= b; xx += 5) ctx.lineTo(xx, y - (long ? 14 + Math.sin(xx * 0.7 + t * 2) * 4 : 6)); ctx.lineTo(b, y + 18); ctx.closePath(); ctx.fill(); ctx.stroke(); };
     fur(x0, cx, false); fur(cx, x1, true);
@@ -132,13 +132,13 @@ TourRooms.def('foleyTrim', {
     });
     // the clippers on their rail: down (trimming) or lifted
     const lift = R.up > 0 ? 30 : 0;
-    ctx.strokeStyle = '#5a5a64'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x0, y - 50); ctx.lineTo(x1, y - 50); ctx.stroke();
-    ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = BRASS; rr(ctx, cx - 9, y - 50, 18, 28 - lift, 3); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = '#5a5a64'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x0, y - 36); ctx.lineTo(x1, y - 36); ctx.stroke();
+    ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = BRASS; rr(ctx, cx - 9, y - 36, 18, 14 - lift * 0.5, 3); ctx.fill(); ctx.stroke();
     // the lever by the mark (it tips up while the clippers lift), its cord up to the rail
-    const lx = 7 * TS + TS / 2, ly = 8 * TS, la = R.up > 0 ? -0.9 : -0.3;
+    const lx = 7 * TS + TS / 2, ly = 7 * TS, la = R.up > 0 ? -0.9 : -0.3;
     ctx.fillStyle = '#5a5a64'; rr(ctx, lx - 10, ly - 8, 20, 8, 2); ctx.fill(); ctx.stroke();
     ctx.save(); ctx.translate(lx, ly - 6); ctx.rotate(la); ctx.fillStyle = WOOD; rr(ctx, -2, -30, 5, 30, 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = FELT; ctx.beginPath(); ctx.arc(0.5, -32, 5, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore();
-    ctx.strokeStyle = '#d8c8a0'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(lx + Math.sin(-la) * -28, ly - 6 - Math.cos(la) * 30); ctx.lineTo(x0, y - 50); ctx.stroke(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    ctx.strokeStyle = '#d8c8a0'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(lx + Math.sin(-la) * -28, ly - 6 - Math.cos(la) * 30); ctx.lineTo(x0, y - 36); ctx.stroke(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
     ctx.fillStyle = '#c8ccd8'; ctx.beginPath(); for (let k = 0; k < 6; k++) { ctx.moveTo(cx - 12 + k * 4.5, y - 22 - lift); ctx.lineTo(cx - 10 + k * 4.5, y - 12 - lift); ctx.lineTo(cx - 8 + k * 4.5, y - 22 - lift); } ctx.fill(); ctx.stroke();
     if (!R.up && !R.won && R.u > 0 && R.u < 1) for (let k = 0; k < 2; k++) { ctx.fillStyle = '#e8dcc0'; ctx.fillRect(cx - 8 + ((t * 80 + k * 9) % 16), y - 10 + ((t * 60 + k * 7) % 20), 2, 4); }
     ctx.restore();
@@ -162,11 +162,11 @@ const shapePath = (ctx, sh, x, y, r) => {
 TourRooms.def('foleyLids', {
   title: 'ONLY ONE LID', rule: 'THROW AT THE CRANK TURNS THE LID RACK. FIT EACH LID TO ITS TIN, THEN THROW AT THE LEVER TO DROP THEM', need: 'FIT THE LIDS FIRST!',
   make(o, keep, ctx, A, rng) {
-    const g = stageRoom(keep, A, o, prizeOf(o, keep), { st: 9, s0: 6, cx: 18, hatch: null, ledge: 8 });
+    const g = stageRoom(keep, A, o, prizeOf(o, keep), { st: 7, s0: 6, cx: 18, hatch: null, ledge: 6 });
     // (here the cage sits on a shelf high over the way in, the game takes the whole stage)
-    g.spawn(8, 8, 'foleyRoomMark', { k: 'crank', cue: 'THROW: TURN' }); g.need('the crank', 8, 8);
-    g.spawn(17, 8, 'foleyRoomMark', { k: 'drop', cue: 'THROW: DROP' }); g.need('the lever', 17, 8);
-    g.winSpot(A.id, 12, 8); g.coins(10, 16, 7);
+    g.spawn(8, 6, 'foleyRoomMark', { k: 'crank', cue: 'THROW: TURN' }); g.need('the crank', 8, 6);
+    g.spawn(17, 6, 'foleyRoomMark', { k: 'drop', cue: 'THROW: DROP' }); g.need('the lever', 17, 6);
+    g.winSpot(A.id, 12, 6);
     // two rounds: the rack's order of lids, and how far round it starts
     // (the rack keeps the lids in the tins' own order round the ring: one turn of it fits them, the others don't)
     g.data.rounds = [0, 1].map(() => ({ order: SHAPES.slice(), off: 1 + Math.floor(rng() * 2) }));
@@ -185,20 +185,20 @@ TourRooms.def('foleyLids', {
   },
   mark(play, A, R, kit, m) {
     if (R.won || R.drop >= 0) return;
-    if (m.k === 'crank') { R.rot = (R.rot + 1) % 3; Sound.play('select', { vol: 0.4, pitch: 1.3 }); FX.noise(play, 8 * TS, 6 * TS, 'clack', { quiet: true, scale: 0.6 }); }
+    if (m.k === 'crank') { R.rot = (R.rot + 1) % 3; Sound.play('select', { vol: 0.4, pitch: 1.3 }); FX.noise(play, 8 * TS, 5 * TS, 'clack', { quiet: true, scale: 0.6 }); }
     else { R.drop = 0; Sound.play('throw', { vol: 0.4 }); }
   },
   draw(play, ctx, A, R, kit) {
-    const t = play.t, xs = [10, 13, 16].map(x => x * TS + TS / 2), ty = 9 * TS, rackY = 3.6 * TS, k = R.drop >= 0 ? Math.min(1, R.drop / 0.5) : 0;
+    const t = play.t, xs = [10, 13, 16].map(x => x * TS + TS / 2), ty = 7 * TS, rackY = 4.3 * TS, k = R.drop >= 0 ? Math.min(1, R.drop / 0.5) : 0;
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.lineJoin = 'round';
     // the tins on the stage, each showing its mouth's shape on its front
     SHAPES.forEach((sh, i) => { const x = xs[i]; ctx.fillStyle = TIN; rr(ctx, x - 22, ty - 34, 44, 34, 4); ctx.fill(); ctx.stroke(); ctx.fillStyle = FELT; ctx.save(); shapePath(ctx, sh, x, ty - 17, 9); ctx.fill(); ctx.stroke(); ctx.restore(); });
     // the turning rack with its three lids, edge-on: each lid's rim profile shows its shape
-    ctx.strokeStyle = '#5a5a64'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(xs[0] - 40, rackY - 30); ctx.lineTo(xs[2] + 40, rackY - 30); ctx.stroke();
+    ctx.strokeStyle = '#5a5a64'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(xs[0] - 40, rackY - 22); ctx.lineTo(xs[2] + 40, rackY - 22); ctx.stroke();
     ctx.lineWidth = 2; ctx.strokeStyle = INK;
     [0, 1, 2].forEach(i => {
       const sh = this.lidAt(kit, R, i), x = xs[i], y = rackY + k * (ty - 40 - rackY);
-      ctx.strokeStyle = '#8a8a94'; ctx.beginPath(); ctx.moveTo(x, rackY - 30); ctx.lineTo(x, y - 12); ctx.stroke(); ctx.strokeStyle = INK;
+      ctx.strokeStyle = '#8a8a94'; ctx.beginPath(); ctx.moveTo(x, rackY - 22); ctx.lineTo(x, y - 12); ctx.stroke(); ctx.strokeStyle = INK;
       // edge-on: a thin lid with its shape's profile cut along its lower edge
       ctx.fillStyle = TIN3; ctx.beginPath(); ctx.moveTo(x - 24, y - 10);
       if (sh === 'heart') { ctx.lineTo(x + 24, y - 10); ctx.lineTo(x + 24, y); ctx.lineTo(x + 6, y); ctx.lineTo(x, y + 8); ctx.lineTo(x - 6, y); ctx.lineTo(x - 24, y); }
@@ -222,10 +222,10 @@ const GULL_COL = ['#e0403a', '#3a6ad8', '#f2c23a'];
 TourRooms.def('foleyPerch', {
   title: 'VACANT PERCH', rule: 'STAND UNDER A GULL AND THROW: IT HOPS TO THE EMPTY PERCH BESIDE IT. SEAT EACH GULL OVER ITS OWN FISH', need: 'SEAT THE GULLS FIRST!',
   make(o, keep, ctx, A, rng) {
-    const g = stageRoom(keep, A, o, prizeOf(o, keep), { st: 8, s0: 7, cx: 18, hatch: [17, 7], ledge: 5 });
+    const g = stageRoom(keep, A, o, prizeOf(o, keep), { st: 7, s0: 7, cx: 18, hatch: [17, 6], ledge: 5 });
     const xs = [8, 11, 14, 17].slice(0, 4);
-    [8, 10, 12, 14].forEach((x, k) => { g.spawn(x, 7, 'foleyRoomMark', { k, cue: 'THROW: HOP' }); g.need('perch ' + k, x, 7); });
-    g.winSpot(A.id, 11, 7); g.coins(9, 13, 4);
+    [8, 10, 12, 14].forEach((x, k) => { g.spawn(x, 6, 'foleyRoomMark', { k, cue: 'THROW: HOP' }); g.need('perch ' + k, x, 6); });
+    g.winSpot(A.id, 11, 6);
     g.data.px = [8, 10, 12, 14]; void xs;
     // fish under perches 0, 1, 3 (the gap's home is perch 2); the gulls start rotated round the ring
     g.data.fish = [0, 1, -1, 2];
@@ -240,20 +240,20 @@ TourRooms.def('foleyPerch', {
     // the empty perch next to it, round the ring (the wire runs from the last perch back to the first)
     const nb = [(k + 1) % 4, (k + 3) % 4].find(j => S[j] < 0);
     if (nb == null) { K.say(play, m.cx, m.y - 60, 'NO ROOM NEXT TO ME!', '#ffd8a0', 'room'); Sound.play('bump', { vol: 0.3 }); return; }
-    S[nb] = gull; S[k] = -1; Sound.play('jump', { vol: 0.4, pitch: 1.5 }); FX.noise(play, kit.data.px[nb] * TS + 16, 4 * TS, 'squeak', { quiet: true });
+    S[nb] = gull; S[k] = -1; Sound.play('jump', { vol: 0.4, pitch: 1.5 }); FX.noise(play, kit.data.px[nb] * TS + 16, 4.5 * TS, 'squeak', { quiet: true });
     if (kit.data.fish.every((f, j) => f < 0 || S[j] === f)) TourRooms.win(play, A, R, { text: 'EVERY GULL ON ITS FISH!', coins: 5 });
   },
   draw(play, ctx, A, R, kit) {
-    const t = play.t, px = kit.data.px.map(x => x * TS + TS / 2), py = 4.4 * TS;
+    const t = play.t, px = kit.data.px.map(x => x * TS + TS / 2), py = 4.7 * TS;
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.lineJoin = 'round';
     // the ring wire: along the perches and back round over the top
-    ctx.strokeStyle = '#d8c8a0'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(px[0], py); ctx.lineTo(px[3], py); ctx.moveTo(px[3], py); ctx.bezierCurveTo(px[3] + 40, py - 90, px[0] - 40, py - 90, px[0], py); ctx.stroke();
+    ctx.strokeStyle = '#d8c8a0'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(px[0], py); ctx.lineTo(px[3], py); ctx.moveTo(px[3], py); ctx.bezierCurveTo(px[3] + 50, py + 55, px[0] - 50, py + 55, px[0], py); ctx.stroke();
     ctx.strokeStyle = INK; ctx.lineWidth = 2;
     px.forEach((x, j) => {
       // the perch (a rope loop on a post) and the fish painted on the stage under it
-      ctx.fillStyle = WOOD; ctx.fillRect(x - 3, py, 6, 8 * TS - py); ctx.strokeRect(x - 3, py, 6, 8 * TS - py);
+      ctx.fillStyle = WOOD; ctx.fillRect(x - 3, py, 6, 7 * TS - py); ctx.strokeRect(x - 3, py, 6, 7 * TS - py);
       ctx.fillStyle = '#e8dcc0'; rr(ctx, x - 14, py - 4, 28, 7, 3); ctx.fill(); ctx.stroke();
-      const f = kit.data.fish[j]; if (f >= 0) { ctx.fillStyle = GULL_COL[f]; ctx.beginPath(); ctx.ellipse(x, 8 * TS + 10, 11, 5, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - 10, 8 * TS + 10); ctx.lineTo(x - 17, 8 * TS + 5); ctx.lineTo(x - 17, 8 * TS + 15); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+      const f = kit.data.fish[j]; if (f >= 0) { ctx.fillStyle = GULL_COL[f]; ctx.beginPath(); ctx.ellipse(x, 7 * TS + 10, 11, 5, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - 10, 7 * TS + 10); ctx.lineTo(x - 17, 7 * TS + 5); ctx.lineTo(x - 17, 7 * TS + 15); ctx.closePath(); ctx.fill(); ctx.stroke(); }
       const gl = R.seat ? R.seat[j] : -1;
       if (gl >= 0) {
         // a gull: white body, grey wing, its bill in its colour (pointing down at the fish it wants)
@@ -283,10 +283,10 @@ TourRooms.def('foleyPerch', {
 TourRooms.def('foleyTicket', {
   title: 'TWO-SIDED TICKET', rule: 'THROW AT THE LEVER FOLDS THE CUE SHEET ON A CREASE. THROW UNDER THE SHEET PUNCHES BOTH LAYERS: HIT BOTH DOTS AT ONCE', need: 'PUNCH THE DOTS FIRST!',
   make(o, keep, ctx, A, rng) {
-    const g = stageRoom(keep, A, o, prizeOf(o, keep), { st: 8, s0: 6, cx: 19, hatch: null, ledge: 7 });
-    for (let i = 0; i < 10; i++) { g.spawn(7 + i, 7, 'foleyRoomMark', { k: i, cue: 'THROW: PUNCH' }); g.need('punch ' + i, 7 + i, 7); }
-    g.spawn(18, 7, 'foleyRoomMark', { k: 'fold', cue: 'THROW: FOLD' }); g.need('the fold lever', 18, 7);
-    g.winSpot(A.id, 12, 7);
+    const g = stageRoom(keep, A, o, prizeOf(o, keep), { st: 7, s0: 6, cx: 19, hatch: null, ledge: 6 });
+    for (let i = 0; i < 10; i++) { g.spawn(7 + i, 6, 'foleyRoomMark', { k: i, cue: 'THROW: PUNCH' }); g.need('punch ' + i, 7 + i, 6); }
+    g.spawn(18, 6, 'foleyRoomMark', { k: 'fold', cue: 'THROW: FOLD' }); g.need('the fold lever', 18, 6);
+    g.winSpot(A.id, 12, 6);
     // two rounds: two creases, the dots placed so that exactly one crease brings them together
     g.data.rounds = [0, 1].map(r => { const cr = [3 + Math.floor(rng() * 2), 6 + Math.floor(rng() * 2)], good = Math.floor(rng() * 2), c = cr[good]; let a = c - 1 - Math.floor(rng() * Math.min(c, 3)); const b = 2 * c - 1 - a; if (b > 9 || a < 0) a = c - 1; return { cr, dots: [a, 2 * c - 1 - a], good }; });
     return g;
@@ -347,9 +347,9 @@ const REC_COL = { stripes: '#d85a70', dots: '#3a8ab0', waves: '#5a9a4a', checks:
 TourRooms.def('foleyRecords', {
   title: 'FRUIT FAMILY', rule: 'THROW AT A TURNTABLE TURNS IT A QUARTER. WHERE TWO RECORDS TOUCH, THEIR HALVES MUST MATCH', need: 'MATCH THE RECORDS FIRST!',
   make(o, keep, ctx, A, rng) {
-    const g = stageRoom(keep, A, o, prizeOf(o, keep), { st: 9, s0: 6, cx: 19, hatch: [17, 8], ledge: 6, cy: 8 });
-    [9, 13, 17].forEach((x, k) => { g.spawn(x - 1, 8, 'foleyRoomMark', { k, cue: 'THROW: TURN' }); g.need('table ' + k, x - 1, 8); });
-    g.winSpot(A.id, 12, 8); g.coins(10, 15, 6);
+    const g = stageRoom(keep, A, o, prizeOf(o, keep), { st: 7, s0: 6, cx: 19, hatch: [17, 6], ledge: 6 });
+    [9, 13, 17].forEach((x, k) => { g.spawn(x - 1, 6, 'foleyRoomMark', { k, cue: 'THROW: TURN' }); g.need('table ' + k, x - 1, 6); });
+    g.winSpot(A.id, 12, 6);
     // halves [A, B] glued opposite each other; the solution turns are (2, 2, 0)
     g.data.tables = [['dots', 'stripes'], ['stripes', 'waves'], ['checks', 'waves']];
     g.data.start = [1, 3, 1];
@@ -362,11 +362,11 @@ TourRooms.def('foleyRecords', {
   update(play, dt, A, R) { if (R.spin) for (let k = 0; k < 3; k++) if (R.spin[k] > 0) R.spin[k] = Math.max(0, R.spin[k] - dt * 3); },
   mark(play, A, R, kit, m) {
     if (R.won) return;
-    R.rot[m.k] = (R.rot[m.k] + 1) % 4; R.spin[m.k] = 1; Sound.play('select', { vol: 0.4, pitch: 1.2 }); FX.noise(play, m.cx + 16, 5 * TS, 'clack', { quiet: true, scale: 0.6 });
+    R.rot[m.k] = (R.rot[m.k] + 1) % 4; R.spin[m.k] = 1; Sound.play('select', { vol: 0.4, pitch: 1.2 }); FX.noise(play, m.cx + 16, 4.5 * TS, 'clack', { quiet: true, scale: 0.6 });
     const M = this.matched(kit, R); if (M[0] && M[1]) TourRooms.win(play, A, R, { text: 'A MATCHED SET!', coins: 5 });
   },
   draw(play, ctx, A, R, kit) {
-    const xs = [9, 13, 17].map(x => x * TS), y = 5.6 * TS, r = 42, M = R.rot ? this.matched(kit, R) : [false, false];
+    const xs = [9, 13, 17].map(x => x * TS), y = 5.1 * TS, r = 36, M = R.rot ? this.matched(kit, R) : [false, false];
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
     xs.forEach((x, k) => {
       ctx.fillStyle = WOOD; rr(ctx, x - r - 6, y + r - 6, 2 * r + 12, 14, 3); ctx.fill(); ctx.stroke();
@@ -389,9 +389,9 @@ const RAIN = { need: 4.0, reach: 5 };
 TourRooms.def('foleyRain', {
   title: 'RAIN FOR ONE', rule: 'THROW TAKES THE TRAY. TIP IT WITH THE STICK: KEEP THE RICE POURING ON THE LITTLE CLOUD\'S ROOF', need: 'OPEN THE FLOWER FIRST!',
   make(o, keep, ctx, A, rng) {
-    const g = stageRoom(keep, A, o, prizeOf(o, keep), { st: 9, s0: 6, cx: 18, hatch: 'cage', ledge: 5, cy: 8 });
-    g.spawn(8, 8, 'foleyRoomMark', { k: 0, cue: 'THROW: TAKE THE TRAY', mount: true }); g.need('the tray', 8, 8);
-    g.winSpot(A.id, 10, 8);
+    const g = stageRoom(keep, A, o, prizeOf(o, keep), { st: 7, s0: 6, cx: 18, hatch: 'cage', ledge: 5 });
+    g.spawn(8, 6, 'foleyRoomMark', { k: 0, cue: 'THROW: TAKE THE TRAY', mount: true }); g.need('the tray', 8, 6);
+    g.winSpot(A.id, 10, 6);
     return g;
   },
   enter(play, A, R) { if (!R.won) { R.tilt = 0; R.wet = 0; R.cx = 13 * TS; R.ct = 0; R.open = 0; } },
@@ -403,22 +403,22 @@ TourRooms.def('foleyRain', {
     // the cloud drifts back and forth, a little faster as the flower opens
     R.ct += dt * (0.5 + R.wet / RAIN.need * 0.35); R.cx = 13 * TS + Math.sin(R.ct) * 3.8 * TS + Math.sin(R.ct * 2.3) * 0.8 * TS;
     const m = markK(play, 0), pouring = m && m.mounted, on = pouring && Math.abs(this.fallX(R) - R.cx) < 30;
-    if (on) { R.wet += dt; if (Math.floor(R.wet * 4) !== Math.floor((R.wet - dt) * 4)) FX.noise(play, R.cx, 5.6 * TS, 'dots', { quiet: true, scale: 0.5 }); }
+    if (on) { R.wet += dt; if (Math.floor(R.wet * 4) !== Math.floor((R.wet - dt) * 4)) FX.noise(play, R.cx, 5.2 * TS, 'dots', { quiet: true, scale: 0.5 }); }
     else R.wet = Math.max(0, R.wet - dt * 0.35);
     if (R.wet >= RAIN.need) TourRooms.win(play, A, R, { text: 'A FLOWER, FOR ONE!', coins: 6 });
   },
   draw(play, ctx, A, R) {
-    const t = play.t, m = markK(play, 0), pouring = m && m.mounted, ty = 3.2 * TS, cx = 13 * TS, a = (R.tilt || 0) * 0.32;
+    const t = play.t, m = markK(play, 0), pouring = m && m.mounted, ty = 3.6 * TS, cx = 13 * TS, a = (R.tilt || 0) * 0.32;
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.lineJoin = 'round';
     // the tray on its pivot, its rope to the lever
     ctx.fillStyle = '#5a5a64'; ctx.fillRect(cx - 3, ty - 40, 6, 40);
     ctx.save(); ctx.translate(cx, ty); ctx.rotate(a); ctx.fillStyle = WOOD; rr(ctx, -4.5 * TS, -8, 9 * TS, 14, 3); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#f6eedc'; ctx.fillRect(-4.3 * TS, -12, 8.6 * TS, 5); ctx.restore();
     // the thin fall of rice (dots) from the low end
     const fx = this.fallX(R), fy = ty + Math.abs(R.tilt || 0) * 4.5 * TS * 0.32 + 6;
-    if (pouring && Math.abs(R.tilt || 0) > 0.05) { ctx.fillStyle = '#fff8e0'; for (let k = 0; k < 18; k++) { const q = (t * 2.4 + k / 18) % 1, yy = fy + q * (8 * TS - fy); ctx.beginPath(); ctx.arc(fx + Math.sin(k * 7) * 2, yy, 2, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(26,20,38,0.5)'; ctx.lineWidth = 0.8; ctx.stroke(); } }
+    if (pouring && Math.abs(R.tilt || 0) > 0.05) { ctx.fillStyle = '#fff8e0'; for (let k = 0; k < 18; k++) { const q = (t * 2.4 + k / 18) % 1, yy = fy + q * (7 * TS - fy); ctx.beginPath(); ctx.arc(fx + Math.sin(k * 7) * 2, yy, 2, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(26,20,38,0.5)'; ctx.lineWidth = 0.8; ctx.stroke(); } }
     // the tiny cloud (a painted cardboard cloud on a stick, with a paper flower in a pot on its roof)
-    const cy = 6 * TS, k = clamp((R.wet || 0) / RAIN.need, 0, 1);
-    ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#5a5a64'; ctx.fillRect(R.cx - 2, cy + 10, 4, 8 * TS - cy - 10);
+    const cy = 5.6 * TS, k = clamp((R.wet || 0) / RAIN.need, 0, 1);
+    ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#5a5a64'; ctx.fillRect(R.cx - 2, cy + 10, 4, 7 * TS - cy - 10);
     ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(R.cx, cy, 26, 12, 0, 0, TAU); ctx.ellipse(R.cx - 12, cy - 8, 12, 10, 0, 0, TAU); ctx.ellipse(R.cx + 10, cy - 10, 14, 11, 0, 0, TAU); ctx.fill(); ctx.stroke();
     ctx.fillStyle = FELT; rr(ctx, R.cx - 5, cy - 30, 10, 10, 2); ctx.fill(); ctx.stroke();
     ctx.strokeStyle = '#4a8a3a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(R.cx, cy - 30); ctx.lineTo(R.cx, cy - 40 - k * 8); ctx.stroke(); ctx.strokeStyle = INK;

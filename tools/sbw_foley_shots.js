@@ -484,7 +484,7 @@ LEVELS.r3 = async (page, shot) => { await run0(page, 'r3', () => roomRun(page, s
 const S4_ROUTE = [
   [2, "trumpet(12, 23)"], [12, "AP.route([[16, 16], [21, 13], [24, 14], [30, 16]])"], [30, "safeWalk(40)"], [40, "trumpet(40, 52)"],
   [40, "AP.route([[46, 13], [50, 10], [55, 10]])"], [55, "safeWalk(62)"], [62, "AP.route([[66, 16]])"], [66, "safeWalk(71)"], [71, "AP.route([[74, 14]])"],
-  [74, "trumpet(74, 83)"], [74, "trumpet(74, 91)"], [74, "AP.route([[81, 14], [84, 14], [89, 14], [92, 14], [97, 16]])"],
+  [74, "trumpet(74, 83)"], [74, "trumpet(74, 91)"], [74, "AP.route([[80, 13], [84, 14], [88, 13], [92, 14], [97, 16]])"],
   [97, "safeWalk(137)"], [137, "safeWalk(140)"], [140, "trumpet(140, 150)"], [140, "AP.route([[143, 16], [147, 13], [151, 10], [155, 10], [163, 16]])"], [163, "safeWalk(203)"]];
 LEVELS.s4 = async (page, shot, run, pano) => {
   await run('s4', async () => {
@@ -513,7 +513,7 @@ LEVELS.r4 = async (page, shot) => { await run0(page, 'r4', () => roomRun(page, s
 // ---------------- 29-5 Cut the Take ----------------
 const S5_ROUTE = [
   [2, "cut(12)"], [12, "safeWalk(29)"], [29, "AP.route([[36, 16]])"], [36, "safeWalk(46)"], [46, "cut(46)"], [46, "safeWalk(57)"], [57, "AP.route([[64, 13], [68, 12]])"],
-  [68, "cut(70)"], [70, "safeWalk(80)"], [80, "AP.route([[84, 16]])"], [84, "safeWalk(98)"], [98, "AP.route([[103, 16]])"], [103, "safeWalk(150)"], [150, "cut(150)"],
+  [68, "cut(70)"], [70, "safeWalk(79)"], [79, "AP.route([[84, 16]])"], [84, "safeWalk(98)"], [98, "AP.route([[103, 16]])"], [103, "safeWalk(150)"], [150, "cut(150)"],
   [150, "safeWalk(161)"], [161, "AP.route([[169, 16]])"], [169, "safeWalk(176)"], [176, "cut(176)"], [176, "safeWalk(199)"]];
 LEVELS.s5 = async (page, shot, run, pano) => {
   await run('s5', async () => {
@@ -634,6 +634,44 @@ LEVELS.bot = async (page) => {
   await botRun(page, '29-5', S5_ROUTE);
   await botRun(page, '29-6', S6_ROUTE);
   if (LEVELS.botMore) await LEVELS.botMore(page, botRun);
+};
+
+// the boss with damage on, three runs in a row: the way a careful thumb plays him: take the mic, steer to the noise
+// of his move, capture it as it sounds, play it back (the rice only once the tray is empty, the pea only in the
+// quiet); jump the shock rings and the shells (that lets go of the mic: walk back, take it again)
+LEVELS.botMore = async (page, botRun) => {
+  if (want.length && !want.includes('boss')) return;
+  const runs = [];
+  for (let run = 0; run < 3; run++) runs.push(await page.evaluate(run => {
+    fresh(); play('29-6'); toArea('stage'); sim(0.5 + run * 0.4); let g = S(); P().invuln = 0; let deaths = 0, t = 0;
+    const B = () => S().entities.find(e => e.boss), M = () => S().entities.find(e => e.constructor.name === 'FoleyBossMic');
+    // walk in until he wakes
+    for (let q = 0; q < 1200 && !(B() && B().state === 'fight'); q++) { sim(1 / 120, { right: P().cx < M().cx - 4 }); t += 1 / 120; }
+    const dead = () => S() !== g || !P() || P().dead || g.state !== 'play';
+    const step = inp => { sim(1 / 120, inp || {}); t += 1 / 120; };
+    const log = [];
+    while (t < 300) {
+      if (dead()) { deaths++; log.push({ ph: B() && B().phase, hp: B() && B().hp, at: P() ? tileOf() : null }); for (let q = 0; q < 400 && (!S().player || S().player.dead || S().state !== 'play'); q++) { sim(0.05); t += 0.05; } g = S(); if (!g.player) break; if (g.area.aid !== 'stage') toArea('stage'); P().invuln = 0; sim(1); continue; }
+      const b = B(), m = M(), p = P(); if (!b || b.remove || b.state === 'dying' || b.hp <= 0) break;
+      // danger first: a shot coming at him on his level: jump it (and let go of the mic)
+      const sh = g.entities.find(e => e.constructor.name === 'TourShot' && !e.remove && Math.abs(e.cx - p.cx) < 60 && e.cy > p.y - 20 && e.cy < p.y + p.h + 30 && (e.vx || 0) * (p.cx - e.cx) >= 0);
+      const shadow = (b.hailList || []).some(h => !h.fell && Math.abs(h.x - p.cx) < 26);
+      if (sh && p.onGround) { step({ jump: true, jumpPressed: true }); for (let q = 0; q < 40; q++) step({ jump: true }); continue; }
+      if (shadow && p.onGround) { const d = (b.hailList.find(h => !h.fell && Math.abs(h.x - p.cx) < 26).x < p.cx) ? 1 : -1; for (let q = 0; q < 30; q++) step({ right: d > 0, left: d < 0 }); continue; }
+      const ph = b.phase || 1, want = ph === 1 ? 0 : ph === 2 ? 1 : 3;
+      // to the mic, take it
+      if (!m.fTouch(p)) { const dx = m.cx - p.cx; step({ right: dx > 6, left: dx < -6 }); continue; }
+      if (!m.mounted) { step({ action: true, actionPressed: true }); continue; }
+      if (m.sel !== want && !m.got) { step({ right: m.sel < want, left: m.sel > want }); continue; }
+      const L = m.machines(), tg = L[want];
+      if (!m.got) { if (tg && tg.sounding() && (ph !== 3 || b.at > 0.7)) step({ action: true, actionPressed: true }); else step(); continue; }
+      if (ph === 2 && b.act !== 'empty') { step(); continue; }
+      step({ action: true, actionPressed: true }); for (let q = 0; q < 60; q++) step();
+    }
+    const b = B(); return { hp: b && !b.remove ? b.hp : 0, deaths, log, t: Math.round(t) };
+  }, run));
+  console.log('BOT boss ' + JSON.stringify(runs));
+  check('bot 29-6: Mr. Thunder beaten with damage on, three runs in a row, no deaths', runs.every(q => q.hp <= 0.01 && q.deaths === 0), runs);
 };
 
 (async () => {
