@@ -355,6 +355,80 @@ STAGES.dock = async ({ ev, shot, run, pano }) => {
   });
 };
 
+/* ---------------- 33-5 House Left: the follow-spot, the call board, the moustaches ---------------- */
+STAGES.house = async ({ ev, shot, run, pano }) => {
+  await run('house', async () => {
+    await ev(ROOM_HELPERS);
+    await ev(() => { fresh(); play('33-5'); place(4, 16); sim(0.4); freeze(); }); await shot('50-33-5-start.png');
+    let r = await ev(() => {
+      thaw(); const sp = ents('SeatsSpot').sort((a, b) => a.tx - b.tx)[0]; walkTo((sp.tx + 0.5) * 32, 3); sim(0.2);
+      const on = P().seatsProp === sp, x0 = P().cx, s0 = sp.spot; sim(0.5, { right: true }); const moved = sp.spot - s0, stayed = Math.abs(P().cx - x0) < 4;
+      const wrong = sp.hands.find((h, k) => k !== sp.right); let shrug = false; for (let k = 0; k < 120 * 6 && !shrug; k++) { sim(1 / 120, { action: true, right: sp.spot < wrong.x - 4, left: sp.spot > wrong.x + 4 }); shrug = wrong.pose === 'shrug'; }
+      return { on, moved, stayed, shrug, done: sp.done };
+    });
+    check('33-5: on the stand\'s mark the stick swings the spot (Brady stays put)', r.on && r.moved > 20 && r.stayed, r);
+    check('33-5: focusing on the wrong stagehand: he shrugs (NOT MY CUE) and nothing happens', r.shrug && !r.done, r);
+    await ev(() => freeze()); await shot('51-33-5-not-my-cue.png');
+    r = await ev(() => { thaw(); sim(1); const sp = ents('SeatsSpot').sort((a, b) => a.tx - b.tx)[0], h = sp.hands[sp.right]; for (let k = 0; k < 120 * 8 && !sp.done; k++) sim(1 / 120, { action: Math.abs(sp.spot - h.x) < 14, right: sp.spot < h.x - 3, left: sp.spot > h.x + 3 }); sim(1.2); const t = tile(sp.plank[1][0], sp.plank[1][1]); walkTo((sp.plank[sp.plank.length - 1][0] + 3) * 32, 6); return { done: sp.done, t, at: at() }; });
+    check('33-5: the focused spot held on the stagehand the board calls: he bows and puts his plank across the pit; Brady crosses', r.done && r.t !== 0 && !r.at.dead && r.at.x >= 31, r);
+    await ev(() => freeze()); await shot('52-33-5-plank-down.png');
+    r = await ev(() => {
+      thaw(); place(101, 16); sim(0.5); const sp = ents('SeatsSpot').sort((a, b) => b.tx - a.tx)[0]; walkTo((sp.tx + 0.5) * 32, 3); const h = sp.hands[sp.right]; let hid = false;
+      for (let k = 0; k < 120 * 12 && !hid; k++) { sim(1 / 120, { right: sp.spot < h.x - 3, left: sp.spot > h.x + 3 }); hid = sp.hidden(h); }
+      let lit = 0; for (let k = 0; k < 40 && sp.hidden(h); k++) { sim(1 / 120, { action: true, right: sp.spot < h.x - 3, left: sp.spot > h.x + 3 }); lit = Math.max(lit, sp.lit); }
+      return { hid, litWhileHidden: lit, done: sp.done };
+    });
+    check('33-5: the last scene: the right stagehand walks behind the false moustaches, and there the spot cannot find him', r.hid && r.litWhileHidden === 0 && !r.done, r);
+    await ev(() => freeze()); await shot('53-33-5-behind-the-moustaches.png');
+    r = await ev(() => { thaw(); fresh(); play('33-5'); const kind = intoRoom(86, 7); return { kind }; });
+    check('33-5: the gantry\'s door (the wrong-way seat by it) leads to room B40 (Leave Me a Rest)', r.kind === 'seatsRest', r);
+    await ev(() => { sim(0.7); freeze(); }); await shot('54-room-B40-leave-me-a-rest-entry.png');
+    r = await ev(() => { thaw(); sim(1.5); const R = room(), cx = kit().data.mirror ? (28 - 1 - 11 + 0.5) * 32 : 11.5 * 32, f0 = R.fails || 0; walkTo(cx, 3); for (let k = 0; k < 120 * 12 && (R.fails || 0) === f0; k++) { let tap = false; if (R.ph === 'play') { const b = (window.BRADY.Game.scene.t - R.t0) / 0.75 - 4, kk = Math.round(b); tap = kk === 3 && Math.abs(b - kk) < 0.05; if (kk >= 0 && kk % 4 !== 3 && !R.hits[kk] && Math.abs(b - kk) * 0.75 < 0.05) tap = true; } sim(1 / 120, tap ? { action: true, actionPressed: true } : {}); } return { fails: R.fails, f0, won: R.won }; });
+    check('33-5 B40: a tap on the rest is a miss that costs nothing', r.fails === r.f0 + 1 && !r.won, r);
+    r = await ev(() => { const R = room(); for (let k = 0; k < 120 * 16 && !R.won; k++) { let tap = false; if (R.ph === 'play') { const b = (window.BRADY.Game.scene.t - R.t0) / 0.75 - 4, kk = Math.round(b); if (kk >= 0 && kk % 4 !== 3 && !R.hits[kk] && Math.abs(b - kk) * 0.75 < 0.05) tap = true; } sim(1 / 120, tap ? { action: true, actionPressed: true } : {}); } sim(1.2); return { won: R.won, cage: cageOpen() }; });
+    check('33-5 B40: two bars on beats one to three, thumb off the fourth: won, the cage opens', r.won && r.cage, r);
+    await ev(() => freeze()); await shot('55-room-B40-won.png');
+    r = await ev(() => { thaw(); const a = leave(); return { a }; });
+    check('33-5 B40: the room lets Brady out by the last scene, past its pit', r.a && r.a.area === 'house' && r.a.x >= 130, r);
+    await ev(() => { thaw(); play('33-5'); }); await pano('pano-33-5.png', 0.3);
+  });
+};
+
+/* ---------------- 33-6 Just One More Bow: the encore lead-in, the curtain call room ---------------- */
+STAGES.bow = async ({ ev, shot, run, pano }) => {
+  await run('bow', async () => {
+    await ev(ROOM_HELPERS);
+    await ev(() => { fresh(); play('33-6'); place(4, 16); sim(0.4); freeze(); }); await shot('60-33-6-start.png');
+    let r = await ev(() => {
+      thaw(); const pads = ents('SeatsLeadPaddle').sort((a, b) => a.tx - b.tx), a1 = pads[0].actor(); walkTo(pads[0].cx, 3); sim(0.2);
+      for (let k = 0; k < 120 * 6 && a1.over(); k++) sim(1 / 120); press('action'); sim(0.2); const bowedOff = a1.bowT > 0 && !a1.gone; sim(1.5);
+      for (let k = 0; k < 120 * 10 && !a1.over(); k++) sim(1 / 120); press('action'); sim(3); return { bowedOff, gone: a1.gone, open: S().keys.has(a1.id) };
+    });
+    check('33-6: THROW at the paddle: the actor bows where he stands; over the open basket he bows straight in and the curtain beyond flies out', r.bowedOff && r.gone && r.open, r);
+    await ev(() => freeze()); await shot('61-33-6-into-the-basket.png');
+    r = await ev(() => {
+      thaw(); place(48, 16); sim(0.3); const pads = ents('SeatsLeadPaddle'), low = pads.find(p => p.below), a3 = low.actor();
+      // from the stage above the third clap does nothing (he can't hear); from below, straight under the basket, it works
+      place(a3.bx / 32 - 3, 16); sim(0.2); const pad = ents('SeatsLeadPaddle').find(p => !p.below && p.actor() === a3); const deaf = !pad;
+      walkTo(52.5 * 32, 3); sim(0.8); walkTo(low.cx, 3); sim(0.2); for (let k = 0; k < 120 * 10 && !a3.over(); k++) sim(1 / 120); const under = at(); press('action'); sim(3); return { deaf, under, gone: a3.gone };
+    });
+    check('33-6: the last bow only hears clapping from below: through the trap, straight under the basket, it works', r.deaf && r.under.y >= 19 && r.gone, r);
+    await ev(() => freeze()); await shot('62-33-6-clapping-from-below.png');
+    r = await ev(() => { thaw(); fresh(); play('33-6'); const kind = intoRoom(67, 19); return { kind }; });
+    check('33-6: down in the understage, by the wrong-way seat, the door to the Curtain Call Sheet (before the boss)', r.kind === 'seatsCall', r);
+    await ev(() => { sim(0.7); freeze(); }); await shot('63-room-curtain-call-entry.png');
+    r = await ev(() => { thaw(); const R = room(); for (let k = 0; k < 120 * 8 && R.ph !== 'give'; k++) sim(1 / 120); const f0 = R.fails || 0; const twin = R.kinds.findIndex((kd, i) => R.kinds.indexOf(kd) !== i), first = R.kinds.indexOf(R.kinds[twin]); toMark([8, 11, 14, 17][first]); press('action'); sim(0.2); toMark([8, 11, 14, 17][twin]); press('action'); sim(0.3); return { fails: R.fails, f0, won: R.won }; });
+    check('33-6 room: a second flower for the same shoes (the cheeky sleeve bowing twice) is a miss that costs nothing', r.fails === r.f0 + 1 && !r.won, r);
+    r = await ev(() => { const R = room(); for (let k = 0; k < 120 * 8 && R.ph !== 'give'; k++) sim(1 / 120); const seen = {}; for (let i = 0; i < 4 && !R.won; i++) { const kd = R.kinds[i]; if (seen[kd]) continue; seen[kd] = 1; toMark([8, 11, 14, 17][i]); press('action'); sim(0.2); } sim(1.2); return { won: R.won, cage: cageOpen() }; });
+    check('33-6 room: a flower for each different pair of shoes: won, the cage opens', r.won && r.cage, r);
+    await ev(() => freeze()); await shot('64-room-curtain-call-won.png');
+    r = await ev(() => { thaw(); const a = leave(); return { a }; });
+    check('33-6 room: it lets Brady out beyond the last curtain, by the stage door to the coat', r.a && r.a.area === 'stage' && r.a.x >= 72, r);
+    await ev(() => { thaw(); play('33-6'); const g = S(), k = areaOf(g, 'arena'), A = g.level.areas[k]; g.loadArea(k, A.anchors.in.x, A.anchors.in.y); P().invuln = 999; sim(0.2); for (let n = 0; n < 300; n++) sim(1 / 120, { right: true }); sim(2.5); freeze(); }); await shot('65-33-6-the-encore-coat.png');
+    await ev(() => { thaw(); play('33-6'); }); await pano('pano-33-6.png', 0.3);
+  });
+};
+
 //STAGES
 
 const BOT_PAGE = () => {
@@ -416,6 +490,8 @@ const BOT_PAGE = () => {
   };
   T.cross = () => { const f0 = p().seatsSc.face; if (!T.f({ jump: true, jumpPressed: true })) return false; T.wait(0.45); return p().seatsSc && p().seatsSc.face !== f0; };
   T.letGo = dir => T.hop(dir, false, 0.5);
+  T.spot = () => { const sp = S().entities.filter(e => e.constructor.name === 'SeatsSpot' && !e.done && e.tx * 32 > p().cx - 96).sort((a, b) => a.tx - b.tx)[0]; if (!sp) return true; if (T.to((sp.tx + 0.5) * 32) === false) return false; const h = sp.hands[sp.right]; for (let k = 0; k < 120 * 30 && !sp.done; k++) { const vis = !sp.hidden(h); if (!T.f({ action: vis && Math.abs(sp.spot - h.x) < 14, right: sp.spot < h.x - 3, left: sp.spot > h.x + 3 })) return false; } return T.wait(1.5) && (sp.done || 'stuck'); };
+  T.encore = () => { const pd = S().entities.filter(e => e.constructor.name === 'SeatsLeadPaddle' && e.actor() && !e.actor().gone).sort((a, b) => a.tx - b.tx)[0]; if (!pd) return true; const a = pd.actor(); if (pd.below) { for (let k = 0; k < 120 * 3 && p().y + p().h < 19 * 32; k++) if (!T.f({ right: p().cx < 52.5 * 32, left: p().cx > 53.5 * 32 })) return false; } if (T.to(pd.cx) === false) return false; for (let k = 0; k < 120 * 20 && !a.gone; k++) if (!T.f(a.over() && a.bowT <= 0 ? { action: true, actionPressed: true } : {})) return false; return T.wait(2.4) && (a.gone || 'stuck'); };
   T.seat = () => { const s2 = S().entities.filter(e => e.constructor.name === 'SeatsSeat' && e.px * 32 + 16 > p().cx - 8).sort((a, b) => a.px - b.px)[0]; if (!s2) return true; if (T.to(s2.px * 32 + 16) === false) return false; if (!T.wait(0.3)) return false; if (!T.f({ jump: true, jumpPressed: true })) return false; for (let k = 0; k < 120 * 2.5 && !(k > 20 && p().onGround); k++) if (!T.f({ jump: k < 80, right: k > 12 })) return false; return p().cx > s2.bk[0] * 32 + 32 || 'stuck'; };
   T.house = () => S().entities.find(e => e.constructor.name === 'SeatsHouse' && p().cx > e.x0 - 8 * 32 && p().cx < e.x1);
   T.fresh = h => { for (let k = 0; k < 120 * 10; k++) { const c = (h.t + h.ph) % h.per; if (h.state() === 'idle' && c < 0.25) return true; if (!T.f({})) return false; } return true; };
@@ -472,10 +548,33 @@ const BOT_ROUTES = {
   '33-2': [['slack'], ['walk', 32 * 32], 'cp', ['walk', 50 * 32], ['slack'], ['walk', 72 * 32], 'cp', ['slack'], ['walk', 116 * 32], 'cp', ['slack'], ['walk', 166 * 32], 'cp', ['gate']],
   '33-3': [['seat'], ['seat'], ['walk', 33 * 32], 'cp', ['seat'], ['seat'], ['seat'], ['seat'], ['walk', 71 * 32], 'cp', ['seat'], ['seat'], ['walk', 108 * 32], 'cp', ['seat'], ['seat'], ['walk', 139 * 32], 'cp', ['seat'], ['seat'], ['walk', 167 * 32], 'cp', ['gate']],
   '33-4': [['flat'], ['walk', 39 * 32], 'cp', ['flat'], ['walk', 77 * 32], 'cp', ['flat'], ['flat'], ['walk', 125 * 32], 'cp', ['twin'], ['walk', 171 * 32], 'cp', ['gate']],
+  '33-5': [['spot'], ['walk', 33 * 32], 'cp', ['walk', 52 * 32], ['spot'], ['walk', 73 * 32], 'cp', ['walk', 91 * 32], ['spot'], ['walk', 118 * 32], 'cp', ['walk', 141 * 32], 'cp', ['gate']],
+  '33-6': [['encore'], ['walk', 27 * 32], 'cp', ['encore'], ['walk', 50 * 32], 'cp', ['walk', 52 * 32 + 16, { noHop: true }], ['encore'], ['walk', 69.5 * 32, { noHop: true }], ['hop', 1, false, 0.45], ['walk', 79 * 32], 'cp', ['walk', 93 * 32 + 16], ['door'], ['bossFight'], ['gate']],
 //ROUTES
 };
 const BOT_BOSS = () => {
-//BOSS
+  const T = window.BOT, p = () => S().player;
+  T.bossFight = () => {
+    const boss = () => S().entities.find(e => e.boss && !e.remove);
+    for (let k = 0; k < 120 * 6 && !(boss() && boss().X); k++) if (!T.f({ right: p().cx < (S().area.W * 32) * 0.3 })) return false;
+    const AR = window.BRADY_TOUR.seatsKit.AR;
+    const go = (b, x, row) => { const q = p(), fy = b.fy, feet = Math.round((q.y + q.h) / 32), inp = {}, under = feet > fy / 32 + 0.5, tx = b.X(AR.trap[0]) + 32;
+      if (row === 'under' && !under) { inp.right = q.cx < tx - 4; inp.left = q.cx > tx + 4; return inp; }
+      if (row !== 'under' && under) { if (Math.abs(q.cx - tx) > 6) { inp.right = q.cx < tx; inp.left = q.cx > tx; } else { inp.jump = true; inp.jumpPressed = q.onGround; } return inp; }
+      if (row === 'riser' && q.onGround && feet === fy / 32 && Math.abs(q.cx - x) < 3 * 32) { inp.jump = true; inp.jumpPressed = true; }
+      if (row === 'riser' && !q.onGround) inp.jump = true;
+      if (Math.abs(q.cx - x) > 5) { inp.right = q.cx < x; inp.left = q.cx > x; } return inp; };
+    for (let guard = 0; guard < 120 * 180; guard++) {
+      const b = boss(); if (!b || b.state === 'dying') return T.wait(3) && true;
+      if (!b.X || b.state !== 'fight') { if (!T.f()) return false; continue; }
+      const q = p(), ph = b.phase || 1, A = b.act, r1 = b.X(AR.r1[0] + 1), r2 = b.X(AR.r2[0] + 1), up = b.X(AR.up) + 16; let inp = {};
+      if (ph === 1) { if (A === 'idle' || A === 'dunk') inp = go(b, b.b1, 'floor'); else inp = go(b, r1, 'riser'); if (A === 'bow' && Math.abs(q.cx - r1) < 8 && q.onGround && Math.abs(b.px - b.b1) < 32) inp = { action: true, actionPressed: true }; }
+      else if (ph === 2) { inp = go(b, r2, 'riser'); if (A === 'bow' && Math.abs(q.cx - r2) < 8 && q.onGround && Math.abs(b.px - b.b2) < 32) inp = { action: true, actionPressed: true }; }
+      else { inp = go(b, up, 'under'); if (A === 'bow' && Math.abs(q.cx - up) < 8 && q.onGround) inp = { action: true, actionPressed: true }; }
+      if (!T.f(inp)) return false;
+    }
+    return 'stuck';
+  };
 };
 
 /* ---------------- the secret rooms: shared moves ---------------- */
@@ -525,9 +624,9 @@ async function roomGame({ ev, shot }, tag, pickWrong, pickRight, rounds) {
     for (const k of Object.keys(STAGES)) await STAGES[k](o);
   });
   await session({ width: 402, height: 874 }, async ({ ev, shot, run }) => {
-    await run('p-trellis', async () => { await ev(() => { fresh(); play('28-1'); place(13, 22); sim(0.2); sim(0.35, { jump: true, jumpPressed: true, up: true }); sim(0.4, { up: true }); freeze(); }); await shot('90-portrait-28-1-trellis.png'); });
-    await run('p-boss', async () => { await ev(() => { thaw(); fresh(); play('28-6'); const g = S(), k = areaOf(g, 'orchard'), A = g.level.areas[k]; g.loadArea(k, A.anchors.in.x, A.anchors.in.y); P().invuln = 999; sim(0.2); for (let n = 0; n < 300; n++) sim(1 / 120, { right: true }); sim(2.8); freeze(); }); await shot('91-portrait-28-6-boss.png'); });
-    await run('p-map', async () => { await ev(() => { thaw(); fresh(); const d = window.BRADY.Save.data; d.tour.lands.orch = true; d.unlocked['28-1'] = true; window.BRADY.goToMap('world', 1, '28-1'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } freeze(); }); await shot('92-portrait-orch-map.png'); });
+    await run('p-scaffold', async () => { await ev(() => { fresh(); play('33-1'); place(13, 22); sim(0.2); sim(0.35, { jump: true, jumpPressed: true, up: true }); sim(0.4, { up: true }); freeze(); }); await shot('90-portrait-33-1-scaffold.png'); });
+    await run('p-boss', async () => { await ev(() => { thaw(); fresh(); play('33-6'); const g = S(), k = areaOf(g, 'arena'), A = g.level.areas[k]; g.loadArea(k, A.anchors.in.x, A.anchors.in.y); P().invuln = 999; sim(0.2); for (let n = 0; n < 300; n++) sim(1 / 120, { right: true }); sim(2.8); freeze(); }); await shot('91-portrait-33-6-boss.png'); });
+    await run('p-map', async () => { await ev(() => { thaw(); fresh(); const d = window.BRADY.Save.data; d.tour.lands.seats = true; d.unlocked['33-1'] = true; window.BRADY.goToMap('world', 1, '33-1'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } freeze(); }); await shot('92-portrait-seats-map.png'); });
   });
   console.log(failures ? `${failures} SEATS CHECK(S) FAILED` : 'ALL SEATS CHECKS PASSED');
   process.exit(failures ? 1 : 0);
