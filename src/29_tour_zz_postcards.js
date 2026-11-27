@@ -55,7 +55,8 @@ const NOTES = {
   w22: 'Every card from World 22! Even the ones that did not exist yet.',
   eye: 'Every Red-Eye card! I wrote these at thirty thousand feet. Excuse the turbulence.',
   fest: 'All of Festival Fields! The llamas signed it. That smudge is a hoof.',
-  lost: 'Every Lost & Found card! I found this box in Lost & Found. It had your name on it.'
+  lost: 'Every Lost & Found card! I found this box in Lost & Found. It had your name on it.',
+  table: 'Every card from our table! I saved you the last olive. Madame Manners says you have to offer it to me first.'   // Table for Two (36)
 };
 const noteOf = C => (NOTES[C.id] || ('Every postcard from ' + C.name + '! I keep them all in a shoebox.')) + ' ♥ C';
 
