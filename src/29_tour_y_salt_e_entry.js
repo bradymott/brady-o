@@ -30,10 +30,16 @@ function stall(ctx, x0, x1, y, gy, k) {
   ctx.fillStyle = MC.plank2; ctx.fillRect(x0, y + 4, x1 - x0, gy - y - 4);
   ctx.fillStyle = MC.plank; ctx.fillRect(x0 - 4, y, x1 - x0 + 8, 8); ctx.fillStyle = 'rgba(0,0,0,0.12)'; for (let x = x0 + 14; x < x1; x += 18) ctx.fillRect(x, y + 10, 2, gy - y - 12);
   // a basket of oranges
-  const bx = k === 2 ? x0 + 30 : (x0 + x1) / 2;
+  const bx = k === 2 ? x0 + 22 : (x0 + x1) / 2;
   ctx.fillStyle = MC.basket; ctx.beginPath(); ctx.moveTo(bx - 22, y - 14); ctx.lineTo(bx + 22, y - 14); ctx.lineTo(bx + 17, y); ctx.lineTo(bx - 17, y); ctx.closePath(); ctx.fill();
   ctx.fillStyle = MC.basket2; for (let q = -2; q <= 2; q++) ctx.fillRect(bx + q * 8 - 1, y - 13, 2, 12);
   oranges(ctx, bx, y - 12, k === 1 ? 4 : 3);
+  // ordinary small things on the counters (so the salt saucer is not the only odd one out)
+  const dish = (dx, fill, dots) => { const sx = x0 + dx; ctx.fillStyle = MC.clay2; ctx.beginPath(); ctx.ellipse(sx, y - 2, 13, 3.5, 0, 0, TAU); ctx.fill(); ctx.fillStyle = MC.clay; ctx.beginPath(); ctx.moveTo(sx - 14, y - 7); ctx.quadraticCurveTo(sx, y + 1, sx + 14, y - 7); ctx.closePath(); ctx.fill(); ctx.fillStyle = fill; for (const [ddx, ddy] of dots) { ctx.beginPath(); ctx.ellipse(sx + ddx, y - 9 + ddy, 3.2, 2.4, 0, 0, TAU); ctx.fill(); } };
+  const cups = dx => { const sx = x0 + dx; for (let q = 0; q < 3; q++) { ctx.fillStyle = q % 2 ? '#e8d8b0' : '#f4ead2'; ctx.fillRect(sx - 6 + q * 0.5, y - 7 - q * 6, 12, 6); ctx.fillStyle = MC.jarBlue; ctx.fillRect(sx - 6 + q * 0.5, y - 5 - q * 6, 12, 1.5); } };
+  if (k === 0) dish(18, '#5a6a2a', [[-6, 0], [0, -1], [6, 0], [-3, -3], [3, -3]]);
+  if (k === 1) { dish(x1 - x0 - 22, '#7a3e1e', [[-6, 0], [0, -1], [6, 0], [-3, -3], [3, -3]]); cups(16); }
+  if (k === 2) cups(x1 - x0 - 14);
   if (k === 0) { ctx.fillStyle = MC.jar; ctx.beginPath(); ctx.ellipse(x1 - 18, y - 14, 11, 14, 0, 0, TAU); ctx.fill(); ctx.fillRect(x1 - 23, y - 34, 10, 8); ctx.fillStyle = MC.jarBlue; ctx.fillRect(x1 - 29, y - 16, 22, 3); }
 }
 // the saucer (its centre x, its foot y): a clay dish heaped with salt; one crystal on its rim holds a blue horizon
@@ -43,11 +49,15 @@ function saucer(ctx, x, y, t, sink) {
   // the salt heaped in it (it sinks a little while Brady crouches on it)
   ctx.fillStyle = MC.salt; ctx.beginPath(); ctx.moveTo(x - 20, y - 10); ctx.quadraticCurveTo(x - 6, y - 20 + sink * 6, x + 2, y - 19 + sink * 6); ctx.quadraticCurveTo(x + 12, y - 18 + sink * 6, x + 20, y - 10); ctx.closePath(); ctx.fill();
   ctx.fillStyle = MC.salt2; for (const [dx, dy] of [[-12, -13], [-4, -16], [6, -15], [13, -12], [0, -12]]) ctx.fillRect(x + dx, y + dy + sink * 4, 3, 3);
-  // the crystal on the rim (right): clear, a tiny sea and its horizon inside
-  const cx = x + 18, cy = y - 16;
-  ctx.fillStyle = '#eef6ff'; ctx.beginPath(); ctx.moveTo(cx - 6, cy + 5); ctx.lineTo(cx - 6, cy - 4); ctx.lineTo(cx, cy - 8); ctx.lineTo(cx + 6, cy - 4); ctx.lineTo(cx + 6, cy + 5); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#8ac8f4'; ctx.fillRect(cx - 5, cy - 3, 10, 3.5); ctx.fillStyle = '#1a4ab8'; ctx.fillRect(cx - 5, cy + 0.5, 10, 4);
-  ctx.fillStyle = `rgba(255,255,255,${0.5 + 0.5 * Math.sin(t * 2.2)})`; ctx.fillRect(cx - 5, cy + 0.2, 10, 1);
+  // five small crystals lying ON the rim, all the same size and white; the fourth (front right) holds a sliver of
+  // blue sea and a horizon line (no glow, no sparkle: found only by looking)
+  const rim = [[-19, -10], [-10, -8], [1, -7.5], [11, -8], [19, -10]];
+  rim.forEach(([dx, dy], k) => {
+    const cx = x + dx, cy = y + dy;
+    ctx.fillStyle = '#f2f0ea'; ctx.beginPath(); ctx.moveTo(cx - 2.6, cy + 1.6); ctx.lineTo(cx - 2.6, cy - 1.6); ctx.lineTo(cx, cy - 3); ctx.lineTo(cx + 2.6, cy - 1.6); ctx.lineTo(cx + 2.6, cy + 1.6); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#d6d2c8'; ctx.fillRect(cx + 0.6, cy - 1.2, 1.8, 2.6);
+    if (k === 3) { ctx.fillStyle = '#3a68c0'; ctx.fillRect(cx - 2.2, cy + 0.1, 4.4, 1.4); ctx.fillStyle = '#9ac4e8'; ctx.fillRect(cx - 2.2, cy - 1.3, 4.4, 1.4); }
+  });
 }
 
 /* ---------------- the last stall's saucer and the way in ---------------- */

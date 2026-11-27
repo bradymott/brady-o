@@ -502,6 +502,7 @@ Tour.country({
   } },
   levels: []
 });
-Tour.saltKit = { SOLID, say: SaltSay, COL, INK, SaltArt, onMark, isSalt, wrenArt, shrimpArt, weevilArt, lickArt, decor, RT };
+// the land's own opened locks (kept off the HUD's key row): g.saltKeys
+Tour.saltKit = { keys: g => g.saltKeys || (g.saltKeys = new Set()), SOLID, say: SaltSay, COL, INK, SaltArt, onMark, isSalt, wrenArt, shrimpArt, weevilArt, lickArt, decor, RT };
 try { if (typeof window !== 'undefined') { window.BRADY_TOUR = window.BRADY_TOUR || {}; window.BRADY_TOUR.saltKit = Tour.saltKit; if (typeof TourMap !== 'undefined' && !window.BRADY_TOUR.TourMap) window.BRADY_TOUR.TourMap = TourMap; } } catch (e) { /* not in a browser */ }
 })();

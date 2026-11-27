@@ -224,10 +224,10 @@ STAGES.s4 = async ({ ev, shot, run, pano }) => {
     await ev(() => { fresh(); play('34-4'); place(4, 13); sim(0.5); freeze(); }); await shot('40-34-4-start.png');
     let r = await ev(() => { thaw(); place(24, 13); sim(0.3); const c = byId('SaltCap', 'cap1'); for (let k = 0; k < 120 * 9 && !c.done; k++) sim(1 / 120); return { done: c.done }; });
     check('34-4: standing on nothing (both holes open), half the pour isn\'t enough for the gold bowl', !r.done, r);
-    r = await ev(() => { walkX(18); const c = byId('SaltCap', 'cap1'); let shook = false; for (let k = 0; k < 120 * 9 && !c.done; k++) { if (c.cyc >= c.per - 1 && c.cyc < c.per) shook = true; sim(1 / 120); } return { done: c.done, shook, key: S().keys.has('gate1') }; });
+    r = await ev(() => { walkX(18); const c = byId('SaltCap', 'cap1'); let shook = false; for (let k = 0; k < 120 * 9 && !c.done; k++) { if (c.cyc >= c.per - 1 && c.cyc < c.per) shook = true; sim(1 / 120); } return { done: c.done, shook, key: window.BRADY_TOUR.saltKit.keys(S()).has('gate1') }; });
     check('34-4: a shoe on the other hole: the whole pour goes to the gold bowl; it sinks and the gate lifts', r.done && r.shook && r.key, r);
-    r = await ev(() => { walkX(32); return { at: at() }; });
-    check('34-4: through the open cellar gate', r.at.x >= 31, r);
+    r = await ev(() => { walkX(32); return { at: at(), hudKeys: S().keys.size }; });
+    check('34-4: through the open cellar gate (no key in the HUD\'s key row)', r.at.x >= 31 && r.hudKeys === 0, r);
     r = await ev(() => { place(131, 13); sim(0.2); const c = byId('SaltCap', 'cap4'), p = P(); walkPx(134 * 32); for (let k = 0; k < 120 * 6 && !(c.cyc >= c.per && c.cyc < c.per + 0.6); k++) sim(1 / 120); return { plugged: [c.plugged(0), c.plugged(1), c.plugged(2)] }; });
     check('34-4 twist: astride the two neighbouring holes Brady plugs both', r.plugged[0] && r.plugged[1] && !r.plugged[2], r);
     await ev(() => freeze()); await shot('41-34-4-astride-pouring.png');
@@ -244,8 +244,8 @@ STAGES.s5 = async ({ ev, shot, run, pano }) => {
     let r = await ev(() => { thaw(); walkX(13); const w = byId('SaltWeigh', 'w1'), p = P(); for (let k = 0; k < 120 * 6 && w.S < 0.5; k++) sim(1 / 120); return { S: +w.S.toFixed(2) }; });
     check('34-5: standing on the weighing spoon, the shaker pours and the needle climbs', r.S >= 0.5, r);
     await ev(() => freeze()); await shot('51-34-5-weighing.png');
-    r = await ev(() => { thaw(); const w = byId('SaltWeigh', 'w1'); for (let k = 0; k < 120 * 6 && w.S < 0.95; k++) sim(1 / 120); press('jump'); sim(1.2); walkX(23); return { done: w.done, at: at() }; });
-    check('34-5: off the spoon with the needle in the gold: a pinch in the pot, its lid lifts', r.done && r.at.x >= 22, r);
+    r = await ev(() => { thaw(); const w = byId('SaltWeigh', 'w1'); for (let k = 0; k < 120 * 6 && w.S < 0.95; k++) sim(1 / 120); press('jump'); sim(1.2); walkX(23); return { done: w.done, at: at(), hudKeys: S().keys.size }; });
+    check('34-5: off the spoon with the needle in the gold: a pinch in the pot, its lid lifts (no key in the HUD)', r.done && r.at.x >= 22 && r.hudKeys === 0, r);
     r = await ev(() => { place(45, 15); walkX(48); const w = byId('SaltWeigh', 'w2'); for (let k = 0; k < 120 * 8 && w.S < 0.6; k++) sim(1 / 120); press('jump'); sim(1.0); return { done: w.done }; });
     check('34-5 the last tasting: Brady\'s own weight counts: off when the needle passes the gold is too soon', !r.done, r);
     r = await ev(() => { const w = byId('SaltWeigh', 'w2'); for (let k = 0; k < 120 * 3 && w.state !== 'wait'; k++) sim(1 / 120); walkX(48); for (let k = 0; k < 120 * 8 && w.reading() < 1.38; k++) sim(1 / 120); press('jump'); sim(1.0); walkX(57); return { done: w.done, at: at() }; });
@@ -286,6 +286,30 @@ STAGES.rooms = async ({ ev, shot, run }) => {
     await ev(() => freeze()); await shot(tag + '-3-won.png');
     r = await ev(aid => { thaw(); const out = leave(); return { out, area: S().area.aid }; }, aid);
     check(tag + ': its door lets Brady out elsewhere in the level', r.area !== aid, r);
+  });
+};
+
+/* ---------------- 34-2 after a death: respawned at each checkpoint, the next basin can still be finished ---------------- */
+STAGES.s2r = async ({ ev, run }) => {
+  await run('s2r', async () => {
+    await ev(KITS);
+    for (const [cp, sp, id, x1] of [[32, 41, 'b2', 53], [84, 91, 'b3', 105], [136, 148, 'b4', 163]]) {
+      const r = await ev(([cp, sp, id, x1]) => {
+        fresh(); play('34-2'); const g0 = S(); place(cp - 2, 17); sim(0.2); walkX(cp + 1); P().invuln = 0; P().die('test');
+        for (let k = 0; k < 120 * 10 && !(S() !== g0 && S().state === 'play' && P().state === 'play' && !P().dead); k++) sim(1 / 120);
+        sim(0.6); const p = P(), back = at(), power = p.power;
+        const B = byId('SaltBasin', id), spoon = S().entities.find(e => e.constructor.name === 'SaltSpoon' && e.basin === id);
+        const fresh0 = { dose: B.dose, gone: B.goneT, auto: spoon.autoT };
+        walkX(sp);
+        for (let n = 0; n < 6 && B.dose < B.need; n++) { sim(0.3, { jump: true, jumpPressed: true }); sim(0.8); }
+        for (let k = 0; k < 120 * 3 && Math.abs(B.cork.ry - B.sy * 32) > 3; k++) sim(1 / 120);
+        for (let k = 0; k < 240 && p.ride !== B.cork; k++) sim(1 / 120, { right: true });
+        for (let k = 0; k < 120 * 8 && Math.abs(B.cork.x - B.cork.far) > 3; k++) sim(1 / 120);
+        sim(0.2); sim(0.6, { right: true }); sim(0.4);
+        return { cp, back, power, fresh0, at: at() };
+      }, [cp, sp, id, x1]);
+      check(`34-2 respawned at the checkpoint by ${r.cp}: the next basin, spoon and cork start fresh and Brady crosses it`, r.back.x >= cp - 3 && r.fresh0.dose === 0 && r.at.x > x1 && !r.at.dead, r);
+    }
   });
 };
 //@@STAGES@@
@@ -373,7 +397,7 @@ const BOT_SALT = () => {
   T.hopOn = x => { const X = x * 32 + 16; if (T.to(x - 1) === false) return false; if (!T.f({ jump: true, jumpPressed: true })) return false; for (let k = 0; k < 30; k++) if (!T.f({ jump: true })) return false; for (let k = 0; k < 180 && !(k > 4 && p().onGround); k++) if (!T.f({ jump: k < 20, right: p().cx < X - 5, left: p().cx > X + 5 })) return false; return T.wait(0.2); };
   T.grow = (x, id) => { const c = ent('SaltCrystal', id); for (let n = 0; n < 3 && !c.saltTouch(p()); n++) if (T.hopOn(x) === false) return false; if (!c.saltTouch(p())) return 'stuck'; for (let k = 0; k < 120 * 10 && c.n < c.plan.length; k++) if (!T.f({ action: true })) return false; return T.wait(0.2); };
   // stand at pixel X on a cap's disc until its gate's key is in
-  T.plug = (X, lock) => { if (T.toPx(X) === false) return false; for (let k = 0; k < 120 * 14 && !S().keys.has(lock); k++) if (!T.f()) return false; return T.wait(0.5); };
+  T.plug = (X, lock) => { if (T.toPx(X) === false) return false; for (let k = 0; k < 120 * 14 && !window.BRADY_TOUR.saltKit.keys(S()).has(lock); k++) if (!T.f()) return false; return T.wait(0.5); };
   // a weighing spoon at column x: stand on it, hop off when the needle reads `at`
   T.weigh = (x, id, at) => { if (T.to(x) === false) return false; const w = ent('SaltWeigh', id); for (let k = 0; k < 120 * 10 && !w.done; k++) { if (w.reading() >= at && p().onGround) { if (!T.hop(0, false, 0.3)) return false; if (!T.wait(0.6)) return false; if (!w.done) { if (T.to(x) === false) return false; } continue; } if (!T.f()) return false; } return T.wait(0.3); };
   // A Pinch: the thumb (as tools/boss_tests/salt.js)

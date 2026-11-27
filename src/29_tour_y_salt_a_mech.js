@@ -96,7 +96,7 @@ class SaltHeap extends SaltMark {
   draw(ctx) {
     const gy = this.fy * TS, k = this.salt / this.cap, t = this.t;
     // the shaker over the heap (shaking while it is about to pour, pouring while it refills)
-    const sy = gy - 5.4 * TS, shake = this.refillT > 0 && this.refillT <= 1.2 ? Math.sin(t * 40) * 3 : 0;
+    const sy = gy - 4.2 * TS, shake = this.refillT > 0 && this.refillT <= 1.2 ? Math.sin(t * 40) * 3 : 0;
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
     ctx.fillStyle = SA.CHAR; ctx.beginPath(); ctx.ellipse(this.hx + shake, sy, 26, 10, 0, 0, TAU); ctx.fill(); ctx.stroke();
     ctx.fillStyle = SA.COBALT; ctx.fillRect(this.hx - 20 + shake, sy - 30, 40, 26); ctx.strokeRect(this.hx - 20 + shake, sy - 30, 40, 26);
@@ -164,7 +164,7 @@ class SaltCork extends Ent {
     const surf = B.sy * TS, floor = (B.by + 1) * TS - this.h;
     let ty = B.dose >= B.need ? surf : lerp(floor, floor - 0.6 * TS, B.dose / B.need);
     if (this.drift > 0) { this.drift += dt; ty = surf - this.drift * 2.6 * TS; this.x += dt * 1.2 * TS; }
-    this.ry = approach(this.ry, ty, dt * (this.ry > ty ? 2.2 : 5) * TS) + (B.dose >= B.need && !this.drift ? Math.sin(this.t * 2.4) * 0.15 : 0);
+    this.ry = approach(this.ry, ty, dt * (this.ry > ty ? 5 : 2.2) * TS) + (B.dose >= B.need && !this.drift ? Math.sin(this.t * 2.4) * 0.15 : 0);
     if (B.dose >= B.need && !this.drift) { const goal = this.riding() ? this.far : this.home; this.x = approach(this.x, goal, dt * 2.6 * TS); }
     // sunk in its cradle it is no floor (the brine is deep): only a floating cork holds Brady
     this.y = this.afloat() ? this.ry : 1e5;
@@ -214,7 +214,7 @@ class SaltSpoon extends Ent {
     if (k < 0.3 && full > 0.05) { ctx.fillStyle = SA.CRYS; ctx.beginPath(); ctx.ellipse(this.w / 2 + 14, -6, 12 * full + 2, 5 * full + 1, 0, Math.PI, TAU); ctx.fill(); ctx.stroke(); }
     ctx.restore();
     if (this.auto) {
-      const sx = x + this.w / 2 + 14 + this.w / 2, sy = y - 4.5 * TS, shaking = this.autoT >= 0 && this.autoT > this.auto - 1.0;
+      const sx = x + this.w / 2 + 14 + this.w / 2, sy = y - 3.8 * TS, shaking = this.autoT >= 0 && this.autoT > this.auto - 1.0;
       ctx.fillStyle = SA.COBALT; ctx.fillRect(sx - 14 + (shaking ? Math.sin(this.t * 40) * 3 : 0), sy - 26, 28, 22); ctx.strokeRect(sx - 14, sy - 26, 28, 22);
       ctx.fillStyle = SA.CHAR; ctx.beginPath(); ctx.ellipse(sx, sy - 2, 18, 7, 0, 0, TAU); ctx.fill(); ctx.stroke();
       if (this.autoT >= 0) { SA.stream(ctx, sx, sy + 4, y - 14, this.t, 0.5); SA.pill(ctx, sx, sy - 40, 'REFILLING: ' + Math.max(0, this.auto - this.autoT).toFixed(1) + 's', '#ffd84a'); }
@@ -300,7 +300,7 @@ class SaltCap extends Ent {
     }
     if (this.cyc >= this.per + 1.2) {
       const gk = this.got[this.gold] || 0;
-      if (gk >= this.need - 0.06) { this.done = true; g.keys.add(this.lock); say(g, (this.holes[this.gold] + 0.5) * TS, this.bowlY * TS - 2 * TS, 'THE GOLD BOWL SINKS! THE GATE LIFTS', SA.GOLD); TourKit.sfx('clunk', 'secret', { vol: 0.5 }); }
+      if (gk >= this.need - 0.06) { this.done = true; SK.keys(g).add(this.lock); say(g, (this.holes[this.gold] + 0.5) * TS, this.bowlY * TS - 2 * TS, 'THE GOLD BOWL SINKS! THE GATE LIFTS', SA.GOLD); TourKit.sfx('clunk', 'secret', { vol: 0.5 }); }
       else if (this.open) say(g, (this.holes[this.gold] + 0.5) * TS, this.bowlY * TS - 2 * TS, gk > 0 ? 'NOT ENOUGH IN THE GOLD BOWL' : 'NONE IN THE GOLD BOWL', '#ffffff');
       this.cyc = 0; this.open = null; this.toldS = false; if (!this.done) this.got = this.holes.map(() => 0);
     }
@@ -330,8 +330,11 @@ class SaltCap extends Ent {
   }
 }
 // the cellar gate: a cobalt glass slab (a lock) that slides up when its cap's gold bowl sinks
-class SaltCellarGate extends ENTITY_TYPES.lock {
-  update(dt) { super.update(dt); if (!this.open && this.g.keys.has(this.id) && this.g.player) this.touchPlayer(this.g.player); }
+// (its own key set, Tour.saltKit.keys(g): the land's opened locks stay off the HUD's key row)
+class SaltCellarGate extends Ent {
+  constructor(g, s) { const h = s.h || 4; super(g, s, TS, h * TS); this.x = s.x - TS / 2; this.y = s.y - this.h; this.id = s.id; this.open = false; this.openT = 0; this.back = true; this.friendly = true; const tx = Math.floor(s.x / TS), ty1 = Math.floor((s.y - 1) / TS); this.tiles = []; for (let k = 0; k < h; k++) this.tiles.push([tx, ty1 - k]); }
+  update(dt) { this.t += dt; if (this.open) this.openT += dt; else if (SK.keys(this.g).has(this.id)) { this.open = true; for (const [x, y] of this.tiles) this.g.setTile(x, y, T.EMPTY); Sound.play('door', { vol: 0.6 }); } }
+  touchPlayer() {}
   draw(ctx) {
     const k = this.open ? clamp((this.openT || 0) / 0.6, 0, 1) : 0, x = this.x, y = this.y - k * this.h, h = this.h;
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.globalAlpha = 1 - k * 0.6;
@@ -369,7 +372,7 @@ class SaltWeigh extends Ent {
   }
   judge() {
     const g = this.g, S = this.S; this.S = 0; this.tip = 1; this.st = 0;
-    if (S >= 0.85 && S <= 1.15) { this.done = true; g.keys.add(this.lock); say(g, this.cx, this.y, 'A PINCH! THE LID LIFTS', SA.GOLD); TourKit.sfx('ding', 'secret', { vol: 0.5 }); this.state = 'done'; return; }
+    if (S >= 0.85 && S <= 1.15) { this.done = true; SK.keys(g).add(this.lock); say(g, this.cx, this.y, 'A PINCH! THE LID LIFTS', SA.GOLD); TourKit.sfx('ding', 'secret', { vol: 0.5 }); this.state = 'done'; return; }
     say(g, this.cx, this.y, S < 0.05 ? 'STAY ON TILL IT POURS' : 'BLAND! STAY ON LONGER', '#ffffff'); this.state = 'rest';
   }
   touchPlayer() {}
@@ -448,7 +451,7 @@ Object.assign(Tour.pieces, {
     return st.x;
   },
   // the cellar gate: a lock h rows tall whose foot is the letter
-  'salt.gate'(st, o) { const B = st.B, x = st.x, y = st.gy - 1, n = B.spawns.length; B.lock(x, y - (o.h || 4) + 1, y, o.id, 'door'); for (let k = n; k < B.spawns.length; k++) if (B.spawns[k].type === 'lock') B.spawns[k].type = 'saltCellarGate'; return st.x; },
+  'salt.gate'(st, o) { const B = st.B, x = st.x, y = st.gy - 1, n = B.spawns.length; B.lock(x, y - (o.h || 4) + 1, y, o.id, 'door'); for (let k = n; k < B.spawns.length; k++) if (B.spawns[k].type === 'lock') { B.spawns[k].type = 'saltCellarGate'; B.spawns[k].h = o.h || 4; } return st.x; },
   // the cobalt grain (the land's tell by every secret)
   'salt.grain'(st, o) { st.B.spawn('saltGrain', st.x, st.gy - 1, { dy: o.dy || 0 }); return st.x; }
 });
