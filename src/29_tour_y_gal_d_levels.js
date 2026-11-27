@@ -302,7 +302,7 @@ const L6 = { n: 6, name: 'The Good Side', mapLabel: 'The Good Side', arch: 'lair
   areas: [
     { id: 'salon', gen: 'room', theme: 'gal_salon', stamp: 'galSalon', gal: { sitting: true }, bottomKill: true },
     { id: 'corridor', gen: 'room', role: 'secret', room: 'galEyes', theme: 'gal_room_corridor', stamp: 'galCorridorOld', gal: { room: true } },
-    { id: 'studio', gen: 'arena', role: 'arena', layout: 'studio', arenaW: 30, H: 18, roof: false, theme: 'gal_arena', gal: { boss: true } }
+    { id: 'studio', gen: 'arena', role: 'arena', layout: 'studio', arenaW: 25, H: 18, roof: false, theme: 'gal_arena', gal: { boss: true } }
   ] };
 
 Tour.amend('gal', { stamps, levels: [L1, L2, L3, L4, L5, L6] });

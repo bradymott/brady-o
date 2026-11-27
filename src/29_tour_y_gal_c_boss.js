@@ -28,7 +28,7 @@ const brain = {
   geo(b) {
     if (b.geoC) return b.geoC;
     const x0 = b.arenaX0, x1 = b.arenaX1;
-    return (b.geoC = { x0, x1, easel: x0 + 2.5 * TS, r0: x0 + 5 * TS, r1: x1 - 7 * TS, ear: x0 + 5 * TS, chin: x0 + 9 * TS, frameX: x1 - 3.5 * TS });
+    return (b.geoC = { x0, x1, easel: x0 + 5 * TS, r0: x0 + 7.5 * TS, r1: x1 - 6.5 * TS, ear: x0 + 7.5 * TS, chin: x0 + 11 * TS, frameX: x1 - 3 * TS });
   },
   wake(b) {
     const G = this.geo(b); b.phase = 1; b.markX = G.r0 + 4 * TS; b.loaded = false; b.window = 0; b.lunge = 0;
