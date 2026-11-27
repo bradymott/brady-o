@@ -18,7 +18,7 @@
 (function () {
 if (typeof TourRooms === 'undefined') return;
 const K = Tour.boneKit, INK = K.INK, BA = K.BoneArt, BONE = K.BONE, PERS = K.PERS, PETROL = K.PETROL, RK = TourRoomKit;
-const Y = 8, F = 9;   // the row Brady stands on, the floor's top row
+const Y = 6, F = 7;   // the row Brady stands on, the floor's top row (raised into the middle of the view)
 // the shared frame: a 28 x 14 room, play between columns 1 and 21, the way in at the left, the cage at the right
 function frame(keep, A, o, opts) {
   opts = opts || {};
@@ -56,14 +56,14 @@ const props = (play, role) => play.entities.filter(e => e instanceof BoneRoomPro
 const DRAW = {};
 
 /* ================= boneGiant: RESERVED FOR A GIANT ================= */
-const GIANT_X = 10, BAR_ROW = 5;   // the measuring bar: Brady's head must reach the top of row 5 (a full jump does)
+const GIANT_X = 10, BAR_ROW = 3;   // the measuring bar: Brady's head must reach the top of row 3 (a full jump does)
 TourRooms.def('boneGiant', {
   title: 'RESERVED FOR A GIANT', rule: 'TOO SHORT? STAND UNDER THE BAR AND JUMP: IT MEASURES THE TOP OF YOUR JUMP', need: 'MEASURE UP FIRST!',
   make(o, keep, ctx, A, rng) {
     const { g } = frame(keep, A, o);
-    g.spawn(GIANT_X, Y, 'boneRoomProp', { role: 'chart', w: 3, h: 7 });
+    g.spawn(GIANT_X, Y, 'boneRoomProp', { role: 'chart', w: 3, h: 6 });
     g.winSpot(A.id, GIANT_X, Y);
-    g.coins(12, 14, 4);
+    g.coins(12, 14, 2);
     return g;
   },
   enter(play, A, R) { R.demo = 2.2; R.air = false; R.top = null; },
@@ -87,8 +87,8 @@ DRAW.chart = (ctx, e, R) => {
   // the post with its height marks: GIANT up top, VERY TALL, then a little "you?" far below
   ctx.fillStyle = '#e8dcc0'; rr(ctx, x - 40, e.y + 4, 14, e.h - 4, 3); ctx.fill(); ctx.stroke();
   for (let yy = e.y + 14; yy < y0 - 4; yy += 16) { ctx.fillStyle = INK; ctx.fillRect(x - 40, yy, 7, 2); }
-  ctx.fillStyle = '#fbf4e0'; rr(ctx, x - 24, e.y + 8, 72, 18, 3); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = INK; ctx.font = '7px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('YOU MUST BE THIS TALL', x + 12, e.y + 17);
+  ctx.fillStyle = '#fbf4e0'; rr(ctx, x - 24, y0 - 70, 74, 18, 3); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = INK; ctx.font = '7px ' + FONT_DISPLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('YOU MUST BE THIS TALL', x + 13, y0 - 61);
   // the bar: a bone on a slider; it drops to the top of Brady's last jump for a moment, then back up
   let by = barY; if (R.markT > 0 && R.mark != null) by = R.won ? barY : lerp(barY, R.mark, Math.min(1, R.markT));
   if (R.demo > 0) by = barY + Math.abs(Math.sin(t * 3)) * 0;
@@ -165,8 +165,8 @@ TourRooms.def('boneOrder', {
   title: 'OUT OF ORDER', rule: 'THE CAST DISPENSER IS OUT OF ORDER... OR IS THAT PLACARD JUST LOOSE?', need: 'THE PLACARD IS IN THE WAY!',
   make(o, keep, ctx, A, rng) {
     const { g } = frame(keep, A, o, { cageX: 17 });
-    g.spawn(SLOT_X, Y, 'boneRoomProp', { role: 'machine', w: 4, h: 6 });
-    g.spawn(PLAC_X, 5, 'boneRoomProp', { role: 'placard', w: 2, h: 1 });
+    g.spawn(SLOT_X, Y, 'boneRoomProp', { role: 'machine', w: 4, h: 5 });
+    g.spawn(PLAC_X, 3, 'boneRoomProp', { role: 'placard', w: 2, h: 1 });
     g.winSpot(A.id, PLAC_X, Y);
     return g;
   },
@@ -213,9 +213,9 @@ const DRY1 = 7, POOL0 = 8, POOL1 = 13, ISLE0 = 14;
 TourRooms.def('boneFish', {
   title: 'NO FISHING', rule: 'THE TAR WON\'T HOLD YOU. JUMP ON THE FLOAT AND LET THE FISH REEL YOU IN', need: 'GET REELED IN FIRST!',
   make(o, keep, ctx, A, rng) {
-    const { g } = frame(keep, A, o, { roof: 0 });
+    const { g } = frame(keep, A, o);
     // a low rock ceiling over the pool: no jumping across it
-    g.fill(POOL0 - 1, 1, POOL1 + 1, 6, '#');
+    g.fill(POOL0 + 1, 1, POOL1, 4, '#');
     g.spawn(POOL0, Y, 'boneRoomProp', { role: 'pool', w: POOL1 - POOL0 + 1, h: 1 });
     g.spawn(15, Y, 'boneRoomProp', { role: 'fish', w: 2, h: 2 });
     g.winSpot(A.id, 15, Y);

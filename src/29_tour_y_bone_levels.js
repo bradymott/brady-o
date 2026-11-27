@@ -73,7 +73,7 @@ const L1 = { n: 1, name: 'Walk Like This', mapLabel: 'Walk Like This', arch: 'tr
   mapCell: [0, 0], mapFrom: -1,
   exits: { main: { to: '37-2' } },
   areas: [
-    { id: 'quarry', gen: 'room', theme: 'bone_quarry', stamp: 'boneWalk', bone: { track: true }, camera: 'free', bottomKill: true },
+    { id: 'quarry', gen: 'room', theme: 'bone_quarry', stamp: 'boneWalk', bone: { track: true }, bottomKill: true },
     { id: 'hall', gen: 'room', role: 'secret', room: 'boneGiant', theme: 'bone_room_hall', stamp: 'boneHallOld', bone: { room: true } }
   ] };
 

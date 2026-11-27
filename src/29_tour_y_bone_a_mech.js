@@ -144,9 +144,11 @@ class BoneTrack extends Ent {
     // the prints
     this.prints.forEach(([x, y, kind, toes], i) => {
       const cx = x * TS + TS / 2, cy = y * TS + 5, lit = this.lit.indexOf(i) >= 0;
-      ctx.fillStyle = lit ? 'rgba(255,200,120,0.55)' : 'rgba(30,60,50,0.35)'; ctx.beginPath(); ctx.ellipse(cx, cy, 14, 5, 0, 0, TAU); ctx.fill();
-      ctx.save(); ctx.translate(cx, cy - 1); ctx.scale(1, 0.42);
-      BA.print(ctx, 0, 0, kind, toes || 0, 1.25, lit ? '#f06a2a' : PETROL);
+      // a pad of wet clay pressed into the ground, the print in it seen from a little above
+      ctx.fillStyle = lit ? '#ffc078' : '#b8906a'; ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.ellipse(cx, cy, 17, 7, 0, 0, TAU); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = lit ? '#ffd8a0' : '#cca480'; ctx.beginPath(); ctx.ellipse(cx, cy - 1.5, 14, 4.5, 0, 0, TAU); ctx.fill();
+      ctx.save(); ctx.translate(cx, cy - 1); ctx.scale(1.15, 0.5);
+      BA.print(ctx, 0, 0, kind, toes || 0, 1.15, lit ? '#f06a2a' : PETROL);
       ctx.restore();
       if (this.glow[i]) { ctx.strokeStyle = `rgba(255,216,138,${this.glow[i]})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(cx, cy, 16 + (0.6 - this.glow[i]) * 20, 6, 0, 0, TAU); ctx.stroke(); }
     });
@@ -547,5 +549,6 @@ Tour.pieces['bone.chisel'] = function (st, o) {
 Object.assign(TourLandscape.ARCH_LABEL, { trackway: 'TRACKWAY', vertebra: 'ASSEMBLY', mould: 'MOULD', chisel: 'CHISEL' });
 Object.assign(Tour.boneKit, { standsOn, setRect, throwHint, BoneTrack, BoneVert, BoneRibs, BonePress, BoneChisel, BoneClimber });
 // for the shots tool: the game's own physics on a copy of Brady's body
+try { if (typeof window !== 'undefined') { window.BRADY_TOUR = window.BRADY_TOUR || {}; window.BRADY_TOUR.TourMap = TourMap; } } catch (e) { /* not in a browser */ }
 try { if (typeof window !== 'undefined') window.BRADY_BONE = { phys: (b, inp, A, dt, pl, o) => playerPhysicsFlip(b, inp, A, dt, pl, o), spikeContact: (b, A) => spikeContact(b, A), lavaContact: (b, A) => lavaContact(b, A), kit: Tour.boneKit }; } catch (e) { /* not in a browser */ }
 })();

@@ -21,12 +21,14 @@ const BONE = '#f4ead2', BONE_LO = '#d8c8a4', BONE_SH = '#b8a47c', PERS = '#f06a2
 const strataGround = {
   style: 'strata', cap: OCHRE_HI, capHi: '#ffd88a', dirt: OCHRE, dirt2: OCHRE_LO, rock: RUST,
   paint(ctx, rng) {
+    // strata bands that wander a little from tile to tile (a few painted variants), pebbles, now and then a chip of bone
     ctx.fillStyle = OCHRE; ctx.fillRect(0, 0, TS, TS);
-    ctx.fillStyle = '#c87a2a'; ctx.fillRect(0, 9, TS, 8);
-    ctx.fillStyle = OCHRE_LO; ctx.fillRect(0, 22, TS, 10);
-    ctx.fillStyle = '#8a4a1e'; ctx.fillRect(0, 17, TS, 1.5); ctx.fillRect(0, 30, TS, 1.5);
-    if (rng() < 0.12) { ctx.strokeStyle = PETROL; ctx.lineWidth = 1.6; ctx.fillStyle = '#3e8a74'; ctx.beginPath(); ctx.arc(20, 22, 5, 0, TAU); ctx.fill(); ctx.stroke(); ctx.beginPath(); for (let a = 0; a < 9; a += 0.3) { const r = 5 - a * 0.5; ctx.lineTo(20 + Math.cos(a) * r, 22 + Math.sin(a) * r); } ctx.stroke(); }
-    else if (rng() < 0.3) { ctx.fillStyle = '#e8a04a'; ctx.fillRect(4 + rng() * 20, 3 + rng() * 4, 5, 2); }
+    const o1 = (rng() - 0.5) * 6, o2 = (rng() - 0.5) * 6;
+    ctx.fillStyle = '#c87a2a'; ctx.beginPath(); ctx.moveTo(0, 8 + o1); ctx.lineTo(TS, 10 + o2); ctx.lineTo(TS, 18 + o2); ctx.lineTo(0, 16 + o1); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = OCHRE_LO; ctx.beginPath(); ctx.moveTo(0, 24 + o2 * 0.5); ctx.lineTo(TS, 23 + o1 * 0.5); ctx.lineTo(TS, TS); ctx.lineTo(0, TS); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(120,60,20,0.55)'; ctx.fillRect(0, 16 + o1, TS, 1.2);
+    if (rng() < 0.5) { ctx.fillStyle = '#e8a04a'; ctx.beginPath(); ctx.ellipse(4 + rng() * 22, 4 + rng() * 3, 2.5, 1.5, 0, 0, TAU); ctx.fill(); }
+    if (rng() < 0.18) { ctx.fillStyle = '#efe2c4'; const x = 6 + rng() * 18, y = 20 + rng() * 6; ctx.fillRect(x, y, 6, 2); ctx.beginPath(); ctx.arc(x, y + 1, 1.6, 0, TAU); ctx.arc(x + 6, y + 1, 1.6, 0, TAU); ctx.fill(); }
   },
   paintCap(ctx, x0, x1) {
     ctx.fillStyle = OCHRE_LO; ctx.fillRect(x0, 0, x1 - x0, 11);
@@ -336,14 +338,14 @@ const decor = {
   },
   // a lump of quarry rock
   boneRock(ctx, x, y, t, th, d) {
-    const s = 0.7 + ((d || 0) % 4) * 0.12;
+    const s = 0.7 + (((d && d.seed) || 0) % 4) * 0.12;
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.fillStyle = '#b8743a';
     ctx.beginPath(); ctx.moveTo(x - 13 * s, y); ctx.lineTo(x - 10 * s, y - 9 * s); ctx.lineTo(x - 1 * s, y - 14 * s); ctx.lineTo(x + 11 * s, y - 9 * s); ctx.lineTo(x + 13 * s, y); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.fillStyle = '#e0a060'; ctx.beginPath(); ctx.moveTo(x - 8 * s, y - 8 * s); ctx.lineTo(x - 1 * s, y - 12 * s); ctx.lineTo(x + 3 * s, y - 8 * s); ctx.closePath(); ctx.fill();
     ctx.restore();
   },
   // an ammonite lying in the dust
-  boneAmmo(ctx, x, y, t, th, d) { BoneArt.ammonite(ctx, x, y - 8, 8, (d || 0) % 2 ? '#3e8a74' : '#c8a060'); },
+  boneAmmo(ctx, x, y, t, th, d) { BoneArt.ammonite(ctx, x, y - 8, 8, ((d && d.seed) || 0) % 2 ? '#3e8a74' : '#c8a060'); },
   // a bucket of wet plaster with a trowel in it
   boneBucket(ctx, x, y, t) {
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 1.8; ctx.fillStyle = '#7a8a96';
@@ -355,7 +357,7 @@ const decor = {
   // the tipped crate of replicas (37-1's start)
   boneCrate(ctx, x, y, t) { BoneArt.crate(ctx, x, y, 1); },
   // a museum label on a stalk (decor seed picks the word)
-  boneLabel(ctx, x, y, t, th, d) { BoneArt.label(ctx, x, y, ['APPROX.', 'REPLICA', 'PROBABLY', 'A FOOT?', 'UNSURE'][(d || 0) % 5], 44); },
+  boneLabel(ctx, x, y, t, th, d) { BoneArt.label(ctx, x, y, ['APPROX.', 'REPLICA', 'PROBABLY', 'A FOOT?', 'UNSURE'][((d && d.seed) || 0) % 5], 44); },
   // a lantern on a survey pole
   boneLamp(ctx, x, y, t) {
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.fillStyle = '#5a3a22'; ctx.fillRect(x - 2, y - 50, 4, 50); ctx.strokeRect(x - 2, y - 50, 4, 50);
