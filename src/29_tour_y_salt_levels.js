@@ -262,13 +262,13 @@ if (typeof TOUR_OW_MAPS !== 'undefined') TOUR_OW_MAPS.salt = {
   w: 1520, h: 760,
   pal: { sea: '#3a68c8', deep: '#2448a0', land: '#e8eef8', light: '#ffffff', path: '#f08a2a', beach: '#cfe0fa', cliff: '#1c3586', roof: '#f08a2a', wall: '#f6f9ff' },
   sea: 'waves', coast: 'saltCrust', tufts: 'none', trail: 'sand', bridge: 'stone', meadow: false, woods: false, foam: true, birds: false,
-  land: [[[200, 420], [300, 240], [520, 190], [760, 250], [980, 180], [1220, 230], [1350, 400], [1280, 580], [1040, 640], [780, 600], [520, 650], [300, 600]]],
-  // the trail runs like grains poured along a spoon: left to right and back to the chef's pot in the middle
-  nodes: { start: [280, 480], '34-1': [400, 300, 'n'], '34-2': [720, 290, 'n'], '34-3': [1060, 260, 'n'], '34-4': [1200, 470, 'e'], '34-5': [820, 520, 's'], port: [460, 580] },
-  paths: { 'start>34-1': [[320, 380]], '34-1>34-2': [[560, 260]], '34-2>34-3': [[890, 250]], '34-3>34-4': [[1170, 360]], '34-4>34-5': [[1020, 560]], '34-5>port': [[620, 590]] },
+  // a long spoon lying in the sea: the handle runs in from the left, the bowl is the land's right end
+  land: [[[150, 330], [420, 300], [700, 310], [880, 240], [1080, 170], [1300, 200], [1420, 360], [1330, 560], [1100, 620], [880, 520], [700, 430], [420, 440], [160, 430]]],
+  nodes: { start: [210, 380], '34-1': [380, 370, 'n'], '34-2': [620, 370, 'n'], '34-3': [900, 330, 'n'], '34-4': [1160, 280, 'n'], '34-5': [1180, 480, 's'], port: [960, 500] },
+  paths: { 'start>34-1': [[290, 360]], '34-1>34-2': [[500, 350]], '34-2>34-3': [[760, 380]], '34-3>34-4': [[1030, 280]], '34-4>34-5': [[1280, 380]], '34-5>port': [[1070, 520]] },
   feat: [
-    ['sprite', 'saltHeapSprite', 560, 400, 30], ['sprite', 'saltHeapSprite', 920, 380, 24], ['sprite', 'saltCellarSprite', 1180, 610, 26],
-    ['sprite', 'saltCorkSprite', 660, 660, 22], ['sprite', 'saltPotSprite', 820, 430, 30], ['sprite', 'saltHeapSprite', 330, 560, 18]
+    ['sprite', 'saltHeapSprite', 520, 410, 22], ['sprite', 'saltHeapSprite', 1000, 230, 20], ['sprite', 'saltCellarSprite', 1320, 470, 24],
+    ['sprite', 'saltCorkSprite', 760, 560, 22], ['sprite', 'saltPotSprite', 1180, 400, 28], ['sprite', 'saltCorkSprite', 300, 520, 16]
   ],
   flora: ['rock'], density: 0,
   live: [['circle', 760, 120, 60, 0.6]]
