@@ -374,9 +374,7 @@ LEVELS.buggy = async (page, shot, run, pano) => {
     // a mid-air shot
     await page.evaluate(() => { play('18-3'); place(76, 19); sim(0.2); sim(1.0, { right: true }); sim(1 / 120, { right: true, jump: true, jumpPressed: true }); sim(0.45, { jump: true }); freeze(); });
     await shot('33-18-3-airborne.png');
-    const sec = await page.evaluate(() => { thaw(); play('18-3'); place(136, 19); sim(0.2); AP.go([142, 20]); for (let k = 0; k < 20 && S().area.aid !== 'depot'; k++) sim(0.1, { up: true, upPressed: true }); sim(1); return { area: S().area.aid }; });
-    check('18-3: the blinking garage door leads to the rover depot', sec.area === 'depot', sec);
-    await page.evaluate(() => { place(10, 11); sim(0.3); freeze(); }); await shot('34-18-3-depot.png');
+    await page.evaluate(() => thaw());   // (the rover depot, now up on the tall boulder: LEVELS.secrets)
     await page.evaluate(() => { thaw(); play('18-3'); }); await pano('pano-18-3-buggy.png');
   });
 };
